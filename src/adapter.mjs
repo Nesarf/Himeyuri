@@ -158,4 +158,29 @@ export const statements = (源码) => {
   return { 语句们: 块(fn.body), 错: null };
 };
 
+// ---- 三、函数表 ----
+//
+// 自举那边的函数表是一串二元元组 (("名字", 语句们), ...)，由 装函数从 装进环境，
+// 而 求调用 用 "fn:" + 名字 去查。
+//
+// 一条要写明的边界：自举那边执行函数体时**不把参数绑进环境**
+// （见 self/eval.hmyr 的 求调用）。于是它现在只跑得了无参函数。
+// 那不是这一层的缺口——这一层只负责造表；而把参数绑进去是求值器自己的事。
+// 说在这里，是因为读的人会以为「表造对了就能带参数」。
+
+export const functions = (源码) => {
+  const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
+  const { ast } = parse(lex(源码, { diagnostics: d }).tokens, { diagnostics: d });
+  const 表 = [];
+  const 错们 = [];
+  for (const 声 of ast.decls || []) {
+    if (声.kind !== "Fn") continue;
+    const 体 = 块(声.body);
+    const 坏的 = 体.find((s) => s && s.kind === "err");
+    if (坏的) { 错们.push(声.name + "：" + 坏的.text); continue; }
+    表.push([String(声.name), 体]);
+  }
+  return { 表, 错们 };
+};
+
 export { 转, 语句 };
