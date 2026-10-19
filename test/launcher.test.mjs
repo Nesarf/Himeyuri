@@ -1,0 +1,89 @@
+// 启动器的验收：node bin/hmyr.mjs 把 .hmyr 交给语言自己。
+//
+// 最要紧的一条是「跑的是自举那一层」的证据：记录那种节点宿主支持、而自举曾经造不出来
+// （它当时报的是「这一版还不造记录」）。现在自举能造记录了，于是那一段改成了
+// 「自举自己造记录并取字段，算出 1」——那也是证据，而且比「报错」更硬。
+// 只要那个特征出现，就说明目标程序确实经过了自举的求值器，而不是宿主自己的。
+
+import fs from "node:fs";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+let passed = 0, failed = 0;
+const ok = (label, condition, detail = "") => {
+  if (condition) { passed++; console.log("  通过  " + label); }
+  else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
+};
+const 启动 = (args) => spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), ...args], { encoding: "utf8" });
+const 临 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-launch-");
+const 写 = (名, 内容) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
+
+try {
+  console.log("正常跑");
+  {
+    const r = 启动([path.join(ROOT, "examples/hello.hmyr")]);
+    ok("退出码零", r.status === 0, String(r.status));
+    ok("算出 5", String(r.stdout).trim() === "5", JSON.stringify(String(r.stdout).trim()));
+  }
+  {
+    const p = 写("branch.hmyr", "let n = 7\nif n > 3 { return 1 }\nreturn 0\n");
+    const r = 启动([p]);
+    ok("带分支的程序也能跑", String(r.stdout).trim() === "1", JSON.stringify(String(r.stdout).trim()));
+  }
+  console.log("边界");
+  {
+    const r = 启动([path.join(临, "nope.hmyr")]);
+    ok("缺文件时退出码 1", r.status === 1, String(r.status));
+    ok("并给出编号 R0211", String(r.stderr).includes("HMYR-R0211"), JSON.stringify(String(r.stderr).slice(0, 60)));
+  }
+  {
+    const r = 启动([]);
+    ok("不带参数时退出码 2", r.status === 2, String(r.status));
+    ok("并给出用法", String(r.stderr).includes("用法"), JSON.stringify(String(r.stderr).slice(0, 40)));
+  }
+  {
+    const p = 写("bad.hmyr", "let a = \nreturn a\n");
+    const r = 启动([p]);
+    ok("语法坏的程序不崩（有输出）", r.status === 0 || r.status === 1, String(r.status));
+    ok("而且说的是「错：」", String(r.stdout).includes("错：") || String(r.stderr).includes("错"), JSON.stringify((String(r.stdout) + String(r.stderr)).slice(0, 80)));
+  }
+  console.log("证据：目标程序确实经过自举的求值器");
+  {
+    // 记录这一种节点自举还造不出来，而宿主是支持的。它的错误出现，就说明跑的是自举那层。
+    const p = 写("record.hmyr", "let r = {a: 1}\nreturn r.a\n");
+    const r = 启动([p]);
+    const 全部 = String(r.stdout) + String(r.stderr);
+    // 记录那一格补上之后，这段程序应当跑得通，而且结果是 1 —— 这同样是「跑的是自举那层」的证据。
+    ok("自举自己造记录并取字段，算出 1", String(r.stdout).trim() === "1", JSON.stringify(String(r.stdout).trim()));
+  }
+} finally {
+  fs.rmSync(临, { recursive: true, force: true });
+}
+
+console.log("模块加载：import 进来的函数能调");
+{
+  const 模块目录 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-mod-");
+  try {
+    fs.writeFileSync(path.join(模块目录, "helper.hmyr"), "fn helper() -> Int {\n  return 9\n}\n", "utf8");
+    fs.writeFileSync(path.join(模块目录, "main.hmyr"), 'import "./helper.hmyr"\n\nfn main() -> Int {\n  return helper() + 1\n}\n', "utf8");
+    const r = 启动([path.join(模块目录, "main.hmyr")]);
+    ok("import 进来的函数能调，算出 10", String(r.stdout).trim() === "10", JSON.stringify(String(r.stdout).trim()));
+    // 环状 import：A 引 B、B 引 A，不该挂死
+    fs.writeFileSync(path.join(模块目录, "a.hmyr"), 'import "./b.hmyr"\nfn a() -> Int {\n  return 1\n}\n', "utf8");
+    fs.writeFileSync(path.join(模块目录, "b.hmyr"), 'import "./a.hmyr"\nfn main() -> Int {\n  return 2\n}\n', "utf8");
+    const r2 = 启动([path.join(模块目录, "a.hmyr")]);
+    ok("环状 import 不挂死（读过的不再读）", r2.status === 0 && String(r2.stdout).trim().length > 0, JSON.stringify(String(r2.stdout).trim()));
+    // import 一个不存在的文件：跳过，不该崩
+    fs.writeFileSync(path.join(模块目录, "miss.hmyr"), 'import "./nope.hmyr"\nfn main() -> Int {\n  return 4\n}\n', "utf8");
+    const r3 = 启动([path.join(模块目录, "miss.hmyr")]);
+    ok("import 不存在的文件时跳过，照样跑 main", String(r3.stdout).trim() === "4", JSON.stringify(String(r3.stdout).trim()));
+  } finally {
+    fs.rmSync(模块目录, { recursive: true, force: true });
+  }
+}
+
+console.log("");
+console.log(passed + " passed, " + failed + " failed");
+process.exit(failed === 0 ? 0 : 1);

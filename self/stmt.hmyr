@@ -1,0 +1,123 @@
+import "./chain.hmyr"
+
+// 用 Himeyuri 写的第六件：语句级解析。
+//
+// 前一件（chain.hmyr）只把**一个表达式**读成树；这一件把它抬到**一行语句**：
+//   let x = <表达式>   -> {kind: "let", name, value}
+//   var x = <表达式>   -> {kind: "var", name, value}
+//   return <表达式>    -> {kind: "return", value}
+//   return（不带值）    -> {kind: "return", value: {kind: "nil"}}
+//     用 nil 节点而不是空元组：空元组是一个**值**，而「没有值」不是值。两者混在一起，
+//     求值器就分不清 len 该不该收它。
+//   <表达式>           -> {kind: "expr", value}
+// 认不出来时给 {kind: "err", text}，不猜。
+//
+// 依赖是明写的：表达式那一层在 chain.hmyr 里，加载器会顺着它把 lex.hmyr 也带进来。
+// 关键字在词法里都是 ident（这条边界写在 lex.hmyr 的文件头），所以这里用 text 判断。
+
+fn is_word(t: Int, w: String) -> Bool {
+  return t.kind == "ident" && t.text == w
+}
+
+// 从第 i 个 token 起，交给链的加减那一层继续读。
+fn from_here(tokens: Int, i: Int) -> Int {
+  return compare(tokens, i)
+}
+
+fn binding(tokens: Int, i: Int, keyword: String) -> Int {
+  if i + 2 >= len(tokens) {
+    return {node: {kind: "err", text: keyword}, next: i}
+  }
+  let name = tokens[i + 1]
+  let sign = tokens[i + 2]
+  if name.kind != "ident" || sign.kind != "punct" || sign.text != "=" {
+    return {node: {kind: "err", text: keyword + " " + name.text}, next: i + 1}
+  }
+  let got = from_here(tokens, i + 3)
+  if keyword == "let" {
+    return {node: {kind: "let", name: name.text, value: got.node}, next: got.next}
+  }
+  return {node: {kind: "var", name: name.text, value: got.node}, next: got.next}
+}
+
+fn statement(tokens: Int, i: Int) -> Int {
+  if i >= len(tokens) {
+    return {node: {kind: "err", text: ""}, next: i}
+  }
+  let t = tokens[i]
+  if is_word(t, "let") || is_word(t, "var") {
+    return binding(tokens, i, t.text)
+  }
+  if is_word(t, "if") { return parse_if(tokens, i + 1) }
+  if is_word(t, "return") {
+    if i + 1 >= len(tokens) {
+      return {node: {kind: "return", value: {kind: "nil"}}, next: i + 1}
+    }
+    let got = from_here(tokens, i + 1)
+    return {node: {kind: "return", value: got.node}, next: got.next}
+  }
+  let got = from_here(tokens, i)
+  // 赋值是语句而不是表达式：形状是「裸名字 = 表达式」。
+  // 词法把 = 与 == 留成不同的 token，所以比较不会被误读成赋值。
+  if got.node.kind == "name" && got.next < len(tokens) && is_punct(tokens[got.next], "=") {
+    let value = from_here(tokens, got.next + 1)
+    return {node: {kind: "assign", name: got.node.text, value: value.node}, next: value.next}
+  }
+  return {node: {kind: "expr", value: got.node}, next: got.next}
+}
+
+// 跳过换行：块内的语句之间有换行，它们只是分隔，不是内容。
+fn skip_newlines(tokens: Int, i: Int) -> Int {
+  if i < len(tokens) && tokens[i].kind == "newline" { return skip_newlines(tokens, i + 1) }
+  return i
+}
+
+// 一个花括号块：逐条读语句，直到右花括号。每条语句各自独立递归，所以深度是「块内语句数」与
+// 「单条语句的深度」相加，不是相乘。
+fn block(tokens: Int, i: Int) -> Int {
+  let at = skip_newlines(tokens, i)
+  if at >= len(tokens) { return {list: (), next: at} }
+  if is_punct(tokens[at], "}") { return {list: (), next: at + 1} }
+  let one = statement(tokens, at)
+  let rest = block(tokens, one.next)
+  return {list: (one.node,) + rest.list, next: rest.next}
+}
+
+// if：条件是一个表达式，然后是一个块，可选 else（块或单条语句）。
+fn parse_if(tokens: Int, i: Int) -> Int {
+  let cond = from_here(tokens, i)
+  let at = skip_newlines(tokens, cond.next)
+  if at >= len(tokens) || !is_punct(tokens[at], "{") {
+    return {node: {kind: "err", text: "if"}, next: at}
+  }
+  let then = block(tokens, at + 1)
+  var otherwise = ()
+  var next = skip_newlines(tokens, then.next)
+  if next < len(tokens) && is_word(tokens[next], "else") {
+    let e = skip_newlines(tokens, next + 1)
+    if e < len(tokens) && is_punct(tokens[e], "{") {
+      let other = block(tokens, e + 1)
+      otherwise = other.list
+      next = other.next
+    } else {
+      let one = statement(tokens, e)
+      otherwise = (one.node,)
+      next = one.next
+    }
+  }
+  return {node: {kind: "if", cond: cond.node, then: then.list, otherwise: otherwise}, next: next}
+}
+
+// 宿主入口：读一条语句。
+fn parse_statement(tokens: Int) -> Int {
+  return statement(tokens, 0)
+}
+
+fn main() -> Int {
+  // 手工造几个 token，验证最小的一步能走
+  let tokens = ({kind: "ident", text: "let"}, {kind: "ident", text: "x"}, {kind: "punct", text: "="}, {kind: "int", text: "7"})
+  let one = parse_statement(tokens)
+  print(one.node.kind)
+  print(one.node.name)
+  return 0
+}

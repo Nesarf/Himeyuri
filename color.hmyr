@@ -1,0 +1,51 @@
+// Himeyuri 的色彩模块：声明进来的转换，测量出去的报告。
+//
+// 它自己不实现色彩管理——那件事借 LittleCMS（经 Pillow 的 ImageCms）。这里管的是三件：
+//   ・策略清单：两条具名策略，各带「为什么」，不许混用；
+//   ・发起转换：把源 · 目标 · 策略凑成一次调用，交给桥；
+//   ・朗读清单与报告：桥说的话原样交回来（结构化的判定留给宿主侧的套件，
+//     因为语言这边还没有 JSON 解析——那是一件该单独做的事，不塞进这里顺手糊上）。
+
+fn 桥路径() -> String {
+  return "E:/himeyuri/deps/color/bridge.py"
+}
+
+fn 解释器() -> String {
+  return "E:/DaShaoHuo/Python-managed/bin/python.exe"
+}
+
+// 两条策略：最小损失与观感优先是两个不同的目标。
+// 抬暗部、留白、减墨这类手法会让损失变大，所以它们只能在 look 名下，不许悄悄混进 min-loss。
+fn 策略清单() -> Int {
+  return (
+    ("min-loss", "相对比色 + 黑点补偿：本机实测三段 ΔE76 之和最小（279.6）"),
+    ("look", "感知：整体关系优先，代价是损失更大（290.0）"),
+  )
+}
+
+// 可用的色彩空间与存储模式：内建只有 sRGB / LAB / XYZ，其余一律从文件加载。
+fn 可用清单() -> String effects(process) {
+  let r = run_program(解释器(), (桥路径(), "spaces"), 60000, "utf8")
+  return r.stdout
+}
+
+// 发起一次转换。交回来的是一个三元组：退出码 · 输出 · 错误输出。
+fn 转换(进: String, 出: String, 源: String, 目标: String, 策略: String, 报告: String) -> Int effects(process) {
+  let r = run_program(解释器(), (桥路径(), "convert",
+    "--src", 源, "--dst", 目标, "--strategy", 策略,
+    "--image", 进, "--out", 出, "--report", 报告), 180000, "utf8")
+  return (r.code, r.stdout, r.stderr)
+}
+
+// 选工作空间：给一串候选，逐个实测，从损失最小的排起。
+// 这就是「有损率最小化」的机械化——三条原则（目标包含源则无损 · 够广即可不必最广 · 降了不可逆）
+// 里最好用的那条，在这里成为一步可执行的活，而不是靠人记住。
+fn 选工作空间(源: String, 候选: String) -> String effects(process) {
+  let r = run_program(解释器(), (桥路径(), "pick", "--src", 源, "--candidates", 候选), 180000, "utf8")
+  return r.stdout
+}
+
+fn main() -> Int effects(process) {
+  print("策略 " + str(len(策略清单())) + " 条；可用的空间与模式见 可用清单()\n")
+  return 0
+}

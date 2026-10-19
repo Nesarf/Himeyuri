@@ -1,0 +1,270 @@
+// 用 Himeyuri 写的求值器：吃 self/chain.hmyr 造出来的节点，交回一个值。
+//
+// 这是自举的最后一格。词法（lex）、语法（chain、stmt）、语句（body）都在 self/ 里了，
+// 缺的就是「把节点算成值」。这一件立起来之后，一段源码可以由 Himeyuri 自己读、
+// 自己解析、自己求值——宿主只剩下「起它」这一件事。
+//
+// 节点形状（由 self/chain.hmyr 与 self/stmt.hmyr 定义）：
+//   {kind: "int" | "num", text}      整数（原文）
+//   {kind: "str", text}              字符串
+//   {kind: "name", text}             标识符
+//   {kind: "bin", op, left, right}
+//   {kind: "unary", op, operand}
+//   {kind: "call", callee, args}
+//   {kind: "index", target, index}
+//   {kind: "field", target, name}
+//   {kind: "tuple", items}
+//   {kind: "record", fields}
+//   {kind: "err", text}
+//
+// 环境是键值对的元组（与 json.hmyr 那边同一个表示）：记录的字段名必须是标识符，
+// 而环境里的名字来自程序本身，所以用对表。
+//
+// 结果统一包成 {ok: true, value} 或 {ok: false, text}——这样错误一路往上走，
+// 不会被当成一个值参与计算。这一点比「返回特殊值」可靠。
+
+fn 好(v: Int) -> Int {
+  return {ok: true, value: v}
+}
+
+fn 坏(t: String) -> Int {
+  return {ok: false, text: t}
+}
+
+// 查环境从后往前：后定义要覆盖先定义。正着找会拿到旧值，那是个安静的错。
+fn 查找到(环境: Int, 名: String, i: Int) -> Int {
+  if i < 0 { return {found: false, value: ()} }
+  if 环境[i][0] == 名 { return {found: true, value: 环境[i][1]} }
+  return 查找到(环境, 名, i - 1)
+}
+
+fn 查找(环境: Int, 名: String) -> Int {
+  return 查找到(环境, 名, len(环境) - 1)
+}
+
+fn 求二元(op: String, a: Int, b: Int) -> Int {
+  if a.ok == false { return a }
+  if b.ok == false { return b }
+  let x = a.value
+  let y = b.value
+  if op == "+" { return 好(x + y) }
+  if op == "-" { return 好(x - y) }
+  if op == "*" { return 好(x * y) }
+  if op == "/" { return 好(x / y) }
+  if op == "%" { return 好(x % y) }
+  if op == "==" { return 好(x == y) }
+  if op == "!=" { return 好(x != y) }
+  if op == "<" { return 好(x < y) }
+  if op == "<=" { return 好(x <= y) }
+  if op == ">" { return 好(x > y) }
+  if op == ">=" { return 好(x >= y) }
+  return 坏("不认识的运算符：" + op)
+}
+
+fn 求一元(op: String, a: Int) -> Int {
+  if a.ok == false { return a }
+  if op == "-" { return 好(0 - a.value) }
+  if op == "!" { return 好(!a.value) }
+  return 坏("不认识的一元运算符：" + op)
+}
+
+// 一次性把参数都求出来。任一参数出错就整体出错——不跳过、不补默认值。
+fn 求参数从(节点们: Int, 环境: Int, i: Int, acc: Int) -> Int {
+  if i >= len(节点们) { return 好(acc) }
+  let 一个 = 求值(节点们[i], 环境)
+  if 一个.ok == false { return 一个 }
+  return 求参数从(节点们, 环境, i + 1, acc + (一个.value,))
+}
+
+fn 求参数(节点们: Int, 环境: Int) -> Int {
+  return 求参数从(节点们, 环境, 0, ())
+}
+
+// 调用：先认两个内置（len、str），再查环境里的函数表。
+//
+// 函数表放在环境里，名字加前缀 "fn:"——这样不必给求值、执行这些函数加参数，
+// 而递归也自然成立：函数体在同一个环境里跑，它看得见自己。
+//
+// 这一版是**动态作用域**（被调函数看得见调用者的局部名字），不是词法作用域。
+// 先这样，因为真正的词法作用域要等闭包那一层；这一点写在明处，不装作已经是词法作用域。
+fn 求调用(节点: Int, 环境: Int) -> Int {
+  if 节点.callee.kind != "name" { return 坏("这一版只认按名字调用") }
+  let 名 = 节点.callee.text
+  let 参 = 求参数(节点.args, 环境)
+  if 参.ok == false { return 参 }
+  let 值们 = 参.value
+  if 名 == "len" {
+    if len(值们) != 1 { return 坏("len 要一个参数") }
+    return 好(len(值们[0]))
+  }
+  if 名 == "str" {
+    if len(值们) != 1 { return 坏("str 要一个参数") }
+    return 好(str(值们[0]))
+  }
+  let 找 = 查找(环境, "fn:" + 名)
+  if 找.found == false { return 坏("没有这个函数：" + 名) }
+  let r = 执行块(找.value, 环境)
+  if r.ok == false { return 坏(r.text) }
+  if r.done == true { return 好(r.value) }
+  return 好(())
+}
+
+// 求一个节点。这是核心：节点种类一分派，其余都交给上面的帮手。
+fn 求值(节点: Int, 环境: Int) -> Int {
+  let 种 = 节点.kind
+  if 种 == "int" { return 好(to_int(节点.text)) }
+  if 种 == "num" { return 好(to_int(节点.text)) }
+  if 种 == "str" { return 好(节点.text) }
+  // nil：这门语言没有 null，空元组就是它。而求值器要认得出 {kind: "nil"} 这种节点，
+  // 因为 stmt.hmyr 用它在「return 不带值」时占位。
+  if 种 == "nil" { return 好(()) }
+  if 种 == "name" {
+    let r = 查找(环境, 节点.text)
+    if r.found == false { return 坏("没有这个名字：" + 节点.text) }
+    return 好(r.value)
+  }
+  if 种 == "bin" { return 求二元(节点.op, 求值(节点.left, 环境), 求值(节点.right, 环境)) }
+  if 种 == "unary" { return 求一元(节点.op, 求值(节点.operand, 环境)) }
+  if 种 == "call" { return 求调用(节点, 环境) }
+  if 种 == "index" {
+    let 标 = 求值(节点.target, 环境)
+    if 标.ok == false { return 标 }
+    let 位 = 求值(节点.index, 环境)
+    if 位.ok == false { return 位 }
+    return 好(标.value[位.value])
+  }
+  if 种 == "field" {
+    // 不能写 标.value[节点.name]：下标只收数字，而这里字段名是个变量。
+    // 先问再取：field_get 取不到会抛（有编号），而这里接不住异常，所以先问 field_has。
+    let 标 = 求值(节点.target, 环境)
+    if 标.ok == false { return 标 }
+    if field_has(标.value, 节点.name) == false { return 坏("没有这个字段：" + 节点.name) }
+    return 好(field_get(标.value, 节点.name))
+  }
+  if 种 == "tuple" { return 求参数(节点.items, 环境) }
+  if 种 == "record" { return 求记录(节点, 环境) }
+  if 种 == "err" { return 坏("语法层报的错：" + 节点.text) }
+  return 坏("不认识的节点：" + 种)
+}
+
+// 一段节点求值并直接把结果打成文字。给示例与测试用。
+fn 求值成文字(节点: Int, 环境: Int) -> String {
+  let r = 求值(节点, 环境)
+  if r.ok == false { return "错：" + r.text }
+  return str(r.value)
+}
+
+// ---- 语句层 ----
+//
+// 表达式求值不改变环境，而语句需要：let/var/assign 都让名字指向新的值。
+// 这门语言的 let 不可变，所以环境用「追加一对」的方式更新——不引入可变状态。
+// 查找从后往前，于是后定义自然覆盖先定义。
+//
+// 执行的结果统一成一个记录：
+//   {ok: true,  env: 新环境, done: false, value: ()}     正常走完
+//   {ok: true,  env: 新环境, done: true,  value: 返回值}  遇到 return
+//   {ok: false, env: (),     done: true,  text: 原因}     出错（done 也是真：不能再往下走）
+
+fn 更新(环境: Int, 名: String, 值: Int) -> Int {
+  return 环境 + ((名, 值),)
+}
+
+fn 好执行(环境: Int, 完成: Bool, 值: Int) -> Int {
+  return {ok: true, env: 环境, done: 完成, value: 值}
+}
+
+fn 坏执行(原因: String) -> Int {
+  return {ok: false, env: (), done: true, text: 原因}
+}
+
+fn 执行(节点: Int, 环境: Int) -> Int {
+  let 种 = 节点.kind
+  if 种 == "let" || 种 == "var" {
+    let v = 求值(节点.value, 环境)
+    if v.ok == false { return 坏执行(v.text) }
+    return 好执行(更新(环境, 节点.name, v.value), false, ())
+  }
+  if 种 == "assign" {
+    let 现有 = 查找(环境, 节点.name)
+    if 现有.found == false { return 坏执行("不能给没声明过的名字赋值：" + 节点.name) }
+    let v = 求值(节点.value, 环境)
+    if v.ok == false { return 坏执行(v.text) }
+    return 好执行(更新(环境, 节点.name, v.value), false, ())
+  }
+  if 种 == "expr" {
+    let v = 求值(节点.value, 环境)
+    if v.ok == false { return 坏执行(v.text) }
+    return 好执行(环境, false, ())
+  }
+  if 种 == "return" {
+    // 无值时那个位置是 {kind: "nil"}，于是这一层只看 kind——不用 len 去探，
+    // 因为值也可能是一个记录，而 len 只收字符串与元组。
+    if 节点.value.kind == "nil" { return 好执行(环境, true, ()) }
+    let v = 求值(节点.value, 环境)
+    if v.ok == false { return 坏执行(v.text) }
+    return 好执行(环境, true, v.value)
+  }
+  if 种 == "if" {
+    let c = 求值(节点.cond, 环境)
+    if c.ok == false { return 坏执行(c.text) }
+    if c.value != false {
+      if len(节点.then) == 0 { return 好执行(环境, false, ()) }
+      return 执行块(节点.then, 环境)
+    }
+    if len(节点.otherwise) == 0 { return 好执行(环境, false, ()) }
+    return 执行块(节点.otherwise, 环境)
+  }
+  if 种 == "err" { return 坏执行("语法层报的错：" + 节点.text) }
+  return 坏执行("这一版还不认这种语句：" + 种)
+}
+
+fn 执行块从(语句们: Int, 环境: Int, i: Int) -> Int {
+  if i >= len(语句们) { return 好执行(环境, false, ()) }
+  let r = 执行(语句们[i], 环境)
+  if r.ok == false { return r }
+  if r.done == true { return r }
+  return 执行块从(语句们, r.env, i + 1)
+}
+
+fn 执行块(语句们: Int, 环境: Int) -> Int {
+  return 执行块从(语句们, 环境, 0)
+}
+
+// 跑一段语句：从空环境开始。交回 {ok, env, done, value}。
+fn 跑程序(语句们: Int) -> Int {
+  return 执行块(语句们, ())
+}
+
+// 把函数表装进环境：每项是 (名字, 语句们)，装成 ("fn:名字", 语句们)。
+fn 装函数从(环境: Int, 函数们: Int, i: Int) -> Int {
+  if i >= len(函数们) { return 环境 }
+  return 装函数从(更新(环境, "fn:" + 函数们[i][0], 函数们[i][1]), 函数们, i + 1)
+}
+
+fn 跑程序带函数(语句们: Int, 函数们: Int) -> Int {
+  return 执行块(语句们, 装函数从((), 函数们, 0))
+}
+
+// 造记录：先把每个值求出来，再交给 record_of。
+// 字段名来自源码，所以一定是标识符能写的形状——这正是 record_of 收的那一类。
+// 字段的形状来自 self/chain.hmyr：{name, value}——是记录，不是二元元组。
+// 所以这里读 .name 与 .value，而不是取下标。
+fn 求字段从(字段们: Int, 环境: Int, i: Int, acc: Int) -> Int {
+  if i >= len(字段们) { return 好(acc) }
+  let 字段 = 字段们[i]
+  let v = 求值(字段.value, 环境)
+  if v.ok == false { return v }
+  return 求字段从(字段们, 环境, i + 1, acc + ((字段.name, v.value),))
+}
+
+fn 求记录(节点: Int, 环境: Int) -> Int {
+  let 里 = 求字段从(节点.fields, 环境, 0, ())
+  if 里.ok == false { return 里 }
+  return 好(record_new(里.value))
+}
+
+fn main() -> Int effects(process) {
+  let 节点 = {kind: "bin", op: "+", left: {kind: "int", text: "1"}, right: {kind: "bin", op: "*", left: {kind: "int", text: "2"}, right: {kind: "int", text: "3"}}}
+  print(求值成文字(节点, ()) + "\n")
+  return 0
+}

@@ -1,0 +1,53 @@
+// 练习曲：音符由递归长出来，不是一行行手抄。
+//
+// 这正是一门语言值得用来描述数据的理由——重复的形状写成函数，音高与起点用算术推出来。
+// 用 JSON 写同样一份东西，就只能把每一个音符都抄一遍。
+
+fn note(key: Int, start: Int, length: Int) -> Int {
+  return (key, start, length)
+}
+
+// 上行的琶音：从 key 起，每步升 2 个半音，共 n 个音。空元组 () 是递归的底。
+fn rise(n: Int, key: Int, start: Int, step: Int) -> Int {
+  if n == 0 { return () }
+  return (note(key, start, step),) + rise(n - 1, key + 2, start + step, step)
+}
+
+// 鼓点：每拍一击，强拍落在偶数拍上。
+fn pulse(n: Int, start: Int) -> Int {
+  if n == 0 { return () }
+  let hit = if start % 960 == 0 { 36 } else { 38 }
+  return (note(hit, start, 120),) + pulse(n - 1, start + 480)
+}
+
+fn strip(name: String, gain: Int, pan: Int) -> Int {
+  return {name: name, gain: gain, pan: pan}
+}
+
+fn main() -> Int {
+  let lead = rise(8, 60, 0, 240)
+  let drums = pulse(8, 0)
+
+  let score = {
+    ppq: 480,
+    tempo: 96,
+    title: "練習曲",
+    tracks: (
+      {name: "lead", notes: lead},
+      {name: "drums", notes: drums}
+    )
+  }
+
+  let mix = {
+    strips: (strip("lead", -4, 10), strip("drums", -2, 0)),
+    master: {gain: -1, ceiling: -1}
+  }
+
+  let timbre = {
+    name: "kohane-pluck",
+    engine: "physical",
+    params: {damping: 0.4, brightness: 0.7, decay: 900}
+  }
+
+  return {score: score, mix: mix, timbre: timbre}
+}

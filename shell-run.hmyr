@@ -1,0 +1,91 @@
+// shell 的会话：把按键、行编辑、认命令、执行串成一条线。
+//
+// 两种跑法，与 term 那条线同一个立场：
+//   ・跑一次会话(按键表) —— 喂一串注入的按键，交回所有帧。于是整条线可以断言。
+//   ・真会话() —— 从终端真读（要 TTY）。接不上就如实说，不装。
+//
+// 依赖写清楚：提示行的渲染要用 term 的清屏与光标定位。
+
+import "./term.hmyr"
+import "./shell.hmyr"
+import "./shell-builtins.hmyr"
+
+fn 提示符() -> String {
+  return "> "
+}
+
+// 把一个按键作用到会话上，交回 (新状态, 新历史, 要不要退出, 要写的输出)。
+fn 一步(状态: Int, 历史: Int, 键: String) -> Int effects(process) {
+  if 键 == "UP" { return (状态, 上翻(历史), false, "") }
+  if 键 == "DOWN" { return (状态, 下翻(历史), false, "") }
+  let r = 喂键(状态, 键)
+  let 新状态 = r[0]
+  if r[1] == false { return (新状态, 历史, false, "") }
+  // 回车：认命令、执行、记住、清空缓冲。
+  let 行 = 缓冲(新状态)
+  let 判 = 认命令(行)
+  let 果 = 执行(判)
+  let 新历史 = 记住(历史, 行)
+  if 果.kind == "exit" { return (空状态(), 新历史, true, "") }
+  if 果.kind == "output" { return (空状态(), 新历史, false, 果.text + "\n") }
+  if 果.kind == "external" { return (空状态(), 新历史, false, "（外部命令 " + 果.name + "，这一版不执行）\n") }
+  if 果.kind == "err" { return (空状态(), 新历史, false, "错：" + 果.text + "\n") }
+  return (空状态(), 新历史, false, "")
+}
+
+// 喂一串按键，交回 (帧们, 状态, 历史, 退出了吗)。
+// 每喂一个键就重画一次提示行——真实的 shell 也是这样，只是它画到终端上。
+fn 会话从(状态: Int, 历史: Int, 键们: Int, i: Int, 帧们: Int, 输出们: String) -> Int effects(process) {
+  if i >= len(键们) { return (帧们, 状态, 历史, false) }
+  let r = 一步(状态, 历史, 键们[i])
+  let 新状态 = r[0]
+  let 新历史 = r[1]
+  // 命令的输出先落下来，提示行再画在它下面——真实的 shell 就是这个次序。
+  let 帧 = r[3] + 渲染提示行(提示符(), 新状态)
+  let 新输出 = 输出们 + r[3]
+  if r[2] == true { return (帧们 + (帧,), 新状态, 新历史, true) }
+  return 会话从(新状态, 新历史, 键们, i + 1, 帧们 + (帧,), 新输出)
+}
+
+fn 跑一次会话(键们: Int) -> Int effects(process) {
+  return 会话从(空状态(), 空历史(), 键们, 0, (), "")
+}
+
+// 真会话：从终端读，一直读到 exit。
+//
+// 这里用 while 而不是递归——递归深度会随按键数增长，而按键数没有上限。
+// 这也是「先动语言」那一课的意思：语言里有了循环，用语言写的东西就不必靠深递归硬撑。
+//
+// 接不上终端就交回 1（不是零：零是「正常跑完」），并说明原因，而不是装作在跑。
+fn 真会话() -> Int effects(process) {
+  if 开始收键() == false {
+    print("这个环境不是终端（stdio 是管道），所以收不到按键。请在真终端里跑这一件。\n")
+    return 1
+  }
+  var 状态 = 空状态()
+  var 历史 = 空历史()
+  var 运行 = true
+  print(渲染提示行(提示符(), 状态))
+  while 运行 {
+    // 阻塞取键：没有键就等到有。同步读天然是阻塞的，所以这里不必先问再有。
+    let 键 = 取键()
+    if 键 != "" {
+      let 一步的 = 一步(状态, 历史, 键)
+      状态 = 一步的[0]
+      历史 = 一步的[1]
+      print(一步的[3])
+      print(渲染提示行(提示符(), 状态))
+      if 一步的[2] == true { 运行 = false }
+    }
+  }
+  return 0
+}
+
+fn main() -> Int effects(process) {
+  let r = 跑一次会话(("h", "i", "ENTER"))
+  let 帧们 = r[0]
+  print("喂了三个键，画了 " + str(len(帧们)) + " 帧\n")
+  print("最后状态：缓冲「" + 缓冲(r[1]) + "」\n")
+  print("历史条数：" + str(历史条数(r[2])) + "\n")
+  return 0
+}

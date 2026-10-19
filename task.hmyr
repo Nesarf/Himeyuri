@@ -1,0 +1,114 @@
+// 任务树：主窗口是父任务，子窗口是它的子任务。
+//
+// 这一层只做纯数据：建树、收子树、取消一棵子树。它不开线程、不画窗口，
+// 于是「关主窗口时子窗口会不会留在背后」这种事，在还没有一个像素的时候就能验。
+//
+// 口径来自 design/WINDOWS.txt：窗口不是一个绘图对象，而是一个任务。
+// 而规矩来自 design/CONCURRENCY.txt 2.1：父任务不得先于子任务结束，
+// 取消父任务即取消整棵子树。
+//
+// 树是一个元组，每项是 {id, name, parent}；parent 为 -1 表示它是根。
+// id 就是它在元组里的位置，所以不必另存一个计数器。
+
+fn 空树() -> Int {
+  return ()
+}
+
+// 建一个任务：父给 -1 就是根。父不存在就原样交回（不猜、也不悄悄建游离任务）。
+// id 就是它在元组里的位置，所以这个函数只追加，不改已有项。
+fn 挂(树: Int, 名: String, 父: Int) -> Int {
+  if 父 >= len(树) { return 树 }
+  return 树 + ({id: len(树), name: 名, parent: 父},)
+}
+
+// 一个集合里有某个 id 吗。
+fn 含从(集: Int, id: Int, i: Int) -> Bool {
+  if i >= len(集) { return false }
+  if 集[i] == id { return true }
+  return 含从(集, id, i + 1)
+}
+
+fn 含(集: Int, id: Int) -> Bool {
+  return 含从(集, id, 0)
+}
+
+// 收一棵子树（含它自己）。
+//
+// 做法是「反复扫一遍，把父已经在集合里的收进来，直到不再增加」。
+// 这样不必递归——深度不随树的深度增长，而宽树也只是多扫几遍。
+fn 子树(树: Int, id: Int) -> Int {
+  var 收 = (id,)
+  var 变 = true
+  while 变 {
+    变 = false
+    var i = 0
+    while i < len(树) {
+      if 含(收, 树[i].parent) && 含(收, 树[i].id) == false {
+        收 = 收 + (树[i].id,)
+        变 = true
+      }
+      i = i + 1
+    }
+  }
+  return 收
+}
+
+// 按 id 查一个任务还在不在。
+//
+// 为什么不能用「id 小于任务数」来判断：取消之后树是新元组、位置全变了，
+// 而 id 是记录里的字段、不随位置变。判据必须按 id 查，否则取消一个任务之后
+// 别的表面会错位显示——那种 bug 只会在真窗口里才被发现。
+fn 有id从(树: Int, id: Int, i: Int) -> Bool {
+  if i >= len(树) { return false }
+  if 树[i].id == id { return true }
+  return 有id从(树, id, i + 1)
+}
+
+fn 有id(树: Int, id: Int) -> Bool {
+  return 有id从(树, id, 0)
+}
+
+// 取消一棵子树：交回「还在的」那些任务。
+// 父任务不得先于子任务结束，所以取消父就一起取消——这正是子树的定义。
+fn 取消(树: Int, id: Int) -> Int {
+  let 去 = 子树(树, id)
+  var 留 = ()
+  var i = 0
+  while i < len(树) {
+    if 含(去, 树[i].id) == false { 留 = 留 + (树[i],) }
+    i = i + 1
+  }
+  return 留
+}
+
+fn 名字(树: Int, id: Int) -> String {
+  if id < 0 || id >= len(树) { return "" }
+  return 树[id].name
+}
+
+fn 父(树: Int, id: Int) -> Int {
+  if id < 0 || id >= len(树) { return -2 }
+  return 树[id].parent
+}
+
+fn 任务数(树: Int) -> Int {
+  return len(树)
+}
+
+// 失败的去向：默认传播给父；根任务没有父，那就交给接住它的人（三选一里的第三种）。
+// 这一版只算去向，不接管策略——策略属于监督者那一层。
+fn 失败去向(树: Int, id: Int) -> Int {
+  return 父(树, id)
+}
+
+fn main() -> Int {
+  var t = 空树()
+  t = 挂(t, "主窗口", -1)
+  t = 挂(t, "子窗口 A", 0)
+  t = 挂(t, "子窗口 B", 0)
+  t = 挂(t, "A 的面板", 1)
+  print("任务数 " + str(任务数(t)) + "\n")
+  print("从主窗口看，整棵树有 " + str(len(子树(t, 0))) + " 个任务\n")
+  print("取消子窗口 A 之后，剩下 " + str(任务数(取消(t, 1))) + " 个\n")
+  return 0
+}

@@ -1,0 +1,196 @@
+// 用 Himeyuri 写的第二个前端部件：词法扫描。
+//
+// 与 self/scan.hmyr 一样，它只依赖语言里已有的东西。深度按上一件学到的形状安排：
+// 外层「每读一个 token 一层递归」，而读一个词、读一个数字、读一个字符串各自是**独立的一次递归**——
+// 两者不嵌套在同一层里，所以深度是 token 数与 token 长度的较大者，不是乘积。
+//
+// 两条当前的边界，写在明处而不是留给别人发现：
+//   ・关键字不单独成类，一律算标识符；对拍时 JS 版的 keyword 也按标识符看待。
+//   ・字符串保留原文，不解转义；对拍字符串时只比种类，不比内容（解转义是下一件活）。
+//   ・块注释不嵌套（JS 版嵌套）；进制字面量按十六进制字符集读取；小数与整数同归 int 一类。
+//
+// 这个文件自足：模块系统还没有，所以 starts_with 一类的工具在这里重写了一遍。
+
+fn letters() -> String {
+  return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
+}
+
+fn digits() -> String {
+  return "0123456789"
+}
+
+// ch 是否出现在 set 里。深度等于 set 的长度。
+fn in_set(ch: String, set: String, i: Int) -> Bool {
+  if i >= len(set) { return false }
+  if ch == set[i] { return true }
+  return in_set(ch, set, i + 1)
+}
+
+fn is_alpha(c: String) -> Bool {
+  // 字母的判定交给宿主：它已经有 Unicode 的属性表，而语言自己带一份副本只会与它渐渐分叉。
+  // 这一步是「用母语写这门语言」的前提——中文、日文、谚文的名字在词法里得先算一个标识符。
+  return is_letter(c)
+}
+
+fn is_digit(c: String) -> Bool {
+  return in_set(c, digits(), 0)
+}
+
+fn is_ident_start(c: String) -> Bool {
+  // 字母由宿主判定，下划线是标识符自己的字符（\p{L} 并不包含它）。
+  return is_letter(c) || c == "_"
+}
+
+fn is_ident_char(c: String) -> Bool {
+  // 组合记号也属于标识符：café 的两种写法都是同一个名字的候选（归一是下一步）。
+  return is_letter(c) || is_mark(c) || is_digit(c) || c == "_"
+}
+
+fn is_space(c: String) -> Bool {
+  return c == " " || c == "\t" || c == "\r"
+}
+
+// 跳过空白、换行与行注释，返回下一个有意义字符的位置。
+fn skip_ws(s: String, i: Int) -> Int {
+  if i >= len(s) { return i }
+  // 换行不再算空白：它是语句的边界，要不要留下由 tokenize 决定。
+  if is_space(s[i]) { return skip_ws(s, i + 1) }
+  if s[i] == "/" && i + 1 < len(s) && s[i + 1] == "/" { return skip_ws(s, skip_to_eol(s, i)) }
+  if s[i] == "/" && i + 1 < len(s) && s[i + 1] == "*" { return skip_ws(s, skip_block(s, i + 2)) }
+  return i
+}
+
+fn skip_to_eol(s: String, i: Int) -> Int {
+  if i >= len(s) { return i }
+  if s[i] == "\n" { return i }
+  return skip_to_eol(s, i + 1)
+}
+
+// 跳过块注释，停在收尾的 */ 之后。不处理嵌套，这条边界写在文件头。
+fn skip_block(s: String, i: Int) -> Int {
+  if i + 1 >= len(s) { return len(s) }
+  if s[i] == "*" && s[i + 1] == "/" { return i + 2 }
+  return skip_block(s, i + 1)
+}
+
+fn slice(s: String, from: Int, to: Int) -> String {
+  if from >= to { return "" }
+  return s[from] + slice(s, from + 1, to)
+}
+
+fn starts_with(s: String, from: Int, p: String, k: Int) -> Bool {
+  if k >= len(p) { return true }
+  if from + k >= len(s) { return false }
+  if s[from + k] != p[k] { return false }
+  return starts_with(s, from, p, k + 1)
+}
+
+// 读一个标识符。返回 {next, text}。
+fn read_ident(s: String, i: Int, acc: String) -> Int {
+  if i >= len(s) { return {next: i, text: acc} }
+  if is_ident_char(s[i]) { return read_ident(s, i + 1, acc + s[i]) }
+  return {next: i, text: acc}
+}
+
+fn is_hex_char(c: String) -> Bool {
+  return is_digit(c) || in_set(c, "abcdefABCDEF", 0)
+}
+
+// 进制字面量：0x / 0b / 0o 之后一律按十六进制字符集读下去。
+fn read_based(s: String, i: Int, acc: String) -> Int {
+  if i >= len(s) { return {next: i, text: acc} }
+  if is_hex_char(s[i]) { return read_based(s, i + 1, acc + s[i]) }
+  return {next: i, text: acc}
+}
+
+// 读一个数字（整数与小数都用同一段字面量，带下划线分隔也算）。
+fn read_number(s: String, i: Int, acc: String) -> Int {
+  if i >= len(s) { return {next: i, text: acc} }
+  if is_digit(s[i]) || s[i] == "_" { return read_number(s, i + 1, acc + s[i]) }
+  // 小数点后面紧跟数字时，它属于这个字面量；否则句点是标点
+  if s[i] == "." && i + 1 < len(s) && is_digit(s[i + 1]) { return read_number(s, i + 1, acc + ".") }
+  return {next: i, text: acc}
+}
+
+// 读一个字符串，停在收尾的引号上；内容保留原文。
+fn read_string(s: String, i: Int, acc: String) -> Int {
+  if i >= len(s) { return {next: i, text: acc, closed: false} }
+  if s[i] == "\"" { return {next: i + 1, text: acc, closed: true} }
+  if s[i] == "\n" { return {next: i, text: acc, closed: false} }
+  return read_string(s, i + 1, acc + s[i])
+}
+
+// 读一个标点：先看两字符的组合，再看单字符。
+fn read_punct(s: String, i: Int) -> Int {
+  let two = "-> => == != <= >= && ||"
+  let k = 0
+  return read_punct_two(s, i, two, k)
+}
+
+fn read_punct_two(s: String, i: Int, two: String, k: Int) -> Int {
+  if k + 1 >= len(two) { return {next: i + 1, text: s[i] + ""} }
+  let candidate = two[k] + two[k + 1]
+  if two[k] == " " { return read_punct_two(s, i, two, k + 1) }
+  if starts_with(s, i, candidate, 0) { return {next: i + 2, text: candidate} }
+  return read_punct_two(s, i, two, k + 2)
+}
+
+// 主循环：读一个 token，再递归读剩下的。层数等于 token 数。
+// 跳过空白、注释，以及（只在不保留换行时）换行本身。
+// 这一点很要紧：若让 tokenize 逐个消费换行，每一行都会多占一层递归，
+// 一百行的片段就会顶到调用深度上限——同一条边界测试正是这样被撞出来的。
+fn skip_trivia(s: String, i: Int, keep_lines: Bool) -> Int {
+  if i >= len(s) { return i }
+  if is_space(s[i]) { return skip_trivia(s, i + 1, keep_lines) }
+  if s[i] == "\n" && !keep_lines { return skip_trivia(s, i + 1, keep_lines) }
+  if s[i] == "/" && i + 1 < len(s) && s[i + 1] == "/" { return skip_trivia(s, skip_to_eol(s, i), keep_lines) }
+  if s[i] == "/" && i + 1 < len(s) && s[i + 1] == "*" { return skip_trivia(s, skip_block(s, i + 2), keep_lines) }
+  return i
+}
+
+fn tokenize(s: String, at: Int, acc: Int, keep_lines: Bool) -> Int {
+  let i = skip_trivia(s, at, keep_lines)
+  if i >= len(s) { return acc }
+  if s[i] == "\n" {
+    // 到这里只能是「保留换行」，不保留的情形已在上面被吃掉
+    return tokenize(s, i + 1, acc + ({kind: "newline", text: "\n"},), keep_lines)
+  }
+
+  // r"..." 是一个字符串，不是「标识符 r 加一个字符串」
+  if (s[i] == "r" || s[i] == "R") && i + 1 < len(s) && s[i + 1] == "\"" {
+    let raw = read_string(s, i + 2, "")
+    return tokenize(s, raw.next, acc + ({kind: "string", text: raw.text},), keep_lines)
+  }
+  if is_ident_start(s[i]) {
+    let got = read_ident(s, i, "")
+    return tokenize(s, got.next, acc + ({kind: "ident", text: nfc(got.text)},), keep_lines)
+  }
+  if is_digit(s[i]) {
+    if s[i] == "0" && i + 1 < len(s) && (s[i + 1] == "x" || s[i + 1] == "X" || s[i + 1] == "b" || s[i + 1] == "B" || s[i + 1] == "o" || s[i + 1] == "O") {
+      let based = read_based(s, i + 2, slice(s, i, i + 2))
+      return tokenize(s, based.next, acc + ({kind: "int", text: based.text},), keep_lines)
+    }
+    let got = read_number(s, i, "")
+    return tokenize(s, got.next, acc + ({kind: "int", text: got.text},), keep_lines)
+  }
+  if s[i] == "\"" {
+    let got = read_string(s, i + 1, "")
+    return tokenize(s, got.next, acc + ({kind: "string", text: got.text},), keep_lines)
+  }
+  let got = read_punct(s, i)
+  return tokenize(s, got.next, acc + ({kind: "punct", text: got.text},), keep_lines)
+}
+
+fn scan(text: String) -> Int {
+  return tokenize(text, 0, (), false)
+}
+
+// 保留换行的入口：语句边界由此而来。旧入口保持原样，六处既有对拍不受影响。
+fn scan_lines(text: String) -> Int {
+  return tokenize(text, 0, (), true)
+}
+
+fn main() -> Int {
+  let demo = "let x = 1 + 2\n// 注释\nfn f(a: Int) -> Int { return a }"
+  return len(scan(demo))
+}

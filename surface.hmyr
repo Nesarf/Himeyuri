@@ -1,0 +1,126 @@
+// 表面：一个可绘制的东西。
+//
+// 主窗口是一张大表面，每个子窗口是一张自己的表面。这一层只做纯数据：
+// 表面有名字、宽高、位置，以及一张字符画布——与 term 那套画布同一个表示。
+//
+// 于是「主窗口里多开子窗口」在还没有真窗口之前就能先跑起来：
+// 合成规则与将来真窗口要走的规则完全一样，只是画布是字符而不是像素。
+//
+// 依赖写清楚：画布、换行、贴行都来自 term.hmyr。
+
+import "./term.hmyr"
+import "./task.hmyr"
+
+fn 新表面(名: String, 行: Int, 列: Int) -> Int {
+  return {name: 名, rows: 行, cols: 列, x: 0, y: 0, owner: -1, 布: 空画布(行, 列)}
+}
+
+// 放它在主表面上的位置。位置是表面自己的属性，所以改位置要重建一个记录——
+// 这门语言的 let 不可变，而这样正好避免了「两个地方各记一份坐标」。
+fn 放(表面: Int, x: Int, y: Int) -> Int {
+  return {name: 表面.name, rows: 表面.rows, cols: 表面.cols, x: x, y: y, owner: 表面.owner, 布: 表面.布}
+}
+
+// 把它挂到一个任务下。owner 为 -1 表示它不属于任何任务（主表面就是这样）。
+fn 归主(表面: Int, owner: Int) -> Int {
+  return {name: 表面.name, rows: 表面.rows, cols: 表面.cols, x: 表面.x, y: 表面.y, owner: owner, 布: 表面.布}
+}
+
+// 在表面里写一行字，从指定列开始。越界交给贴行处理：它按起点消费片段。
+fn 写(表面: Int, 行号: Int, 列号: Int, 文字: String) -> Int {
+  if 行号 < 0 || 行号 >= 表面.rows { return 表面 }
+  return {name: 表面.name, rows: 表面.rows, cols: 表面.cols, x: 表面.x, y: 表面.y, owner: 表面.owner,
+          布: 换行(表面.布, 行号, 贴行(表面.布[行号], 文字, 列号))}
+}
+
+// 把一张子表面的每一行贴到主布上；越界的行直接跳过。
+// 后贴的盖住先贴的——与场景栈同一个次序，于是「字幕叠在背景上」那套经验照用。
+fn 贴从(布: Int, 子: Int, i: Int) -> Int {
+  if i >= len(子.布) { return 布 }
+  let 目标行 = 子.y + i
+  if 目标行 < 0 || 目标行 >= len(布) { return 贴从(布, 子, i + 1) }
+  return 贴从(换行(布, 目标行, 贴行(布[目标行], 子.布[i], 子.x)), 子, i + 1)
+}
+
+fn 合成(布: Int, 子们: Int, i: Int) -> Int {
+  if i >= len(子们) { return 布 }
+  return 合成(贴从(布, 子们[i], 0), 子们, i + 1)
+}
+
+// 在场：owner 为 -1（主表面）或那个 owner 还在任务树里。
+//
+// 这是「关掉子窗口，画面就没了」的全部实现——不是把表面删掉，而是合成时过滤掉。
+// 与任务树那边「取消是子树查询，不是删数据」同一个立场。
+fn 在场从(表: Int, 树: Int, i: Int, acc: Int) -> Int {
+  if i >= len(表) { return acc }
+  let 一 = 表[i]
+  if 一.owner < 0 { return 在场从(表, 树, i + 1, acc + (一,)) }
+  if 有id(树, 一.owner) { return 在场从(表, 树, i + 1, acc + (一,)) }
+  return 在场从(表, 树, i + 1, acc)
+}
+
+fn 在场(表: Int, 树: Int) -> Int {
+  return 在场从(表, 树, 0, ())
+}
+
+// 合成的另一条入口：只贴在场的那些。真窗口将来照抄这一条就够了。
+fn 合成在场(布: Int, 表: Int, 树: Int) -> Int {
+  return 合成(布, 在场(表, 树), 0)
+}
+
+// 合成一整帧：清屏、归位、逐行写出。与 term 的 画一帧 同一件事，
+// 只是这里的布可能由好几张表面叠成。
+fn 画表面(布: Int) -> String {
+  return 清屏() + 归位() + 画行(布, 0)
+}
+
+// ---- 呈现后端 ----
+//
+// 程序只认「布」与「呈现」，而「呈现到哪里」由后端决定。
+// 现在只有一个后端：字符终端。将来多一个真窗口，程序不用改一行。
+fn 后端名() -> String {
+  return "term"
+}
+
+fn 呈现(后端: String, 布: Int) -> String {
+  if 后端 == "term" { return 画表面(布) }
+  return "错：没有这个后端：" + 后端
+}
+
+// 脚本路径与颜色那条桥一样：写在一个地方，调用处不必知道绝对路径。
+fn 脚本路径() -> String {
+  return "E:/himeyuri/deps/surface/win.ps1"
+}
+
+// 呈现到某个后端，并且**会真的动世界**（native 要起一个进程）。
+// 与上面的 呈现 分开：那一个是纯的，只交出字符串；这一个要 process 效果。
+fn 呈现进程(后端: String, 布: Int, 文字: String) -> Int effects(process) {
+  if 后端 == "term" { return {ok: true, text: 呈现("term", 布)} }
+  if 后端 == "native" {
+    let r = run_program("powershell", ("-NoProfile", "-STA", "-File", 脚本路径(),
+      "-Width", "640", "-Height", "400", "-Text", 文字, "-NoShow"), 20000, "utf8")
+    return {ok: true, text: "退出码 " + str(r.code) + " · " + r.stdout}
+  }
+  return {ok: false, text: "没有这个后端：" + 后端}
+}
+
+// 呈现一张图像（像素布导出的 PNG）。与 呈现进程 分开一个入口，
+// 因为它们的参数不同：一个是「一段文字」，一个是「一个文件」。
+fn 呈现图像(后端: String, 图像路径: String) -> Int effects(process) {
+  if 后端 == "native" {
+    let r = run_program("powershell", ("-NoProfile", "-STA", "-File", 脚本路径(),
+      "-Image", 图像路径, "-NoShow"), 20000, "utf8")
+    return {ok: r.code == 0, text: r.stdout + r.stderr}
+  }
+  return {ok: false, text: "这个后端还不呈现图像：" + 后端}
+}
+
+fn main() -> Int effects(process) {
+  let 主 = 空画布(6, 24)
+  let a = 写(放(新表面("A", 2, 10), 1, 1), 0, 0, "子窗口 A")
+  let b = 写(放(新表面("B", 2, 10), 12, 3), 0, 0, "子窗口 B")
+  let 成 = 合成(主, (a, b), 0)
+  print("合成之后（主 6 行 24 列，两张子表面各 2 行 10 列）：\n")
+  print(成[1] + "\n" + 成[3] + "\n")
+  return 0
+}

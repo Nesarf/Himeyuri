@@ -1,0 +1,60 @@
+// 语言档案：中日英三套（四份，因为中文给了两种编码）。
+//
+// 数据放在这里，规矩写在 design/LOCALES.txt。宿主只管两件事：
+// 「环境说现在该是哪一套」与「当前选中的是哪一套」——它不知道档案里有什么。
+//
+// 这一层最要紧的一条规矩：**档案绝不影响语法与求值**。它只作用于输入输出边界与
+// 人类可读文本。所以下面这些字段都是给边界用的，没有一个是给求值器用的。
+
+fn 档案表() -> Int {
+  return (
+    ("zh-CN.gbk", "Han", "gbk", "gbk", "中文", false),
+    ("zh-CN.utf8", "Han", "utf8", "utf8", "中文", false),
+    ("ja-JP.shift_jis", "Kana", "shift_jis", "shift_jis", "日本語", false),
+    ("en-US.utf8", "Latin", "utf8", "utf8", "English", false),
+  )
+}
+
+fn 找档案从(表: Int, 名字: String, i: Int) -> Int {
+  if i >= len(表) { return () }
+  if 表[i][0] == 名字 { return 表[i] }
+  return 找档案从(表, 名字, i + 1)
+}
+
+fn 找档案(名字: String) -> Int {
+  return 找档案从(档案表(), 名字, 0)
+}
+
+// 档案名 -> 它的输入输出编码。找不到就返回空串，由调用方决定怎么办（不猜）。
+fn 档案的编码(名字: String) -> String {
+  let 一个 = 找档案(名字)
+  if len(一个) == 0 { return "" }
+  return 一个[3]
+}
+
+fn 档案的文字(名字: String) -> String {
+  let 一个 = 找档案(名字)
+  if len(一个) == 0 { return "" }
+  return 一个[1]
+}
+
+fn 档案的说法(名字: String) -> String {
+  let 一个 = 找档案(名字)
+  if len(一个) == 0 { return "" }
+  return 一个[4]
+}
+
+// 当前是哪一套：宿主记住的那个名字；还没选过就由环境决定。
+fn 当前档案() -> String { return locale_current() }
+
+// 切换档案：名字必须在表里，否则宿主会报 HMYR-R0205（不悄悄退回默认）。
+fn 切换档案(名字: String) -> String { return locale_set(名字) }
+
+// 环境说该是哪一套（可能为空，表示环境说的那套我们还没有档案）。
+fn 环境档案() -> String { return locale_env() }
+
+fn main() -> Int {
+  let 表 = 档案表()
+  print("档案 " + str(len(表)) + " 套；当前是 " + 当前档案() + "\n")
+  return 0
+}

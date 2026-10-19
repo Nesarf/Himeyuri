@@ -1,0 +1,124 @@
+// 像素布：宽、高、以及一张颜色码的行。
+//
+// 与字符布（term 那套）是两种东西：那一层画字，这一层画颜色。
+// 而这一层也只做纯数据，于是「往某处写一块颜色」可以逐点断言。
+//
+// 表示：颜色码是整数，按 0xRRGGBB 打包（0 就是黑）。
+// 布是 {w, h, 行们}；行们是元组，每行是 w 个颜色码的元组。
+// 「导出成 PNG」不在这里：那要动世界，交给一个子进程（与 native 后端同一个做法）。
+
+fn 空行从(列: Int, i: Int, acc: Int) -> Int {
+  if i >= 列 { return acc }
+  return 空行从(列, i + 1, acc + (0,))
+}
+
+fn 空行(列: Int) -> Int {
+  return 空行从(列, 0, ())
+}
+
+fn 空行们从(行: Int, 列: Int, i: Int, acc: Int) -> Int {
+  if i >= 行 { return acc }
+  return 空行们从(行, 列, i + 1, acc + (空行(列),))
+}
+
+fn 空行们(行: Int, 列: Int) -> Int {
+  return 空行们从(行, 列, 0, ())
+}
+
+fn 新布(宽: Int, 高: Int) -> Int {
+  return {w: 宽, h: 高, 行们: 空行们(高, 宽)}
+}
+
+// 换掉一行的第 x 列。深度等于行宽，所以很宽的布会先撞上调用深度上限——
+// 这是刻意的：与其悄悄画歪，不如报出来。
+fn 换点从(行: Int, x: Int, 色: Int, i: Int, acc: Int) -> Int {
+  if i >= len(行) { return acc }
+  if i == x { return 换点从(行, x, 色, i + 1, acc + (色,)) }
+  return 换点从(行, x, 色, i + 1, acc + (行[i],))
+}
+
+fn 换行们从(布: Int, y: Int, 新行: Int, i: Int, acc: Int) -> Int {
+  if i >= len(布.行们) { return acc }
+  if i == y { return 换行们从(布, y, 新行, i + 1, acc + (新行,)) }
+  return 换行们从(布, y, 新行, i + 1, acc + (布.行们[i],))
+}
+
+// 写一个点。越界就原样交回——不报错，因为「画到边界外」在绘图里是常态。
+fn 写点(布: Int, x: Int, y: Int, 色: Int) -> Int {
+  if x < 0 || x >= 布.w || y < 0 || y >= 布.h { return 布 }
+  return {w: 布.w, h: 布.h, 行们: 换行们从(布, y, 换点从(布.行们[y], x, 色, 0, ()), 0, ())}
+}
+
+// 填一条横线。用 while 而不是递归：一条线可能很长，而深度不该跟着长度长。
+fn 填横(布: Int, x: Int, y: Int, 长: Int, 色: Int) -> Int {
+  var 布 = 布
+  var i = 0
+  while i < 长 {
+    布 = 写点(布, x + i, y, 色)
+    i = i + 1
+  }
+  return 布
+}
+
+// 填一个矩形。
+fn 填矩形(布: Int, x: Int, y: Int, 宽: Int, 高: Int, 色: Int) -> Int {
+  var 布 = 布
+  var i = 0
+  while i < 高 {
+    布 = 填横(布, x, y + i, 宽, 色)
+    i = i + 1
+  }
+  return 布
+}
+
+fn 取点(布: Int, x: Int, y: Int) -> Int {
+  if x < 0 || x >= 布.w || y < 0 || y >= 布.h { return -1 }
+  return 布.行们[y][x]
+}
+
+// 导出成文本：一行一行，每行用逗号分开的颜色码。
+// 交给子进程去变成 PNG——这一层不碰文件，也不碰图像库。
+fn 行文字从(行: Int, i: Int, acc: String) -> String {
+  if i >= len(行) { return acc }
+  if i == 0 { return 行文字从(行, 1, str(行[0])) }
+  return 行文字从(行, i + 1, acc + "," + str(行[i]))
+}
+
+fn 行文字(行: Int) -> String {
+  return 行文字从(行, 0, "")
+}
+
+fn 成文本从(布: Int, i: Int, acc: String) -> String {
+  if i >= len(布.行们) { return acc }
+  return 成文本从(布, i + 1, acc + 行文字(布.行们[i]) + "\n")
+}
+
+fn 成文本(布: Int) -> String {
+  return "w " + str(布.w) + "\n" + "h " + str(布.h) + "\n" + 成文本从(布, 0, "")
+}
+
+// ---- 导出 ----
+//
+// 两件事都要动世界：写一个中间文本（file），再让子进程把它变成 PNG（process）。
+// 所以这一个函数声明两个效果——它确实两个都用。
+
+fn 解释器() -> String {
+  return "E:/DaShaoHuo/Python-managed/bin/python.exe"
+}
+
+fn 导出脚本() -> String {
+  return "E:/himeyuri/deps/surface/png.py"
+}
+
+fn 导出(布: Int, 中间文本: String, 目标: String) -> Int effects(process, file) {
+  write_text(中间文本, 成文本(布), "utf8")
+  let r = run_program(解释器(), (导出脚本(), 中间文本, 目标), 30000, "utf8")
+  return {ok: r.code == 0, text: r.stdout + r.stderr}
+}
+
+fn main() -> Int {
+  let 布 = 填矩形(新布(8, 6), 1, 1, 4, 3, 16711680)
+  print("尺寸 " + str(布.w) + "x" + str(布.h) + "\n")
+  print("左上 " + str(取点(布, 0, 0)) + " · 矩形里 " + str(取点(布, 2, 2)) + "\n")
+  return 0
+}

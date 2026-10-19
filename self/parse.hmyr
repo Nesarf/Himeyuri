@@ -1,0 +1,126 @@
+// 用 Himeyuri 写的第三件前端部件：一个表达式解析器。
+//
+// 深度是**先安排好的**，不是碰巧够用：优先级只有「加减」与「乘除」两级，加原子一层，
+// 括号嵌套按嵌套深度增长。解析单个表达式时，深度是常数；这与前两件（每个 token 一层）不同，
+// 所以它不会碰到调用深度上限。
+//
+// 形状与 JS 版解析器对齐，只保留结构：
+//   {kind: "num", text}         整数（原文）
+//   {kind: "name", text}        标识符
+//   {kind: "bin", op, left, right}
+// 对拍时 JS 侧做同样的映射，行号一类的位置信息两边都不带。
+//
+// 自足：模块系统还没有，工具函数在这里重写一份。
+// 边界写在明处：只认 + - * / % 与括号，不认一元负号，不认比较与逻辑运算。
+
+fn digits() -> String {
+  return "0123456789"
+}
+
+fn letters() -> String {
+  return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
+}
+
+fn in_set(ch: String, set: String, i: Int) -> Bool {
+  if i >= len(set) { return false }
+  if ch == set[i] { return true }
+  return in_set(ch, set, i + 1)
+}
+
+fn is_digit_c(c: String) -> Bool {
+  return in_set(c, digits(), 0)
+}
+
+fn is_alpha_c(c: String) -> Bool {
+  return in_set(c, letters(), 0)
+}
+
+fn is_ident_c(c: String) -> Bool {
+  return is_alpha_c(c) || is_digit_c(c)
+}
+
+fn skip_sp(s: String, i: Int) -> Int {
+  if i >= len(s) { return i }
+  if s[i] == " " || s[i] == "\t" { return skip_sp(s, i + 1) }
+  return i
+}
+
+fn read_num(s: String, i: Int, acc: String) -> Int {
+  if i >= len(s) { return {next: i, text: acc} }
+  if is_digit_c(s[i]) { return read_num(s, i + 1, acc + s[i]) }
+  return {next: i, text: acc}
+}
+
+fn read_name(s: String, i: Int, acc: String) -> Int {
+  if i >= len(s) { return {next: i, text: acc} }
+  if is_ident_c(s[i]) { return read_name(s, i + 1, acc + s[i]) }
+  return {next: i, text: acc}
+}
+
+// 原子：括号、整数、标识符。括号里的解析回到最低优先级那一层。
+fn parse_atom(s: String, i: Int) -> Int {
+  let j = skip_sp(s, i)
+  if j >= len(s) { return {node: {kind: "err", text: ""}, next: j} }
+  let c = s[j]
+  if c == "(" {
+    let inner = parse_add(s, j + 1)
+    let k = skip_sp(s, inner.next)
+    if k < len(s) && s[k] == ")" { return {node: inner.node, next: k + 1} }
+    return {node: inner.node, next: k}
+  }
+  if is_digit_c(c) {
+    let got = read_num(s, j, "")
+    return {node: {kind: "num", text: got.text}, next: got.next}
+  }
+  if is_alpha_c(c) {
+    let got = read_name(s, j, "")
+    return {node: {kind: "name", text: got.text}, next: got.next}
+  }
+  return {node: {kind: "err", text: c}, next: j + 1}
+}
+
+// 乘除一层：左结合，靠尾递归累积，层数不随运算个数增长。
+fn mul_tail(s: String, i: Int, left: Int) -> Int {
+  let j = skip_sp(s, i)
+  if j >= len(s) { return {node: left, next: j} }
+  let c = s[j]
+  if c == "*" || c == "/" || c == "%" {
+    let right = parse_atom(s, j + 1)
+    return mul_tail(s, right.next, {kind: "bin", op: c, left: left, right: right.node})
+  }
+  return {node: left, next: j}
+}
+
+fn parse_mul(s: String, i: Int) -> Int {
+  let left = parse_atom(s, i)
+  return mul_tail(s, left.next, left.node)
+}
+
+// 加减一层：同样左结合。
+fn add_tail(s: String, i: Int, left: Int) -> Int {
+  let j = skip_sp(s, i)
+  if j >= len(s) { return {node: left, next: j} }
+  let c = s[j]
+  if c == "+" || c == "-" {
+    let right = parse_mul(s, j + 1)
+    return add_tail(s, right.next, {kind: "bin", op: c, left: left, right: right.node})
+  }
+  return {node: left, next: j}
+}
+
+fn parse_add(s: String, i: Int) -> Int {
+  let left = parse_mul(s, i)
+  return add_tail(s, left.next, left.node)
+}
+
+// 宿主入口：解析一个表达式，返回 {node, next}。
+fn parse(text: String) -> Int {
+  return parse_add(text, 0)
+}
+
+fn main() -> Int {
+  let tree = parse("1 + 2 * 3")
+  print(tree.node.op)
+  print(tree.node.right.op)
+  return 0
+}

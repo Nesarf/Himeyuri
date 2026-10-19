@@ -1,0 +1,61 @@
+// 邮箱：任务之间传值的唯一通道。
+//
+// 这一层是纯数据：一个名字、一个容量、以及一个队列。
+// 「任务之间不共享可变内存，通信靠消息」这条规矩在这里的落点是：
+// 发送是拷一份进队列，收取是拷一份出来，两边的邮箱互不指涉——
+// 因为这一层里根本没有「引用」这种东西。
+//
+// 为什么不一次做到底：真的线程要等运行时那一层。而先把四条钉住，
+// 将来换真的通道时行为不会变：
+//   一、有界（容量由创建者给）
+//   二、先进先出
+//   三、满则拒绝（不丢最旧的、不悄悄扩容——那两种做法都会让背压消失）
+//   四、空则如实说空（空队列不是错误，是一个事实）
+
+fn 新邮箱(名: String, 容量: Int) -> Int {
+  return {name: 名, cap: 容量, queue: ()}
+}
+
+fn 长度(邮箱: Int) -> Int {
+  return len(邮箱.queue)
+}
+
+fn 满(邮箱: Int) -> Bool {
+  if 邮箱.cap <= 0 { return true }
+  return len(邮箱.queue) >= 邮箱.cap
+}
+
+// 发送：满就拒绝，交回 {ok: false, box: 原样}。调用方据此决定是等、是丢、还是另想办法——
+// 而「拒绝」这件事必须由调用方看见，不能让发送悄悄失败。
+fn 发送(邮箱: Int, 值: Int) -> Int {
+  if 满(邮箱) { return {ok: false, box: 邮箱} }
+  return {ok: true, box: {name: 邮箱.name, cap: 邮箱.cap, queue: 邮箱.queue + (值,)}}
+}
+
+// 去掉第一个元素。深度等于队列长度。
+fn 取余从(队: Int, i: Int, acc: Int) -> Int {
+  if i >= len(队) { return acc }
+  if i == 0 { return 取余从(队, i + 1, acc) }
+  return 取余从(队, i + 1, acc + (队[i],))
+}
+
+fn 取余(队: Int) -> Int {
+  return 取余从(队, 0, ())
+}
+
+// 收取：空就交回 {got: false}，而不是报错。
+fn 收取(邮箱: Int) -> Int {
+  if len(邮箱.queue) == 0 { return {got: false, box: 邮箱, value: ()} }
+  return {got: true, box: {name: 邮箱.name, cap: 邮箱.cap, queue: 取余(邮箱.queue)}, value: 邮箱.queue[0]}
+}
+
+fn 名字(邮箱: Int) -> String {
+  return 邮箱.name
+}
+
+fn main() -> Int {
+  var 箱 = 新邮箱("inbox", 2)
+  let 一 = 发送(箱, 10)
+  print("第一个进去：" + str(一.ok) + " · 长度 " + str(长度(一.box)) + "\n")
+  return 0
+}

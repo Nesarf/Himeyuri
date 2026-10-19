@@ -1,0 +1,133 @@
+// shell 的内建命令：只做「认法」，不做执行。
+//
+// 一行文本进，一个判定出：这行想做什么、参数是什么、还是根本不认识。
+// 于是每条命令的认法都能被断言，而真正的执行（改目录、退出）属于调用方——
+// 它得自己去申请效果，而不是让这一层悄悄动世界。
+//
+// 判定有四种：
+//   {kind: "empty"}                       空行或全空白
+//   {kind: "builtin", name: ..., arg: ...}  是内建，arg 是命令名之后的部分（原样用单个空格连起来）
+//   {kind: "unknown", name: ...}           不是内建，交出去（可能是外部程序，也可能敲错了）
+//   {kind: "err", text: ...}               连命令名都读不出来
+
+// 切词：按空白切开，连续空白当一个，首尾空白丢掉。深度等于行长。
+fn 切词从(行: String, i: Int, 当前: String, 词表: Int) -> Int {
+  if i >= len(行) {
+    if 当前 == "" { return 词表 }
+    return 词表 + (当前,)
+  }
+  let c = 行[i]
+  if c == " " || c == "\t" {
+    if 当前 == "" { return 切词从(行, i + 1, "", 词表) }
+    return 切词从(行, i + 1, "", 词表 + (当前,))
+  }
+  return 切词从(行, i + 1, 当前 + c, 词表)
+}
+
+fn 切词(行: String) -> Int {
+  return 切词从(行, 0, "", ())
+}
+
+// 把从第「从」个词开始的部分用单个空格连起来——参数原样保留它内部的空白处理，
+// 于是 `echo  a   b` 的参数是 `a b`（多空格被切词规则统一了）。
+fn 连从(词表: Int, i: Int, 从: Int, acc: String) -> String {
+  if i >= len(词表) { return acc }
+  if i == 从 { return 连从(词表, i + 1, 从, 词表[i]) }
+  return 连从(词表, i + 1, 从, acc + " " + 词表[i])
+}
+
+fn 连(词表: Int, 从: Int) -> String {
+  return 连从(词表, 从, 从, "")
+}
+
+// 内建清单。加命令只改这一处，认法与帮助文字都跟着变。
+fn 是内建从(名: String, 清单: Int, i: Int) -> Bool {
+  if i >= len(清单) { return false }
+  if 清单[i] == 名 { return true }
+  return 是内建从(名, 清单, i + 1)
+}
+
+fn 内建清单() -> Int {
+  return ("cd", "pwd", "echo", "clear", "help", "exit")
+}
+
+fn 是内建(名: String) -> Bool {
+  return 是内建从(名, 内建清单(), 0)
+}
+
+fn 认命令(行: String) -> Int {
+  let 词 = 切词(行)
+  if len(词) == 0 { return {kind: "empty"} }
+  let 名 = 词[0]
+  if 是内建(名) { return {kind: "builtin", name: 名, arg: 连(词, 1)} }
+  return {kind: "unknown", name: 名}
+}
+
+// 帮助文字：内建清单拼成一行。真正的说明等这一层能读文档再说，
+// 现在只说「有哪些」，不假装自己知道它们怎么用。
+fn 帮助文字从(清单: Int, i: Int, acc: String) -> String {
+  if i >= len(清单) { return acc }
+  if i == 0 { return 帮助文字从(清单, 1, 清单[0]) }
+  return 帮助文字从(清单, i + 1, acc + " " + 清单[i])
+}
+
+fn 帮助文字() -> String {
+  let 清单 = 内建清单()
+  return "内建：" + 帮助文字从(清单, 0, "") + "（其余的交给调用方去执行）"
+}
+
+fn 命令名(判定: Int) -> String {
+  if 判定.kind == "empty" { return "" }
+  if 判定.kind == "err" { return "" }
+  return 判定.name
+}
+
+fn 参数(判定: Int) -> String {
+  if 判定.kind != "builtin" { return "" }
+  return 判定.arg
+}
+
+// ---- 执行层 ----
+//
+// 认法那一层只说「想做什么」，这一层才真的动世界：改目录、给出输出、要求退出。
+// 动世界的地方带着效果声明（effects(process)），而输出与退出只是交回一个判定——
+// 这一层不自己去 print，也不自己去 exit，因为那两件事由调用方决定。
+
+fn 执行(判定: Int) -> Int effects(process) {
+  if 判定.kind == "empty" { return {kind: "nothing"} }
+  if 判定.kind == "unknown" { return {kind: "external", name: 判定.name} }
+  if 判定.kind == "err" { return {kind: "err", text: 判定.text} }
+  let 名 = 判定.name
+  let 参 = 判定.arg
+  if 名 == "cd" { return 执行cd(参) }
+  if 名 == "pwd" { return {kind: "output", text: cwd()} }
+  if 名 == "echo" { return {kind: "output", text: 参} }
+  if 名 == "clear" { return {kind: "output", text: 清屏() + 归位()} }
+  if 名 == "help" { return {kind: "output", text: 帮助文字()} }
+  if 名 == "exit" { return {kind: "exit", code: 退出码(参)} }
+  return {kind: "err", text: "内建清单里有它，但没有实现：" + 名}
+}
+
+// cd：不带参数就回家（宿主给的主目录）。进不去时宿主会报编号，这里不接住它——
+// 接住就变成了「悄悄失败」，那比报错更坏。
+fn 执行cd(参: String) -> Int effects(process) {
+  if 参 == "" { return 执行cd到(home_dir()) }
+  return 执行cd到(参)
+}
+
+fn 执行cd到(目标: String) -> Int effects(process) {
+  return {kind: "nothing", text: chdir(目标)}
+}
+
+// exit 的参数：没有就是零；交给 to_int，它只认整数写法，写歪了就拒绝——不猜。
+fn 退出码(参: String) -> Int {
+  if 参 == "" { return 0 }
+  return to_int(参)
+}
+
+fn main() -> Int {
+  let 判 = 认命令("echo hello world")
+  print(判.kind + " " + 命令名(判) + " [" + 参数(判) + "]\n")
+  print(帮助文字() + "\n")
+  return 0
+}

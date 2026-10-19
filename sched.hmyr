@@ -1,0 +1,100 @@
+// 调度器：轮流让每个任务推进一步。
+//
+// 它不「跑」任务。这门语言没有续延，也没有函数值，所以调度器不调用谁——
+// 它只回答两件事：下一个该轮到谁；某个任务跑完一步之后，怎么记。
+// 于是「交错推进」完全由调用方按轮转顺序做，而调度器本身是纯数据、可逐轮断言。
+//
+// 这与 design/THREADS.txt 那个「一步函数 + 调度一遍」的形状是同一件事：
+// 一步之内跑多长由那个任务自己决定，一步结束就轮到下一个。
+
+fn 空轮() -> Int {
+  return {tasks: (), 下一个位: 0, 轮数: 0}
+}
+
+fn 加(轮: Int, 名: String) -> Int {
+  return {tasks: 轮.tasks + ({name: 名, state: (), done: false, failed: false, steps: 0},),
+          下一个位: 轮.下一个位, 轮数: 轮.轮数}
+}
+
+fn 任务数(轮: Int) -> Int {
+  return len(轮.tasks)
+}
+
+// 从「下一个位」开始往后找第一个还没完成的；都完了就交回 -1。
+// 深度等于任务数——所以一个轮里的任务不该成千上万，这一点写在明处。
+fn 找下一个从(轮: Int, i: Int) -> Int {
+  if i >= len(轮.tasks) { return -1 }
+  let 位 = (轮.下一个位 + i) % len(轮.tasks)
+  if 轮.tasks[位].done == false { return 位 }
+  return 找下一个从(轮, i + 1)
+}
+
+fn 下一个(轮: Int) -> Int {
+  if len(轮.tasks) == 0 { return -1 }
+  return 找下一个从(轮, 0)
+}
+
+fn 名字(轮: Int, 位: Int) -> String {
+  if 位 < 0 || 位 >= len(轮.tasks) { return "" }
+  return 轮.tasks[位].name
+}
+
+fn 状态(轮: Int, 位: Int) -> Int {
+  if 位 < 0 || 位 >= len(轮.tasks) { return () }
+  return 轮.tasks[位].state
+}
+
+fn 完成了(轮: Int, 位: Int) -> Bool {
+  if 位 < 0 || 位 >= len(轮.tasks) { return true }
+  return 轮.tasks[位].done
+}
+
+fn 步数(轮: Int, 位: Int) -> Int {
+  if 位 < 0 || 位 >= len(轮.tasks) { return -1 }
+  return 轮.tasks[位].steps
+}
+
+fn 失败了吗(轮: Int, 位: Int) -> Bool {
+  if 位 < 0 || 位 >= len(轮.tasks) { return false }
+  return 轮.tasks[位].failed
+}
+
+fn 剩余(轮: Int) -> Int {
+  var 数 = 0
+  var i = 0
+  while i < len(轮.tasks) {
+    if 轮.tasks[i].done == false { 数 = 数 + 1 }
+    i = i + 1
+  }
+  return 数
+}
+
+// 换掉第 位 个任务。深度等于任务数。
+fn 换位从(轮: Int, 位: Int, 新: Int, i: Int, acc: Int) -> Int {
+  if i >= len(轮.tasks) { return acc }
+  if i == 位 { return 换位从(轮, 位, 新, i + 1, acc + (新,)) }
+  return 换位从(轮, 位, 新, i + 1, acc + (轮.tasks[i],))
+}
+
+// 记一步：状态换掉、步数加一、完成与失败照实记。
+// 而「下一个位」推到它后面——轮转就是这样来的。
+fn 记(轮: Int, 位: Int, 新状态: Int, 完成: Bool, 失败: Bool) -> Int {
+  if 位 < 0 || 位 >= len(轮.tasks) { return 轮 }
+  let 旧 = 轮.tasks[位]
+  let 新 = {name: 旧.name, state: 新状态, done: 完成, failed: 失败, steps: 旧.steps + 1}
+  return {tasks: 换位从(轮, 位, 新, 0, ()), 下一个位: (位 + 1) % len(轮.tasks), 轮数: 轮.轮数 + 1}
+}
+
+// 取消一个任务：它不再被轮到。而它的子任务由任务树那边负责（task.hmyr 的 取消），
+// 这一层不重复实现那条规矩——两处各管一件事。
+fn 取消(轮: Int, 位: Int) -> Int {
+  return 记(轮, 位, 状态(轮, 位), true, false)
+}
+
+fn main() -> Int {
+  var 轮 = 空轮()
+  轮 = 加(轮, "甲")
+  轮 = 加(轮, "乙")
+  print("两个任务，第一个该轮到：" + 名字(轮, 下一个(轮)) + "\n")
+  return 0
+}

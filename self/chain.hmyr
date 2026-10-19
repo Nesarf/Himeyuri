@@ -1,0 +1,204 @@
+// 用 Himeyuri 写的第五件：吃 token 元组的解析器。
+//
+// 前一件是「两条平行的路」——词法从字符串切 token，语法也从字符串解析，然后两边对一下。
+// 这一件才是链：**输入就是词法的产出**（token 元组），游标是一个整数下标。
+//
+import "./lex.hmyr"
+
+// 上面这行是实话：本文件吃的是 lex 切出来的 token，形状由它定义。
+// 有了模块加载，宿主不必再手工把两个文件塞进同一个求值器了。
+//
+// token 的形状来自 self/lex.hmyr：
+//   {kind: "ident" | "int" | "string" | "punct", text}
+//
+// 深度照旧先安排：加减一层、乘除一层、原子一层，尾循环按项数增长；括号按嵌套增长。
+// 所以它和字符串版一样，碰不到调用深度那道墙。
+//
+// 边界写在明处：只认 + - * / % 与括号；出错时给出 {kind: "err"} 而不猜。
+
+fn is_punct(t: Int, ch: String) -> Bool {
+  return t.kind == "punct" && t.text == ch
+}
+
+// 原子：整数、标识符、括号里的表达式。
+// 后缀层：一个原子之后可以跟调用 f(…) 与下标 x[…]。
+// 它们在语法上同属一层，所以放在一起；深度上每次后缀各占一层，链式调用则有几段占几层。
+fn postfix(tokens: Int, i: Int) -> Int {
+  let base = atom(tokens, i)
+  return postfix_tail(tokens, base.next, base.node)
+}
+
+fn postfix_tail(tokens: Int, i: Int, target: Int) -> Int {
+  if i >= len(tokens) { return {node: target, next: i} }
+  if is_punct(tokens[i], "(") {
+    let got = arg_list(tokens, i + 1, ())
+    return postfix_tail(tokens, got.next, {kind: "call", callee: target, args: got.list})
+  }
+  if is_punct(tokens[i], ".") {
+    if i + 1 < len(tokens) && tokens[i + 1].kind == "ident" {
+      return postfix_tail(tokens, i + 2, {kind: "field", target: target, name: tokens[i + 1].text})
+    }
+    return {node: target, next: i + 1}
+  }
+  if is_punct(tokens[i], "[") {
+    let inner = compare(tokens, i + 1)
+    if inner.next < len(tokens) && is_punct(tokens[inner.next], "]") {
+      return postfix_tail(tokens, inner.next + 1, {kind: "index", target: target, index: inner.node})
+    }
+    return {node: target, next: inner.next}
+  }
+  return {node: target, next: i}
+}
+
+// 实参表：每个实参各自独立递归一次，所以层数是「实参个数」与「实参深度」相加。
+fn arg_list(tokens: Int, i: Int, acc: Int) -> Int {
+  if i >= len(tokens) { return {list: acc, next: i} }
+  if is_punct(tokens[i], ")") { return {list: acc, next: i + 1} }
+  let one = compare(tokens, i)
+  var next = one.next
+  if next < len(tokens) && is_punct(tokens[next], ",") { next = next + 1 }
+  return arg_list(tokens, next, acc + (one.node,))
+}
+
+fn atom(tokens: Int, i: Int) -> Int {
+  if i >= len(tokens) { return {node: {kind: "err", text: ""}, next: i} }
+  let t = tokens[i]
+  if t.kind == "int" { return {node: {kind: "num", text: t.text}, next: i + 1} }
+  if t.kind == "string" { return {node: {kind: "str", text: t.text}, next: i + 1} }
+  if t.kind == "ident" { return {node: {kind: "name", text: t.text}, next: i + 1} }
+  if is_punct(t, "(") { return paren_or_tuple(tokens, i + 1) }
+  if is_punct(t, "{") { return record_of(tokens, i + 1) }
+  return {node: {kind: "err", text: t.text}, next: i + 1}
+}
+
+// (x) 是分组，(x, …) 是元组——含尾逗号的一元组也算元组。
+// 深度：每个元素各自独立递归一次，所以「元素个数」与「元素的深度」相加，不是相乘。
+fn paren_or_tuple(tokens: Int, i: Int) -> Int {
+  if i < len(tokens) && is_punct(tokens[i], ")") { return {node: {kind: "tuple", items: ()}, next: i + 1} }
+  let first = compare(tokens, i)
+  if first.next < len(tokens) && is_punct(tokens[first.next], ",") {
+    return tuple_tail(tokens, first.next + 1, (first.node,))
+  }
+  if first.next < len(tokens) && is_punct(tokens[first.next], ")") {
+    return {node: first.node, next: first.next + 1}
+  }
+  return {node: first.node, next: first.next}
+}
+
+fn tuple_tail(tokens: Int, i: Int, acc: Int) -> Int {
+  if i >= len(tokens) { return {node: {kind: "tuple", items: acc}, next: i} }
+  if is_punct(tokens[i], ")") { return {node: {kind: "tuple", items: acc}, next: i + 1} }
+  let item = compare(tokens, i)
+  var next = item.next
+  if next < len(tokens) && is_punct(tokens[next], ",") { next = next + 1 }
+  return tuple_tail(tokens, next, acc + (item.node,))
+}
+
+// {字段: 值, …}：字段名可以是标识符（词法里关键字也归在标识符一类，
+// 所以 type、pub、effects 这些词在这里天然可用）。
+fn record_of(tokens: Int, i: Int) -> Int {
+  return record_tail(tokens, i, ())
+}
+
+fn record_tail(tokens: Int, i: Int, acc: Int) -> Int {
+  if i >= len(tokens) { return {node: {kind: "record", fields: acc}, next: i} }
+  let t = tokens[i]
+  if is_punct(t, "}") { return {node: {kind: "record", fields: acc}, next: i + 1} }
+  if t.kind != "ident" { return {node: {kind: "err", text: t.text}, next: i + 1} }
+  let name = t.text
+  if i + 1 >= len(tokens) || !is_punct(tokens[i + 1], ":") {
+    return {node: {kind: "err", text: name}, next: i + 1}
+  }
+  let value = compare(tokens, i + 2)
+  var next = value.next
+  if next < len(tokens) && is_punct(tokens[next], ",") { next = next + 1 }
+  return record_tail(tokens, next, acc + ({name: name, value: value.node},))
+}
+
+fn mul_tail(tokens: Int, i: Int, left: Int) -> Int {
+  if i >= len(tokens) { return {node: left, next: i} }
+  let t = tokens[i]
+  if t.kind == "punct" && (t.text == "*" || t.text == "/" || t.text == "%") {
+    let right = postfix(tokens, i + 1)
+    return mul_tail(tokens, right.next, {kind: "bin", op: t.text, left: left, right: right.node})
+  }
+  return {node: left, next: i}
+}
+
+fn mul(tokens: Int, i: Int) -> Int {
+  let left = postfix(tokens, i)
+  return mul_tail(tokens, left.next, left.node)
+}
+
+fn add_tail(tokens: Int, i: Int, left: Int) -> Int {
+  if i >= len(tokens) { return {node: left, next: i} }
+  let t = tokens[i]
+  if t.kind == "punct" && (t.text == "+" || t.text == "-") {
+    let right = mul(tokens, i + 1)
+    return add_tail(tokens, right.next, {kind: "bin", op: t.text, left: left, right: right.node})
+  }
+  return {node: left, next: i}
+}
+
+// 比较层（第 2 级：低于加减的第 3 级，高于尚未实现的两个逻辑层）。
+// 优先级取自语言自己的表（src/parser.mjs 的 PRECEDENCE），不是凭手感排的。
+fn cmp_op(t: Int) -> String {
+  if t.kind != "punct" { return "" }
+  let x = t.text
+  if x == "==" || x == "!=" || x == "<" || x == "<=" || x == ">" || x == ">=" { return x }
+  return ""
+}
+
+fn compare(tokens: Int, i: Int) -> Int {
+  let left = add(tokens, i)
+  return compare_tail(tokens, left.next, left.node)
+}
+
+fn compare_tail(tokens: Int, i: Int, acc: Int) -> Int {
+  if i >= len(tokens) { return {node: acc, next: i} }
+  let op = cmp_op(tokens[i])
+  if op == "" { return {node: acc, next: i} }
+  let right = add(tokens, i + 1)
+  return compare_tail(tokens, right.next, {kind: "bin", op: op, left: acc, right: right.node})
+}
+
+// 一元负号只作用在一个乘除项上，然后这个结果回到加减的尾部继续走——
+// 于是 -5 + 3 读作 (-5) + 3，而不是只解析到 -5 就收工。
+// 一元负号自己也要递归一层，好认得出 --5。
+fn unary_or_mul(tokens: Int, i: Int) -> Int {
+  if i < len(tokens) && is_punct(tokens[i], "-") {
+    let operand = unary_or_mul(tokens, i + 1)
+    return {node: {kind: "unary", op: "-", operand: operand.node}, next: operand.next}
+  }
+  return mul(tokens, i)
+}
+
+fn add(tokens: Int, i: Int) -> Int {
+  let left = unary_or_mul(tokens, i)
+  return add_tail(tokens, left.next, left.node)
+}
+
+// 宿主入口：吃掉一串 token，回一棵树和停下的位置。
+fn chain(tokens: Int) -> Int {
+  return compare(tokens, 0)
+}
+
+// 树上的叶子，方便与词法再对一次。
+fn leaves(tree: Int, acc: Int) -> Int {
+  if tree.kind == "bin" {
+    return leaves(tree.right, leaves(tree.left, acc))
+  }
+  if tree.kind == "num" || tree.kind == "name" {
+    return acc + (tree.text,)
+  }
+  return acc
+}
+
+fn main() -> Int {
+  // 手工造三个 token，验证这条链最小的一步能走
+  let tokens = ({kind: "int", text: "1"}, {kind: "punct", text: "+"}, {kind: "int", text: "2"})
+  let tree = chain(tokens)
+  print(tree.node.op)
+  print(len(leaves(tree.node, ())))
+  return 0
+}

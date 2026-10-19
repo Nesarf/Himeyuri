@@ -1,0 +1,60 @@
+// KPB 的谱、混、音色，用 Himeyuri 写。
+//
+// 这是语言的第一个真用户（规格的 M4）：不追求音乐性，追求「这份数据能被这门语言写出来，
+// 也能被引擎读回去」。所以形状是刻意的——记录给具名字段，元组给定长序列。
+//
+// 两件今天还不成立的事，不藏在这里：
+//   ・类型标注尚未被检查（-> Int 眼下是写给读者看的，不是约束）
+//   ・arena 是三区模型的宿主桩，不是模型本身（design/MEMORY.txt 写了它该成为什么）
+
+fn note(key: Int, start: Int, length: Int) -> Int {
+  // 一个音符：音高、起点、长度（单位是 tick）
+  return (key, start, length)
+}
+
+fn track(name: String, notes: Int) -> Int {
+  return {name: name, notes: notes}
+}
+
+fn strip(name: String, gain: Int, pan: Int) -> Int {
+  return {name: name, gain: gain, pan: pan}
+}
+
+fn main() -> Int {
+  let lead = (
+    note(69, 0, 480),
+    note(71, 480, 480),
+    note(72, 960, 480),
+    note(74, 1440, 480)
+  )
+  let bass = (
+    note(45, 0, 960),
+    note(43, 960, 960)
+  )
+  let drums = (
+    note(36, 0, 120),
+    note(38, 480, 120),
+    note(36, 960, 120),
+    note(38, 1440, 120)
+  )
+
+  let score = {
+    ppq: 480,
+    tempo: 120,
+    title: "湯の岡",
+    tracks: (track("lead", lead), track("bass", bass), track("drums", drums))
+  }
+
+  let mix = {
+    strips: (strip("lead", -3, -20), strip("bass", -6, 0), strip("drums", -1, 0)),
+    master: {gain: -1, ceiling: -1}
+  }
+
+  let timbre = {
+    name: "kohane-lead",
+    engine: "subtractive",
+    params: {cutoff: 4200, resonance: 30, attack: 5, release: 220}
+  }
+
+  return {score: score, mix: mix, timbre: timbre}
+}

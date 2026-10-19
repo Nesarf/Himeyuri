@@ -1,0 +1,167 @@
+// 用 Himeyuri 写的 JSON 解析器：值那一层。
+//
+// 为什么这件事该在语言里做：颜色桥的报告是 JSON，此前要判断「源图带不带 ICC」「损失多大」
+// 都得请宿主代劳——而那是「用别人的语言判定自己产物」的形态。把解析器写进语言之后，
+// 同一份报告可以在 Himeyuri 里被读、被判断、被拒绝。
+//
+// 表示约定（JSON 与 Himeyuri 的类型不对应，所以要说清楚）：
+//   ・JSON 字符串 → Himeyuri 字符串
+//   ・JSON 整数   → Himeyuri 整数
+//   ・JSON 布尔   → Himeyuri 布尔
+//   ・JSON null   → 空元组（这门语言没有 null）
+//   ・JSON 数组   → 元组
+//   ・JSON 对象   → 元组的元组，每项是 (键, 值)
+//      不用记录，因为记录的字段名必须是标识符，而 JSON 的键是任意字符串。
+//
+// 每个值都包一层 {kind: ..., value: ...}，kind 是 "s" / "n" / "b" / "null" / "a" / "o"，
+// 调用方据此分派——于是「这是什么类型」不靠猜。
+//
+// 边界（写在明处，不装作支持）：
+//   ・字符串只认两个转义：\\ 与 \"，其余原样保留
+//   ・数字只认整数（报告里的数都是整数或小数的字符串形式）
+//   ・深度等于嵌套层数加字符串长度，所以极深的文档会先撞上调用深度上限
+
+fn 跳过空白(s: String, i: Int) -> Int {
+  if i >= len(s) { return i }
+  let c = s[i]
+  if c == " " || c == "\n" || c == "\r" || c == "\t" { return 跳过空白(s, i + 1) }
+  return i
+}
+
+fn 是数字字符(c: String) -> Bool {
+  return c == "0" || c == "1" || c == "2" || c == "3" || c == "4" || c == "5" || c == "6" || c == "7" || c == "8" || c == "9"
+}
+
+// 字符串：从开引号之后开始读，认出 \\ 与 \" 两个转义。
+fn 读字符串从(s: String, i: Int, acc: String) -> Int {
+  if i >= len(s) { return ({kind: "err", text: "字符串没有闭合"}, i) }
+  let c = s[i]
+  if c == "\"" { return ({kind: "s", value: acc}, i + 1) }
+  if c == "\\" {
+    if i + 1 >= len(s) { return ({kind: "err", text: "转义不完整"}, i) }
+    return 读字符串从(s, i + 2, acc + s[i + 1])
+  }
+  return 读字符串从(s, i + 1, acc + c)
+}
+
+fn 读字符串(s: String, i: Int) -> Int {
+  return 读字符串从(s, i, "")
+}
+
+// 数字：整数，可带负号。
+// 数字：整数或小数。小数点只认一个，读到别的字符就收工。
+// 整数给 "n"（值是整数），带小数点的给 "f"（值保留原文，免得把 0.969 悄悄读成 0）。
+fn 读数字从(s: String, i: Int, acc: String, 有点: Bool) -> Int {
+  if i >= len(s) { return (收数字(acc), i) }
+  let c = s[i]
+  if 是数字字符(c) { return 读数字从(s, i + 1, acc + c, 有点) }
+  if c == "." && 有点 == false { return 读数字从(s, i + 1, acc + ".", true) }
+  return (收数字(acc), i)
+}
+
+fn 收数字(原文: String) -> Int {
+  if 含点(原文) { return {kind: "f", value: 原文} }
+  return {kind: "n", value: to_int(原文)}
+}
+
+fn 含点从(s: String, i: Int) -> Bool {
+  if i >= len(s) { return false }
+  if s[i] == "." { return true }
+  return 含点从(s, i + 1)
+}
+
+fn 含点(s: String) -> Bool {
+  return 含点从(s, 0)
+}
+
+
+
+
+// 字面量：true / false / null
+fn 读字面量(s: String, i: Int, 字: String, 值: Int) -> Int {
+  if i + len(字) > len(s) { return ({kind: "err", text: "字面量不完整：" + 字}, i) }
+  let 片 = slice(s, i, i + len(字))
+  if 片 != 字 { return ({kind: "err", text: "不认识的词：" + 片}, i) }
+  return (值, i + len(字))
+}
+
+
+
+fn 读值(s: String, i: Int) -> Int {
+  let j = 跳过空白(s, i)
+  if j >= len(s) { return ({kind: "err", text: "没有值"}, j) }
+  let c = s[j]
+  if c == "\"" { return 读字符串(s, j + 1) }
+  if c == "{" { return 读对象(s, j + 1, ()) }
+  if c == "[" { return 读数组(s, j + 1, ()) }
+  if c == "t" { return 读字面量(s, j, "true", ({kind: "b", value: true})) }
+  if c == "f" { return 读字面量(s, j, "false", ({kind: "b", value: false})) }
+  if c == "n" { return 读字面量(s, j, "null", {kind: "null"}) }
+  // 负号要单独吃：读数字从只认数字字符，遇到负号会立刻收工，于是 -7 会变成 0。
+  if c == "-" {
+    let 后半 = 读数字从(s, j + 1, "", false)
+    if 后半[0].kind == "f" { return ({kind: "f", value: "-" + 后半[0].value}, 后半[1]) }
+    return ({kind: "n", value: 0 - 后半[0].value}, 后半[1])
+  }
+  if 是数字字符(c) { return 读数字从(s, j, "", false) }
+  return ({kind: "err", text: "不认识的字符：" + c}, j + 1)
+}
+
+// 数组：[值, 值, ...]——遇到 ] 收工。
+fn 读数组从(s: String, i: Int, acc: Int) -> Int {
+  let j = 跳过空白(s, i)
+  if j >= len(s) { return ({kind: "err", text: "数组没有闭合"}, j) }
+  if s[j] == "]" { return ({kind: "a", value: acc}, j + 1) }
+  if s[j] == "," { return 读数组从(s, j + 1, acc) }
+  let 一个 = 读值(s, j)
+  if 一个[0].kind == "err" { return 一个 }
+  return 读数组从(s, 一个[1], acc + (一个[0],))
+}
+
+fn 读数组(s: String, i: Int, acc: Int) -> Int {
+  return 读数组从(s, i, acc)
+}
+
+// 对象：{"键": 值, ...}——键读成字符串值，再塞进 (键, 值) 的对里。
+fn 读对象从(s: String, i: Int, acc: Int) -> Int {
+  let j = 跳过空白(s, i)
+  if j >= len(s) { return ({kind: "err", text: "对象没有闭合"}, j) }
+  if s[j] == "}" { return ({kind: "o", value: acc}, j + 1) }
+  if s[j] == "," { return 读对象从(s, j + 1, acc) }
+  if s[j] != "\"" { return ({kind: "err", text: "键必须是字符串"}, j) }
+  let 键 = 读字符串(s, j + 1)
+  if 键[0].kind == "err" { return 键 }
+  let k = 跳过空白(s, 键[1])
+  if k >= len(s) || s[k] != ":" { return ({kind: "err", text: "键后面应当是冒号"}, k) }
+  let 值 = 读值(s, k + 1)
+  if 值[0].kind == "err" { return 值 }
+  return 读对象从(s, 值[1], acc + ((键[0].value, 值[0]),))
+}
+
+fn 读对象(s: String, i: Int, acc: Int) -> Int {
+  return 读对象从(s, i, acc)
+}
+
+// 入口：读一段 JSON，交回 (值, 结束位置)。值带着 kind，所以调用方不必猜它是什么。
+fn 解析(s: String) -> Int {
+  return 读值(s, 0)
+}
+
+// 从对象里取一个字段。不是对象、或没有这个键，都返回 err——
+// 调用方据此拒绝，而不是拿默认值顶上。
+fn 字段从(对表: Int, 键: String, i: Int) -> Int {
+  if i >= len(对表) { return {kind: "err", text: "没有字段：" + 键} }
+  if 对表[i][0] == 键 { return 对表[i][1] }
+  return 字段从(对表, 键, i + 1)
+}
+
+fn 字段(对象: Int, 键: String) -> Int {
+  if 对象.kind != "o" { return {kind: "err", text: "不是对象，取不到字段 " + 键} }
+  return 字段从(对象.value, 键, 0)
+}
+
+fn main() -> Int {
+  let 一个 = 解析("{\"a\": 1, \"b\": [true, false]}")[0]
+  print("kind " + 一个.kind + " 字段 " + str(len(一个.value)) + "\n")
+  return 0
+}

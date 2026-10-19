@@ -1,0 +1,100 @@
+// 用 Himeyuri 写的第四件：把前两件串起来用。
+//
+// 模块系统还没有，所以「串起来」在这里是具体的：宿主把 self/lex.hmyr、self/parse.hmyr 与本文件
+// 加载进**同一个求值器**，于是本文件可以直接调用 scan（词法）与 parse（语法）——
+// 函数表是全局的，这正好在缺模块系统时充当了一次连接。
+//
+// 它做的检查是两条路对同一段输入必须说同一件事：
+//   ・词法从表达式里挑出的字面量（整数与标识符）
+//   ・语法树上的叶子（num 与 name 的文本）
+// 两者一一对应，才算这条路真的通了。
+
+fn is_space(c: String) -> Bool {
+  return c == " " || c == "\t"
+}
+
+fn last_non_space(s: String, i: Int) -> Int {
+  if i <= 0 { return 0 }
+  if is_space(s[i - 1]) { return last_non_space(s, i - 1) }
+  return i
+}
+
+fn first_non_space(s: String, i: Int) -> Int {
+  if i >= len(s) { return len(s) }
+  if is_space(s[i]) { return first_non_space(s, i + 1) }
+  return i
+}
+
+fn slice(s: String, from: Int, to: Int) -> String {
+  if from >= to { return "" }
+  return s[from] + slice(s, from + 1, to)
+}
+
+// 取等号之后的部分。
+fn after_eq(s: String, i: Int) -> String {
+  if i >= len(s) { return "" }
+  if s[i] == "=" { return slice(s, i + 1, len(s)) }
+  return after_eq(s, i + 1)
+}
+
+// 从一行里取出表达式：等号之后、两侧去空白。
+fn expression_of(line: String) -> String {
+  let raw = after_eq(line, 0)
+  let from = first_non_space(raw, 0)
+  let to = last_non_space(raw, len(raw))
+  return slice(raw, from, to)
+}
+
+// 语法树上的叶子，按顺序取出来。
+fn leaves(tree: Int, acc: Int) -> Int {
+  if tree.kind == "bin" {
+    return leaves(tree.right, leaves(tree.left, acc))
+  }
+  if tree.kind == "num" || tree.kind == "name" {
+    return acc + (tree.text,)
+  }
+  return acc
+}
+
+// 词法挑出的字面量，按顺序取出来。
+fn literals(tokens: Int, n: Int, acc: Int) -> Int {
+  if n >= len(tokens) { return acc }
+  let t = tokens[n]
+  if t.kind == "int" || t.kind == "ident" {
+    return literals(tokens, n + 1, acc + (t.text,))
+  }
+  return literals(tokens, n + 1, acc)
+}
+
+// 把两条路合到一起：一段源码，交给词法与语法各走一遍。
+fn check(source: String) -> Int {
+  let expr = expression_of(source)
+  let tokens = scan(expr)
+  let tree = parse(expr)
+  return {
+    source: source,
+    expression: expr,
+    tokens: tokens,
+    leaves: leaves(tree.node, ()),
+    literals: literals(tokens, 0, ()),
+    agree: same_list(leaves(tree.node, ()), literals(tokens, 0, ())),
+  }
+}
+
+// 两个元组是否逐项相同。
+fn same_list(a: Int, b: Int) -> Bool {
+  if len(a) != len(b) { return false }
+  return same_each(a, b, 0)
+}
+
+fn same_each(a: Int, b: Int, i: Int) -> Bool {
+  if i >= len(a) { return true }
+  if a[i] != b[i] { return false }
+  return same_each(a, b, i + 1)
+}
+
+fn main() -> Int {
+  let one = check("let x = 12 + 34 * (5 - 6)")
+  print(str(len(one.tokens)) + " token(s), " + str(len(one.leaves)) + " leaf/leaves, agree: " + str(one.agree))
+  return 0
+}

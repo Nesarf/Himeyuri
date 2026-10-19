@@ -1,0 +1,96 @@
+import "./stmt.hmyr"
+
+// 用 Himeyuri 写的第八件：函数体。
+//
+// 它吃的是**保留换行**的 token 流（self/lex.hmyr 里 scan_lines 的产出），于是语句边界终于有了着落：
+// 按换行切开，每条交给 self/stmt.hmyr 的 parse_statement 读成记录。
+//
+// 深度先算好：外层「一条语句一层」（层数等于语句数），而收集一条语句时最多占「这一条自己的 token 数」
+// 那么多层。两者相加而不是相乘，所以一段百来行的体不会碰到调用深度上限。
+
+fn is_punct(t: Int, ch: String) -> Bool {
+  return t.kind == "punct" && t.text == ch
+}
+
+// 体的起点：第一个左花括号。
+fn find_open(tokens: Int, i: Int) -> Int {
+  if i >= len(tokens) { return -1 }
+  if is_punct(tokens[i], "{") { return i }
+  return find_open(tokens, i + 1)
+}
+
+// 收集一条语句的 token。
+//   depth 用来照顾语句内部的嵌套花括号（例如记录字面量）；
+//   顶层的换行表示这一条到此为止；顶层的右花括号表示整个体到此为止。
+fn collect(tokens: Int, i: Int, depth: Int, acc: Int) -> Int {
+  if i >= len(tokens) { return {line: acc, next: i, end: true} }
+  let t = tokens[i]
+  if is_punct(t, "{") { return collect(tokens, i + 1, depth + 1, acc + (t,)) }
+  if is_punct(t, "}") {
+    if depth == 0 { return {line: acc, next: i, end: true} }
+    return collect(tokens, i + 1, depth - 1, acc + (t,))
+  }
+  if t.kind == "newline" {
+    if depth == 0 { return {line: acc, next: i + 1, end: false} }
+    return collect(tokens, i + 1, depth, acc)
+  }
+  return collect(tokens, i + 1, depth, acc + (t,))
+}
+
+// 一条条读下去，直到体的收尾。空行跳过。
+fn each(tokens: Int, i: Int, acc: Int) -> Int {
+  let got = collect(tokens, i, 0, ())
+  if got.end { return {list: acc, next: got.next} }
+  if len(got.line) == 0 { return each(tokens, got.next, acc) }
+  let st = parse_statement(got.line)
+  return each(tokens, got.next, acc + (st.node,))
+}
+
+// 宿主入口：拿整份函数声明的 token 流，读出它的体。
+fn parse_body(tokens: Int) -> Int {
+  let at = find_open(tokens, 0)
+  if at < 0 { return {list: (), next: len(tokens), found: false} }
+  let got = each(tokens, at + 1, ())
+  return {list: got.list, next: got.next, found: true}
+}
+
+// ---- 多声明 ----
+//
+// parse_body 只找**第一个**花括号之后的体；这一层找**所有的** fn。
+// 只认「fn 名字 … { 体 }」这一种声明：参数、返回类型、效果声明都跳过，
+// 因为求值到这一步还用不上它们——用不上的东西不假装认得。
+fn next_fn(tokens: Int, i: Int) -> Int {
+  if i >= len(tokens) { return -1 }
+  let t = tokens[i]
+  if t.kind == "ident" && t.text == "fn" { return i }
+  return next_fn(tokens, i + 1)
+}
+
+fn 名字在(tokens: Int, i: Int) -> String {
+  if i + 1 < len(tokens) && tokens[i + 1].kind == "ident" { return tokens[i + 1].text }
+  return ""
+}
+
+fn decls_from(tokens: Int, i: Int, acc: Int) -> Int {
+  let at = next_fn(tokens, i)
+  if at < 0 { return {fns: acc, next: len(tokens)} }
+  let 名 = 名字在(tokens, at)
+  let open = find_open(tokens, at + 1)
+  if open < 0 { return {fns: acc, next: len(tokens)} }
+  let got = each(tokens, open + 1, ())
+  return decls_from(tokens, got.next, acc + ((名, got.list),))
+}
+
+// 交回 {fns: ((名字, 语句们), …), next}。
+fn parse_decls(tokens: Int) -> Int {
+  return decls_from(tokens, 0, ())
+}
+
+fn main() -> Int {
+  let tokens = ({kind: "punct", text: "{"}, {kind: "ident", text: "let"}, {kind: "ident", text: "x"},
+    {kind: "punct", text: "="}, {kind: "int", text: "1"}, {kind: "newline", text: "\n"},
+    {kind: "ident", text: "return"}, {kind: "ident", text: "x"}, {kind: "punct", text: "}"})
+  let body = parse_body(tokens)
+  print(str(len(body.list)))
+  return 0
+}

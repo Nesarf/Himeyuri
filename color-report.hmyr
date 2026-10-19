@@ -1,0 +1,98 @@
+// 颜色报告在语言里被判定。
+//
+// 此前这份报告只有宿主（Node 或 Python）能读，于是「这份转换可不可接受」这件事
+// 得请别人的语言代劳。现在 json.hmyr 把值那一层写进了 Himeyuri，这里就把判定也搬过来：
+// 读报告、取字段、算三段的最大色差、给出结论。
+//
+// 报告的形状（由 deps/color/bridge.py 写出）：
+//   { "engine": {...}, "changed_fraction": 0.969, "delta_e76": { "暗部": {...}, "中间": {...}, "高光": {...} },
+//     "image": { "has_icc": true, ... }, "target": { "name": "...", "sha256": "..." } }
+
+
+fn 小数点的位置从(s: String, i: Int) -> Int {
+  if i >= len(s) { return len(s) }
+  if s[i] == "." { return i }
+  return 小数点的位置从(s, i + 1)
+}
+
+fn 小数点的位置(s: String) -> Int {
+  return 小数点的位置从(s, 0)
+}
+
+fn 取整数(对象: Int, 键: String) -> Int {
+  let v = 字段(对象, 键)
+  // 小数（f）只取整数部分——这里每个用途（色差、比例）都接受了这个粗糙度，
+  // 而诚实的做法是把失真写在调用处的注释里，不是悄悄四舍五入。
+  if v.kind == "f" { return to_int(slice(v.value, 0, 小数点的位置(v.value))) }
+  if v.kind != "n" { return -1 }
+  return v.value
+}
+
+fn 取布尔(对象: Int, 键: String) -> Bool {
+  let v = 字段(对象, 键)
+  if v.kind != "b" { return false }
+  return v.value
+}
+
+// 两个里大的那个。这门语言的 let 不可变，所以不拿它当累加变量——
+// 想累加就该用 var，而这里根本不需要可变状态。
+fn 大者(a: Int, b: Int) -> Int {
+  if a > b { return a }
+  return b
+}
+
+// 三段里最大的那个 max 色差（暗部、中间、高光）。
+fn 三段最大(报告: Int) -> Int {
+  let 段 = 字段(报告, "delta_e76")
+  if 段.kind != "o" { return -1 }
+  let a = 取整数(字段(段, "暗部"), "max")
+  let b = 取整数(字段(段, "中间"), "max")
+  let c = 取整数(字段(段, "高光"), "max")
+  return 大者(大者(a, b), c)
+}
+
+// changed_fraction 是 0 到 1 之间的比例。报告里写成小数字符串时，这里只能给出整数部分，
+// 所以调用方若需要精细比较，应当看三段最大色差——那是整数，不会失真。
+fn 改动比例(报告: Int) -> Int {
+  return 取整数(报告, "changed_fraction")
+}
+
+fn 源图带ICC(报告: Int) -> Bool {
+  let 图 = 字段(报告, "image")
+  if 图.kind != "o" { return false }
+  return 取布尔(图, "has_icc")
+}
+
+fn 目标名字(报告: Int) -> String {
+  let 目 = 字段(报告, "target")
+  if 目.kind != "o" { return "" }
+  let 名 = 字段(目, "name")
+  if 名.kind != "s" { return "" }
+  return 名.value
+}
+
+// 判定：整份报告过了阈值就算可接受，否则说清是哪一段最差。
+// 阈值由调用方给，因为「多大色差算看得出来」取决于用途，不该写死在这里。
+fn 可接受(报告: Int, 阈值: Int) -> Bool {
+  let m = 三段最大(报告)
+  if m < 0 { return false }
+  return m <= 阈值
+}
+
+fn 摘要(报告: Int) -> String {
+  let m = 三段最大(报告)
+  let 译 = "最大色变 " + str(m) + "（阈值 2 以内才算看不出来）"
+  if m <= 2 { return "可接受：" + 译 }
+  return "超出阈值：" + 译
+}
+
+fn 读报告(路径: String) -> Int effects(file) {
+  return 解析(read_text(路径, "utf8"))[0]
+}
+
+fn main() -> Int effects(file) {
+  let r = 读报告("E:/DaShaoHuo/cache/tmp/icc-report.json")
+  print(摘要(r) + "\n")
+  print("源图带 ICC：" + str(源图带ICC(r)) + " · 目标：" + 目标名字(r) + "\n")
+  return 0
+}

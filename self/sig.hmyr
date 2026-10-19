@@ -1,0 +1,141 @@
+import "./lex.hmyr"
+
+// 用 Himeyuri 写的第七件：函数声明的签名。
+//
+// 上面那行是实话：这一件读的是词法切出来的 token，所以它依赖 lex.hmyr。
+// （先前漏了它，于是宿主去取 scan 时拿到空值，报错只说「读不到 params」——
+//   一条看起来像内部故障、其实是缺依赖的信息。补上依赖，信息才对得上号。）
+//
+//   [pub] fn 名字 ( 参数… ) [-> 类型] [effects( 效果… )] [函数体]
+//
+// 读成：{kind: "fn", pub, name, params, returns, effects, hasBody}
+//   params  : 元组，每项 {name, type}（own / borrow 这类前缀会被跳过）
+//             字段名就叫 type：语言的字段名位置允许关键字，这条正是自举逼出来的。
+//
+// 一件**故意没做**的事，写在明处：函数体没有被切开。
+// 原因是上一层的边界——self/lex.hmyr 把空白与换行一起丢掉了，而换行正是语句的分界。
+// 所以这里只记「有没有体」，不装出读懂体的样子。要读体，先得让词法把换行作为 token 留下，
+// 那是下一件的前提。
+//
+// 另一条边界：参数里的默认值会被跳过（记录里不保留），返回类型只保留名字与可空标记。
+
+fn is_word(t: Int, w: String) -> Bool {
+  return t.kind == "ident" && t.text == w
+}
+
+fn is_punct(t: Int, ch: String) -> Bool {
+  return t.kind == "punct" && t.text == ch
+}
+
+// 类型：一个标识符，后面可能跟一个可空标记。
+fn type_at(tokens: Int, i: Int) -> String {
+  if i >= len(tokens) { return "" }
+  let name = tokens[i].text
+  if i + 1 < len(tokens) && is_punct(tokens[i + 1], "?") {
+    return name + "?"
+  }
+  return name
+}
+
+// 跳过默认值：从 = 之后一直跳到 , 或 ) 之前。
+fn skip_default(tokens: Int, i: Int) -> Int {
+  if i >= len(tokens) { return i }
+  if is_punct(tokens[i], ",") || is_punct(tokens[i], ")") { return i }
+  return skip_default(tokens, i + 1)
+}
+
+// 参数列表：从 ( 之后开始。
+fn params(tokens: Int, i: Int, acc: Int) -> Int {
+  if i >= len(tokens) { return {list: acc, next: i, closed: false} }
+  let t = tokens[i]
+  if is_punct(t, ")") { return {list: acc, next: i + 1, closed: true} }
+  if is_punct(t, ",") { return params(tokens, i + 1, acc) }
+  if is_word(t, "own") || is_word(t, "borrow") { return params(tokens, i + 1, acc) }
+
+  if t.kind == "ident" {
+    let name = t.text
+    if i + 1 < len(tokens) && is_punct(tokens[i + 1], ":") {
+      let ty = type_at(tokens, i + 2)
+      // after 与 next 都要往前走，所以它们必须是 var——这门语言的 let 不可变。
+      var after = i + 2
+      if after + 1 < len(tokens) && is_punct(tokens[after + 1], "?") { after = after + 1 }
+      var next = after + 1
+      if next < len(tokens) && is_punct(tokens[next], "=") {
+        next = skip_default(tokens, next + 1)
+      }
+      return params(tokens, next, acc + ({name: name, type: ty},))
+    }
+    return params(tokens, i + 1, acc)
+  }
+  return {list: acc, next: i + 1, closed: false}
+}
+
+// 效果列表：effects( 之后。函数名不能叫 effects——它是关键字，所以这里叫 effect_list。
+fn effect_list(tokens: Int, i: Int, acc: Int) -> Int {
+  if i >= len(tokens) { return {list: acc, next: i} }
+  let t = tokens[i]
+  if is_punct(t, ")") { return {list: acc, next: i + 1} }
+  if is_punct(t, ",") { return effect_list(tokens, i + 1, acc) }
+  if t.kind == "ident" { return effect_list(tokens, i + 1, acc + (t.text,)) }
+  return effect_list(tokens, i + 1, acc)
+}
+
+// 主体：签名之后一直读到末尾（体没有被切开，见文件头）。
+fn has_body(tokens: Int, i: Int) -> Bool {
+  if i >= len(tokens) { return false }
+  if is_punct(tokens[i], "{") { return true }
+  return has_body(tokens, i + 1)
+}
+
+// 宿主入口：读一份「函数声明」的 token 流。
+fn read_signature(tokens: Int) -> Int {
+  return signature(tokens, 0, false)
+}
+
+fn signature(tokens: Int, i: Int, is_pub: Bool) -> Int {
+  if i >= len(tokens) { return {kind: "err", text: ""} }
+  let t = tokens[i]
+  if is_word(t, "pub") { return signature(tokens, i + 1, true) }
+  if !is_word(t, "fn") { return {kind: "err", text: t.text} }
+  if i + 1 >= len(tokens) { return {kind: "err", text: "fn"} }
+  let name = tokens[i + 1].text
+  if i + 2 >= len(tokens) || !is_punct(tokens[i + 2], "(") {
+    return {kind: "err", text: "fn " + name}
+  }
+  let got = params(tokens, i + 3, ())
+  var at = got.next
+  // returns 与 eff 都会被改写，所以是 var——let 不可变是这门语言的规则。
+  var returns = ""
+  if at < len(tokens) && is_punct(tokens[at], "->") {
+    returns = type_at(tokens, at + 1)
+    // 跨过箭头与类型名两格；若类型带可空标记，再跨一格
+    at = at + 2
+    if at < len(tokens) && is_punct(tokens[at], "?") { at = at + 1 }
+  }
+  var eff = ()
+  if at < len(tokens) && is_word(tokens[at], "effects") && at + 1 < len(tokens) && is_punct(tokens[at + 1], "(") {
+    let e = effect_list(tokens, at + 2, ())
+    eff = e.list
+    at = e.next
+  }
+  return {
+    kind: "fn",
+    pub: is_pub,
+    name: name,
+    params: got.list,
+    returns: returns,
+    effects: eff,
+    hasBody: has_body(tokens, at),
+  }
+}
+
+fn main() -> Int {
+  let tokens = ({kind: "ident", text: "pub"}, {kind: "ident", text: "fn"}, {kind: "ident", text: "f"},
+    {kind: "punct", text: "("}, {kind: "ident", text: "a"}, {kind: "punct", text: ":"},
+    {kind: "ident", text: "Int"}, {kind: "punct", text: ")"},
+    {kind: "punct", text: "{"}, {kind: "punct", text: "}"})
+  let sig = read_signature(tokens)
+  print(sig.name)
+  print(sig.pub)
+  return 0
+}
