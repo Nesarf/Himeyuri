@@ -79,6 +79,7 @@ const SUITES = [
   ["verify", "test/verify.test.mjs", "SPEC M7 - the manifest verifier: it says pass when it matches, and it really says fail when something was changed"],
   ["package", "test/package.test.mjs", "SPEC M7 - packaging: the release carries a manifest, and that manifest verifies from inside the package"],
   ["distro", "test/distro.test.mjs", "SPEC M7 - the distribution pieces: a wizard that installs nothing, a tour that links only to what exists, and an updater that can say it does not know"],
+  ["release", "test/release.test.mjs", "SPEC M7 - release: it prepares the notes and the assets, and by default it sends nothing anywhere"],
   ["selfparse", "test/self-parse.test.mjs", "SPEC M7 - the expression parser written in Himeyuri agrees shape by shape"],
   ["selfpipe", "test/self-pipeline.test.mjs", "SPEC M7 - three Himeyuri pieces used together, and matching JavaScript end to end"],
   ["modules", "test/module.test.mjs", "SPEC 6.4 step one - imports load, once each, and cycles are refused"],
