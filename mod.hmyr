@@ -1,0 +1,131 @@
+// MOD 文件的元信息：只读头部，不碰格子。
+//
+// 为什么从 MOD 起：它是模块音乐里最简单的一种，而它的头部是一张固定的表——
+//   偏移 0     二十字节的标题（补空格）
+//   偏移 20    三十一个样本头，每个三十字节
+//   偏移 950   歌曲长度（一个字节）
+//   偏移 951   历史遗留的「还原字节」
+//   偏移 952   一百二十八个字节的 pattern 序列
+//   偏移 1080  四个字节的标记（M.K. / M!K! / 4CHN / 6CHN / 8CHN / xxCH / xCHN …）
+//
+// 所以总大小 = 1084 + 格子数 × 1024 × 声道数。
+//
+// 读二进制不需要新内置：latin1 编码下一个字节正好一个字符，于是「字节」在语言里就是字符串。
+// 那与「帧是数据，不是字节」并不矛盾——这一层只是把文件读成字符，判定仍在语言里做。
+
+// 读一个文件成「字节串」：每字符一个字节。需要 file 效果。
+fn 读字节(路径: String) -> String effects(file) {
+  return read_text(路径, "latin1")
+}
+
+// 从字节串里切一段。超出范围就交回空串——比报错更符合「只是读不到」的意思。
+fn 取(字节串: String, 起: Int, 数: Int) -> String {
+  if 起 < 0 || 起 >= len(字节串) { return "" }
+  let 末 = 起 + 数
+  if 末 > len(字节串) { return slice(字节串, 起, len(字节串)) }
+  return slice(字节串, 起, 末)
+}
+
+// 一个字节的数值。latin1 下它就是那个字符的码位。
+fn 字节值(字节串: String, 位: Int) -> Int {
+  if 位 < 0 || 位 >= len(字节串) { return 0 }
+  return ord(字节串[位])
+}
+
+fn 去尾空从(文本: String, 末: Int) -> Int {
+  if 末 <= 0 { return 0 }
+  if 文本[末 - 1] == " " { return 去尾空从(文本, 末 - 1) }
+  return 末
+}
+
+fn 去尾空(文本: String) -> String {
+  return slice(文本, 0, 去尾空从(文本, len(文本)))
+}
+
+// 标题：前二十字节，去掉尾部补的空格。
+fn 标题(字节串: String) -> String {
+  return 去尾空(取(字节串, 0, 20))
+}
+
+// 声道数：从标记读。
+// M.K. 与 M!K! 是四声道（ProTracker 与 NoiseTracker 的两种写法），
+// 4CHN 也是四；6CHN 与 8CHN 是六与八；xxCH 与 xCHN 里的数字就是声道数。
+fn 声道数(字节串: String) -> Int {
+  let 标 = 取(字节串, 1080, 4)
+  if len(标) < 4 { return 0 }
+  if 标 == "M.K." { return 4 }
+  if 标 == "M!K!" { return 4 }
+  if 标 == "4CHN" { return 4 }
+  if 标 == "6CHN" { return 6 }
+  if 标 == "8CHN" { return 8 }
+  if 取(标, 2, 2) == "CH" { return 数字(取(标, 0, 2)) }
+  if 标[3] == "N" { return 数字(取(标, 0, 1)) }
+  return 0
+}
+
+// 两位十进制数（"8C" 那样的写法）。读不出就当零——而调用方据此知道标记不认识。
+fn 数字(文本: String) -> Int {
+  let 一 = 位值(文本, 0)
+  let 二 = 位值(文本, 1)
+  if 一 < 0 || 二 < 0 { return 0 }
+  return 一 * 10 + 二
+}
+
+fn 位值(文本: String, 位: Int) -> Int {
+  if 位 >= len(文本) { return -1 }
+  let 码 = ord(文本[位])
+  if 码 >= 48 && 码 <= 57 { return 码 - 48 }
+  return -1
+}
+
+// xCHN 那一种只有一位数字。
+fn 一位数字(文本: String) -> Int {
+  let 一 = 位值(文本, 0)
+  if 一 < 0 { return 0 }
+  return 一
+}
+
+// 歌曲长度：偏移 950 的一个字节。
+fn 歌长(字节串: String) -> Int {
+  return 字节值(字节串, 950)
+}
+
+// 格子数：序列里最大的那一个加一。序列按歌曲长度截断——
+// 后面那些字节常是垃圾，读进去会把 格子数算得虚高。
+fn 最大序列从(字节串: String, i: Int, 末: Int, 大: Int) -> Int {
+  if i >= 末 { return 大 }
+  let 值 = 字节值(字节串, 952 + i)
+  if 值 > 大 { return 最大序列从(字节串, i + 1, 末, 值) }
+  return 最大序列从(字节串, i + 1, 末, 大)
+}
+
+fn 格子数(字节串: String) -> Int {
+  let 长 = 歌长(字节串)
+  if 长 <= 0 { return 0 }
+  return 最大序列从(字节串, 0, 长, 0) + 1
+}
+
+// 三十一个样本头里真正有东西的那几个：长度不为零就算有。
+fn 样本数从(字节串: String, i: Int, 数: Int) -> Int {
+  if i >= 31 { return 数 }
+  let 位 = 20 + i * 30
+  let 长 = 字节值(字节串, 位 + 22) * 65536 + 字节值(字节串, 位 + 23) * 256 + 字节值(字节串, 位 + 24)
+  if 长 > 0 { return 样本数从(字节串, i + 1, 数 + 1) }
+  return 样本数从(字节串, i + 1, 数)
+}
+
+fn 样本数(字节串: String) -> Int {
+  return 样本数从(字节串, 0, 0)
+}
+
+// 应收的大小：头加上格子。
+// 一个 pattern 恒为一千零二十四字节——那是四声道乘六十四行乘四字节的定值。
+// 声道数写在标记里，但不参与这个乘法：六声道的文件里一个 pattern 仍是一千零二十四。
+fn 应收大小(字节串: String) -> Int {
+  return 1084 + 格子数(字节串) * 1024
+}
+
+fn main() -> Int {
+  print("这一层只有函数，没有独立的入口可跑。\n")
+  return 0
+}
