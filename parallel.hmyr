@@ -8,15 +8,15 @@
 // 而交回来的是一段 JSON，交给 json.hmyr 去读——于是判定仍在语言里做。
 
 fn 列表路径() -> String {
-  return "E:/DaShaoHuo/cache/tmp/hmyr-parallel-in.txt"
+  return temp_path("parallel-in.txt")
 }
 
 fn 结果路径() -> String {
-  return "E:/DaShaoHuo/cache/tmp/hmyr-parallel-out.json"
+  return temp_path("parallel-out.json")
 }
 
-fn 脚本路径() -> String {
-  return "E:/himeyuri/deps/surface/parallel.ps1"
+fn 并行脚本() -> String {
+  return repo_path("deps/surface/parallel.ps1")
 }
 
 fn 拼列表从(命令们: Int, i: Int, acc: String) -> String {
@@ -34,7 +34,7 @@ fn 拼列表(命令们: Int) -> String {
 // 取决于最长的那一条，把它写死反而会误杀。
 fn 并行跑(命令们: Int, 超时秒: Int) -> Int effects(process, file) {
   write_text(列表路径(), 拼列表(命令们), "utf8")
-  let r = run_program("powershell", ("-NoProfile", "-STA", "-File", 脚本路径(),
+  let r = run_program("powershell", ("-NoProfile", "-STA", "-File", 并行脚本(),
     "-List", 列表路径(), "-Out", 结果路径(), "-TimeoutSec", str(超时秒)), 120000, "utf8")
   if r.code != 0 { return {ok: false, text: r.stderr} }
   return {ok: true, text: read_text(结果路径(), "utf8"), 报: r.stdout}

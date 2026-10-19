@@ -24,7 +24,7 @@ fn 一步(状态: Int, 历史: Int, 键: String) -> Int effects(process) {
   // 回车：认命令、执行、记住、清空缓冲。
   let 行 = 缓冲(新状态)
   let 判 = 认命令(行)
-  let 果 = 执行(判)
+  let 果 = 执行命令(判)
   let 新历史 = 记住(历史, 行)
   if 果.kind == "exit" { return (空状态(), 新历史, true, "") }
   if 果.kind == "output" { return (空状态(), 新历史, false, 果.text + "\n") }

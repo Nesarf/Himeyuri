@@ -41,6 +41,7 @@
 
   五、环境（只读，不需要效果）
       cwd home_dir locale_env locale_current locale_set console_codepage
+      repo_path python_path      （仓库根与解释器位置：语言文件里不写死绝对路径）
       语义：读宿主的位置与语言环境；locale_set 只改「当前选的是哪一套」，不改任何文件。
       拒绝：没有那套语言档案给 R0205。
 

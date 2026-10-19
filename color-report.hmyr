@@ -91,7 +91,7 @@ fn 读报告(路径: String) -> Int effects(file) {
 }
 
 fn main() -> Int effects(file) {
-  let r = 读报告("E:/DaShaoHuo/cache/tmp/icc-report.json")
+  let r = 读报告(temp_path("icc-report.json"))
   print(摘要(r) + "\n")
   print("源图带 ICC：" + str(源图带ICC(r)) + " · 目标：" + 目标名字(r) + "\n")
   return 0

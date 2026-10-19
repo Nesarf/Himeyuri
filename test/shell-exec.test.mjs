@@ -22,7 +22,7 @@ const call = (name, args) => {
   if (!fn) throw new Error("没有这个函数：" + name);
   return rt.callFunction(fn, args, null);
 };
-const 执行 = (行) => call("执行", [call("认命令", [行])]);
+const 执行 = (行) => call("执行命令", [call("认命令", [行])]);
 const 原目录 = process.cwd();
 const 恢复 = () => { try { process.chdir(原目录); } catch (err) { /* 恢复不了也要继续报 */ } };
 
@@ -68,7 +68,7 @@ try {
   console.log("效果：这一层真的带着声明");
   {
     // 同一行代码，在只给 file 的宿主里应当被拒（chdir 要 process）
-    const src = 'fn main() -> Int effects(file) { print(执行(认命令("cd /"))) return 0 }\n';
+    const src = 'fn main() -> Int effects(file) { print(执行命令(认命令("cd /"))) return 0 }\n';
     const { lex } = await import("../src/lexer.mjs");
     const { parse } = await import("../src/parser.mjs");
     const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };

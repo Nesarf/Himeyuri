@@ -89,7 +89,7 @@ fn 呈现(后端: String, 布: Int) -> String {
 
 // 脚本路径与颜色那条桥一样：写在一个地方，调用处不必知道绝对路径。
 fn 脚本路径() -> String {
-  return "E:/himeyuri/deps/surface/win.ps1"
+  return repo_path("deps/surface/win.ps1")
 }
 
 // 呈现到某个后端，并且**会真的动世界**（native 要起一个进程）。

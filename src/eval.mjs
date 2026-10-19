@@ -19,7 +19,7 @@ import fs from "node:fs";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { lex } from "./lexer.mjs";
 import { parse } from "./parser.mjs";
 
@@ -386,6 +386,9 @@ import { Worker } from "node:worker_threads";
 const THREADS = new Map();
 let nextThreadId = 1;
 
+// 仓库根：语言文件用的相对路径都以它为基准。
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
 const BUILTINS = {
   // ---- 一、文本（纯函数）：只从输入算出输出，不读也不写外部状态 ----
   slice: (rt, args) => {
@@ -527,6 +530,28 @@ const BUILTINS = {
     return id;
   },
   thr_count: () => Array.from(THREADS.values()).filter((h) => Atomics.load(h.flag, 0) === 0).length,
+  // ---- 五、环境（只读，不需要效果） ----
+  // 仓库根：语言文件里不该写死绝对路径，否则换一台机器就坏。
+  // 这一对内置把「仓库在哪」与「解释器在哪」收成两处，而不是散在各文件里。
+  repo_path: (rt, args) => {
+    const rel = rt.asString(args[0]);
+    return path.resolve(ROOT, rel);
+  },
+  // 临时文件放哪儿：只有这一处说。缺省是系统临时目录，
+  // 而 HMYR_TMP 可以把它指到别处——本机就把它指到 E: 上的缓存目录，以守那条磁盘纪律。
+  temp_path: (rt, args) => {
+    const 名 = rt.asString(args[0]);
+    const 目录 = process.env.HMYR_TMP || os.tmpdir();
+    try { fs.mkdirSync(目录, { recursive: true }); } catch (err) { /* 已经在就算了 */ }
+    return path.join(目录, "hmyr-" + 名);
+  },
+  python_path: () => {
+    // 先看环境变量（于是别的机器可以指自己的），再看这台机器上那个托管解释器，最后退回 PATH。
+    if (process.env.HMYR_PYTHON) return process.env.HMYR_PYTHON;
+    const 托管 = "E:/DaShaoHuo/Python-managed/bin/python.exe";
+    if (fs.existsSync(托管)) return 托管;
+    return "python";
+  },
   // ---- 二、输出：写到一个可替换的出口 ----
   print: (rt, args) => { rt.write(args.map((a) => rt.asString(a)).join("")); return null; },
   // ---- 三、文件（需要 file 效果） ----

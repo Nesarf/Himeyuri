@@ -102,17 +102,13 @@ fn 成文本(布: Int) -> String {
 // 两件事都要动世界：写一个中间文本（file），再让子进程把它变成 PNG（process）。
 // 所以这一个函数声明两个效果——它确实两个都用。
 
-fn 解释器() -> String {
-  return "E:/DaShaoHuo/Python-managed/bin/python.exe"
-}
-
 fn 导出脚本() -> String {
-  return "E:/himeyuri/deps/surface/png.py"
+  return repo_path("deps/surface/png.py")
 }
 
 fn 导出(布: Int, 中间文本: String, 目标: String) -> Int effects(process, file) {
   write_text(中间文本, 成文本(布), "utf8")
-  let r = run_program(解释器(), (导出脚本(), 中间文本, 目标), 30000, "utf8")
+  let r = run_program(python_path(), (导出脚本(), 中间文本, 目标), 30000, "utf8")
   return {ok: r.code == 0, text: r.stdout + r.stderr}
 }
 
