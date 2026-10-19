@@ -66,4 +66,23 @@ const 大小 = fs.statSync(出).size;
 console.log("  收了 " + 收.length + " 个文件");
 console.log("  出了 " + path.relative(ROOT, 出) + "（" + Math.round(大小 / 1024) + " KB）");
 console.log("  清单 digest " + 清单.digest.slice(0, 16) + " · 内核 " + 清单.kernel.builtins + " 个内置 · 最小集 " + 清单.kernel.minimalSet.length + " 个");
-console.log("  注意：这是 zip，而 OnlySign 认的是 PE——要签它得另外决定，不是顺手能做的。");
+// 四、分离签名。zip 没有内嵌签名位置，于是签名落在清单旁边一个 .sig 里——
+// 那正是 S.M.Y.T. 对 Linux 包与压缩归档的做法，不是这里临时想出来的。
+// 钥匙不在就当「没有钥匙」如实说，而不是悄悄跳过。
+const 钥匙 = "C:/Windows/System32/OpenSSH/ssh-keygen.exe";
+const 私钥 = "C:/Users/Administrator/.ssh/signing_ed25519_20261011";
+if (fs.existsSync(钥匙) && fs.existsSync(私钥)) {
+  // 先删旧的 .sig：ssh-keygen 在目标已存在时会问一句「Overwrite (y/n)?」，
+  // 而脚本里 stdin 被占着，于是它默默不动——旧的签名就这么留了下来，
+  // 而它签的是旧的清单。这个坑踩过一次（2026-10-19），写在明处。
+  fs.rmSync(path.join(ROOT, "dist/manifest.json.sig"), { force: true });
+  const 签 = spawnSync(钥匙, ["-Y", "sign", "-f", 私钥, "-n", "file", path.join(ROOT, "dist/manifest.json")], { encoding: "utf8" });
+  if (fs.existsSync(path.join(ROOT, "dist/manifest.json.sig"))) {
+    console.log("  清单已签：dist/manifest.json.sig（Ed25519，分离签名）");
+  } else {
+    console.log("  签名没成：" + String(签.stderr || 签.stdout).trim().slice(0, 100));
+  }
+} else {
+  console.log("  这台机器上没有签名钥匙——于是这一包只有内容寻址，没有签名。");
+}
+console.log("  注意：zip 没有内嵌签名位置，所以签的是清单，不是 zip 本身。");
