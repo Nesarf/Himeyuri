@@ -10,7 +10,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const EXT = new Set([".txt", ".md", ".rst", ".adoc"]);
+// .md 故意不在这个集合里：markdown 的存在就是为了渲染，而这份检查针对的是
+// 「本来该是普通文本、却混进了渲染语法」的文档。项目里的设计文档全是 .txt，所以它们受这一条约束。
+const EXT = new Set([".txt", ".rst", ".adoc"]);
 const SKIP = new Set(["node_modules", ".git", "build"]);
 
 const MARKERS = [
