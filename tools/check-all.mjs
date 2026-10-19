@@ -75,6 +75,7 @@ const SUITES = [
   ["container", "test/container.test.mjs", "SPEC M7 - containers round modules: XPK, MMCMP and PowerPacker are recognised, and uncompressing is handed out rather than faked"],
   ["reader", "test/reader.test.mjs", "SPEC 4.1 - reader macros as data: whole tokens only, and the rewritten source parses to the same tree"],
   ["manifest", "test/manifest.test.mjs", "SPEC M7 - the distribution manifest: everything it lists actually exists, and the minimal set is exactly fifteen"],
+  ["helper", "test/helper.test.mjs", "SPEC M7 - the assistant: a code explains itself, a word searches the meanings, and a miss still hands back the list"],
   ["selfparse", "test/self-parse.test.mjs", "SPEC M7 - the expression parser written in Himeyuri agrees shape by shape"],
   ["selfpipe", "test/self-pipeline.test.mjs", "SPEC M7 - three Himeyuri pieces used together, and matching JavaScript end to end"],
   ["modules", "test/module.test.mjs", "SPEC 6.4 step one - imports load, once each, and cycles are refused"],
