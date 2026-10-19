@@ -41,7 +41,8 @@
 
   五、环境（只读，不需要效果）
       cwd home_dir locale_env locale_current locale_set console_codepage
-      repo_path python_path      （仓库根与解释器位置：语言文件里不写死绝对路径）
+      repo_path python_path temp_path
+      （仓库根、解释器位置与临时目录：语言文件里不写死绝对路径，换机器也不用改）
       语义：读宿主的位置与语言环境；locale_set 只改「当前选的是哪一套」，不改任何文件。
       拒绝：没有那套语言档案给 R0205。
 
@@ -60,7 +61,21 @@
       语义：真实终端与套件走同一个队列；key_start 在非 TTY 环境下如实返回假，不装。
       拒绝：无。收不到键就是一个空队列。
 
-  九、内存（三区模型未实现前的宿主桩）
+  九、记录（按名字造、按名字取）
+      record_new field_get field_has
+      语义：记录不是哈希表——record_new 只收「标识符能写的名字」，否则拒绝（R0214）。
+            field_get 取不到会拒绝（R0216），而 field_has 只回答有没有（纯函数，不需要编号）。
+      为什么它们在这一组：自举的求值器要按节点上的名字现场造记录，那时候
+            名字是个变量，写成 .名字 写不出来。而 x[名字] 也不行——下标只收数字。
+
+  十、线程（需要 thread 效果）
+      thr_spawn thr_join thr_cancel thr_count
+      语义：worker 在另一个核上跑，结果经文件送达，共享内存只发「写完了」这一个信号。
+            为什么不用 postMessage：那个回调也在主线程的事件循环里，而主线程正堵在
+            Atomics.wait 上。隔离是硬的——worker 有自己的求值器实例。
+      拒绝：句柄不存在给 R0221；等超时给 R0222。起不来就交回 -1（无效句柄），不另设编号。
+
+  十一、内存（三区模型未实现前的宿主桩）
       arena
       语义：占位。等内存模型定了再写契约。
 
