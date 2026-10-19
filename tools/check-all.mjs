@@ -24,6 +24,7 @@ const SUITES = [
   ["reflect", "test/reflect.test.mjs", "SPEC M6 - a program can read its own shape"],
   ["lsp", "test/lsp.test.mjs", "SPEC M6 - an editor can ask about symbols, definitions and signatures"],
   ["adapter", "test/adapter.test.mjs", "SPEC M6 - the adapter: the host and the bootstrap compute the same number for the same source"],
+  ["adapterstatements", "test/adapter-statements.test.mjs", "SPEC M6 - the adapter, statements: run the same program on both sides and they hand back the same value"],
   ["self", "test/self.test.mjs", "SPEC M7 - a front end written in Himeyuri agrees with the one in JavaScript"],
   ["selflex", "test/self-lex.test.mjs", "SPEC M7 - the tokenizer written in Himeyuri agrees token by token"],
   ["selfunicode", "test/self-unicode.test.mjs", "SPEC M7 - identifiers written in Chinese and Japanese read the same on both sides"],
