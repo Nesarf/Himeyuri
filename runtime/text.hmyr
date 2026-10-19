@@ -1,0 +1,130 @@
+// 小库：文本。只用四个内置——len、slice、ord、chr。
+//
+// 为什么强调「只用这四个」：这一层的目的不是方便，而是**可移植**。
+// 换宿主时要实现的就是那十四个内置（见 design/RUNTIME.txt），
+// 而这一层若只用到其中四个，那么不管宿主的文件、进程、终端做得多烂，
+// 文本这一块都不会受影响。
+//
+// 所以这个文件里的每一个函数都该能用「长度、切片、码位、字符」四个词说清。
+// 若哪天需要第五个，那是把「最小的内置集」往上抬，而不是偷偷用地上的别的东西。
+
+fn 字符(文本: String, 位: Int) -> String {
+  if 位 < 0 || 位 >= len(文本) { return "" }
+  return 文本[位]
+}
+
+// 两个字符串是否相同。写成函数，是为了让小库里的东西都显式——
+// 而比较本身是语言的事，不是库的事。
+fn 同(甲: String, 乙: String) -> Bool {
+  return 甲 == 乙
+}
+
+// 从 起 取 数 个字符。超出就取到末尾。
+fn 取(文本: String, 起: Int, 数: Int) -> String {
+  if 起 < 0 || 起 >= len(文本) || 数 <= 0 { return "" }
+  let 末 = 起 + 数
+  if 末 > len(文本) { return slice(文本, 起, len(文本)) }
+  return slice(文本, 起, 末)
+}
+
+// 从 起 到末尾。
+fn 之后(文本: String, 起: Int) -> String {
+  return 取(文本, 起, len(文本) - 起)
+}
+
+fn 之前(文本: String, 数: Int) -> String {
+  return 取(文本, 0, 数)
+}
+
+// 是不是空白：空格、制表符、换行、回车。
+fn 空白(字: String) -> Bool {
+  if 字 == "" { return false }
+  let 码 = ord(字)
+  if 码 == 32 { return true }
+  if 码 == 9 { return true }
+  if 码 == 10 { return true }
+  if 码 == 13 { return true }
+  return false
+}
+
+fn 去首空从(文本: String, 位: Int) -> Int {
+  if 位 >= len(文本) { return 位 }
+  if 空白(文本[位]) { return 去首空从(文本, 位 + 1) }
+  return 位
+}
+
+fn 去尾空从(文本: String, 末: Int) -> Int {
+  if 末 <= 0 { return 0 }
+  if 空白(文本[末 - 1]) { return 去尾空从(文本, 末 - 1) }
+  return 末
+}
+
+fn 去首空(文本: String) -> String {
+  return 之后(文本, 去首空从(文本, 0))
+}
+
+fn 去尾空(文本: String) -> String {
+  return 之前(文本, 去尾空从(文本, len(文本)))
+}
+
+// 首尾都去。顺序无关，但它是最常用的那一个。
+fn 去空白(文本: String) -> String {
+  return 去尾空(去首空(文本))
+}
+
+// 拆行：按换行切。末尾的空段留着——因为「文件以换行结尾」与「末尾有空行」
+// 在文本层是两件事，而让调用方自己决定要不要丢掉最后那一个。
+fn 拆行从(文本: String, i: Int, 起: Int, acc: Int) -> Int {
+  if i >= len(文本) { return acc + (slice(文本, 起, len(文本)),) }
+  if 文本[i] == chr(10) {
+    return 拆行从(文本, i + 1, i + 1, acc + (slice(文本, 起, i),))
+  }
+  return 拆行从(文本, i + 1, 起, acc)
+}
+
+fn 拆行(文本: String) -> Int {
+  if 文本 == "" { return ("",) }
+  return 拆行从(文本, 0, 0, ())
+}
+
+// 拼行：每行之后加一个换行。与拆行是（近似）的逆——
+// 差在「末尾那一个空段」，而那是约定，不是漏洞。
+fn 拼行从(行们: Int, i: Int, acc: String) -> String {
+  if i >= len(行们) { return acc }
+  return 拼行从(行们, i + 1, acc + 行们[i] + chr(10))
+}
+
+fn 拼行(行们: Int) -> String {
+  return 拼行从(行们, 0, "")
+}
+
+// 子串出现的位置；没有就交回 -1。朴素匹配——这一层不追求算法，追求说得清。
+fn 找从(文本: String, 要: String, 位: Int) -> Int {
+  if len(要) == 0 { return 0 }
+  if 位 + len(要) > len(文本) { return -1 }
+  if slice(文本, 位, 位 + len(要)) == 要 { return 位 }
+  return 找从(文本, 要, 位 + 1)
+}
+
+fn 找(文本: String, 要: String) -> Int {
+  return 找从(文本, 要, 0)
+}
+
+fn 含(文本: String, 要: String) -> Bool {
+  return 找(文本, 要) >= 0
+}
+
+fn 前缀(文本: String, 头: String) -> Bool {
+  if len(头) > len(文本) { return false }
+  return slice(文本, 0, len(头)) == 头
+}
+
+fn 后缀(文本: String, 尾: String) -> Bool {
+  if len(尾) > len(文本) { return false }
+  return slice(文本, len(文本) - len(尾), len(文本)) == 尾
+}
+
+fn main() -> Int {
+  print("这一层只有函数，没有独立的入口可跑。\n")
+  return 0
+}

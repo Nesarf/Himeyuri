@@ -56,6 +56,57 @@ console.log("  代码里的内置 " + 代码里.length + " 个 · 第一圈点�
 const 效果行 = eval源.split("\n").find((l) => l.includes("const BUILTIN_EFFECTS"));
 console.log("  有效果的内置：" + (效果行 ? 效果行.replace(/.*=\s*/, "").replace(/[{};]/g, "").trim() : "（没找到那一行）"));
 
+// 第四面：小库只用最小的内置集。
+//
+// 那十四个名字从 design/RUNTIME.txt 里读，而不是在这里重抄一遍——
+// 抄一遍就会两处漂移，而「文档与工具对不上」正是这一路一直在修的那种事。
+const 库文件 = [];
+const 走 = (dir) => {
+  if (!fs.existsSync(dir)) return;
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) 走(p);
+    else if (e.name.endsWith(".hmyr")) 库文件.push(p);
+  }
+};
+走(path.join(ROOT, "runtime"));
+
+const 小库在 = 库文件.length;
+if (小库在 === 0) {
+  console.log("  小库还没建起来（runtime/ 里没有 .hmyr）——这一面暂时空着");
+} else {
+  // 那十四个：从 RUNTIME.txt 里「最小的内置集」那一节抓标识符
+  const 文档 = 读("design/RUNTIME.txt");
+  const 起 = 文档.indexOf("最小的内置集");
+  if (起 < 0) { console.error("  RUNTIME.txt 里找不到「最小的内置集」"); process.exit(2); }
+  const 节 = 文档.slice(起, 文档.indexOf("小库该有什么", 起));
+  // 只取恰好四个空格缩进的行：那一节里更深的缩进是说明文字，
+  // 而说明文字里会提到那些名字，算进去就会把集算大。
+  // 而同一行可以写好几个名字（「ord chr」就是这样），所以每一行取全部。
+  const 枚举行 = 节.split("\n").filter((l) => /^ {4}[a-z_]/.test(l));
+  // 而说明文字里会顺口提到效果名（「带 file 效果」），那不是内置。
+  // 效果是语言的三个名字，写死在这里比从别处猜稳。
+  const 效果名 = new Set(["file", "process", "thread"]);
+  const 十四 = new Set(枚举行
+    .flatMap((l) => Array.from(l.matchAll(/[a-z_][a-z0-9_]*/g)).map((m) => m[0]))
+    .filter((n) => !效果名.has(n)));
+  console.log("  小库 " + 小库在 + " 个文件 · 最小的内置集 " + 十四.size + " 个（读自 RUNTIME.txt）");
+
+  // 小库里出现的、属于「全部内置」的名字——那就是它用到的内置（同名即用）
+  const 全部内置 = new Set(代码里);
+  const 用到 = new Set();
+  for (const f of 库文件) {
+    const 文本 = fs.readFileSync(f, "utf8");
+    for (const m of 文本.matchAll(/[a-z_][a-z0-9_]*/g)) {
+      if (全部内置.has(m[0])) 用到.add(m[0]);
+    }
+  }
+  // 文档自己也会提到那些名字，所以这里只看小库自身
+  const 越界 = Array.from(用到).filter((n) => !十四.has(n));
+  报("小库用到了最小的内置集之外的东西", 越界);
+  if (越界.length === 0) console.log("  小库只用到最小的内置集里的东西（" + 用到.size + " 个被用到）");
+}
+
 if (问题 === 0) console.log("  三面一致（代码、第一圈、契约互相对得上）");
 console.log(问题 === 0 ? "  通过" : "  不通过");
 process.exit(问题 === 0 ? 0 : 1);
