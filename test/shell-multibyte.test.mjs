@@ -82,6 +82,27 @@ console.log("五、显示宽度");
   ok("而在第二个码位处是一列", call("显示列", ["中中", 1]) === 2, String(call("显示列", ["中中", 1])));
 }
 
+console.log("六、光标按字移动");
+{
+  // a + 组合 e + b 一共四个码位：a(0) e(1) 重音符(2) b(3)
+  let s = call("空状态", []);
+  for (const ch of ("a" + 组合 + "b")) s = call("插入", [s, ch]);
+  ok("打了三个字、四个码位", s[0].length === 4 && s[1] === 4, s[0].length + " · " + s[1]);
+  s = call("左移", [s]);
+  ok("左一格停在 b 之前（位 3）", s[1] === 3, String(s[1]));
+  s = call("左移", [s]);
+  ok("再左一格跨过整个组合字（位 1）", s[1] === 1, String(s[1]));
+  s = call("左移", [s]);
+  ok("再左一格到最前（位 0）", s[1] === 0, String(s[1]));
+  s = call("右移", [s]);
+  ok("右一格到组合字之前（位 1）", s[1] === 1, String(s[1]));
+  s = call("右移", [s]);
+  ok("再右一格跨过整个组合字（位 3）", s[1] === 3, String(s[1]));
+  s = call("右移", [s]);
+  ok("再右一格到末尾（位 4）", s[1] === 4, String(s[1]));
+  ok("而且停在组合符号中间的情况一次都没有", [1, 3].indexOf(call("左一字", ["a" + 组合 + "b", 3])) >= 0 || call("左一字", ["a" + 组合 + "b", 3]) === 1);
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
