@@ -30,9 +30,19 @@ if (清单) {
   const 缺 = [];
   for (const 件 of 清单.standardLibrary) if (!fs.existsSync(path.join(ROOT, 件.file))) 缺.push(件.file);
   for (const 件 of 清单.suites) if (!fs.existsSync(path.join(ROOT, 件.path))) 缺.push(件.path);
-  for (const 件 of 清单.tools) if (!fs.existsSync(path.join(ROOT, "tools", 件))) 缺.push("tools/" + 件);
-  for (const 件 of 清单.documents) if (!fs.existsSync(path.join(ROOT, "design", 件))) 缺.push("design/" + 件);
+  // tools 与 documents 现在每一项是 { name, sha256 }，而不是一个字符串。
+  for (const 件 of 清单.tools) if (!fs.existsSync(path.join(ROOT, "tools", 件.name))) 缺.push("tools/" + 件.name);
+  for (const 件 of 清单.documents) if (!fs.existsSync(path.join(ROOT, "design", 件.name))) 缺.push("design/" + 件.name);
   ok("一个都不缺", 缺.length === 0, 缺.slice(0, 4).join(" "));
+  // 而每一项都该带一个哈希：内容寻址是清单的第一层用途。
+  const 没哈希 = [
+    ...清单.standardLibrary.filter((f) => !f.sha256).map((f) => f.file),
+    ...清单.suites.filter((f) => !f.sha256).map((f) => f.path),
+    ...清单.tools.filter((f) => !f.sha256).map((f) => "tools/" + f.name),
+    ...清单.documents.filter((f) => !f.sha256).map((f) => "design/" + f.name),
+  ];
+  ok("每一项都带 sha256", 没哈希.length === 0, 没哈希.slice(0, 4).join(" "));
+  ok("而整份清单带一个 digest", typeof 清单.digest === "string" && 清单.digest.length === 64, String(清单.digest).slice(0, 16));
 
   console.log("三、数量对得上");
   ok("标准库至少有一件", 清单.standardLibrary.length >= 1, String(清单.standardLibrary.length));
