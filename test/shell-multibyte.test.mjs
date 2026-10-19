@@ -68,6 +68,20 @@ console.log("四、删除也按字");
   ok("Del 一次删掉整个字", s2[0] === "" && s2[1] === 0, JSON.stringify(s2[0]));
 }
 
+console.log("五、显示宽度");
+{
+  const 宽 = (s) => call("显示宽", [s]);
+  ok("abc 占三列", 宽("abc") === 3, String(宽("abc")));
+  ok("两个中文占四列", 宽("中文") === 4, String(宽("中文")));
+  ok("ab中占四列（一宽两个、二宽一个）", 宽("ab中") === 4, String(宽("ab中")));
+  ok("全角标点也是二宽", 宽("，。！") === 6, String(宽("，。！")));
+  ok("组合符号是零宽", 宽(组合) === 1, String(宽(组合)));
+  ok("混合串对得上", 宽("a中b，") === 6, String(宽("a中b，")));
+  // 显示列：这是光标该去的地方，与码位下标不是一回事
+  ok("「ab中」的末列是四，而码位是三", call("显示列", ["ab中", 3]) === 4, String(call("显示列", ["ab中", 3])));
+  ok("而在第二个码位处是一列", call("显示列", ["中中", 1]) === 2, String(call("显示列", ["中中", 1])));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
