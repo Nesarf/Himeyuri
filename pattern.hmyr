@@ -1,0 +1,100 @@
+// pattern 的美化：把 tracker 的格子画成人看得懂的文本。
+//
+// 学自 openmpt/MPTPatterns（那个 PHP 小仓库，十四 KB）：它做的事就是把模块音乐的
+// pattern 变成一张对齐的、能省略空行的表。那是同一条思路——
+// 帧是数据，不是字节；格子是数据，而 bytes 只是它在文件里的样子。
+//
+// 为什么它值得做：pattern 是模块音乐里唯一的「界面」，而它在文件里是一串压过的二进制。
+// 人要看它，只能先解出来，再排整齐。这一份做后半段：格子进去、文本出来；
+// 解码交给格式层，不在这里假装会。
+//
+// 格子用字符串写，因为 tracker 的习俗如此：一个格子就是 "C-4 01 v64 A0F" 这样的几段。
+// 列宽按最宽的那一格算，否则列会歪——那是这一层唯一的算法。
+
+fn 最宽从(格们: Int, i: Int, 宽: Int) -> Int {
+  if i >= len(格们) { return 宽 }
+  if len(格们[i]) > 宽 { return 最宽从(格们, i + 1, len(格们[i])) }
+  return 最宽从(格们, i + 1, 宽)
+}
+
+// 最宽的一格占几列。
+fn 最宽(格们: Int) -> Int {
+  return 最宽从(格们, 0, 0)
+}
+
+fn 补空到(文本: String, 宽: Int) -> String {
+  return 补空从(文本, len(文本), 宽)
+}
+
+fn 补空从(文本: String, 当前: Int, 宽: Int) -> String {
+  if 当前 >= 宽 { return 文本 }
+  return 补空从(文本 + " ", 当前 + 1, 宽)
+}
+
+fn 画一行从(格们: Int, i: Int, 宽: Int, acc: String) -> String {
+  if i >= len(格们) { return acc }
+  return 画一行从(格们, i + 1, 宽, acc + 补空到(格们[i], 宽) + " |")
+}
+
+// 一行格子画成 "| a  | b  |" 这样的样子。
+fn 画一行(格们: Int) -> String {
+  return 画一行从(格们, 0, 最宽(格们), "|")
+}
+
+// pattern 就是若干行。每一个是 (行号, 格们) —— 行号显式带着，
+// 因为空行被省略之后，「这是第几行」只能由数据说，不能由位置说。
+fn 画格子从(行们: Int, i: Int, acc: String) -> String {
+  if i >= len(行们) { return acc }
+  let 行 = 行们[i]
+  let 号 = str(行[0])
+  return 画格子从(行们, i + 1, acc + 补空到(号, 3) + " " + 画一行(行[1]) + "\n")
+}
+
+fn 画格子表(行们: Int) -> String {
+  return 画格子从(行们, 0, "")
+}
+
+// 空行（整行都是空串）压掉，而保留行号——于是「哪里是空的」由行号说出来。
+// 一格是不是空的：tracker 的「空」不是空串，而是 "--- .. ... ..." 那样的占位符。
+// 所以判空格要看它是不是只由占位符号组成——短横、点、空格，没有别的。
+fn 只占位从(格: String, i: Int) -> Bool {
+  if i >= len(格) { return true }
+  let 字 = 格[i]
+  if 字 == "-" { return 只占位从(格, i + 1) }
+  if 字 == "." { return 只占位从(格, i + 1) }
+  if 字 == " " { return 只占位从(格, i + 1) }
+  return false
+}
+
+fn 空格(格: String) -> Bool {
+  if 格 == "" { return true }
+  return 只占位从(格, 0)
+}
+
+fn 压空行从(格们: Int, i: Int, 全空: Bool) -> Bool {
+  if i >= len(格们) { return 全空 }
+  if 空格(格们[i]) { return 压空行从(格们, i + 1, true) }
+  return false
+}
+
+fn 整行空(格们: Int) -> Bool {
+  return 压空行从(格们, 0, true)
+}
+
+fn 去空行从(行们: Int, i: Int, acc: Int) -> Int {
+  if i >= len(行们) { return acc }
+  if 整行空(行们[i][1]) { return 去空行从(行们, i + 1, acc) }
+  return 去空行从(行们, i + 1, acc + (行们[i],))
+}
+
+fn 去空行(行们: Int) -> Int {
+  return 去空行从(行们, 0, ())
+}
+
+fn main() -> Int {
+  let 行们 = ((0, ("C-4 01 v64 A0F", "--- .. ... ...", "G-4 02 v48 ...")),
+              (1, ("--- .. ... ...", "--- .. ... ...", "--- .. ... ...")),
+              (2, ("E-4 01 v64 A0F", "--- .. ... ...", "C-5 01 v40 ...")))
+  print(画格子表(去空行(行们)))
+  return 0
+}
