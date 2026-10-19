@@ -9,20 +9,33 @@ HMYR 全面自举：运行时、宿主依赖与启动
 现状（2026 年间实测，数字都来自当场检查）
 --------------------------------------------------------------------
 
-  ・启动方式：node examples/run-shell.mjs
+  ・启动方式：node bin/hmyr.mjs xxx.hmyr（启动器会把目标程序交给自举的求值器，而不是宿主的）
   ・宿主：纯 ESM 的 Node 脚本，Node 24。
   ・构建：没有。无 package.json、无 tsconfig、无打包器、无 node_modules。
   ・第三方依赖：零。
-  ・宿主模块（五个，是这一条要收掉的东西）：
-      node:fs       读写文件
-      node:os       主目录与平台信息
-      node:path     路径拼接
-      node:readline 逐行输入
-      node:url      取当前模块地址
-  ・规模：宿主源码 92 KB；源码、套件、工具与语言写的模块合计 8672 行。
+  ・宿主模块（七个，是这一条要收掉的东西）：
+      node:fs            读写文件、同步读 stdin
+      node:os            主目录、临时目录与平台信息
+      node:path          路径拼接与解析
+      node:readline      逐行输入（真终端那一格）
+      node:url           取当前模块地址
+      node:child_process  跑一个程序（run_program）
+      node:worker_threads 真线程（thr_spawn；已登记为专有模块，见 tools/conformance.mjs）
+  ・规模（2026-10-19 实测）：宿主 src/ 2290 行；.mjs 89 个 9306 行，.hmyr 30 个 3492 行。
   ・已经自制的那一半：self/lex.hmyr、self/chain.hmyr、self/stmt.hmyr、self/eval.hmyr
-    与 self/run.hmyr 证明「Himeyuri 能跑 Himeyuri」；但它只覆盖十二种节点里
-    已实现的部分（记录还造不出来），所以现在还替代不了宿主。
+    与 self/run.hmyr 证明「Himeyuri 能跑 Himeyuri」；它现在能造记录、能取字段（record_new／field_get），
+    而它仍然替代不了宿主：语句层的覆盖还不全，而宿主的能力内核（文件、进程、终端）也还没换。
+
+走到第几步（2026-10-19）
+--------------------------------------------------------------------
+
+  第一步 能力收敛：已做。九组能力写进了 design/CAPABILITIES.txt，
+          而 tools/check-builtins.mjs 让「代码、规格第一圈、契约」三面对得上，
+          并由 test/builtins.test.mjs 挂进每次全量。
+  第二步 启动器还原：做了一半。bin/hmyr.mjs 已经把目标程序交给自举的求值器，
+          但求值器本身仍在宿主的 src/eval.mjs 里跑，能力内核也还是宿主的七个模块。
+  第三步 自举闭环：未开始。它要等第二步的求值器换过去。
+
 
 三步（按顺序，前一步不成立就不走下一步）
 --------------------------------------------------------------------
