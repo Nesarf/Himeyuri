@@ -4,15 +4,14 @@
 // 「这一行上有什么」。前者是跳转，后者是补全的上下文。
 // 而这个工具就做那一层——不是服务器，是服务器脚下那块地。
 //
-// 两条要说清的缺口，都是 AST 自己的形状决定的：
+// 位置：行与列都有。
 //
-//   一、只有行，没有列。于是这里能答「第几行有 foo」，不能答「第几列」。
-//   二、参数不带行：参数对象是 { name, type } 而没有 line。
-//      于是参数在符号表里 line 为 null——那不是漏了，那是它真的不知道。
-//      用类型的行去代替它是个诱人的做法，而那是猜；猜出来的位置比没有位置更坏，
-//      因为读的人分不出哪个是记下来的、哪个是猜出来的。
+// 曾经有一条要说清的缺口——AST 只有行，参数连行都没有。而那两条现在补上了：
+// 词法一直记着列（token 上就是 line 与 column），语法层只是没把它传下去。
+// 三十二处 line 与参数那一处一起补，于是这一层能答「第几行第几列」。
 //
-// 两条都要动词法与语法才能补。而那正说明这一层是诚实的：它只说自己知道的。
+// 而「用附近的数字填补空白」这条诱惑仍然要说：凡是拿不到的位置，仍然留 null。
+// 一个会猜的工具比一个留空的工具更坏，因为读的人分不出哪个是记的、哪个是猜的。
 //
 //   node tools/ast.mjs 文件.hmyr        符号表（JSON）
 //   node tools/ast.mjs 文件.hmyr --行 7  第 7 行上有什么
@@ -49,25 +48,26 @@ const 走 = (节点, 上下文) => {
 
   const 种类 = 节点.kind;
   const 行 = typeof 节点.line === "number" ? 节点.line : null;
+  const 列 = typeof 节点.column === "number" ? 节点.column : null;
 
   if (种类 === "Fn" && 节点.name) {
-    符号们.push({ kind: "fn", name: 节点.name, line: 行, detail: "函数" });
+    符号们.push({ kind: "fn", name: 节点.name, line: 行, column: 列, detail: "函数" });
     走(节点.params, { 在: 节点.name });
     走(节点.body, { 在: 节点.name });
     return;
   }
   if (种类 === "Param" || (节点.name && 节点.type && !种类)) {
     // 参数在 AST 里是 { name, type } 而不是带 kind 的节点——于是按「有名字有类型」认它。
-    符号们.push({ kind: "param", name: 节点.name, line: 行, detail: "参数（在 " + (上下文 && 上下文.在 ? 上下文.在 : "?") + " 里）" });
+    符号们.push({ kind: "param", name: 节点.name, line: 行, column: 列, detail: "参数（在 " + (上下文 && 上下文.在 ? 上下文.在 : "?") + " 里）" });
     走(节点.type, 上下文);
     return;
   }
   if ((种类 === "Let" || 种类 === "Var" || 种类 === "Assign") && 节点.name) {
-    符号们.push({ kind: 种类 === "Var" ? "var" : 种类 === "Let" ? "let" : "assign", name: 节点.name, line: 行, detail: 种类 === "Assign" ? "赋值" : "局部变量" });
+    符号们.push({ kind: 种类 === "Var" ? "var" : 种类 === "Let" ? "let" : "assign", name: 节点.name, line: 行, column: 列, detail: 种类 === "Assign" ? "赋值" : "局部变量" });
     return;
   }
   if (种类 === "TypeRef" && 节点.name) {
-    符号们.push({ kind: "type", name: 节点.name, line: 行, detail: "类型名" });
+    符号们.push({ kind: "type", name: 节点.name, line: 行, column: 列, detail: "类型名" });
     return;
   }
 

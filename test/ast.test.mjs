@@ -50,16 +50,23 @@ try {
     }
   }
 
-  console.log("二、不知道的位置就说不知道");
+  console.log("二、位置：行与列都有");
   {
     const r = 跑(好);
     const 表 = JSON.parse(r.stdout);
     const 参数们 = 表.symbols.filter((s) => s.kind === "param");
     ok("参数都在", 参数们.length === 2, String(参数们.length));
-    ok("而它们的 line 是 null（AST 里真的没有）", 参数们.every((s) => s.line === null),
-      JSON.stringify(参数们.map((s) => s.line)));
-    // 而空不能变成 0：0 是一个位置，null 是「不知道」
-    ok("不是 0 而是 null", 参数们.every((s) => s.line !== 0), JSON.stringify(参数们.map((s) => s.line)));
+    // 参数曾经是唯一不知道自己在哪儿的节点。2026-10-19 补上了位置，
+    // 于是这一条从「它是 null」变成了「它是对的」。
+    ok("参数带上了行", 参数们.every((s) => typeof s.line === "number"), JSON.stringify(参数们.map((s) => s.line)));
+    ok("参数带上了列", 参数们.every((s) => typeof s.column === "number"), JSON.stringify(参数们.map((s) => s.column)));
+    const a = 参数们.find((s) => s.name === "a");
+    // fn add(a：f1 n2 空格3 a4 d5 d6 (7 a8 —— 于是 a 在第 8 列。
+    ok("a 在第 8 列", a && a.column === 8, a ? String(a.column) : "没找到");
+    const 函数 = 表.symbols.find((s) => s.name === "add");
+    ok("add 在第一列", 函数 && 函数.column === 1, 函数 ? String(函数.column) : "没找到");
+    // 而拿不到位置时仍然留 null，不猜
+    ok("拿不到就留 null，而 null 不是 0", 表.symbols.every((s) => s.column !== 0), JSON.stringify(表.symbols.filter((s) => s.column === 0).map((s) => s.name)));
   }
 
   console.log("三、按行筛");

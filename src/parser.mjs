@@ -103,7 +103,7 @@ export function parse(tokens, options = {}) {
     let alias = null;
     if (at("keyword", "as")) { advance(); alias = expect("ident", "an alias"); }
     endStatement();
-    return { kind: "Import", path: pathToken ? pathToken.value : "", alias: alias ? alias.value : null, line: kw.line };
+    return { kind: "Import", path: pathToken ? pathToken.value : "", alias: alias ? alias.value : null, line: kw.line, column: kw.column };
   }
 
   function parseDecl() {
@@ -142,7 +142,7 @@ export function parse(tokens, options = {}) {
       if (at("newline")) skipNewlines();
     }
     const body = atPunct("{") ? parseBlock() : null;
-    return { kind: "Fn", name: name ? name.value : "<error>", typeParams, params, returns, effects, contracts, body, pub: false, line: kw.line };
+    return { kind: "Fn", name: name ? name.value : "<error>", typeParams, params, returns, effects, contracts, body, pub: false, line: kw.line, column: kw.column };
   }
 
   function parseTypeParams() {
@@ -167,7 +167,9 @@ export function parse(tokens, options = {}) {
       const type = parseType();
       let fallback = null;
       if (atPunct("=")) { advance(); fallback = parseExpr(); }
-      if (name) list.push({ name: name.value, type, passing, fallback });
+      // 参数也带上位置：它是唯一一个曾经不知道自己在哪儿的节点。
+      // 曾经用类型的行代替它，那是个诱惑——而猜出来的位置比没有更坏。
+      if (name) list.push({ name: name.value, type, passing, fallback, line: name.line, column: name.column });
       if (atPunct(",")) advance(); else break;
     }
     return list;
@@ -194,7 +196,7 @@ export function parse(tokens, options = {}) {
       const items = [];
       while (!atPunct(")") && !at("eof")) { items.push(parseType()); if (atPunct(",")) advance(); else break; }
       expectPunct(")");
-      return items.length === 1 ? items[0] : { kind: "TupleType", items, line: t.line };
+      return items.length === 1 ? items[0] : { kind: "TupleType", items, line: t.line, column: t.column };
     }
     if (at("keyword", "fn")) {                // fn type
       advance();
@@ -203,7 +205,7 @@ export function parse(tokens, options = {}) {
       while (!atPunct(")") && !at("eof")) { params.push(parseType()); if (atPunct(",")) advance(); else break; }
       expectPunct(")");
       expectPunct("->");
-      return { kind: "FnType", params, returns: parseType(), line: t.line };
+      return { kind: "FnType", params, returns: parseType(), line: t.line, column: t.column };
     }
     const name = expect("ident", "a type name");
     const args = [];
@@ -214,7 +216,7 @@ export function parse(tokens, options = {}) {
     }
     let nullable = false;
     if (atPunct("?")) { advance(); nullable = true; }
-    return { kind: "TypeRef", name: name ? name.value : "<error>", args, nullable, line: t.line };
+    return { kind: "TypeRef", name: name ? name.value : "<error>", args, nullable, line: t.line, column: t.column };
   }
 
   function parseTypeAlias() {
@@ -224,7 +226,7 @@ export function parse(tokens, options = {}) {
     expectPunct("=", "before the aliased type");
     const value = parseType();
     endStatement();
-    return { kind: "TypeAlias", name: name ? name.value : "<error>", params, value, line: kw.line };
+    return { kind: "TypeAlias", name: name ? name.value : "<error>", params, value, line: kw.line, column: kw.column };
   }
 
   function parseConst() {
@@ -233,14 +235,14 @@ export function parse(tokens, options = {}) {
     expectPunct("=", "before the value");
     const value = parseExpr();
     endStatement();
-    return { kind: "Const", name: name ? name.value : "<error>", value, line: kw.line };
+    return { kind: "Const", name: name ? name.value : "<error>", value, line: kw.line, column: kw.column };
   }
 
   function parseEffectDecl() {
     const kw = advance();
     const name = expect("ident", "an effect name");
     endStatement();
-    return { kind: "EffectDecl", name: name ? name.value : "<error>", line: kw.line };
+    return { kind: "EffectDecl", name: name ? name.value : "<error>", line: kw.line, column: kw.column };
   }
 
   function parseBlock() {
@@ -267,7 +269,7 @@ export function parse(tokens, options = {}) {
       advance();
       const value = parseExpr();
       endStatement();
-      return { kind: "Assign", name: name.value, value, line: name.line };
+      return { kind: "Assign", name: name.value, value, line: name.line, column: name.column };
     }
     if (at("keyword", "let") || at("keyword", "var")) {
       const kw = advance();
@@ -277,22 +279,22 @@ export function parse(tokens, options = {}) {
       expectPunct("=", "before the value");
       const value = parseExpr();
       endStatement();
-      return { kind: kw.value === "let" ? "Let" : "Var", name: name ? name.value : "<error>", type, value, line: kw.line };
+      return { kind: kw.value === "let" ? "Let" : "Var", name: name ? name.value : "<error>", type, value, line: kw.line, column: kw.column };
     }
     if (at("keyword", "return")) {
       const kw = advance();
       const value = at("newline") || atPunct("}") || at("eof") ? null : parseExpr();
       endStatement();
-      return { kind: "Return", value, line: kw.line };
+      return { kind: "Return", value, line: kw.line, column: kw.column };
     }
     // A nested declaration inside a block is allowed (a local function, say).
     if (at("keyword", "fn") || at("keyword", "pub") || at("keyword", "type") || at("keyword", "const")) {
       const decl = parseDecl();
-      return decl ? { kind: "DeclStmt", decl, line: t.line } : null;
+      return decl ? { kind: "DeclStmt", decl, line: t.line, column: t.column } : null;
     }
     const expr = parseExpr();
     endStatement();
-    return { kind: "ExprStmt", expr, line: t.line };
+    return { kind: "ExprStmt", expr, line: t.line, column: t.column };
   }
 
   function parseExpr() {
@@ -305,7 +307,7 @@ export function parse(tokens, options = {}) {
     while (at("punct") && PRECEDENCE[level].includes(peek().value)) {
       const op = advance();
       const right = parseBinary(level + 1);
-      left = { kind: "Binary", op: op.value, left, right, line: op.line };
+      left = { kind: "Binary", op: op.value, left, right, line: op.line, column: op.column };
     }
     return left;
   }
@@ -313,7 +315,7 @@ export function parse(tokens, options = {}) {
   function parseUnary() {
     if (atPunct("!") || atPunct("-")) {
       const op = advance();
-      return { kind: "Unary", op: op.value, operand: parseUnary(), line: op.line };
+      return { kind: "Unary", op: op.value, operand: parseUnary(), line: op.line, column: op.column };
     }
     return parsePostfix();
   }
@@ -330,20 +332,20 @@ export function parse(tokens, options = {}) {
           if (atPunct(",")) advance(); else break;
         }
         expectPunct(")", "to close the argument list");
-        expr = { kind: "Call", callee: expr, args, line: open.line };
+        expr = { kind: "Call", callee: expr, args, line: open.line, column: open.column };
         continue;
       }
       if (atPunct(".")) {
         advance();
         const name = at("ident") || at("keyword") ? advance() : expect("ident", "a field name");
-        expr = { kind: "Field", target: expr, name: name ? name.value : "<error>", line: peek().line };
+        expr = { kind: "Field", target: expr, name: name ? name.value : "<error>", line: peek().line, column: peek().column };
         continue;
       }
       if (atPunct("[")) {
         const open = advance();
         const index = parseExpr();
         expectPunct("]", "to close the subscript");
-        expr = { kind: "Index", target: expr, index, line: open.line };
+        expr = { kind: "Index", target: expr, index, line: open.line, column: open.column };
         continue;
       }
       break;
@@ -356,11 +358,11 @@ export function parse(tokens, options = {}) {
 
     if (t.type === "int" || t.type === "float") {
       advance();
-      return { kind: "Literal", type: t.type, value: t.numeric !== undefined ? t.numeric : t.value, raw: t.value, line: t.line };
+      return { kind: "Literal", type: t.type, value: t.numeric !== undefined ? t.numeric : t.value, raw: t.value, line: t.line, column: t.column };
     }
-    if (t.type === "string") { advance(); return { kind: "Literal", type: "string", value: t.value, raw: t.raw === true, line: t.line }; }
-    if (at("keyword", "true") || at("keyword", "false")) { advance(); return { kind: "Literal", type: "bool", value: t.value === "true", line: t.line }; }
-    if (at("keyword", "nil")) { advance(); return { kind: "Literal", type: "nil", value: null, line: t.line }; }
+    if (t.type === "string") { advance(); return { kind: "Literal", type: "string", value: t.value, raw: t.raw === true, line: t.line, column: t.column }; }
+    if (at("keyword", "true") || at("keyword", "false")) { advance(); return { kind: "Literal", type: "bool", value: t.value === "true", line: t.line, column: t.column }; }
+    if (at("keyword", "nil")) { advance(); return { kind: "Literal", type: "nil", value: null, line: t.line, column: t.column }; }
 
     if (at("keyword", "while")) {
 
@@ -370,7 +372,7 @@ export function parse(tokens, options = {}) {
 
       const body = atPunct("{") ? parseBlock() : null;
 
-      return { kind: "While", condition, body, line: t.line };
+      return { kind: "While", condition, body, line: t.line, column: t.column };
 
     }
 
@@ -383,7 +385,7 @@ export function parse(tokens, options = {}) {
         advance();
         otherwise = at("keyword", "if") ? parsePrimary() : parseBlock();
       }
-      return { kind: "If", condition, then, otherwise, line: t.line };
+      return { kind: "If", condition, then, otherwise, line: t.line, column: t.column };
     }
 
     if (at("keyword", "match")) {
@@ -396,19 +398,19 @@ export function parse(tokens, options = {}) {
         const pattern = parseExpr();
         expectPunct("=>", "after the pattern");
         const body = parseExpr();
-        arms.push({ pattern, body, line: pattern.line });
+        arms.push({ pattern, body, line: pattern.line, column: pattern.column });
         if (atPunct(",")) advance();
         skipNewlines();
       }
       expectPunct("}", "to close the match arms");
-      return { kind: "Match", subject, arms, line: t.line };
+      return { kind: "Match", subject, arms, line: t.line, column: t.column };
     }
 
     if (at("keyword", "arena")) {
       advance();
       const args = [];
       if (atPunct("(")) { advance(); while (!atPunct(")") && !at("eof")) { args.push(parseExpr()); if (atPunct(",")) advance(); else break; } expectPunct(")"); }
-      return { kind: "Call", callee: { kind: "Ident", name: "arena", line: t.line }, args, line: t.line };
+      return { kind: "Call", callee: { kind: "Ident", name: "arena", line: t.line, column: t.column }, args, line: t.line, column: t.column };
     }
 
     // A record literal and a block both start with {. They are told apart by looking ahead: a field
@@ -434,7 +436,7 @@ export function parse(tokens, options = {}) {
       }
       skipNewlines();
       expectPunct("}", "to close the record");
-      return { kind: "Record", fields, line: open.line };
+      return { kind: "Record", fields, line: open.line, column: open.column };
     }
     if (atPunct("{")) return parseBlock();
 
@@ -450,10 +452,10 @@ export function parse(tokens, options = {}) {
       expectPunct(")");
       // (x) is a group; (x,) is a one-element tuple. Without the second form a description cannot hold
       // a sequence of tuples - joining a note to the rest would splice its elements instead.
-      return items.length === 1 && !trailingComma ? items[0] : { kind: "Tuple", items, line: t.line };
+      return items.length === 1 && !trailingComma ? items[0] : { kind: "Tuple", items, line: t.line, column: t.column };
     }
 
-    if (t.type === "ident") { advance(); return { kind: "Ident", name: t.value, line: t.line }; }
+    if (t.type === "ident") { advance(); return { kind: "Ident", name: t.value, line: t.line, column: t.column }; }
 
     error("HMYR-E0104", "expected an expression, found " + describe(t));
     advance();
@@ -461,7 +463,7 @@ export function parse(tokens, options = {}) {
     // produces a second complaint from endStatement and then a third, which is exactly the cascade the
     // recovery is meant to prevent.
     while (!at("eof") && !at("newline") && !atPunct("}") && !atPunct(")") && !atPunct(",")) advance();
-    return { kind: "Error", line: t.line };
+    return { kind: "Error", line: t.line, column: t.column };
   }
 
   const ast = parseModule();
