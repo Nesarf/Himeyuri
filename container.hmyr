@@ -1,0 +1,66 @@
+// 压缩容器：认出模块文件外面那层壳，而把「解」交出去。
+//
+// 学自 openmpt 的 soundlib/Container*.cpp 那几份。模块音乐有三种老壳：
+//
+//   XPKF      XPK，Amiga 上常见的整包压缩（壳里还写着用哪个子压缩器）
+//   ziRCONia  MMCMP，那个年代用来把模块压小的工具
+//   PP20      PowerPacker，Amiga 的老压缩器
+//
+// 这一层只做前半段：认出是哪一个。为什么只做前半段——
+// 解压是几百行的位操作，而本机没有现成的那三种解压器。认出来之后如实说
+// 「这是 XPK，而我这里没有解压器」，比假装能解好得多。
+//
+// 认出来的容器名交回小写；认不出交回空串。空串不是失败，是「外面没有壳」。
+
+// 开头是不是这几个字节。全用 latin1 下的字符写，于是比较就是字符串比较。
+fn 开头是(字节串: String, 标记: String) -> Bool {
+  if len(字节串) < len(标记) { return false }
+  return slice(字节串, 0, len(标记)) == 标记
+}
+
+fn 认(字节串: String) -> String {
+  if 开头是(字节串, "XPKF") { return "xpk" }
+  if 开头是(字节串, "ziRCONia") { return "mmcmp" }
+  if 开头是(字节串, "PP20") { return "pp20" }
+  return ""
+}
+
+// 壳的名字，给人看的那一种。认不出就交回「外面没有壳」——
+// 因为「没有壳」与「壳不认识」是两件事，而这一层只说前者。
+fn 壳名(字节串: String) -> String {
+  let 容 = 认(字节串)
+  if 容 == "" { return "无" }
+  if 容 == "xpk" { return "XPK" }
+  if 容 == "mmcmp" { return "MMCMP" }
+  if 容 == "pp20" { return "PowerPacker" }
+  return 容
+}
+
+// XPK 的壳里还写着用哪个子压缩器：偏移八到十一那四个字节。
+// 那是有用的信息，而它不能替代解压器——认出子压缩器不等于会解。
+fn 子压缩器(字节串: String) -> String {
+  if 认(字节串) != "xpk" { return "" }
+  if len(字节串) < 12 { return "" }
+  return slice(字节串, 8, 12)
+}
+
+// 解压器的名字：认得出就给一个能去借的名字，认不出就交回空串。
+// 注意它只是「名字」，这一层没有去起进程——起进程是调用方的事，也是它该声明效果的地方。
+fn 解压器名(字节串: String) -> String {
+  let 容 = 认(字节串)
+  if 容 == "xpk" { return "xpk" }
+  if 容 == "mmcmp" { return "mmcmp" }
+  if 容 == "pp20" { return "pp20" }
+  return ""
+}
+
+// 解开之后该拿到什么：这里只说「去解」，而结果由调用方交回来。
+// 于是这一层不假装自己会解，而调用方也没法悄悄以为它会。
+fn 要解吗(字节串: String) -> Bool {
+  return 认(字节串) != ""
+}
+
+fn main() -> Int {
+  print("这一层只有函数，没有独立的入口可跑。\n")
+  return 0
+}
