@@ -1,4 +1,4 @@
-// 格式化器的验收：空白规范化，而语义不变。
+// 空白规范化的验收：只动空白，而语义不变。
 //
 // 那条客观标准写在最上面，因为它是「对不对」的定义：
 //   解析 → 重排 → 再解析，两次得到的 AST 必须相同。
@@ -17,8 +17,8 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "fmt.hmyr"));
-ok("格式化器那一层加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
+const unit = loadUnit(path.join(ROOT, "whitespace.hmyr"));
+ok("空白规范化那一层加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
 const 规 = (s) => {
   const fn = rt.functions.get("规范化");
