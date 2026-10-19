@@ -118,5 +118,20 @@ console.log("七、列与位之间的换算");
   ok("折行与列到位是同一个换算", call("折行位", ["a中b", 2]) === 位("a中b", 2));
 }
 
+console.log("八、按列插入（编辑器真正需要的那种插入）");
+{
+  let s = call("空状态", []);
+  for (const ch of "a中b") s = call("插入", [s, ch]);
+  ok("a中b 的光标在第四列", call("光标列", [s]) === 4, String(call("光标列", [s])));
+  const r1 = call("在列插入", [[s[0], 0], 1, "X"]);
+  ok("第一列插 X 得 aX中b", r1[0] === "aX中b", JSON.stringify(r1[0]));
+  ok("而新位是二", r1[1] === 2, String(r1[1]));
+  const r2 = call("在列插入", [[s[0], 0], 2, "Y"]);
+  ok("第二列也停在中的前面，得 aY中b", r2[0] === "aY中b", JSON.stringify(r2[0]));
+  const r3 = call("在列插入", [[s[0], 0], 99, "Z"]);
+  ok("超过宽度就落在末尾", r3[0] === "a中bZ", JSON.stringify(r3[0]));
+  ok("它没有改「位」的语义（位仍是码位下标）", r1[1] <= 4);
+}
+
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
