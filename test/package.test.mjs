@@ -23,7 +23,10 @@ try {
     ok("退出码零", r.status === 0, String(r.status));
     ok("说了收了多少文件", /收了 \d+ 个文件/.test(r.stdout), r.stdout.slice(0, 50));
     ok("文件真的在", fs.existsSync(出) && fs.statSync(出).size > 1000, String(fs.existsSync(出)));
-    ok("而且它明说「这是 zip，不是 PE」", r.stdout.includes("OnlySign"), r.stdout.slice(-80));
+    // 断言那两句实话：zip 没有内嵌签名位置，所以签的是清单而不是它。
+    // 早前这里断言的是「它说了 OnlySign」——那句话改掉之后这条就过期了。
+    ok("而且它明说「签的是清单，不是 zip」", r.stdout.includes("签的是清单"), r.stdout.slice(-120));
+    ok("若本机有钥匙就说了已签", r.stdout.includes("清单已签") || r.stdout.includes("没有签名钥匙"), r.stdout.slice(-140));
   }
 
   console.log("二、包里有什么");
