@@ -10,9 +10,11 @@
 //   node tools/helper.mjs               列出全部编号
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// 中文人话单独一份（conformance/plain.mjs）：codes.mjs 给检查器读，这一份给人读。
+const { PLAIN } = await import(pathToFileURL(path.join(ROOT, "conformance/plain.mjs")).href);
 const 源 = fs.readFileSync(path.join(ROOT, "conformance/codes.mjs"), "utf8");
 
 // 承认的现实：那是一份 JS 模块，而不是数据文件。
@@ -60,7 +62,8 @@ if (/^HMYR-[A-Z]\d+$/.test(名.toUpperCase())) {
   }
   const 阶段 = { lex: "词法", parse: "语法", link: "链接", run: "求值", host: "宿主", tool: "工具", check: "检查" }[目.stage] || 目.stage;
   console.log("  " + 目.code + "    " + 阶段);
-  console.log("  含义  " + 目.meaning);
+  if (PLAIN[目.code]) console.log("  说人话  " + PLAIN[目.code]);
+  console.log("  原文  " + 目.meaning);
   if (目.checkedBy) console.log("  谁在验  " + 目.checkedBy);
   if (目.内部) console.log("  这一类   实现内部的故障：一个程序不该故意触发它。撞上它通常意味着前面的输入已经坏了。");
   if (目.预留) console.log("  这一类   预留：规则还没实现，于是它现在还不会出现。");
@@ -70,10 +73,13 @@ if (/^HMYR-[A-Z]\d+$/.test(名.toUpperCase())) {
 }
 
 // 按词搜：含义里有它就列出来
-const 命中 = 条目们.filter((e) => e.meaning.toLowerCase().includes(名.toLowerCase()));
+// 两个方向都搜：中文人话与英文原文。人打来的词可能是任一边。
+const 命中 = 条目们.filter((e) =>
+  e.meaning.toLowerCase().includes(名.toLowerCase()) ||
+  (PLAIN[e.code] && PLAIN[e.code].includes(名)));
 console.log("  「" + 名 + "」命中 " + 命中.length + " 个编号：");
 for (const e of 命中) {
-  console.log("    " + e.code.padEnd(12) + e.meaning);
+  console.log("    " + e.code.padEnd(12) + (PLAIN[e.code] ? PLAIN[e.code] : e.meaning));
 }
 if (命中.length === 0) {
   // 没命中不空手回去：把全部编号列出来，人总能从里面认出一个。
