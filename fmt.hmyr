@@ -1,0 +1,109 @@
+// 格式化器第一版：只规范化空白，不重排内容。
+//
+// 验收标准（写在明处，因为它决定了「对不对」）：
+//
+//   解析 → 重排 → 再解析，两次得到的 AST 必须相同。
+//
+// 对「只动空白」来说这条标准会自动成立——因为它一个记号都不碰。
+// 那不意味着它不重要：行尾空白、制表符与空格的混用、文件末尾没有换行，
+// 这三样是版本控制里最常见的噪声，而它们全都能在这一层消掉。
+//
+// 幂等：规范化两遍与一遍结果相同。那也是可测的。
+
+// 去掉行尾的一串空格与制表符。
+fn 去尾从(行: String, 末: Int) -> Int {
+  if 末 <= 0 { return 0 }
+  let 字 = 行[末 - 1]
+  if 字 == " " { return 去尾从(行, 末 - 1) }
+  if 字 == chr(9) { return 去尾从(行, 末 - 1) }
+  return 末
+}
+
+fn 去尾(行: String) -> String {
+  return slice(行, 0, 去尾从(行, len(行)))
+}
+
+// 把一个制表符换成两个空格。为什么是两个而不是八个：
+// 这一版的读者是自己，而两个空格是这门语言里缩进的既定宽度。
+fn 展制表从(行: String, i: Int, acc: String) -> String {
+  if i >= len(行) { return acc }
+  if 行[i] == chr(9) { return 展制表从(行, i + 1, acc + "  ") }
+  return 展制表从(行, i + 1, acc + 行[i])
+}
+
+fn 展制表(行: String) -> String {
+  return 展制表从(行, 0, "")
+}
+
+fn 一行(行: String) -> String {
+  return 展制表(去尾(行))
+}
+
+// 压空行：连续两个以上的空行压成一个。
+fn 压空行从(行们: Int, i: Int, 上空白: Bool, acc: Int) -> Int {
+  if i >= len(行们) { return acc }
+  let 行 = 行们[i]
+  let 是空白 = len(行) == 0
+  if 是空白 && 上空白 { return 压空行从(行们, i + 1, true, acc) }
+  return 压空行从(行们, i + 1, 是空白, acc + (行,))
+}
+
+fn 压空行(行们: Int) -> Int {
+  return 压空行从(行们, 0, false, ())
+}
+
+// 拆行：按换行切成一段一段（不保留换行符本身）。
+fn 拆行从(文本: String, i: Int, 起: Int, acc: Int) -> Int {
+  if i >= len(文本) { return acc + (slice(文本, 起, len(文本)),) }
+  if 文本[i] == chr(10) {
+    let 行 = slice(文本, 起, i)
+    return 拆行从(文本, i + 1, i + 1, acc + (行,))
+  }
+  return 拆行从(文本, i + 1, 起, acc)
+}
+
+fn 拆行(文本: String) -> Int {
+  if 文本 == "" { return () }
+  return 拆行从(文本, 0, 0, ())
+}
+
+// 逐行做「一行」那件事。
+fn 行们加工从(行们: Int, i: Int, acc: Int) -> Int {
+  if i >= len(行们) { return acc }
+  return 行们加工从(行们, i + 1, acc + (一行(行们[i]),))
+}
+
+// 拼回去：每行之后一个换行，末尾再留一个（文件总以换行结尾）。
+fn 拼行从(行们: Int, i: Int, acc: String) -> String {
+  if i >= len(行们) { return acc }
+  return 拼行从(行们, i + 1, acc + 行们[i] + chr(10))
+}
+
+// 去掉末尾的空行。为什么需要它：拼回去时每一行后面都补一个换行，
+// 所以「末尾那一行是空的」会变成一个多余的空行——而那就是幂等不成立的原因。
+fn 去末空从(行们: Int, 末: Int) -> Int {
+  if 末 <= 0 { return 0 }
+  if len(行们[末 - 1]) == 0 { return 去末空从(行们, 末 - 1) }
+  return 末
+}
+
+fn 取头从(行们: Int, i: Int, 末: Int, acc: Int) -> Int {
+  if i >= 末 { return acc }
+  return 取头从(行们, i + 1, 末, acc + (行们[i],))
+}
+
+fn 去末空(行们: Int) -> Int {
+  return 取头从(行们, 0, 去末空从(行们, len(行们)), ())
+}
+
+// 规范化整份源码。
+fn 规范化(文本: String) -> String {
+  let 行们 = 去末空(压空行(行们加工从(拆行(文本), 0, ())))
+  return 拼行从(行们, 0, "")
+}
+
+fn main() -> Int {
+  let 例 = "fn main() {\n\tprint(\"hi\")   \n\n\n  return 0\n}"
+  print("原文：\n" + 例 + "\n---\n规范化：\n" + 规范化(例))
+  return 0
+}
