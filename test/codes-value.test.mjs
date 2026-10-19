@@ -1,0 +1,48 @@
+// 一个编号一个用例：最后十条。
+//
+// 这些大多是「值不对」的拒绝，每一条都只有一个自然的触发方式。
+// 而 R0201 与 W0001 是两道门：一个是效果系统的门，一个是字符集的门。
+import { run } from "../src/eval.mjs";
+
+let passed = 0, failed = 0;
+const ok = (label, condition, detail = "") => {
+  if (condition) { passed++; console.log("  通过  " + label); }
+  else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
+};
+const 跑 = (src) => {
+  const r = run(src, {});
+  return r.diagnostics.items.map((x) => x.code);
+};
+const 程序 = (body) => "fn main() -> Int {\n  " + body + "\n}\n";
+const 断言 = (label, code, body) => ok(label, 跑(程序(body)).includes(code), JSON.stringify(跑(程序(body))));
+
+console.log("值的拒绝");
+断言("R0120 除以零", "HMYR-R0120", "return 1 / 0");
+断言("R0130 要有数字", "HMYR-R0130", 'return "a" - 1');
+断言("R0131 两个值不能比", "HMYR-R0131", 'return 1 < "a"');
+
+console.log("内置的拒绝");
+断言("R0140 len 没有长度", "HMYR-R0140", "return len(1)");
+断言("R0141 int 读不出", "HMYR-R0141", 'return int("abc")');
+
+console.log("变量与下标");
+断言("R0150 给不可变的赋值", "HMYR-R0150", "let x = 1\n  x = 2\n  return x");
+断言("R0151 下标越界", "HMYR-R0151", 'return ("a", "b")[5]');
+断言("R0152 被下标的东西没有元素", "HMYR-R0152", "return 5[0]");
+
+console.log("两道门");
+{
+  // 效果的门：main 没有声明 effects，而 chdir 要 process。
+  // print 不算——它写到一个可替换的出口，不是动世界（这一条契约里也写着）。
+  const codes = 跑('fn main() -> Int {\n  chdir("/")\n  return 0\n}\n');
+  ok("R0201 调用了调用者没声明的效果", codes.includes("HMYR-R0201"), JSON.stringify(codes));
+}
+{
+  // 字符集的门：一个标识符里混了中文与拉丁
+  const codes = 跑("fn main() -> Int {\n  let 名字abc = 1\n  return 名字abc\n}\n");
+  ok("W0001 标识符混用文字", codes.includes("HMYR-W0001"), JSON.stringify(codes));
+}
+
+console.log("");
+console.log(passed + " passed, " + failed + " failed");
+process.exit(failed === 0 ? 0 : 1);
