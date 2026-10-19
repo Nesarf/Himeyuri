@@ -1,0 +1,87 @@
+// 语法改写（reader macro）：让「记号换成什么」成为一张表，而不是一段代码。
+//
+// 为什么是表而不是代码：design/PLATFORM.txt 里那句「语法改写会让工具失去立足点」说的是
+// 「改写藏在代码里，于是格式化器与 LSP 看不见它」。而规则若是数据，工具就能看见——
+// 它能读那张表，能把改写反向用一次，能在补全时知道「这个记号会变成什么」。
+//
+// 所以这一层的形状是：
+//
+//   展开(源码, 规则们) -> 新源码
+//
+// 而规则是一个二元元组 (记号, 展开成)。展开就是把源码里出现的记号逐个换掉。
+//
+// 三条要说清的：
+//   一、只换「完整的记号」，不换「记号里面的一部分」——否则 map 会把 remap 里的 map 也换掉。
+//   二、规则表是按顺序用的，先写的先换；一条规则不看别的规则展开了什么。
+//   三、展开之后要能解析——而「能不能解析」不归这一层管，它只管生成文字。
+
+// 字母、数字与下划线：一个记号的字符集。中文也算字母（这门语言允许中文标识符）。
+fn 是字(码: Int) -> Bool {
+  if 码 >= 48 && 码 <= 57 { return true }        // 0-9
+  if 码 >= 65 && 码 <= 90 { return true }        // A-Z
+  if 码 >= 97 && 码 <= 122 { return true }       // a-z
+  if 码 == 95 { return true }                    // 下划线
+  if 码 >= 19968 { return true }                // 中日韩统一表意（足够这一层用）
+  return false
+}
+
+fn 字吗(文本: String, 位: Int) -> Bool {
+  if 位 < 0 || 位 >= len(文本) { return false }
+  return 是字(ord(文本[位]))
+}
+
+// 从 位 开始的那一段，是不是正好是 记号，而且它的两边不在更大的记号里。
+fn 整记号(源码: String, 位: Int, 记号: String) -> Bool {
+  if len(记号) == 0 { return false }
+  if 位 + len(记号) > len(源码) { return false }
+  if slice(源码, 位, 位 + len(记号)) != 记号 { return false }
+  if 字吗(源码, 位 - 1) { return false }
+  if 字吗(源码, 位 + len(记号)) { return false }
+  return true
+}
+
+// 用一条规则扫一遍。扫到整记号就换掉，然后从换完的地方继续——
+// 于是同一条规则不会在它自己的展开结果里再命中一次（那样会无限展开）。
+fn 扫一遍从(源码: String, 位: Int, 记号: String, 展开成: String, acc: String) -> String {
+  if 位 >= len(源码) { return acc }
+  if 整记号(源码, 位, 记号) {
+    return 扫一遍从(源码, 位 + len(记号), 记号, 展开成, acc + 展开成)
+  }
+  return 扫一遍从(源码, 位 + 1, 记号, 展开成, acc + 源码[位])
+}
+
+fn 扫一遍(源码: String, 记号: String, 展开成: String) -> String {
+  return 扫一遍从(源码, 0, 记号, 展开成, "")
+}
+
+// 把一整张规则表按顺序用上去。
+fn 展开从(源码: String, 规则们: Int, i: Int) -> String {
+  if i >= len(规则们) { return 源码 }
+  let 规 = 规则们[i]
+  return 展开从(扫一遍(源码, 规[0], 规[1]), 规则们, i + 1)
+}
+
+fn 展开(源码: String, 规则们: Int) -> String {
+  return 展开从(源码, 规则们, 0)
+}
+
+// 反过来问：这份源码里有没有哪条规则的记号？工具（LSP、格式化器）用这一条
+// 决定「这个文件要不要先展开再读」——而那正是「规则是数据」的好处。
+fn 用到从(源码: String, 记号: String, 位: Int) -> Bool {
+  if 位 >= len(源码) { return false }
+  if 整记号(源码, 位, 记号) { return true }
+  return 用到从(源码, 记号, 位 + 1)
+}
+
+fn 用到(源码: String, 规则们: Int, i: Int) -> Bool {
+  if i >= len(规则们) { return false }
+  if 用到从(源码, 规则们[i][0], 0) { return true }
+  return 用到(源码, 规则们, i + 1)
+}
+
+fn main() -> Int {
+  let 规则们 = (("每当", "while"), ("否则", "if"))
+  let 例 = "fn main() -> Int {\n  var i = 0\n  每当 i < 3 {\n    i = i + 1\n  }\n  return i\n}\n"
+  print("原文：\n" + 例 + "展开之后：\n" + 展开(例, 规则们))
+  return 0
+}
