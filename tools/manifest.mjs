@@ -12,6 +12,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 读 = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
@@ -73,9 +74,22 @@ const 工具们 = fs.readdirSync(path.join(ROOT, "tools")).filter((n) => n.endsW
 const 文档们 = fs.readdirSync(path.join(ROOT, "design")).filter((n) => n.endsWith(".txt")).sort()
   .map((n) => ({ name: n, sha256: 哈("design/" + n) }));
 
+// 版本号用 git 的短哈希：那是最诚实的一种版本号——
+// 它指向确切的字节，而任何自称的「版本 1.2.3」都能被改，它不能。
+let commit = "";
+// 只吞「git 不在 PATH 上」这一种：别的错误该冒出来，而不是被静默吃掉。
+// 曾经这里 catch 了一切，于是少一个 import 变成了「commit 是空串」——
+// 一个看起来像「不在 git 仓库里」的空值。
+{
+  const r = spawnSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8", cwd: ROOT });
+  if (r.status === 0) commit = String(r.stdout).trim();
+  else if (r.error && r.error.code !== "ENOENT") throw r.error;
+}
+
 const 清单 = {
   name: "himeyuri",
   language: "HMYR",
+  commit: commit,
   generatedAt: new Date().toISOString().slice(0, 10),
   kernel: {
     builtins: 内置们.length,
