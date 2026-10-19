@@ -11,9 +11,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 读 = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
+
+// 一个文件的哈希：内容寻址的第一层。
+// 「谁签的」需要密钥，而「内容对不对」不需要——所以先做这一层。
+const 哈 = (p) => createHash("sha256").update(fs.readFileSync(path.join(ROOT, p))).digest("hex").slice(0, 16);
 
 // 一、内核：代码里的内置，与那十五个最小的
 const 源 = 读("src/eval.mjs");
@@ -52,7 +57,7 @@ const 走 = (dir) => {
       const 文本 = 读(p);
       const 函数 = (文本.match(/^fn /gm) || []).length;
       // 路径写成斜杠：清单要能 diff，而反斜杠只在 Windows 上成立。
-      库.push({ file: p.split(path.sep).join("/"), functions: 函数, lines: 文本.split("\n").length });
+      库.push({ file: p.split(path.sep).join("/"), functions: 函数, lines: 文本.split("\n").length, sha256: 哈(p) });
     }
   }
 };
@@ -60,11 +65,13 @@ const 走 = (dir) => {
 
 // 三、套件：check-all 里登记的
 const 检查 = 读("tools/check-all.mjs");
-const 套件们 = Array.from(检查.matchAll(/\["([a-z0-9]+)", "([^"]+)"/g)).map((m) => ({ name: m[1], path: m[2] }));
+const 套件们 = Array.from(检查.matchAll(/\["([a-z0-9]+)", "([^"]+)"/g)).map((m) => ({ name: m[1], path: m[2], sha256: 哈(m[2]) }));
 
 // 四、工具与文档
-const 工具们 = fs.readdirSync(path.join(ROOT, "tools")).filter((n) => n.endsWith(".mjs")).sort();
-const 文档们 = fs.readdirSync(path.join(ROOT, "design")).filter((n) => n.endsWith(".txt")).sort();
+const 工具们 = fs.readdirSync(path.join(ROOT, "tools")).filter((n) => n.endsWith(".mjs")).sort()
+  .map((n) => ({ name: n, sha256: 哈("tools/" + n) }));
+const 文档们 = fs.readdirSync(path.join(ROOT, "design")).filter((n) => n.endsWith(".txt")).sort()
+  .map((n) => ({ name: n, sha256: 哈("design/" + n) }));
 
 const 清单 = {
   name: "himeyuri",
@@ -80,6 +87,10 @@ const 清单 = {
   documents: 文档们,
 };
 
+// 整份清单的 digest：先算不含它的那一份，再补进去。
+// 于是「清单没被动过」也能验——而那是「拿到一份清单能不能信」的第一步。
+const 底 = JSON.stringify(清单, null, 2);
+清单.digest = createHash("sha256").update(底).digest("hex");
 const 出了 = JSON.stringify(清单, null, 2) + "\n";
 const 参 = process.argv.slice(2);
 const 出位 = 参.indexOf("--out");
