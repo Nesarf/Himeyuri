@@ -26,21 +26,26 @@ const ok = (label, condition, detail = "") => {
 const 行数 = (相对) => fs.readFileSync(path.join(ROOT, 相对), "utf8").split("\n").length;
 const 合行数 = (几份) => 几份.reduce((n, f) => n + 行数(f), 0);
 
-console.log("一、Stage 0 是三份：loader 与子集那两层");
+console.log("一、Stage 0 是五份：loader、子集那两层、诊断，与最小求值器");
 {
-  const 三份 = ["src/loader.mjs", "src/subset-lex.mjs", "src/subset-parse.mjs"];
-  for (const 文 of 三份) {
+  const 五份 = ["src/loader.mjs", "src/subset-lex.mjs", "src/subset-parse.mjs", "src/diagnostics.mjs", "src/minimal-eval.mjs"];
+  for (const 文 of 五份) {
     const n = 行数(文);
     ok(文 + " 在，且行数是 " + n, n > 20, String(n));
   }
-  const 合 = 合行数(三份);
+  const 合 = 合行数(五份);
   console.log("    （合计 " + 合 + " 行）");
-  ok("三份加起来在五百五到八百五之间", 合 > 550 && 合 < 850, String(合));
-  // 宿主那两层不在 Stage 0 里了，而它们仍在仓库里——给要读更宽语法的工具用。
-  ok("loader 不引宿主那两层", !/from "\.\/(lexer|parser)\.mjs"/.test(fs.readFileSync(path.join(ROOT, "src/loader.mjs"), "utf8")));
-  ok("而宿主那两层仍然在（工具路线）", 行数("src/lexer.mjs") > 20 && 行数("src/parser.mjs") > 20, 行数("src/lexer.mjs") + " 与 " + 行数("src/parser.mjs"));
-  // 一句可核的话：Stage 0 那三份比宿主那两层小。
-  ok("Stage 0 那三份比宿主那两层小", 合 < 合行数(["src/lexer.mjs", "src/parser.mjs"]), 合 + " 对 " + 合行数(["src/lexer.mjs", "src/parser.mjs"]));
+  ok("五份加起来在一千到一千三百之间", 合 > 1000 && 合 < 1300, String(合));
+  // 宿主那三份（读的两层 + 求值器）不在 Stage 0 里了，而它们仍在仓库里——对照与工具要用。
+  const 宿主 = ["src/lexer.mjs", "src/parser.mjs", "src/eval.mjs"];
+  for (const 文 of 宿主) ok(文 + " 仍然在（对照与工具路线）", 行数(文) > 20, String(行数(文)));
+  // 一句可核的话：Stage 0 那五份加起来比宿主那三份小。
+  ok("Stage 0 那五份比宿主那三份小", 合 < 合行数(宿主), 合 + " 对 " + 合行数(宿主));
+  // 而启动器既不引宿主的读法，也不引宿主的求值器当默认。
+  const 启动器 = fs.readFileSync(path.join(ROOT, "bin/hmyr.mjs"), "utf8");
+  ok("启动器不引宿主的读法", !/from "\.\.\/src\/(lexer|parser)\.mjs"/.test(启动器));
+  ok("启动器把最小求值器当默认", /最小运行\(层/.test(启动器) && !/runUnit\(层\)\s*;/.test(启动器));
+  ok("宿主那份留着一条开关（--host-eval）", 启动器.includes("--host-eval"));
 }
 
 console.log("二、它读进来自举那一层：六份，一百二十三条声明");
