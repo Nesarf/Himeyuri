@@ -38,23 +38,24 @@ HMYR 全面自举：运行时、宿主依赖与启动
   ・宿主：纯 ESM 的 Node 脚本，Node 24。
   ・构建：没有。无 package.json、无 tsconfig、无打包器、无 node_modules。
   ・第三方依赖：零。
-  ・宿主模块（七个，是这一条要收掉的东西）：
-      node:fs            读写文件、同步读 stdin
-      node:os            主目录、临时目录与平台信息
-      node:path          路径拼接与解析
-      node:readline      逐行输入（真终端那一格）
-      node:url           取当前模块地址
-      node:child_process  跑一个程序（run_program）
-      node:worker_threads 真线程（thr_spawn；已登记为专有模块，见 tools/conformance.mjs）
-  ・规模（2026-10-19 实测）：宿主 src/ 2290 行；.mjs 89 个 9306 行，.hmyr 30 个 3492 行。
+  ・宿主模块：现在只剩这些（2026-10-20 实测）
+      src/capabilities.mjs        node:fs · node:os · node:path · node:child_process · node:worker_threads
+                                  ——能力内核自己，这是它该在的位置
+      src/format.mjs src/lsp.mjs src/reflect.mjs src/embed.mjs
+                                  工具路线：格式化器、语言服务器、反射、嵌入，
+                                  fs / path / url / readline 各取所需
+      bin/hmyr.mjs bin/run-eval.mjs   node:path · node:url，只为算模块自己的位置
+      src/thr-worker.mjs          跑在另一个线程里的那一份
+    启动那条路上一处都没有：Stage 0 的五份（loader · 子集切词 · 子集 parser · 诊断 ·
+    最小求值器）全都不 import node:，它们只拿到能力对象。
+  ・规模（2026-10-20 实测）：src/ 三千四百三十九行；.mjs 一百三十七个，.hmyr 三十七个。
   ・已经自制的那一半：self/ 那六件（lex · chain · stmt · body · eval · run）证明「Himeyuri 能跑 Himeyuri」。
-    而「读它自己那一层」也交出去了：Stage 0 换成了 src/subset-lex.mjs 与 src/subset-parse.mjs，
-    于是宿主的 src/lexer.mjs 与 src/parser.mjs 不在启动那一条路上了。
-    它们留在仓库里，给要读更宽语法的工具用（格式化器、语言服务器、一致性检查）。
-    Stage 0 现在是 693 行：loader 112 · 子集切词 175 · 子集 parser 386 · 诊断 20。
-    还差的是求值器与能力内核——那两件就是下面第二步剩下的部分。
+    而「读它自己那一层」与「跑」都交出去了：Stage 0 现在是五份 1108 行
+    （loader 114 · 子集切词 175 · 子集 parser 386 · 诊断 20 · 最小求值器 413）。
+    宿主那几份（lexer · parser · eval）留在仓库里，而它们成了对照与工具路线——
+    见 design/BOOTSTRAP.txt 第二节那五笔账。
 
-走到第几步（2026-10-19）
+走到第几步（2026-10-20）
 --------------------------------------------------------------------
 
   第一步 能力收敛：已做。九组能力写进了 design/CAPABILITIES.txt，
@@ -72,7 +73,9 @@ HMYR 全面自举：运行时、宿主依赖与启动
 
   第三步 自举闭环：前提齐了，还没开始。它要的是「谁来跑求值器」那一层——
           一个最小的机器层，让执行器本身不依赖高级宿主。
-  第三步 自举闭环：未开始。它要等第二步的求值器换过去。
+          它的需求表已经量出来了：design/HOSTMIN.txt（十项全局、八种构造，没有 Promise），
+          而覆盖率把那份「上界」收紧到「每一项都真的被走到过」。所以这一步要选的不是
+          「减什么」，而是「由谁提供」——自己实现那一层，或者把规格写死继续用 JS。
 
 
 三步（按顺序，前一步不成立就不走下一步）
