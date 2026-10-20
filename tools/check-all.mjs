@@ -62,6 +62,7 @@ const SUITES = [
   ["selfcmdline", "test/self-cmdline.test.mjs", "SPEC M6 - the command line entry: answers on stdout, usage and failures on stderr, and never the two mixed"],
   ["selfcompile", "test/self-compile.test.mjs", "SPEC M6 - compiling itself: how far the bootstrap gets today, in numbers rather than hopes"],
   ["bootstrap", "test/bootstrap.test.mjs", "SPEC M6 - the bootstrap account: how big stage 0 is, what it does, and what it does not do"],
+  ["subsetcensus", "test/subset-census.test.mjs", "SPEC M6 - the subset census: what a bootstrap interpreter would have to support, counted from source"],
   ["selfframes", "test/self-frames.test.mjs", "SPEC M6 - one level of recursion costs about eleven host frames, and why the cheap fix was refused"],
   ["tailcall", "test/tail-call.test.mjs", "SPEC M6 - tail calls: tail recursion reaches any depth, and nothing else about the language changes"],
   ["launcher", "test/launcher.test.mjs", "SPEC M7 - node bin/hmyr.mjs: the target program goes through the bootstrap, not the host language layer"],
