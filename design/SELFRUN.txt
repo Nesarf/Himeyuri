@@ -60,9 +60,11 @@ HMYR 全面自举：运行时、宿主依赖与启动
   第一步 能力收敛：已做。九组能力写进了 design/CAPABILITIES.txt，
           而 tools/check-builtins.mjs 让「代码、规格第一圈、契约」三面对得上，
           并由 test/builtins.test.mjs 挂进每次全量。
-  第二步 启动器还原：做了一半多。bin/hmyr.mjs 已经把目标程序交给自举的求值器，
-          而「读它自己那一层」也交出去了（子集那两层，见 design/BOOTSTRAP.txt 与 design/SELFCOMPILE.txt）。
-          还差的是求值器本身：它仍在宿主的 src/eval.mjs 里跑，能力内核也还是宿主的七个模块。
+  第二步 启动器还原：做完了。bin/hmyr.mjs 已经把目标程序交给自举的求值器，
+          而「读它自己那一层」与「跑」都交出去了：默认的读法是子集那两层，
+          默认的执行器是 src/minimal-eval.mjs（只认量出来的那张表，见 design/BOOTSTRAP.txt 第九、十节）。
+          宿主那几份仍在仓库里，而它们成了对照（--host-eval）与工具路线。
+          还差的是能力内核：文件、进程、终端、时间仍然借宿主的模块。
   第三步 自举闭环：未开始。它要等第二步的求值器换过去。
 
 

@@ -80,7 +80,33 @@ try {
     ok("两边都算完而不是撞深度", r.主.码 === 0, r.主.码 + " " + JSON.stringify(r.主.出));
   }
 
-  console.log("三、错误路径：同一个编号");
+    console.log("二·补、两个求值器跑「自举自己的求值器」，答案也同一个");
+  {
+    // 这一节比上面那批硬：它跑的源码是 self/run.hmyr 里的 跑（表达式求值），
+    // 那条路上要经过自举的切词、搭树与求值三层。两个宿主求值器在这条路上给出同一个字符串，
+    // 才算「它们对这门语言的理解一致」——而不是各算各的加法。
+    const 层 = loadUnit(path.join(ROOT, "self/run.hmyr"));
+    const 宿主 = runUnit(层);
+    宿主.write = () => {};
+    宿主.writeErr = () => {};
+    const 小 = 最小运行(层, { readFile: (p) => fs.readFileSync(p), exists: (p) => fs.existsSync(p) });
+    小.write = () => {};
+    小.writeErr = () => {};
+    const 跑 = (rt, s) => rt.callFunction(rt.functions.get("跑"), [s], null);
+    const 例 = ["1 + 2 * 3", "(1 + 2) * 3", "10 % 4", "7 / 2", "-5 + 3", "--5", "1 < 2", "\"a\" + \"b\"", "len(\"abcd\")", "str(9)", "1 +", "x + 1"];
+    let 同数 = 0;
+    for (const s of 例) {
+      const a = 跑(宿主, s), b = 跑(小, s);
+      if (a === b) 同数++;
+      else ok("「" + s + "」两路不同", false, JSON.stringify(a) + " 对 " + JSON.stringify(b));
+    }
+    ok("十二个表达式两路给同一个字符串（含两个错处）", 同数 === 例.length, 同数 + " / " + 例.length);
+    // 这里只走 跑（表达式求值）。整段程序那条入口（跑程序带函数）收的是适配层造出来的
+    // 「语句们」与「函数们」两件东西，而不是源码字符串——那是另一套装置，
+    // 由 adapter 与 self-agree 那几套钉着，不在这儿重复一遍。
+  }
+
+console.log("三、错误路径：同一个编号");
   const 编号例 = [
     ["除零", "fn main() -> Int {\n  return 1 / 0\n}\n", "HMYR-R0120"],
     ["取余除零", "fn main() -> Int {\n  return 1 % 0\n}\n", "HMYR-R0120"],
