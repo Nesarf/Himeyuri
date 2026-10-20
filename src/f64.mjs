@@ -35,7 +35,11 @@ export const 拆 = (位模式值) => {
 
 // 把 M * 2^E（M 为正，E 为整数）装回一个位模式。负号由调用处给。
 // 一次舍入做完，中间不落地成浮点。
-const 装配 = (M, E, 负) => {
+//
+// sticky 说的是「这个 M 底下还有一点没写出来的东西」，也就是真实值是 M 加上一个
+// 小于一的零头。除法必须带它：商是用整数除出来的，余数不进商的话，
+// 「正好一半」那条判断就会把一次真实的余数当成 tie。
+const 装配 = (M, E, 负, sticky = false) => {
   const s = 负 ? 符号位 : 0n;
   if (M === 0n) return s;                 // 带符号的零
   const 位长 = M.toString(2).length;
@@ -44,7 +48,7 @@ const 装配 = (M, E, 负) => {
 
   // 目标指数：正规数按 e - 52，次正规固定在 -1074（也就是精度变少）。
   let 目标E = e >= -1022 ? e - 52 : -1074;
-  let M2 = 右舍(M, 目标E - E);
+  let M2 = 右舍(M, 目标E - E, sticky);
 
   // 舍入进位可能把 M2 顶到 2^53：那就降一格。
   if (M2 >= (1n << 53n)) { M2 >>= 1n; 目标E += 1; }
@@ -60,14 +64,17 @@ const 装配 = (M, E, 负) => {
 };
 
 // 右移 k 位并舍入到最近偶数。k 为负时是左移（不丢位）。
-const 右舍 = (M, k) => {
+//
+// sticky 只改一条判断：余数正好一半时，若底下还有零头，那就比一半大，进一；
+// 没有零头才是真的 tie，那时才看商的末位。
+const 右舍 = (M, k, sticky = false) => {
   if (k <= 0) return M << BigInt(-k);
   const kk = BigInt(k);
   const 商 = M >> kk;
   const 余 = M & ((1n << kk) - 1n);
   const 半 = 1n << (kk - 1n);
   if (余 > 半) return 商 + 1n;
-  if (余 === 半 && (商 & 1n) === 1n) return 商 + 1n;
+  if (余 === 半) return sticky || (商 & 1n) === 1n ? 商 + 1n : 商;
   return 商;
 };
 
@@ -112,7 +119,46 @@ export const 乘 = (a, b) => {
   return 装配(A.M * B.M, A.E + B.E, 负);
 };
 
-// 比较：-1 / 0 / 1，而不可比（有 NaN）交回 null —— 那是 IEEE 的意思，
+// 除法。商要到五十五位左右，余数进粘滞位，然后一次舍入 —— 与乘法同一个形状，
+// 只多了一个「底下还有零头」的信号。
+export const 除 = (a, b) => {
+  const A = 拆(a), B = 拆(b);
+  const 负 = A.负 !== B.负;
+  if (A.种 === "非数" || B.种 === "非数") return 位模式.非数;
+  if (A.种 === "无穷") {
+    if (B.种 === "无穷") return 位模式.非数;
+    return 负 ? 位模式.负无穷 : 位模式.正无穷;
+  }
+  if (B.种 === "无穷") return 负 ? 位模式.负零 : 位模式.正零;
+  if (B.种 === "零") return A.种 === "零" ? 位模式.非数 : (负 ? 位模式.负无穷 : 位模式.正无穷);
+  if (A.种 === "零") return 负 ? 位模式.负零 : 位模式.正零;
+
+  const n1 = A.M.toString(2).length, n2 = B.M.toString(2).length;
+  const 移 = 55 + n2 - n1;               // 让商落在五十五位上下：够舍入，且不止一位
+  const 被 = A.M << BigInt(移);
+  const Q = 被 / B.M;
+  const R = 被 % B.M;
+  return 装配(Q, A.E - B.E - 移, 负, R !== 0n);
+};
+
+// 取余：fmod 的规矩 —— 符号跟被除数，而结果总能精确表示，所以它不会舍入。
+export const 余 = (a, b) => {
+  const A = 拆(a), B = 拆(b);
+  if (A.种 === "非数" || B.种 === "非数") return 位模式.非数;
+  if (B.种 === "零") return 位模式.非数;   // 零取余没有答案，除零也一样
+  if (A.种 === "无穷") return 位模式.非数;
+  if (B.种 === "无穷") return a;           // 无穷当除数，余数就是被除数本身
+  if (A.种 === "零") return a;             // 零的余数是零，符号照留
+
+  // 两边对齐到同一个指数，然后整数取余。余数精确，所以这一步不丢位。
+  const E = Math.min(A.E, B.E);
+  const Am = A.M << BigInt(A.E - E);
+  const Bm = B.M << BigInt(B.E - E);
+  return 装配(Am % Bm, E, A.负);
+};
+
+
+// 比较：-1 / 0 / 1，而不可比（有 NaN）交回 null —— 那是 IEEE 的意思。
 // 把「不可比」压成 0 正是 design/SCALARS.txt 里记着的那处洞，这一层不跟着抄。
 export const 比 = (a, b) => {
   const A = 拆(a), B = 拆(b);
