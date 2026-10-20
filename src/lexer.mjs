@@ -51,16 +51,11 @@ const SCRIPT_RANGES = [
   [0xac00, 0xd7af, "Hangul"],
 ];
 
-export class Diagnostics {
-  constructor() { this.items = []; }
-  add(severity, code, message, line, column) {
-    this.items.push({ severity, code, message, line, column });
-  }
-  error(code, message, line, column) { this.add("error", code, message, line, column); }
-  warn(code, message, line, column) { this.add("warning", code, message, line, column); }
-  get errors() { return this.items.filter((d) => d.severity === "error"); }
-  get warnings() { return this.items.filter((d) => d.severity === "warning"); }
-}
+// 诊断搬到了 src/diagnostics.mjs：它不属于任何一个阶段，而凡是要记错误的地方
+// 都得 import 它。这里 import 再导出一次，是为了不让已有的 import 一起改。
+// 两行都要：export ... from 只是把名字再卖出去，不会把它绑进本模块，而下面还要 new 它。
+import { Diagnostics } from "./diagnostics.mjs";
+export { Diagnostics };
 
 const isDigit = (c) => c >= "0" && c <= "9";
 const isHex = (c) => isDigit(c) || (c >= "a" && c <= "f") || (c >= "A" && c <= "F");

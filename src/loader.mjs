@@ -11,9 +11,10 @@
 // 这一步的处理是**把这件事说出来**（HMYR-W0302），而不是让它静默发生。可见性与命名空间是第二步。
 import fs from "node:fs";
 import path from "node:path";
-import { lex, Diagnostics } from "./lexer.mjs";
-import { parse } from "./parser.mjs";
+import { Diagnostics } from "./diagnostics.mjs";
 import { Runtime } from "./eval.mjs";
+import { 切 } from "./subset-lex.mjs";
+import { 子集解 } from "./subset-parse.mjs";
 
 const short = (file) => path.basename(file);
 
@@ -34,13 +35,19 @@ export function loadUnit(entry, options = {}) {
   const modules = new Map();     // absolute path -> ast
   const loading = new Set();     // the chain currently being loaded, for cycle detection
   const order = [];
-  // 「怎么把一段源码变成一棵树」是一个可以换的东西，而不是这里写死的一步。
-  // 默认还是宿主那两层；换掉它的是子集那两层（src/subset-lex.mjs + src/subset-parse.mjs），
-  // 而换的理由只有一个：证明子集那一份真能顶替这两层，而不是只在套件里对得上。
-  // 换掉时若那两层被一份源码难住，它会抛——子集的立场是报错而不是猜，于是这里不接住它。
-  const reader = options.reader || ((source, abs) => {
-    const lexed = lex(source, { path: abs });
-    return parse(lexed.tokens, { diagnostics });
+  // 「怎么把一段源码变成一棵树」现在是子集那两层（src/subset-lex.mjs + src/subset-parse.mjs），
+  // 于是 Stage 0 这条路上没有宿主的 lexer 与 parser 了。
+  //
+  // 换过去的依据不是「它看起来行」：六份 token 逐个相同、六份的树逐节点相同（含位置）、
+  // 八种语法错同一个码同一个位置，以及仓库里 37 份 .hmyr 全部读得进。
+  //
+  // 子集那一层是「认得窄而说清」：宿主读得动、而它还不认的构造会抛，不是静默地读错。
+  // 于是这里不接住它——一个 loader 把「我不认」讲成别的东西，比它直接抛更糟。
+  const reader = options.reader || ((source) => {
+    const 解 = 子集解(切(source));
+    // 子集那一层的诊断要并进调用方拿到的那一份，不然「读进来了但有抱怨」会被吞掉。
+    for (const d of 解.diagnostics.items) diagnostics.add(d.severity, d.code, d.message, d.line, d.column);
+    return 解;
   });
 
   function visit(file) {
