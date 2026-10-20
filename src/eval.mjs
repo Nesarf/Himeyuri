@@ -36,6 +36,26 @@ class TailCall extends Error {
 
 class Return extends Error { constructor(value) { super("return"); this.value = value; } }
 
+// Stage 0 只要求这么多：跑 self/ 那六份时真正被走到的节点与内置。
+// 这张表是量出来的（test/stage0-eval.test.mjs 跑六条真实路径统计），不是设计出来的。
+//
+// 它拦的不是「用户程序的错」，而是「这一份求值器被要求做超出契约的事」——
+// 所以拦下来是抛普通错误，不是记诊断：一个用户写错程序，该拿到带编号的诊断；
+// 而一个不该出现的节点跑进来，说明契约与实现有一边错了，那时要的是栈，不是一条诊断。
+// 一个名字算不算内置。
+//
+// 它存在的理由是有一处行为需要被说清：evalCall 先查内置，于是同名的用户函数调用不到。
+// self/run.hmyr 里自己定义了 slice，而真正执行的是宿主那个内置——那看起来像 bug，
+// 其实是一条刻意的规矩（内置优先，于是 print 这类名字不会被变量遮蔽）。
+// 想让「谁被调到了」可问，就得有一个能回答「这个名字算不算内置」的地方。
+//
+// 只卖一个布尔，不卖整张表：表是实现的细节，而「这个名字算不算内置」是可问的事实。
+export const isBuiltin = (name) => Object.prototype.hasOwnProperty.call(BUILTINS, name);
+
+const STAGE0_EXPR = new Set(["Binary", "Call", "Field", "Ident", "If", "Index", "Literal", "Record", "Tuple", "Unary", "While"]);
+const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
+const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "is_letter", "is_mark", "len", "nfc", "print", "print_err", "read_text", "record_new", "slice", "str", "to_int"]);
+
 export class Runtime {
   constructor(options = {}) {
     this.functions = new Map();
@@ -44,6 +64,9 @@ export class Runtime {
     this.write = options.write || ((line) => this.output.push(line));
     this.steps = 0;
     this.depth = 0;
+    // stage0：只允许上面那三张表里的东西。它存在的理由是让「需求表」可执行——
+    // 一份写着「只需要这些」的文档只能被人读完点头，而一个会拦下来的求值器能证明它。
+    this.stage0 = options.stage0 === true;
     // Each Himeyuri call costs several host frames (evalExpr, evalCall, callFunction, execBlock,
     // execStatement...), so the language's depth limit has to sit below what the host can take,
     // otherwise the host stack goes first and the user sees a host crash instead of a diagnostic.
@@ -153,6 +176,9 @@ export class Runtime {
   }
 
   execStatement(stmt, scope, effects) {
+    if (this.stage0 && !STAGE0_STMT.has(stmt.kind)) {
+      throw new Error("stage 0 does not need the statement kind '" + stmt.kind + "'");
+    }
     switch (stmt.kind) {
       case "Let": case "Var": {
         const value = this.evalExpr(stmt.value, scope, effects);
@@ -193,6 +219,9 @@ export class Runtime {
   evalExpr(node, scope, effects) {
     if (++this.steps > this.stepLimit) this.fail("HMYR-R0102", "the program ran for too long without finishing");
     if (!node || node.kind === "Error") this.fail("HMYR-R0103", "a syntax error reached the evaluator");
+    if (this.stage0 && !STAGE0_EXPR.has(node.kind)) {
+      throw new Error("stage 0 does not need the expression kind '" + node.kind + "'");
+    }
 
     switch (node.kind) {
       case "Literal": return node.value;
@@ -277,6 +306,9 @@ export class Runtime {
     // a builtin first, so that names like print are not shadowed by a variable
     if (node.callee.kind === "Ident" && BUILTINS[node.callee.name]) {
       const name = node.callee.name;
+      if (this.stage0 && !STAGE0_BUILTIN.has(name)) {
+        throw new Error("stage 0 does not need the builtin '" + name + "'");
+      }
       const need = BUILTIN_EFFECTS[name];
       if (need && !(effects instanceof Set && effects.has(need))) {
         this.fail("HMYR-R0201", "builtin '" + name + "' needs effect '" + need + "', which the caller did not declare");

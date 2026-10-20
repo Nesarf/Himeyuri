@@ -19,8 +19,10 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { Runtime } from "../src/eval.mjs";
+import { Runtime, isBuiltin } from "../src/eval.mjs";
 import { loadUnit, runUnit } from "../src/loader.mjs";
+import { lex } from "../src/lexer.mjs";
+import { parse } from "../src/parser.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -29,8 +31,8 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 量 = (目标) => {
-  const 语句 = new Set(), 表达式 = new Set(), 内置 = new Set();
+const 量 = (目标, options = {}) => {
+  const 语句 = new Set(), 表达式 = new Set(), 内置 = new Set(), 用户 = new Set();
   const 原expr = Runtime.prototype.evalExpr;
   const 原call = Runtime.prototype.evalCall;
   const 原块 = Runtime.prototype.execBlock;
@@ -40,7 +42,10 @@ const 量 = (目标) => {
   };
   Runtime.prototype.evalCall = function (n, s, e) {
     const 名 = n && n.callee && n.callee.kind === "Ident" ? n.callee.name : null;
-    if (名 && !(this.functions && this.functions.has(名))) 内置.add(名);
+    // 「算不算内置」要问 isBuiltin，不能看「函数表里有没有它」：
+    // 内置优先于同名用户函数，而 self/ 里自己定义了 slice——于是它既在函数表里，
+    // 又真的按内置执行。按函数表判断会把这种情况记成用户函数，而那正是第一版的错。
+    if (名) { if (isBuiltin(名)) 内置.add(名); else 用户.add(名); }
     return 原call.call(this, n, s, e);
   };
   Runtime.prototype.execBlock = function (n, s, e) {
@@ -49,7 +54,7 @@ const 量 = (目标) => {
   };
   try {
     const 层 = loadUnit(path.join(ROOT, "self/run.hmyr"));
-    const rt = runUnit(层);
+    const rt = runUnit(层, options);
     let 出 = "";
     rt.write = (t) => { 出 += t; };
     rt.writeErr = () => {};
@@ -68,6 +73,7 @@ try {
   fs.writeFileSync(path.join(临, "w.hmyr"), "var i = 0\nwhile i < 3 {\n  i = i + 1\n}\nreturn i\n");
   fs.writeFileSync(path.join(临, "f.hmyr"), "fn 加(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  let s = \"abc\"\n  return 加(len(s), 2)\n}\n");
   fs.writeFileSync(path.join(临, "bad.hmyr"), "let a = \nreturn a\n");
+  fs.writeFileSync(path.join(临, "rec.hmyr"), "let r = {a: 1}\nreturn r.a\n");
   const 模块 = path.join(临, "mod");
   fs.mkdirSync(模块, { recursive: true });
   fs.writeFileSync(path.join(模块, "lib.hmyr"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
@@ -76,13 +82,15 @@ try {
   const 全部语句 = new Set(), 全部表达式 = new Set(), 全部内置 = new Set();
   const 收 = (r) => { r.语句.forEach((x) => 全部语句.add(x)); r.表达式.forEach((x) => 全部表达式.add(x)); r.内置.forEach((x) => 全部内置.add(x)); return r; };
 
-  console.log("一、六条路径，各自的答案先对");
+  console.log("一、七条路径，各自的答案先对");
   const hello = 收(量(path.join(ROOT, "examples/hello.hmyr")));
   ok("hello 给五", hello.码 === 0 && hello.出.trim() === "5", hello.码 + " / " + JSON.stringify(hello.出.trim()));
   const 循环 = 收(量(path.join(临, "w.hmyr")));
   ok("while 那个给三", 循环.码 === 0 && 循环.出.trim() === "3", 循环.码 + " / " + JSON.stringify(循环.出.trim()));
   const 函数 = 收(量(path.join(临, "f.hmyr")));
   ok("函数那个给五", 函数.码 === 0 && 函数.出.trim() === "5", 函数.码 + " / " + JSON.stringify(函数.出.trim()));
+  const 记录 = 收(量(path.join(临, "rec.hmyr")));
+  ok("记录那个给一", 记录.码 === 0 && 记录.出.trim() === "1", 记录.码 + " / " + JSON.stringify(记录.出.trim()));
   const 缺 = 收(量(path.join(临, "nope.hmyr")));
   ok("目标不存在给退出码 1", 缺.码 === 1, String(缺.码));
   const 坏 = 收(量(path.join(临, "bad.hmyr")));
@@ -103,11 +111,18 @@ try {
   ok("正好五种", 实语句.length === 5, 实语句.join(" "));
   ok("而它们是那五种", JSON.stringify(实语句) === JSON.stringify(应语句), 实语句.join(" "));
 
-  console.log("四、内置：十二个");
-  const 应内置 = ["argv", "chr", "file_exists", "is_letter", "is_mark", "len", "nfc", "print", "print_err", "read_text", "str", "to_int"];
+  console.log("四、内置：十六个");
+  // 这一栏漏过一次：第一版只跑了六条路径，里面没有一条用记录，于是表里少了
+  // record_new / field_get / field_has。补上记录那条之后才齐。
+  // 把它抓出来的是启动器在 stage0 模式下跑那个记录程序时抛的一句，而不是任何一份文档。
+  const 应内置 = ["argv", "chr", "field_get", "field_has", "file_exists", "is_letter", "is_mark", "len", "nfc", "print", "print_err", "read_text", "record_new", "slice", "str", "to_int"];
   const 实内置 = [...全部内置].sort();
-  ok("正好十二个", 实内置.length === 12, 实内置.join(" "));
-  ok("而它们是那十二个", JSON.stringify(实内置) === JSON.stringify(应内置), 实内置.join(" "));
+  ok("正好十六个", 实内置.length === 16, 实内置.join(" "));
+  ok("而它们是那十六个", JSON.stringify(实内置) === JSON.stringify(应内置), 实内置.join(" "));
+  // 一条值得单说的：slice 既是 self/ 里定义的函数，又真的按内置执行（内置优先）。
+  ok("slice 被算成内置（同名用户函数调用不到它）", 全部内置.has("slice"), 实内置.join(" "));
+  // 记录那一组三个：造记录、取字段、问字段在不在。
+  ok("记录那一组三个都在", ["record_new", "field_get", "field_has"].every((n) => 全部内置.has(n)), 实内置.join(" "));
 
   console.log("五、这张表说明宿主求值器比需要的宽");
   {
@@ -116,6 +131,40 @@ try {
     const 认得 = new Set([...源.matchAll(/case "([A-Z][a-zA-Z]+)"/g)].map((m) => m[1]));
     ok("宿主认得的节点比这一张表多", 认得.size > 全部表达式.size, 认得.size + " 对 " + 全部表达式.size);
     ok("其中含 Match（而这张表里没有）", 认得.has("Match"));
+  }
+
+  console.log("六、stage0 模式下同一批路径仍然全对（表不是写在纸上给人点头的）");
+  {
+    const 三 = [["hello", path.join(ROOT, "examples/hello.hmyr"), "5"], ["while", path.join(临, "w.hmyr"), "3"], ["函数", path.join(临, "f.hmyr"), "5"]];
+    for (const [名, 目标, 应] of 三) {
+      const r = 量(目标, { stage0: true });
+      ok(名 + " 在 stage0 下给 " + 应, r.码 === 0 && r.出.trim() === 应, r.码 + " / " + JSON.stringify(r.出.trim()));
+    }
+    const 引二 = 量(path.join(模块, "main.hmyr"), { stage0: true });
+    ok("import 那个在 stage0 下给四十二", 引二.码 === 0 && 引二.出.trim() === "42", 引二.码 + " / " + JSON.stringify(引二.出.trim()));
+  }
+
+  console.log("七、而表外的东西会被拦住，并说清拦的是哪一个");
+  {
+    // 直接造一份用 match 的源码给宿主求值器跑：这一层拦的是「求值器被要求做超出契约的事」。
+    // 读它要用宿主那两层——子集 parser 不认 match，于是它压根产不出 Match 节点。
+    // 那件事本身也是明写的：两道门各自拦，各有各的理由。
+    const 宿主读 = (source) => {
+      const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
+      return parse(lex(source).tokens, { diagnostics: d });
+    };
+    const 文件 = path.join(临, "m.hmyr");
+    fs.writeFileSync(文件, "fn f(n: Int) -> Int {\n  return match n { 1 => 2 }\n}\nfn main() -> Int {\n  return f(1)\n}\n");
+    const rt = runUnit(loadUnit(文件, { reader: 宿主读 }), { stage0: true });
+    rt.write = () => {};
+    let 错 = "";
+    try { rt.callFunction(rt.functions.get("main"), [], null); } catch (e) { 错 = e.message; }
+    ok("stage0 下 Match 被拦", 错.includes("Match"), 错 || "（没有抛）");
+    ok("消息里说了 stage 0 不需要它", 错.includes("stage 0 does not need"), 错);
+    // 而同一个程序在默认求值器里跑得通：拦人的是 stage0 这个契约，不是求值器不会算 match。
+    const 默认 = runUnit(loadUnit(文件, { reader: 宿主读 }));
+    默认.write = () => {};
+    ok("默认求值器跑得通这个 match 程序", 默认.callFunction(默认.functions.get("main"), [], null) === 2, "跑不通");
   }
 } finally {
   fs.rmSync(临, { recursive: true, force: true });

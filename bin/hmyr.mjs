@@ -41,7 +41,12 @@ if (!层.ok) {
   process.exit(1);
 }
 
-const rt = runUnit(层);
+// 求值器跑在 stage0 模式下：那一层只允许「跑 self/ 那六份真正被走到的」节点与内置
+// （十一·五·十三，见 design/BOOTSTRAP.txt 第九节与 test/stage0-eval.test.mjs）。
+//
+// 这不是把求值器缩小，而是把「它需要多少」变成可执行的约束：六份里哪天有人用上表外的东西，
+// 这里会立刻抛，而不是等到某天有人想换掉求值器时才发现「原来还用了这么多」。
+const rt = runUnit(层, { stage0: true });
 rt.write = (s) => process.stdout.write(s);
 rt.writeErr = (s) => process.stderr.write(s);
 // 与宿主一致：第一个是「解释器名」位，之后才是参数。语言侧取 argv[1] 当目标。
