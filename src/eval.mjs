@@ -15,10 +15,7 @@
 //
 // Effect checking follows SPEC 2.4: a function may only call what its own declared effects allow.
 // Runtime diagnostics use an R range, which the spec does not yet define - marked [议] as well.
-import fs from "node:fs";
 import { 本机能力 } from "./capabilities.mjs";
-import path from "node:path";
-import { pathToFileURL, fileURLToPath } from "node:url";
 import { lex } from "./lexer.mjs";
 import { parse } from "./parser.mjs";
 
@@ -415,13 +412,17 @@ class Scope {
 // what the calling function declared. Without this, "effects" would only apply to functions we wrote.
 const BUILTIN_EFFECTS = { read_text: "file", write_text: "file", run_program: "process", chdir: "process", argv: "process", file_exists: "file", print_err: "process", thr_spawn: "thread", thr_cancel: "thread" };
 
-/** 编码表按需读入并缓存：表是「字符 -> 字节」，从本运行时的解码器推出来的。 */
+/** 编码表按需读入并缓存：表是「字符 -> 字节」，从本运行时的解码器推出来的。
+ *
+ * 读它也算读文件，于是走能力层——不是因为它「碰了世界」，而是因为这条路只有一条。
+ * 一份表从哪儿来（本仓库的 deps）与「怎么读一个文件」是两件事，前者是常量，后者是能力。
+ */
 const ENCODING_TABLES = new Map();
-function loadEncodingTable(enc) {
+function loadEncodingTable(rt, enc) {
   if (ENCODING_TABLES.has(enc)) return ENCODING_TABLES.get(enc);
   let table = null;
   try {
-    table = JSON.parse(fs.readFileSync(new URL("../deps/encodings/" + enc + ".json", import.meta.url), "utf8"));
+    table = JSON.parse(String(rt.cap.file.read(new URL("../deps/encodings/" + enc + ".json", import.meta.url))));
   } catch (err) { table = null; }
   ENCODING_TABLES.set(enc, table);
   return table;
@@ -465,7 +466,7 @@ const THREADS = new Map();
 let nextThreadId = 1;
 
 // 仓库根：语言文件用的相对路径都以它为基准。
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT = import.meta.dirname.replace(/[\\/][^\\/]*$/, "");
 
 const BUILTINS = {
   // ---- 一、文本（纯函数）：只从输入算出输出，不读也不写外部状态 ----
@@ -669,7 +670,7 @@ const BUILTINS = {
       return text.length;
     }
     // 其余编码走表。表不存在就明确拒绝——猜一个编码是这一路最不想要的行为。
-    const table = loadEncodingTable(enc);
+    const table = loadEncodingTable(rt, enc);
     if (!table) {
       rt.fail("HMYR-R0203", "writing '" + raw + "' is not supported: no table under deps/encodings for it");
     }
@@ -818,12 +819,9 @@ export function run(source, options = {}) {
   return { output: rt.output, diagnostics, value };
 }
 
-const isMain = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
-if (isMain) {
-  const file = process.argv[2];
-  if (!file) { console.log("usage: node eval.mjs <file.hmyr>"); process.exit(1); }
-  const result = run(fs.readFileSync(file, "utf8"), { path: file });
-  for (const line of result.output) console.log(line);
-  for (const d of result.diagnostics.items) console.log("  " + d.severity + " " + d.code + "  " + d.message);
-  process.exit(result.diagnostics.errors.length ? 1 : 0);
-}
+// 这一份文件不再有 CLI 尾部：那段「node eval.mjs <file>」搬到了 bin/run-eval.mjs。
+//
+// 搬的理由是它一直不属于库：一个库的最后十几行若是「读一个文件、打印用法、按退出码退出」，
+// 那它就不是库的一部分，而是这个文件顺带当命令用的那一面。留着它，求值器就得 import fs，
+// 而那条 import 会让「求值器不借世界」这句话永远差一点。
+

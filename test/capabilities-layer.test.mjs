@@ -133,43 +133,26 @@ console.log("五、宿主求值器里的文件内置也走能力层");
   }
 }
 
-console.log("六、宿主求值器里剩下的直连是一张清单，而不是一堆散落");
+console.log("六、宿主求值器里已经没有一处直连");
 {
-  // 「不出现 node: 模块」这句话对求值器不成立，也不该成立：它有内部资源、线程、终端的同步读，
-  // 以及一段不属于库的 CLI 尾部。硬要求它一条都没有，只会让人把那些用法藏起来。
-  //
-  // 于是这里的规则改成清单化：每一处直连都必须命中一条带理由的模式。
-  // 出现清单之外的一处就会红，而那时要么它该改走能力层，要么它该给一个理由。
   const 源 = 读("src/eval.mjs");
-  const 允许 = [
-    [/^import .* from "node:(fs|path|url)";$/, "宿主模块的 import：只剩三个"],
-    [/deps\/encodings/, "编码表：程序自己的数据，不是世界的接口"],
-    [/^const ROOT = path\.resolve\(path\.dirname\(fileURLToPath/, "模块自己的位置，不是世界"],
-    [/process\.pid/, "线程结果文件名里的进程号（线程那一组已经走能力层了，进程号不是能力）"],
-    [/^const isMain|^  const file = process\.argv\[2\]|usage: node eval\.mjs|process\.exit\(|run\(fs\.readFileSync\(file/, "CLI 尾部：不属于库"],
-  ];
-  // 判据要排除两类行：`rt.cap.*`（已经走能力层）与纯注释（不执行，只是提到那些名字）。
+  // 判据排除两类行：`rt.cap.*`（已经走能力层）与纯注释（不执行，只是提到那些名字）。
   const 触碰 = 源.split(/\r?\n/).filter((l) => !l.includes("rt.cap.") && !/^\s*\/\//.test(l) && /fs\.|os\.|path\.|process\.|spawnSync|Worker|node:/.test(l));
-  const 未覆盖 = 触碰.filter((l) => !允许.some(([论]) => 论.test(l)));
-  ok("每一处直连都有一张清单替它说话", 未覆盖.length === 0, 未覆盖.join(" | "));
-  ok("而清单不是空的（求值器确实还借了几样东西）", 触碰.length > 0, String(触碰.length));
-  // 这一条要说清：清单里有几类，就等于还欠几类。把它们数出来，比一句「大部分都搬了」有用。
-  //
-  // 每行只归一类，按顺序取第一个命中的：一行同时命中两类会让合计大于总数，
-  // 而那个「多出来的一」正是这类统计最容易骗人的地方。
-  const 归类 = (l) => {
-    if (/^import /.test(l)) return "import行";
-    if (/^const ROOT =/.test(l)) return "模块位置";
-    if (/deps\/encodings/.test(l)) return "内部资源";
-    if (/process\.pid/.test(l)) return "进程号";
-    if (/isMain|process\.argv\[2\]|usage: node|process\.exit\(|run\(fs\.readFileSync\(file/.test(l)) return "CLI尾部";
-    return "（未归类）";
-  };
-  const 类别 = {};
-  for (const l of 触碰) 类别[归类(l)] = (类别[归类(l)] || 0) + 1;
-  ok("每一处都归得进这几类", !类别["（未归类）"], JSON.stringify(类别));
-  ok("合计等于总数（没有一处被数两遍）", Object.values(类别).reduce((a, b) => a + b, 0) === 触碰.length, JSON.stringify(类别));
-  console.log("    （剩下的直连 " + 触碰.length + " 处：" + Object.entries(类别).map(([k, v]) => k + " " + v).join(" · ") + "）");
+  ok("求值器里一处直连都没有", 触碰.length === 0, 触碰.join(" | "));
+  ok("也没有 node: 的 import", !/from "node:/.test(源), "仍在引");
+  // 那两个不再需要的东西也该消失：Node 自己算模块位置（import.meta.dirname），
+  // 编码表走能力层读。留着它们就说明还有一条绕过去的路。
+  ok("不再用 fileURLToPath 算模块位置", !源.includes("fileURLToPath"));
+  // 「求值器也能当命令用」这一面搬到了 bin/run-eval.mjs，而不是被删掉。
+  const 命令面 = 读("bin/run-eval.mjs");
+  ok("命令行那一面搬到了 bin/run-eval.mjs", 命令面.length > 100);
+  ok("而那一条用的是显式给的能力", /capabilities: 本机能力\(\)/.test(命令面), "没有显式给");
+  // 一个不给能力的求值器仍然起得来：库要能直接用（默认给本机那一份）。
+  // 而它的每一条能力路径都还是从那一个对象上取，于是换一份实现照旧成立。
+  const { Runtime } = await import("../src/eval.mjs");
+  let 起得来 = true;
+  try { new Runtime({}); } catch (e) { 起得来 = false; }
+  ok("求值器默认自带本机能力（库用起来不必每次给）", 起得来);
 }
 
 console.log("");
