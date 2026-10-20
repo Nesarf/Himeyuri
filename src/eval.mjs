@@ -622,7 +622,7 @@ const BUILTINS = {
     const 名 = rt.asString(args[0]);
     const 目录 = rt.cap.env.get("HMYR_TMP") || rt.cap.env.temp();
     rt.cap.file.ensureDir(目录);
-    return path.join(目录, "hmyr-" + 名);
+    return rt.cap.path.join(目录, "hmyr-" + 名);
   },
   python_path: (rt) => {
     // 先看环境变量（于是别的机器可以指自己的），再看这台机器上那个托管解释器，最后退回 PATH。
