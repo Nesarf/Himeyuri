@@ -34,6 +34,8 @@
 // 这一份的立场是「认得窄而说清」，于是遇上不认的东西它会报错而不是猜——
 // 而「不认」这件事本身要写在这里，不然下一个人会以为它认得。
 // 关键字表与宿主保持一致——这一份自己的立场是「更小」，不是「另立一套」。
+// 字面量变成数的那一步读 src/numbers.mjs，与宿主的切词器是同一处定义。
+import { 解析 as 解析数 } from "./numbers.mjs";
 const 关键字 = new Set(["import","as","pub","fn","type","const","effect","effects","requires","ensures","invariant","own","borrow","let","var","return","while","if","else","match","true","false","nil","arena","managed"]);
 
 export const 切 = (源) => {
@@ -101,7 +103,7 @@ export const 切 = (源) => {
         const 词 = 源.slice(i, j);
         const 数位 = 词.slice(2).replace(/_/g, "");
         if (!数位) throw new Error("进制字面量没有数字：" + 词 + "（行 " + 行 + " 列 " + 列 + "）");
-        记({ type: "int", value: 词, base: 基, numeric: Number(词) });
+        记({ type: "int", value: 词, base: 基, numeric: 解析数(数位, 基) });
         进(j - i);
         continue;
       }
@@ -121,7 +123,7 @@ export const 切 = (源) => {
         }
       }
       const 词 = 源.slice(i, j);
-      记({ type: 是浮 ? "float" : "int", value: 词, numeric: Number(词.replace(/_/g, "")) });
+      记({ type: 是浮 ? "float" : "int", value: 词, numeric: 解析数(词) });
       进(j - i);
       continue;
     }

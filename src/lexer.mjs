@@ -12,6 +12,9 @@
 // part of the specification, so a code is never reused for a different meaning.
 import fs from "node:fs";
 import path from "node:path";
+// 字面量变成数的那一步只在 src/numbers.mjs 里定义一次。两个切词器都读那一处，
+// 于是「1e308 是什么」不会因为读它的切词器不同而不同。
+import { 解析 as 解析数 } from "./numbers.mjs";
 import { pathToFileURL } from "node:url";
 
 export const KEYWORDS = new Set([
@@ -164,7 +167,11 @@ export function lex(source, options = {}) {
         while (i < text.length && (valid(text[i]) || text[i] === "_")) { raw += text[i]; advance(); }
         const digits = raw.slice(2).replace(/_/g, "");
         if (!digits) diagnostics.error("HMYR-E0003", "based literal has no digits: " + raw, startLine, startColumn);
-        push("int", raw, startLine, startColumn, { base: { x: 16, b: 2, o: 8 }[base] });
+        // numeric 这一项曾经漏了。漏掉之后 parser 会退回 t.value，于是 0x10 成了一个字符串，
+        // 0x10 + 0 给 "0x100" —— 一个安静算错的数。子集那条路一直是对的，所以这是两条路的分叉，
+        // 而分叉只在有人写下进制字面量时才现形（仓库里的 .hmyr 一份都没有）。
+        const 进 = { x: 16, b: 2, o: 8 }[base];
+        push("int", raw, startLine, startColumn, { base: 进, numeric: 解析数(digits, 进) });
       } else {
         while (i < text.length && (isDigit(text[i]) || text[i] === "_")) { raw += text[i]; advance(); }
         let isFloat = false;
@@ -183,7 +190,7 @@ export function lex(source, options = {}) {
           }
         }
         if (/__|^_|_$/.test(raw)) diagnostics.error("HMYR-E0003", "misplaced separator in literal: " + raw, startLine, startColumn);
-        push(isFloat ? "float" : "int", raw, startLine, startColumn, { numeric: Number(raw.replace(/_/g, "")) });
+        push(isFloat ? "float" : "int", raw, startLine, startColumn, { numeric: 解析数(raw) });
       }
       continue;
     }

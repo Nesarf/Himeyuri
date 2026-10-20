@@ -10,30 +10,35 @@
 //
 // 世界仍然从那一个对象里取（vm.cap）。这一份文件不 import 任何 node: 模块。
 import { 类元组, 类记录 } from "./vm-values.mjs";
+// 数的意思只在 src/numbers.mjs 里定义。这一份不再自己写 Math.floor / Number()，
+// 也不再自己判断「这是不是数」——换掉标量时要改的是那一份文件。
+import * as 数 from "./numbers.mjs";
 
 export const 内置表 = {
   len: { 做: (vm, a) => {
     const v = a[0];
-    if (typeof v === "string") return v.length;
-    if (v && v.tag === "tuple") return v.items.length;
+    if (typeof v === "string") return 数.造(v.length);
+    if (v && v.tag === "tuple") return 数.造(v.items.length);
     return vm.坏("HMYR-R0140", "len() wants a string or a tuple");
   } },
   str: { 做: (vm, a) => vm.成串(a[0]) },
   slice: { 做: (vm, a) => {
     const s = vm.成串(a[0]);
-    const 起 = a[1] === undefined || a[1] === null ? 0 : Math.max(0, Math.floor(vm.成数(a[1])));
-    const 止 = a[2] === undefined || a[2] === null ? s.length : Math.min(s.length, Math.floor(vm.成数(a[2])));
-    return 起 >= 止 ? "" : s.slice(起, 止);
+    const 起原 = a[1] === undefined || a[1] === null ? 0 : 数.下整(vm.成数(a[1]));
+    const 起 = 数.比(起原, 0) < 0 ? 0 : 起原;
+    const 止原 = a[2] === undefined || a[2] === null ? s.length : 数.下整(vm.成数(a[2]));
+    const 止 = 数.比(止原, s.length) > 0 ? s.length : 止原;
+    return 数.比(起, 止) >= 0 ? "" : s.slice(起, 止);
   } },
   chr: { 做: (vm, a) => {
-    const cp = Math.floor(vm.成数(a[0]));
-    if (cp < 0 || cp > 0x10ffff) return vm.坏("HMYR-R0207", "not a code point: " + cp);
+    const cp = 数.下整(vm.成数(a[0]));
+    if (数.比(cp, 0) < 0 || 数.比(cp, 0x10ffff) > 0) return vm.坏("HMYR-R0207", "not a code point: " + 数.成文(cp));
     return String.fromCodePoint(cp);
   } },
   to_int: { 做: (vm, a) => {
     const s = vm.成串(a[0]).trim();
     if (!/^-?[0-9]+$/.test(s)) return vm.坏("HMYR-R0208", "not an integer literal: '" + s + "'");
-    return Number(s);
+    return 数.解析(s);
   } },
   nfc: { 做: (vm, a) => String(a[0]).normalize("NFC") },
   is_letter: { 做: (vm, a) => /\p{L}/u.test(String(a[0])) },
@@ -101,5 +106,6 @@ const 述 = (v) => {
   if (typeof v === "string") return JSON.stringify(v);
   if (v && v.tag === "tuple") return "tuple";
   if (v && v.tag === "record") return "a host object";
+  if (数.是数(v)) return 数.成文(v);
   return String(v);
 };
