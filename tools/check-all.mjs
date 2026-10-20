@@ -67,6 +67,7 @@ const SUITES = [
   ["subsetparse", "test/subset-parse.test.mjs", "SPEC M6 - the subset parser builds the same tree as the host on all six files, and says what it refuses"],
   ["subsetload", "test/subset-load.test.mjs", "SPEC M6 - the subset layers plugged into the loader: same modules, same functions, same answer, and the default left alone"],
   ["subsetdiag", "test/subset-diag.test.mjs", "SPEC M6 - the same syntax error gives the same code at the same place on both sides, and the subset's own refusals still throw"],
+  ["stage0eval", "test/stage0-eval.test.mjs", "SPEC M6 - what stage 0's evaluator actually needs: eleven expression kinds, five statements and twelve builtins, counted from real runs"],
   ["selfframes", "test/self-frames.test.mjs", "SPEC M6 - one level of recursion costs about eleven host frames, and why the cheap fix was refused"],
   ["tailcall", "test/tail-call.test.mjs", "SPEC M6 - tail calls: tail recursion reaches any depth, and nothing else about the language changes"],
   ["launcher", "test/launcher.test.mjs", "SPEC M7 - node bin/hmyr.mjs: the target program goes through the bootstrap, not the host language layer"],
