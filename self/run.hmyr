@@ -293,6 +293,25 @@ fn 命令行入口() -> Int effects(process, file) {
   return 0
 }
 
+// ---- 编自己：语法层的那一半 ----
+//
+// 「一门语言能不能编译它自己」是第三步的核心问题，而它可以拆成一个能验的问题：
+// 把 HMYR 的源码交给 HMYR，它算出来的函数名集合，与宿主算出来的对不对得上。
+//
+// 这一件只做语法那一半（名字），求值那一半由「跑 main」验。
+// 两半都对，才说得上「它认得自己」。
+
+fn 函数名从(函数们: Int, i: Int, acc: Int) -> Int {
+  if i >= len(函数们) { return acc }
+  return 函数名从(函数们, i + 1, acc + (函数们[i][0],))
+}
+
+// 一段源码声明了哪些函数名，按出现的顺序。
+fn 函数名们(源码: String) -> Int {
+  let 全部 = parse_decls(scan_lines(源码))
+  return 函数名从(全部.fns, 0, ())
+}
+
 fn main() -> Int effects(process) {
   print("1 + 2 * 3 → " + 跑("1 + 2 * 3") + "\n")
   print("(1 + 2) * 3 → " + 跑("(1 + 2) * 3") + "\n")
