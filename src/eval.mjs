@@ -18,6 +18,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
+import { 本机能力 } from "./capabilities.mjs";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { lex } from "./lexer.mjs";
@@ -73,6 +74,10 @@ export class Runtime {
     this.maxDepth = options.maxDepth || 500;
     this.stepLimit = options.stepLimit || 5_000_000;
     this.errors = [];
+    // 能力内核：文件、进程、时间这些「借世界」的事都从这里走，而这一层之外不自己 import 它们。
+    // 默认给本机那一份；套件可以换一份记账的，于是「这一趟借了什么」变成一份能打印的清单。
+    // 内部资源（编码表、worker 脚本）不走这里——那是程序自己的数据，不是世界的接口。
+    this.cap = options.capabilities || 本机能力();
   }
 
   fail(code, message) {
@@ -431,7 +436,7 @@ function loadEncodingTable(enc) {
 
 function writeBytes(rt, file, buf) {
 
-  try { fs.writeFileSync(file, buf); return true; }
+  try { rt.cap.file.write(file, buf); return true; }
 
   catch (err) { rt.fail("HMYR-R0212", "cannot write '" + file + "': " + String(err && err.message ? err.message : err)); }
 
@@ -640,7 +645,7 @@ const BUILTINS = {
   read_text: (rt, args) => {
     const 路径 = String(args[0]);
     let buf;
-    try { buf = fs.readFileSync(路径); }
+    try { buf = rt.cap.file.read(路径); }
     catch (err) { rt.fail("HMYR-R0211", "cannot read '" + 路径 + "': " + String(err && err.message ? err.message : err)); }
     const enc = args[1] === undefined || args[1] === null ? null : rt.asString(args[1]);
     if (enc) return decodeBytes(rt, buf, enc);
@@ -655,7 +660,7 @@ const BUILTINS = {
   // 于是「引了个不存在的」与「读不了」被混成同一件事。
   file_exists: (rt, args) => {
     const 路径 = String(args[0]);
-    try { return fs.existsSync(路径); } catch (err) { return false; }
+    try { return rt.cap.file.exists(路径); } catch (err) { return false; }
   },
   write_text: (rt, args) => {
     const file = String(args[0]);

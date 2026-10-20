@@ -112,6 +112,27 @@ console.log("四、换一份能力实现，同一段程序仍然给出同一个�
     [...new Set(记.记)].join(" "));
 }
 
+console.log("五、宿主求值器里的文件内置也走能力层");
+{
+  const { loadUnit, runUnit } = await import("../src/loader.mjs");
+  const 目录 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-cap-host-"));
+  try {
+    const 入口 = path.join(目录, "read.hmyr");
+    // main 声明 file 效果才能读：没声明就调 read_text 会撞 R0201，那是另一套钉着的事。
+    fs.writeFileSync(入口, "fn main() -> String effects(file) {\n  return read_text(\"SPEC.txt\")\n}\n");
+    const 记 = 记账能力();
+    const 层 = loadUnit(入口);
+    const rt = runUnit(层, { capabilities: 记.cap });
+    rt.write = () => {};
+    const 值 = rt.callFunction(rt.functions.get("main"), [], null);
+    ok("读到的确实是 SPEC 的开头", String(值).toLowerCase().includes("himeyuri"), JSON.stringify(String(值).slice(0, 30)));
+    ok("而它走的是能力层（清单里有 file.read）", 记.记.includes("file.read"), [...new Set(记.记)].join(" ") || "（清单是空的）");
+    ok("读文件这件事没有绕过能力层去碰 fs", 记.记.filter((x) => x === "file.read").length === 1, 记.记.join(" "));
+  } finally {
+    fs.rmSync(目录, { recursive: true, force: true });
+  }
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
