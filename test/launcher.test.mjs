@@ -98,6 +98,30 @@ console.log("读自举那一层用的是子集那两层，不是宿主那两层"
   ok("加载器仍然默认用宿主那两层（口子是可选的）", /options\.reader \|\|/.test(加载器));
 }
 
+console.log("--minimal-eval：那条最小求值器跑同一件事，给同一个答案");
+{
+  const 目录 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-min-launch-");
+  try {
+    const 用 = (args) => spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), ...args], { encoding: "utf8" });
+    const 目标 = path.join(ROOT, "examples/hello.hmyr");
+    const 普 = 用([目标]);
+    const 小 = 用(["--minimal-eval", 目标]);
+    ok("hello 两边都算出 5", String(普.stdout).trim() === "5" && String(小.stdout).trim() === "5", JSON.stringify(String(小.stdout).trim()));
+    ok("退出码一样", 普.status === 小.status, 普.status + " 对 " + 小.status);
+    const 缺 = 用(["--minimal-eval", path.join(目录, "nope.hmyr")]);
+    ok("缺文件时最小那条也给退出码 1", 缺.status === 1, String(缺.status));
+    ok("并给出编号 R0211", String(缺.stderr).includes("HMYR-R0211"), JSON.stringify(String(缺.stderr).slice(0, 50)));
+    // 开关自己不该被当成目标文件：它被剔掉了，于是 argv[1] 仍是目标。
+    ok("开关没有被当成目标文件", !String(缺.stderr).includes("--minimal-eval"), String(缺.stderr).slice(0, 60));
+    // 带 while 与记录的也算一件：最小那份不是只认得 hello。
+    const w = path.join(目录, "w.hmyr");
+    fs.writeFileSync(w, "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n", "utf8");
+    ok("while 那条最小也给 3", String(用(["--minimal-eval", w]).stdout).trim() === "3", JSON.stringify(String(用(["--minimal-eval", w]).stdout).trim()));
+  } finally {
+    fs.rmSync(目录, { recursive: true, force: true });
+  }
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

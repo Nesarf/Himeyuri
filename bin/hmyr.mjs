@@ -16,9 +16,11 @@
 // 一句明写的代价：子集那两层认得窄，遇上不认的构造会抛，而不是给一棵猜出来的树。
 // 于是将来谁往 self/ 里加一个子集还没认的写法，启动器会在这里失败——
 // 而在他跑到这里之前，subset-lex / subset-parse / subset-load 三套会先红，红在那个写法上。
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
+import { 最小运行 } from "../src/minimal-eval.mjs";
 import { 切 } from "../src/subset-lex.mjs";
 import { 子集解 } from "../src/subset-parse.mjs";
 
@@ -46,10 +48,19 @@ if (!层.ok) {
 //
 // 这不是把求值器缩小，而是把「它需要多少」变成可执行的约束：六份里哪天有人用上表外的东西，
 // 这里会立刻抛，而不是等到某天有人想换掉求值器时才发现「原来还用了这么多」。
-const rt = runUnit(层, { stage0: true });
+// 两个求值器，一条开关：--minimal-eval 用那份只认表内东西的最小求值器跑。
+// 开关是给人对照用的——同一份程序两条路给出同一个答案，那才是「最小那份能顶替」的证据。
+// 它从 argv 里剔掉，因为语言侧取 argv[1] 当目标文件，多一个参数会把它挪错位。
+const 参数 = process.argv.slice(1);
+const 用最小 = 参数.includes("--minimal-eval");
+const 递给语言 = 参数.filter((a) => a !== "--minimal-eval");
+
+const rt = 用最小
+  ? 最小运行(层, { readFile: (p) => fs.readFileSync(p), exists: (p) => fs.existsSync(p) })
+  : runUnit(层, { stage0: true });
 rt.write = (s) => process.stdout.write(s);
 rt.writeErr = (s) => process.stderr.write(s);
 // 与宿主一致：第一个是「解释器名」位，之后才是参数。语言侧取 argv[1] 当目标。
-rt.argv = process.argv.slice(1);
+rt.argv = 递给语言;
 
 process.exit(rt.callFunction(rt.functions.get("命令行入口"), [], null));
