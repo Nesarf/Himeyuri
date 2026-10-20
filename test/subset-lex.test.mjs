@@ -21,10 +21,10 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-// 只看种类与值：位置字段是子集还没有的东西，这里不该因为它而红。
-const 简 = (tokens) => tokens.filter((t) => t.type !== "eof").map((t) => t.type + ":" + JSON.stringify(t.value));
+// 只看种类、值与位置：位置字段已经从宿主那边抄过来了，于是这里也该比它。
+const 简 = (tokens) => tokens.filter((t) => t.type !== "eof").map((t) => t.type + ":" + JSON.stringify(t.value) + "@" + t.line + ":" + t.column);
 
-console.log("一、六份源码：与宿主逐个 token 相同");
+console.log("一、六份源码：与宿主逐个 token 相同（含行号与列号）");
 let 总数 = 0;
 for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
   const 源 = fs.readFileSync(path.join(ROOT, "self", 名 + ".hmyr"), "utf8");
@@ -39,6 +39,8 @@ for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
   总数 += 主.length;
 }
 
+const 数换行 = (简们) => 简们.filter((t) => t.startsWith("newline:")).length;
+
 console.log("二、行尾是 ident、前一个是运算符时，换行必须出得来（就是那个笔误的形状）");
 for (const [标, 源] of [
   ["赋值", "let a = b.value\nlet c = 1\n"],
@@ -48,17 +50,18 @@ for (const [标, 源] of [
   const 主 = 简(lex(源).tokens);
   const 子 = 简(切(源));
   ok(标 + "：两边相同", JSON.stringify(主) === JSON.stringify(子), "宿主 " + 主.join(" ") + " · 子集 " + 子.join(" "));
-  ok(标 + "：换行确实在", 子.includes("newline:" + JSON.stringify("\n")), 子.join(" "));
+  ok(标 + "：换行确实在", 数换行(子) === 2, 子.join(" "));
 }
 
 console.log("三、续行的两种情况仍然成立（规则不是靠吞掉一切凑出来的）");
 {
-  const 括号 = 切("let a = (1 +\n 2)\n");
+  const 括号 = 简(切("let a = (1 +\n 2)\n"));
   // 括号内那一个不出，收尾行末那一个照出——于是整段只有一个换行。
-  ok("括号开着 → 那一个换行不出", 简(括号).filter((t) => t === "newline:" + JSON.stringify("\n")).length === 1, 简(括号).join(" "));
-  const 运算符 = 切("let a = 1 +\n 2\n");
-  const 简运 = 简(运算符);
-  ok("行尾是运算符 → 那一个换行不出", 简运.filter((t) => t === "newline:" + JSON.stringify("\n")).length === 1, 简运.join(" "));
+  ok("括号开着 → 那一个换行不出", 数换行(括号) === 1, 括号.join(" "));
+  const 运算符 = 简(切("let a = 1 +\n 2\n"));
+  ok("行尾是运算符 → 那一个换行不出", 数换行(运算符) === 1, 运算符.join(" "));
+  const 连接词 = 简(切("let a = 1 and\n 2\n"));
+  ok("行尾是 and → 那一个换行不出", 数换行(连接词) === 1, 连接词.join(" "));
 }
 
 console.log("四、它认得窄，而窄这件事是明说的");
@@ -71,12 +74,32 @@ console.log("四、它认得窄，而窄这件事是明说的");
   ok("未认的转义报错而不是猜", 错2.includes("转义"), 错2);
 }
 
-console.log("五、它自己的注释写着现在的账");
+console.log("五、位置：CRLF、注释与多行，位置都跟着宿主的算法");
+{
+  // \r 也占一列——宿主如此，这里照办。CRLF 的源码上两边的列号才会一致。
+  for (const [标, 源] of [
+    ["CRLF 两行", "let a = 1\r\nlet b = 2\r\n"],
+    ["行注释跨行", "// 一\nlet a = 1\n"],
+    ["块注释跨行", "/* 一\n二 */ let a = 1\n"],
+    ["中文标识符", "let 名字 = 1\nlet 换 = 2\n"],
+    ["空行与缩进", "\n  let a = 1\n\n   let b = 2\n"],
+  ]) {
+    const 主 = 简(lex(源).tokens);
+    const 子 = 简(切(源));
+    ok(标 + "：位置相同", JSON.stringify(主) === JSON.stringify(子), "宿主 " + 主.join(" ") + " · 子集 " + 子.join(" "));
+  }
+  // 报错也带位置：一个指不回源码的错误，等于没有位置。
+  let 错 = "";
+  try { 切("let a = 1\nlet b = 1.5\n"); } catch (e) { 错 = e.message; }
+  ok("浮点报错带行列", 错.includes("行 2"), 错);
+}
+
+console.log("六、它自己的注释写着现在的账");
 {
   const 文 = fs.readFileSync(path.join(ROOT, "src/subset-lex.mjs"), "utf8");
   ok("注释里有六份的 token 数", /lex 1988/.test(文), "在");
   ok("注释说清了那个笔误", 文.includes("出.push 而不是 记()"), "在");
-  ok("注释说清了它还缺什么", 文.includes("行号与列号"), "在");
+  ok("注释说清了位置照谁抄", 文.includes("算法照 src/lexer.mjs"), "在");
 }
 
 console.log("");
