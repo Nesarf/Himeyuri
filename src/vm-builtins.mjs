@@ -4,6 +4,10 @@
 // 每一条都照 minimal-eval 的实现抄，只把形状从 (rt, args) 换成 { 效果, 做(vm, args) }——
 // 「需不需要效果」从一张旁表挪到条目自己身上，于是少了一处对不上。
 //
+// 失败用 return vm.坏(...)：坏 记下停机原因并交回 null，于是「出错之后这一条不该继续算」
+// 写在每一处，而不是靠一个异常替人记着。这一版把十处都改了——漏一处的话，
+// 后面那几行会用 undefined 接着算，而那种错比抛出来难查得多。
+//
 // 世界仍然从那一个对象里取（vm.cap）。这一份文件不 import 任何 node: 模块。
 import { 类元组, 类记录 } from "./vm-values.mjs";
 
@@ -12,7 +16,7 @@ export const 内置表 = {
     const v = a[0];
     if (typeof v === "string") return v.length;
     if (v && v.tag === "tuple") return v.items.length;
-    vm.坏("HMYR-R0140", "len() wants a string or a tuple");
+    return vm.坏("HMYR-R0140", "len() wants a string or a tuple");
   } },
   str: { 做: (vm, a) => vm.成串(a[0]) },
   slice: { 做: (vm, a) => {
@@ -23,12 +27,12 @@ export const 内置表 = {
   } },
   chr: { 做: (vm, a) => {
     const cp = Math.floor(vm.成数(a[0]));
-    if (cp < 0 || cp > 0x10ffff) vm.坏("HMYR-R0207", "not a code point: " + cp);
+    if (cp < 0 || cp > 0x10ffff) return vm.坏("HMYR-R0207", "not a code point: " + cp);
     return String.fromCodePoint(cp);
   } },
   to_int: { 做: (vm, a) => {
     const s = vm.成串(a[0]).trim();
-    if (!/^-?[0-9]+$/.test(s)) vm.坏("HMYR-R0208", "not an integer literal: '" + s + "'");
+    if (!/^-?[0-9]+$/.test(s)) return vm.坏("HMYR-R0208", "not an integer literal: '" + s + "'");
     return Number(s);
   } },
   nfc: { 做: (vm, a) => String(a[0]).normalize("NFC") },
@@ -36,20 +40,20 @@ export const 内置表 = {
   is_mark: { 做: (vm, a) => /\p{M}/u.test(String(a[0])) },
   record_new: { 做: (vm, a) => {
     const pairs = a[0];
-    if (!pairs || pairs.tag !== "tuple") vm.坏("HMYR-R0214", "record_of wants a tuple of (name, value) pairs");
+    if (!pairs || pairs.tag !== "tuple") return vm.坏("HMYR-R0214", "record_of wants a tuple of (name, value) pairs");
     const 字段 = new Map();
     for (const p of pairs.items) {
-      if (!p || p.tag !== "tuple" || p.items.length !== 2) vm.坏("HMYR-R0214", "every item must be a (name, value) pair");
+      if (!p || p.tag !== "tuple" || p.items.length !== 2) return vm.坏("HMYR-R0214", "every item must be a (name, value) pair");
       const k = vm.成串(p.items[0]);
-      if (!/^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u.test(k)) vm.坏("HMYR-R0214", "not a name a record could hold: " + JSON.stringify(k));
+      if (!/^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u.test(k)) return vm.坏("HMYR-R0214", "not a name a record could hold: " + JSON.stringify(k));
       字段.set(k, p.items[1]);
     }
     return new 类记录(字段);
   } },
   field_get: { 做: (vm, a) => {
     const rec = a[0], name = vm.成串(a[1]);
-    if (!rec || rec.tag !== "record") vm.坏("HMYR-R0215", "field_get wants a record, found " + 述(rec));
-    if (!rec.fields.has(name)) vm.坏("HMYR-R0216", "no field '" + name + "' on that record");
+    if (!rec || rec.tag !== "record") return vm.坏("HMYR-R0215", "field_get wants a record, found " + 述(rec));
+    if (!rec.fields.has(name)) return vm.坏("HMYR-R0216", "no field '" + name + "' on that record");
     return rec.fields.get(name);
   } },
   field_has: { 做: (vm, a) => {
@@ -67,14 +71,14 @@ export const 内置表 = {
     const 路径 = String(a[0]);
     let buf;
     try { buf = vm.cap.file.read(路径); }
-    catch (err) { vm.坏("HMYR-R0211", "cannot read '" + 路径 + "': " + String(err && err.message ? err.message : err)); }
+    catch (err) { return vm.坏("HMYR-R0211", "cannot read '" + 路径 + "': " + String(err && err.message ? err.message : err)); }
     const enc = a[1] === undefined || a[1] === null ? null : vm.成串(a[1]);
     if (enc) {
       const 名 = String(enc).toLowerCase();
       if (名 === "utf8" || 名 === "utf-8") return buf.toString("utf8");
       if (名 === "utf16le" || 名 === "utf-16le") return new TextDecoder("utf-16le").decode(buf);
       if (名 === "latin1") return buf.toString("latin1");
-      vm.坏("HMYR-R0212", "this runtime cannot decode '" + enc + "'");
+      return vm.坏("HMYR-R0212", "this runtime cannot decode '" + enc + "'");
     }
     if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) return buf.subarray(3).toString("utf8");
     if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) return new TextDecoder("utf-16le").decode(buf.subarray(2));

@@ -3,22 +3,18 @@
 // 它与 src/minimal-eval.mjs 认同一张表（11 种表达式、5 种语句、16 个内置），
 // 差别只在执行模型：那边递归走树，这边在一个循环里读指令。前者吃宿主栈，后者不吃。
 //
-// 这一版把「聚合值」收成自己的两种：元组与记录不再借用 JS 的数组与对象，而是两个带标签的
-// 东西（见下面的 类元组 / 类记录）。于是 VM 判断一个值是什么，靠它自己的标签，
-// 不再靠 Array.isArray 与 instanceof——那两样问的是「宿主怎么看它」，这里要问「它是什么」。
+// 这一版又去掉一样借来的东西：错误不再靠 JS 的 throw 传播。VM 自己记一个「停机」，
+// 解释循环每步开头看一眼，有就退出。于是控制流全在 VM 手里——它自己的循环、自己的闸、
+// 自己的停机。这是第三层的意思：一个循环能交给一台机器，一个 throw 不能。
 //
-// 还没换掉的：数字、字符串、布尔、null 仍是宿主的标量（它们就是这些标量，换掉没有意义）；
-// 而错误仍靠 JS 的 throw 传播。那两样写在 design/VM.txt 的「还没做的」里，不假装做了。
+// 还没换掉的：数字、字符串、布尔、null 仍是宿主的标量（它们就是那些东西）。
+// 写在 design/VM.txt 的「还没做的」里，不假装做了。
 import { 内置表 } from "./vm-builtins.mjs";
 import { 编译模块, 合并程序 } from "./bytecode.mjs";
 
 // 值：两种聚合值自己带标签（定义在 src/vm-values.mjs，内置表也要用同一份）。
 import { 类元组, 类记录 } from "./vm-values.mjs";
 export { 类元组, 类记录 };
-
-class 运行错 extends Error {
-  constructor(码, 话) { super(话); this.code = 码; }
-}
 
 // 语义辅助：与 minimal-eval 一致，因为它们定义的是这门语言的意思，不是实现细节。
 // 一处细节要对齐：宿主那边 describe 一个记录会得到 "a host object"，
@@ -45,61 +41,86 @@ export class 虚拟机 {
     this.步限 = 选项.stepLimit || 5_000_000;
     this.深限 = 选项.maxDepth || 500;
     this.深 = 0;
+    // 停机：null 表示还在跑；否则是 { 码, 话 }。
+    // 它就是「错误」在这台机器上的全部表示——一个标志，加上一条可以读的话。
+    this.停机 = null;
   }
 
-  坏(码, 话) { throw new 运行错(码, 话); }
+  // 登记一次失败。它不再抛：返回 null 是给调用处用的，好让那里写成
+  //   return this.坏(...)
+  // 于是「出错之后不该继续跑」这件事写在每一处，而不是靠一个异常替人记着。
+  坏(码, 话) {
+    if (!this.停机) this.停机 = { 码, 话 };
+    return null;
+  }
 
   成数(v) {
     if (typeof v === "number") return v;
     if (typeof v === "boolean") return v ? 1 : 0;
     this.坏("HMYR-R0130", "expected a number, found " + 述(v));
+    return 0;                       // 停机之后这个值不会被用到，给个 0 免得算出 NaN
   }
   成串(v) {
     if (typeof v === "string") return v;
     if (v === null) return "nil";
     if (v && v.tag === "tuple") return "[" + v.items.map((x) => this.成串(x)).join(", ") + "]";
-    return String(v);          // 记录走这一步，与宿主那边 String(obj) 相同
+    return String(v);               // 记录走这一步，与宿主那边 String(obj) 相同
   }
   相等(a, b) { return typeof a === typeof b ? a === b : this.成串(a) === this.成串(b); }
   比(a, b) {
     if (typeof a === "number" && typeof b === "number") return a < b ? -1 : a > b ? 1 : 0;
     if (typeof a === "string" && typeof b === "string") return a < b ? -1 : a > b ? 1 : 0;
     this.坏("HMYR-R0131", "cannot compare " + 述(a) + " with " + 述(b));
+    return 0;
   }
 
-  // 调一个函数：建一帧，跑它的指令段，交回它的返回值。
+  // 调一个函数。交回的东西有两种形状，而调用者必须两种都看：
+  //
+  //   { ok: true, 值 }          正常返回
+  //   { ok: false, 码, 话 }      停机
+  //
+  // 这一层不再抛，于是「失败」是一条要读的返回值，而不是一个要接的异常。
   调用(名, 实参, 调用者效果) {
+    if (this.停机) return { ok: false, ...this.停机 };
     const 函 = this.程序.函数们.get(名);
-    if (!函) this.坏("HMYR-R0104", "there is no name '" + 名 + "' in scope");
-    if (++this.深 > this.深限) this.坏("HMYR-R0108", "call depth exceeded (" + this.深限 + ")");
+    if (!函) { this.坏("HMYR-R0104", "there is no name '" + 名 + "' in scope"); return { ok: false, ...this.停机 }; }
+    if (++this.深 > this.深限) {
+      this.坏("HMYR-R0108", "call depth exceeded (" + this.深限 + ")");
+      return { ok: false, ...this.停机 };
+    }
     try {
       // 效果：被调者声明的不能比调用者声明的多。
       if (调用者效果) {
         for (const 效 of 函.效果) {
           if (!调用者效果.has(效)) {
             this.坏("HMYR-R0201", "function '" + 名 + "' uses effect '" + 效 + "', which the caller did not declare");
+            return { ok: false, ...this.停机 };
           }
         }
       }
       if (实参.length !== 函.参数量) {
         this.坏("HMYR-R0101", "function '" + 名 + "' expects " + 函.参数量 + " argument(s), got " + 实参.length);
+        return { ok: false, ...this.停机 };
       }
       const 帧 = { 槽: new Array(函.槽数).fill(null).map(() => ({ v: null, 可写: true })), 效果: new Set(函.效果) };
       for (let i = 0; i < 实参.length; i++) 帧.槽[i] = { v: 实参[i], 可写: true };
-      return this.执行(函.码, 帧);
+      const 值 = this.执行(函.码, 帧);
+      return this.停机 ? { ok: false, ...this.停机 } : { ok: true, 值 };
     } finally { this.深--; }
   }
 
-  // 解释循环。返回值靠 RET 直接 return。
+  // 解释循环。正常返回靠 RET（JS 的 return 仍然是这一条的路，它不表示失败）；
+  // 失败靠 this.停机——每走一步看一次，有就交回 null。
   执行(码, 帧) {
     const 栈 = [];
     let pc = 0;
     const 弹 = () => 栈.pop();
     const 压 = (v) => { 栈.push(v); };
     for (;;) {
-      if (++this.步 > this.步限) this.坏("HMYR-R0102", "the program ran for too long without finishing");
+      if (this.停机) return null;
+      if (++this.步 > this.步限) { this.坏("HMYR-R0102", "the program ran for too long without finishing"); return null; }
       const 指令 = 码[pc];
-      if (!指令) this.坏("HMYR-R0110", "the instruction stream ran off its end");
+      if (!指令) { this.坏("HMYR-R0110", "the instruction stream ran off its end"); return null; }
       switch (指令.op) {
         case "CONST": 压(指令.a); pc++; break;
         case "LOAD": 压(帧.槽[指令.a].v); pc++; break;
@@ -107,13 +128,13 @@ export class 虚拟机 {
         case "ASSIGN": {
           const 槽 = 帧.槽[指令.a];
           const v = 弹();
-          if (!槽.可写) this.坏("HMYR-R0150", "cannot assign to a name that was not declared with var");
+          if (!槽.可写) { this.坏("HMYR-R0150", "cannot assign to a name that was not declared with var"); return null; }
           槽.v = v;
           pc++; break;
         }
         case "POP": 弹(); pc++; break;
         case "GLOBAL": {
-          if (!this.全局.has(指令.a)) this.坏("HMYR-R0104", "there is no name '" + 指令.a + "' in scope");
+          if (!this.全局.has(指令.a)) { this.坏("HMYR-R0104", "there is no name '" + 指令.a + "' in scope"); return null; }
           压(this.全局.get(指令.a)); pc++; break;
         }
         case "BOOL": 压(真(弹())); pc++; break;
@@ -127,10 +148,10 @@ export class 虚拟机 {
         case "SUB": { const b = 弹(), a = 弹(); 压(this.成数(a) - this.成数(b)); pc++; break; }
         case "MUL": { const b = 弹(), a = 弹(); 压(this.成数(a) * this.成数(b)); pc++; break; }
         case "DIV": { const b = 弹(), a = 弹();
-          if (this.成数(b) === 0) this.坏("HMYR-R0120", "division by zero");
+          if (this.成数(b) === 0) { this.坏("HMYR-R0120", "division by zero"); return null; }
           压(this.成数(a) / this.成数(b)); pc++; break; }
         case "MOD": { const b = 弹(), a = 弹();
-          if (this.成数(b) === 0) this.坏("HMYR-R0120", "division by zero");
+          if (this.成数(b) === 0) { this.坏("HMYR-R0120", "division by zero"); return null; }
           压(this.成数(a) % this.成数(b)); pc++; break; }
         case "EQ": { const b = 弹(), a = 弹(); 压(this.相等(a, b)); pc++; break; }
         case "NE": { const b = 弹(), a = 弹(); 压(!this.相等(a, b)); pc++; break; }
@@ -159,20 +180,24 @@ export class 虚拟机 {
         }
         case "FIELD": {
           const t = 弹();
-          if (!t || t.tag !== "record" || !t.fields.has(指令.a)) this.坏("HMYR-R0106", "no field '" + 指令.a + "' on that value");
+          if (!t || t.tag !== "record" || !t.fields.has(指令.a)) {
+            this.坏("HMYR-R0106", "no field '" + 指令.a + "' on that value");
+            return null;
+          }
           压(t.fields.get(指令.a));
           pc++; break;
         }
         case "INDEX": {
           const i = this.成数(弹()), t = 弹();
           if (typeof t === "string") {
-            if (i < 0 || i >= t.length) this.坏("HMYR-R0151", "index " + i + " is outside a value of length " + t.length);
+            if (i < 0 || i >= t.length) { this.坏("HMYR-R0151", "index " + i + " is outside a value of length " + t.length); return null; }
             压(t[i]);
           } else if (t && t.tag === "tuple") {
-            if (i < 0 || i >= t.items.length) this.坏("HMYR-R0151", "index " + i + " is outside a value of length " + t.items.length);
+            if (i < 0 || i >= t.items.length) { this.坏("HMYR-R0151", "index " + i + " is outside a value of length " + t.items.length); return null; }
             压(t.items[i]);
           } else {
             this.坏("HMYR-R0152", "cannot index " + 述(t));
+            return null;
           }
           pc++; break;
         }
@@ -180,22 +205,26 @@ export class 虚拟机 {
           const n = 指令.b;
           const 实参 = 栈.splice(栈.length - n, n);
           const 内置项 = 内置表[指令.a];
-          if (!内置项) this.坏("HMYR-R0104", "there is no builtin '" + 指令.a + "'");
+          if (!内置项) { this.坏("HMYR-R0104", "there is no builtin '" + 指令.a + "'"); return null; }
           if (内置项.效果 && !(帧.效果 instanceof Set && 帧.效果.has(内置项.效果))) {
             this.坏("HMYR-R0201", "builtin '" + 指令.a + "' needs effect '" + 内置项.效果 + "', which the caller did not declare");
+            return null;
           }
           const 结果 = 内置项.做(this, 实参);
+          if (this.停机) return null;
           压(结果 === undefined ? null : 结果);
           pc++; break;
         }
         case "CALLF": {
           const n = 指令.b;
           const 实参 = 栈.splice(栈.length - n, n);
-          压(this.调用(指令.a, 实参, 帧.效果));
+          const r = this.调用(指令.a, 实参, 帧.效果);
+          if (!r.ok) return null;
+          压(r.值);
           pc++; break;
         }
         case "RET": return 弹();
-        default: this.坏("HMYR-R0110", "cannot execute the opcode " + 指令.op);
+        default: this.坏("HMYR-R0110", "cannot execute the opcode " + 指令.op); return null;
       }
     }
   }

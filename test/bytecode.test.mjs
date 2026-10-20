@@ -61,8 +61,12 @@ console.log("二、六条真实路径：两条执行路径给同一个答案");
     let 码 = 0;
     try {
       const rt = 用字节码 ? 跑字节码(层, 选项) : 最小运行(层, 选项);
-      if (用字节码) 码 = rt.调用("命令行入口", [], null) ?? 0;
-      else { rt.argv = 选项.argv; rt.writeErr = 选项.writeErr; 码 = rt.callFunction(rt.functions.get("命令行入口"), [], null) ?? 0; }
+      if (用字节码) {
+        // 虚拟机现在不抛：它交回 { ok, 值 } 或 { ok:false, 码, 话 }。
+        // 失败是一条要读的返回值，于是这一行必须两种都看。
+        const r = rt.调用("命令行入口", [], null);
+        if (r.ok) 码 = r.值 ?? 0; else { 码 = -1; 出.e += r.码 + " " + r.话; }
+      } else { rt.argv = 选项.argv; rt.writeErr = 选项.writeErr; 码 = rt.callFunction(rt.functions.get("命令行入口"), [], null) ?? 0; }
     } catch (e) { 码 = -1; 出.e += (e.code || "") + " " + e.message; }
     return { 码, 出: 出.w.trim(), 错: 出.e.trim() };
   };
@@ -102,6 +106,15 @@ console.log("三、聚合值不再靠宿主怎么看它们");
   const 值 = fs.readFileSync(path.join(ROOT, "src/vm-values.mjs"), "utf8");
   ok("两个值类各带一个标签", 值.includes('this.tag = "tuple"') && 值.includes('this.tag = "record"'));
   ok("执行器与内置表共用同一份值定义", fs.readFileSync(path.join(ROOT, "src/vm-builtins.mjs"), "utf8").includes('from "./vm-values.mjs"'));
+
+  // 错误不再靠 JS 的 throw：VM 自己记停机，解释循环每步看一眼。
+  // 唯一留下的那一处 throw 是「没给能力」，那是编程错误，不是语言里的失败。
+  const 内置源 = 剥注释(fs.readFileSync(path.join(ROOT, "src/vm-builtins.mjs"), "utf8"));
+  ok("内置表里没有 throw", !内置源.includes("throw"));
+  const 执行源 = 剥注释(fs.readFileSync(path.join(ROOT, "src/vm.mjs"), "utf8"));
+  const 几处 = (执行源.match(/\bthrow\b/g) || []).length;
+  ok("执行器里只剩一处 throw（没给能力那一条）", 几处 === 1, String(几处));
+  ok("而它记的是停机，不是异常", 执行源.includes("this.停机"));
 }
 
 console.log("四、错误编号也照旧");
@@ -115,7 +128,7 @@ console.log("四、错误编号也照旧");
       let 错 = "";
       try {
         const rt = 用字节码 ? 跑字节码(层, { capabilities: 本机能力(), write: () => {}, argv: ["hmyr", p] }) : 最小运行(层, { capabilities: 本机能力(), write: () => {}, argv: ["hmyr", p] });
-        if (用字节码) rt.调用("命令行入口", [], null);
+        if (用字节码) { const r = rt.调用("命令行入口", [], null); if (!r.ok) 错 = r.码 + " " + r.话; }
         else { rt.argv = ["hmyr", p]; rt.callFunction(rt.functions.get("命令行入口"), [], null); }
       } catch (e) { 错 = (e.code || "") + " " + e.message; }
       return 错;
