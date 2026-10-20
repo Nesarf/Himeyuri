@@ -28,7 +28,7 @@
             这条是设计决定，不是遗漏：谁要真的写文件或起进程，才需要 file 与 process。
 
   三、文件（需要 file 效果）
-      read_text write_text
+      read_text write_text file_exists
       语义：读时编码要么显式写明，要么按 BOM 判——BOM 是事实，代码页是猜测，所以只认前者。
             写时只编得出 utf8、latin1、utf16le 与有表的那几个；写不出就拒绝。
       拒绝：编码不认识给 E0008；表缺失给 R0203；字符编不了给 R0204。

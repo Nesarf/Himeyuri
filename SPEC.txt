@@ -98,7 +98,7 @@ stmt        = "let" ident [ ":" type ] "=" expr
   ・序列的拼接：两个元组用 + 拼成一个（数据语言要能递归地长出一串东西）；元组与其它值相加报 HMYR-R0130。
   ・2.5 实现的可移植性：本语言自身的源码只许使用可移植的内置（Node、Deno、Bun 都提供的那几样），不许依赖宿主的专有模块。
   ・编号的分布：E0001-E0099 词法 · E0100-E0199 语法 · W0001-W0099 警告 · R0100-R0199 运行期 · R0200-R0299 效果与能力 · R0300-R0399 预留（三区模型）。登记表在 conformance/codes.mjs，每个编号写明含义；程序能触发的编号必须有符合性用例，实现自身的故障标记为 internal，尚未实现的标记为 planned。
-  ・2.6 内置函数的边界：求值器提供的每个内置函数都必须落在标准库第一圈内；多出来的要么入选，要么删掉。，用 .字段 读取；这是 KPB 那类数据语言要用的形状。is_letter、is_mark 、nfc、read_text、write_text、run_program、console_codepage 、split、record_new／field_get／field_has、thr_spawn／thr_join／thr_cancel／thr_count、repo_path／python_path／temp_path 与 term_size／term_clear／term_escape／term_color／term_hide／term_show、sleep_ms、floor、slice／ord／chr／to_upper／to_lower／to_int、cwd／home_dir／chdir、key_push／key_available／key_read、locale_env／locale_current／locale_set／key_start（字符分类）同属第一圈：它们是文本层最小的一对原语。
+  ・2.6 内置函数的边界：求值器提供的每个内置函数都必须落在标准库第一圈内；多出来的要么入选，要么删掉。，用 .字段 读取；这是 KPB 那类数据语言要用的形状。is_letter、is_mark 、nfc、read_text、write_text、run_program、console_codepage 、split、record_new／field_get／field_has、thr_spawn／thr_join／thr_cancel／thr_count、repo_path／python_path／temp_path／file_exists 与 term_size／term_clear／term_escape／term_color／term_hide／term_show、sleep_ms、floor、slice／ord／chr／to_upper／to_lower／to_int、cwd／home_dir／chdir、key_push／key_available／key_read、locale_env／locale_current／locale_set／key_start（字符分类）同属第一圈：它们是文本层最小的一对原语。
   ・下标：从 0 开始，可下标的值是元组与字符串；越界报 HMYR-R0151，不可下标的值报 HMYR-R0152。
   ・求值顺序：左到右；实参自左向右求值；规格写明，不留实现自由：[定]
   ・整数溢出：默认检查并报错；硬档可显式关闭（@wrapping）：[定]

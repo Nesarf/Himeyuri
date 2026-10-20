@@ -336,7 +336,7 @@ class Scope {
 
 // A builtin that touches the outside world is a capability, and it is checked at the call site against
 // what the calling function declared. Without this, "effects" would only apply to functions we wrote.
-const BUILTIN_EFFECTS = { read_text: "file", write_text: "file", run_program: "process", chdir: "process", thr_spawn: "thread", thr_cancel: "thread" };
+const BUILTIN_EFFECTS = { read_text: "file", write_text: "file", run_program: "process", chdir: "process", file_exists: "file", thr_spawn: "thread", thr_cancel: "thread" };
 
 /** 编码表按需读入并缓存：表是「字符 -> 字节」，从本运行时的解码器推出来的。 */
 const ENCODING_TABLES = new Map();
@@ -568,6 +568,13 @@ const BUILTINS = {
     return buf.toString("utf8");
   },
   // 写文件：这台运行时只编得出 UTF-8 一类。写不出就拒绝——写出一串看着对、其实错的字节才是灾难。
+  // 「这个文件在不在」是文件这一组最基础的问题，而 read_text 只能读。
+  // 没有它，「引一个可选文件」就只能靠 read_text 去撞——而它撞到就是一条 R0211，
+  // 于是「引了个不存在的」与「读不了」被混成同一件事。
+  file_exists: (rt, args) => {
+    const 路径 = String(args[0]);
+    try { return fs.existsSync(路径); } catch (err) { return false; }
+  },
   write_text: (rt, args) => {
     const file = String(args[0]);
     const text = rt.asString(args[1]);
