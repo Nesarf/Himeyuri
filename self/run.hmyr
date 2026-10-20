@@ -104,6 +104,70 @@ fn 合并从(已收: Int, 源码们: Int, i: Int) -> Int {
   return 合并从(已收 + 全部.fns, 源码们, i + 1)
 }
 
+// ---- 认 import：从源码里取出它引的那几个路径 ----
+//
+// 这一段以前在宿主那边（bin/hmyr.mjs 里一个正则）。搬到这里，是因为
+// 「一个文件引了谁」是这门语言自己的事——宿主不该比语言更懂 HMYR 的写法。
+//
+// 只认「一行 import "路径"」这一种形式。别的一律当没有：
+// 认得窄而说清，比认得宽而猜测好。
+
+// 按换行拆。与 拆行 不同，这里不要末尾那一个空段——
+// 找 import 只看行，末尾空行没有意义。
+fn 拆行从(文本: String, i: Int, 起: Int, acc: Int) -> Int {
+  if i >= len(文本) { return acc + (slice(文本, 起, len(文本)),) }
+  if 文本[i] == chr(10) {
+    return 拆行从(文本, i + 1, i + 1, acc + (slice(文本, 起, i),))
+  }
+  return 拆行从(文本, i + 1, 起, acc)
+}
+
+fn 拆行(文本: String) -> Int {
+  if 文本 == "" { return () }
+  return 拆行从(文本, 0, 0, ())
+}
+
+// 这一行是不是「import "..."」。是就交回引号里的那一段，不是就交回空串。
+fn 引号里(行: String) -> String {
+  let 去 = 去首(行)
+  if len(去) < 9 { return "" }
+  if slice(去, 0, 6) != "import" { return "" }
+  // 还要看词界：importx 的前六个字符也是 import，而它不是那件事。
+  // 与词法那条规矩一样——换记号只看整个记号，不看它里面的一部分。
+  if len(去) > 6 && 去[6] != " " && 去[6] != chr(9) && 去[6] != chr(34) { return "" }
+  let 开 = 找引号(去, 6)
+  if 开 < 0 { return "" }
+  let 闭 = 找引号(去, 开 + 1)
+  if 闭 < 0 { return "" }
+  return slice(去, 开 + 1, 闭)
+}
+
+fn 去首(行: String) -> String {
+  if len(行) == 0 { return 行 }
+  if 行[0] == " " || 行[0] == chr(9) { return 去首(slice(行, 1, len(行))) }
+  return 行
+}
+
+fn 找引号(文本: String, 起: Int) -> Int {
+  // 这里要改 i，所以是 var 而不是 let——let 声明的东西不可变。
+  var i = 起
+  while i < len(文本) && 文本[i] != chr(34) { i = i + 1 }
+  if i >= len(文本) { return -1 }
+  return i
+}
+
+fn 导入们从(行们: Int, i: Int, acc: Int) -> Int {
+  if i >= len(行们) { return acc }
+  let 路 = 引号里(行们[i])
+  if 路 == "" { return 导入们从(行们, i + 1, acc) }
+  return 导入们从(行们, i + 1, acc + (路,))
+}
+
+// 一段源码里引了哪些路径，按出现的顺序。
+fn 找导入们(源码: String) -> Int {
+  return 导入们从(拆行(源码), 0, ())
+}
+
 fn 跑模块们(源码们: Int) -> String {
   let 函数们 = 合并从((), 源码们, 0)
   if len(函数们) == 0 {
