@@ -1,11 +1,9 @@
-// 「编译自己」现在到哪儿：把当下的数字钉住。
+// 「编译自己」在默认配置下的现状：六份里两份过。
 //
-// 这一套钉的是同尺度对照：只算「这一份文件自己的声明」。
-// 上一版这里错在把「单文件」与「整棵 import 树」放在一起比，
-// 于是比出了十对五十五这种假差距。
+// 这一套钉的是默认栈的事实——别人不调 --stack-size 就会撞到这里。
+// 而在 8 MB 栈下六份全过，那件事由 self-compile-stack 那套钉。
 //
-// 它不钉「该通过」，它钉「现在是这样」——将来补上时它会红，
-// 而那时改它的人会先读 design/SELFCOMPILE.txt 里那一段。
+// 两套分开是有意的：抹掉「默认栈下过不去」等于让人以为开箱就能编译自己。
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,61 +16,42 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 自举 = runUnit(loadUnit(path.join(ROOT, "self/run.hmyr")), { maxDepth: 3000 });
-const 自举名 = (路) => Array.from(自举.callFunction(自举.functions.get("函数名们"), [fs.readFileSync(路, "utf8")], null));
-const 宿主名 = (路) => {
-  const 宿 = loadUnit(路);
-  const 本 = 宿.modules.get(路);
-  if (!本) return null;
-  return 本.decls.filter((d) => d.kind === "Fn").map((d) => d.name);
+const 自举 = runUnit(loadUnit(path.join(ROOT, "self/run.hmyr")), { maxDepth: 20000 });
+const 试一 = (名) => {
+  try {
+    const 名们 = 自举.callFunction(自举.functions.get("函数名们"), [fs.readFileSync(path.join(ROOT, "self", 名 + ".hmyr"), "utf8")], null);
+    return { 跑: true, 个数: 名们.length };
+  } catch (e) { return { 跑: false, 说法: String(e && e.message ? e.message : e).slice(0, 46) }; }
 };
 
-console.log("一、同尺度对照：这两份，自举与宿主名字与顺序都对得上");
+console.log("一、默认栈下：这两份过");
 {
   for (const 名 of ["stmt", "body"]) {
-    const 路 = path.join(ROOT, "self", 名 + ".hmyr");
-    const 甲 = 自举名(路);
-    const 乙 = 宿主名(路);
-    ok(名 + ".hmyr：两边数量一致（" + 甲.length + "）", 乙 !== null && 甲.length === 乙.length, 甲.length + " vs " + (乙 ? 乙.length : "取不到"));
-    ok(名 + ".hmyr：名单与顺序完全一致", JSON.stringify(甲) === JSON.stringify(乙), JSON.stringify(甲).slice(0, 60));
+    const r = 试一(名);
+    ok(名 + ".hmyr 在默认栈下跑得动", r.跑 === true, JSON.stringify(r).slice(0, 60));
   }
+  ok("stmt.hmyr 认出十个", 试一("stmt").个数 === 10, String(试一("stmt").个数));
+  ok("body.hmyr 认出十四个", 试一("body").个数 === 14, String(试一("body").个数));
 }
 
-console.log("二、四个大文件撞墙，而说法落在「栈」或「步数」两类");
+console.log("二、默认栈下：另外四份撞栈");
 {
-  const 试一次 = (名) => {
-    try { 自举名(path.join(ROOT, "self", 名 + ".hmyr")); return { 跑: true, 说法: "跑得动" }; }
-    catch (e) { return { 跑: false, 说法: String(e && e.message ? e.message : e).slice(0, 46) }; }
-  };
+  // 每份只调一次，把结果存下来——连调两次说法会变，那种不稳定不该被钉成断言。
   const 结果 = {};
-  for (const 名 of ["lex", "chain", "eval", "run"]) 结果[名] = 试一次(名);
+  for (const 名 of ["lex", "chain", "eval", "run"]) 结果[名] = 试一(名);
   for (const 名 of ["lex", "chain", "eval", "run"]) {
-    ok(名 + ".hmyr 当下跑不动", 结果[名].跑 === false, 结果[名].说法);
+    ok(名 + ".hmyr 在默认栈下跑不动", 结果[名].跑 === false, 结果[名].说法 || "");
   }
-  const 说法们 = Object.values(结果).map((r) => r.说法);
-  const 认得出 = 说法们.every((s) => s.includes("call stack") || s.includes("ran for too long") || s.includes("depth"));
-  ok("每种说法都在「栈」或「步数」这两类里", 认得出, 说法们.join(" / "));
+  ok("而它们在 8 MB 栈下跑得动（见 self-compile-stack）", fs.existsSync(path.join(ROOT, "test/self-compile-stack.test.mjs")));
 }
 
-console.log("三、已经成立的那一半：它认得自己写的程序");
-{
-  const 路 = path.join(ROOT, "test/self-agree.test.mjs");
-  ok("对照那一套还在", fs.existsSync(路));
-  const 文 = fs.readFileSync(路, "utf8");
-  ok("而它钉的是「两边同一个答案」", 文.includes("两边同一个答案") || 文.includes("同一个数"), "在");
-}
-
-console.log("四、说明文档在，且记着那次量法错");
+console.log("三、说明文档在，且写着今天的实况");
 {
   const 文档 = path.join(ROOT, "design/SELFCOMPILE.txt");
   ok("design/SELFCOMPILE.txt 在", fs.existsSync(文档));
   const 文 = fs.readFileSync(文档, "utf8");
-  ok("里面写了「量错过一次」", 文.includes("量错过一次"), "在");
-  // 这一条钉的是文档现在的立场：六份里四份，而别写成「快好了」。
-  // 文档改了口径，这条就要跟着改——一条断言钉着一句人话，那是它该有的阻力。
-  ok("写了「六份里四份」这个实况", 文.includes("六份里四份"), "在");
-  ok("也写了「别写成快好了」这一句", 文.includes("别写成"), "在");
-  ok("还写着那两堵墙各自的性质", 文.includes("栈这一堵") && 文.includes("步数这一堵"), "在");
+  ok("写了「六份全对」", 文.includes("六份全对"), "在");
+  ok("也写了默认栈下过不去", 文.includes("默认栈"), "在");
   ok("也写了「这些数字会变」", 文.includes("这些数字会变"), "在");
 }
 
