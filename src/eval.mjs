@@ -614,21 +614,22 @@ const BUILTINS = {
   // 这一对内置把「仓库在哪」与「解释器在哪」收成两处，而不是散在各文件里。
   repo_path: (rt, args) => {
     const rel = rt.asString(args[0]);
-    return path.resolve(ROOT, rel);
+    return rt.cap.path.resolve(ROOT, rel);
   },
   // 临时文件放哪儿：只有这一处说。缺省是系统临时目录，
   // 而 HMYR_TMP 可以把它指到别处——本机就把它指到 E: 上的缓存目录，以守那条磁盘纪律。
   temp_path: (rt, args) => {
     const 名 = rt.asString(args[0]);
-    const 目录 = process.env.HMYR_TMP || os.tmpdir();
-    try { fs.mkdirSync(目录, { recursive: true }); } catch (err) { /* 已经在就算了 */ }
+    const 目录 = rt.cap.env.get("HMYR_TMP") || rt.cap.env.temp();
+    rt.cap.file.ensureDir(目录);
     return path.join(目录, "hmyr-" + 名);
   },
-  python_path: () => {
+  python_path: (rt) => {
     // 先看环境变量（于是别的机器可以指自己的），再看这台机器上那个托管解释器，最后退回 PATH。
-    if (process.env.HMYR_PYTHON) return process.env.HMYR_PYTHON;
+    const 指 = rt.cap.env.get("HMYR_PYTHON");
+    if (指) return 指;
     const 托管 = "E:/DaShaoHuo/Python-managed/bin/python.exe";
-    if (fs.existsSync(托管)) return 托管;
+    if (rt.cap.file.exists(托管)) return 托管;
     return "python";
   },
   // ---- 二、输出：写到一个可替换的出口 ----
@@ -702,7 +703,7 @@ const BUILTINS = {
     const timeout = args[2] === undefined || args[2] === null ? 10000 : rt.asNumber(args[2]);
     // 第四位是输出的编码：中文 Windows 的控制台多半是 GBK，写死 UTF-8 会让每个汉字变成替换字符。
     const outEnc = args[3] === undefined || args[3] === null ? "utf8" : rt.asString(args[3]);
-    const result = spawnSync(command, rest, { timeout, windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
+    const result = rt.cap.process.exec(command, rest, { timeout, windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
     return {
       code: typeof result.status === "number" ? result.status : -1,
       stdout: trimEnd(decodeBytes(rt, result.stdout, outEnc)),
@@ -718,18 +719,18 @@ const BUILTINS = {
   argv: (rt, args) => (rt.argv || []).map((x) => String(x)),
   chdir: (rt, args) => {
     const target = rt.asString(args[0]);
-    try { process.chdir(target); return process.cwd(); }
+    try { rt.cap.process.chdir(target); return rt.cap.process.cwd(); }
     catch (err) { rt.fail("HMYR-R0209", "cannot enter '" + target + "': " + String(err && err.message ? err.message : err)); }
   },
   // ---- 五、环境（只读，不需要效果） ----
-  cwd: () => process.cwd(),
-  home_dir: () => os.homedir(),
-  locale_env: () => {
+  cwd: (rt) => rt.cap.process.cwd(),
+  home_dir: (rt) => rt.cap.env.home(),
+  locale_env: (rt) => {
     let region = "";
     try { region = new Intl.DateTimeFormat().resolvedOptions().locale || ""; } catch (err) { region = ""; }
     let page = "utf8";
-    if (process.platform === "win32") {
-      const r = spawnSync("cmd", ["/c", "chcp"], { timeout: 5000, windowsHide: true });
+    if (rt.cap.env.platform() === "win32") {
+      const r = rt.cap.process.exec("cmd", ["/c", "chcp"], { timeout: 5000, windowsHide: true });
       const m = /(\d{3,5})/.exec(r.stdout ? r.stdout.toString("latin1") : "");
       page = m ? (m[1] === "936" ? "gbk" : m[1] === "932" ? "shift_jis" : "utf8") : "utf8";
     }
@@ -746,9 +747,9 @@ const BUILTINS = {
     return name;
   },
 
-  console_codepage: () => {
-    if (process.platform !== "win32") return "utf8";
-    const r = spawnSync("cmd", ["/c", "chcp"], { timeout: 5000, windowsHide: true });
+  console_codepage: (rt) => {
+    if (rt.cap.env.platform() !== "win32") return "utf8";
+    const r = rt.cap.process.exec("cmd", ["/c", "chcp"], { timeout: 5000, windowsHide: true });
     const m = /(\d{3,5})/.exec(r.stdout ? r.stdout.toString("latin1") : "");
     return m ? m[1] : "unknown";
   },
@@ -757,11 +758,11 @@ const BUILTINS = {
   // 大小写换成二十六项小表）。规矩改了：语言达不到就先补语言，不是绕。
   // 按分隔符切：i18n 处理的第一步就是按行切。
   // ---- 六、时间（不需要效果，但破坏可复现性） ----
-  now_ms: () => Date.now(),
-  sleep_ms: (rt, args) => { const ms = Math.max(0, Math.floor(rt.asNumber(args[0]))); if (ms > 0) { const until = Date.now() + ms; while (Date.now() < until) { /* 等 */ } } return ms; },
+  now_ms: (rt) => rt.cap.time.now(),
+  sleep_ms: (rt, args) => { const ms = Math.max(0, Math.floor(rt.asNumber(args[0]))); if (ms > 0) rt.cap.time.sleep(ms); return ms; },
   floor: (rt, args) => Math.floor(rt.asNumber(args[0])),
   // ---- 七、终端（只返回字符串，一个字都不写出去） ----
-  term_size: () => [process.stdout.rows || 24, process.stdout.columns || 80],
+  term_size: (rt) => { const s = rt.cap.terminal.size(); return [s.rows, s.columns]; },
   term_clear: () => "\u001b[2J",
   term_escape: (rt, args) => "\u001b[" + Math.max(1, Math.floor(rt.asNumber(args[0]))) + ";" + Math.max(1, Math.floor(rt.asNumber(args[1]))) + "H",
   term_color: (rt, args) => {

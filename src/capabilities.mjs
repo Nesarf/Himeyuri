@@ -33,6 +33,9 @@ export const 本机能力 = (options = {}) => ({
     read: (p) => fs.readFileSync(p),
     exists: (p) => fs.existsSync(p),
     write: (p, buf) => fs.writeFileSync(p, buf),
+    // 建目录不让它失败：已经在就算了。这一条与「写」分开，因为「准备一个地方」
+    // 与「往里写东西」是两件事，而契约里只有后者要求 file 效果。
+    ensureDir: (p) => { try { fs.mkdirSync(p, { recursive: true }); } catch (err) { /* 已经在就算了 */ } },
   },
   process: {
     argv: () => process.argv.slice(),
@@ -53,6 +56,9 @@ export const 本机能力 = (options = {}) => ({
   env: {
     home: () => os.homedir(),
     temp: () => os.tmpdir(),
+    // 环境变量也算世界：读它是读进程的状态，而不是读这门语言自己的东西。
+    get: (name) => process.env[name],
+    platform: () => process.platform,
   },
   path: {
     join: (...parts) => path.join(...parts),
