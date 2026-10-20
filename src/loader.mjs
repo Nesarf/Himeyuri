@@ -34,6 +34,14 @@ export function loadUnit(entry, options = {}) {
   const modules = new Map();     // absolute path -> ast
   const loading = new Set();     // the chain currently being loaded, for cycle detection
   const order = [];
+  // 「怎么把一段源码变成一棵树」是一个可以换的东西，而不是这里写死的一步。
+  // 默认还是宿主那两层；换掉它的是子集那两层（src/subset-lex.mjs + src/subset-parse.mjs），
+  // 而换的理由只有一个：证明子集那一份真能顶替这两层，而不是只在套件里对得上。
+  // 换掉时若那两层被一份源码难住，它会抛——子集的立场是报错而不是猜，于是这里不接住它。
+  const reader = options.reader || ((source, abs) => {
+    const lexed = lex(source, { path: abs });
+    return parse(lexed.tokens, { diagnostics });
+  });
 
   function visit(file) {
     const abs = path.resolve(file);
@@ -48,8 +56,7 @@ export function loadUnit(entry, options = {}) {
     }
     loading.add(abs);
     const source = fs.readFileSync(abs, "utf8");
-    const lexed = lex(source, { path: abs });
-    const { ast } = parse(lexed.tokens, { diagnostics });
+    const { ast } = reader(source, abs);
 
     for (const imp of ast.imports) {
       const target = resolveImport(abs, imp.path);
