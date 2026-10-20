@@ -16,8 +16,6 @@
 // Effect checking follows SPEC 2.4: a function may only call what its own declared effects allow.
 // Runtime diagnostics use an R range, which the spec does not yet define - marked [议] as well.
 import fs from "node:fs";
-import os from "node:os";
-import { spawnSync } from "node:child_process";
 import { 本机能力 } from "./capabilities.mjs";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -461,7 +459,8 @@ let currentLocale = null;
 
 // 线程：worker 在另一个核上跑，结果经共享内存回来，所以主线程可以同步等。
 // 这一点与子进程那条路不同——那一头的完成事件要经过主线程的事件循环，同步等会死锁。
-import { Worker } from "node:worker_threads";
+// 而 Worker 与 Atomics 本身在能力层那一组里（src/capabilities.mjs 的 thread），
+// 于是这一份文件不再直接 import 它。
 const THREADS = new Map();
 let nextThreadId = 1;
 
@@ -561,23 +560,20 @@ const BUILTINS = {
     const source = rt.asString(args[0]);
     const entry = rt.asString(args[1]);
     const id = nextThreadId++;
-    const outPath = path.join(os.tmpdir(), "hmyr-thread-" + process.pid + "-" + id + ".json");
-    const flag = new Int32Array(new SharedArrayBuffer(4));
+    const outPath = rt.cap.path.join(rt.cap.env.temp(), "hmyr-thread-" + process.pid + "-" + id + ".json");
+    const flag = rt.cap.thread.signal();
     const handle = { id, flag, outPath, done: false, worker: null };
-    try {
-      handle.worker = new Worker(new URL("./thr-worker.mjs", import.meta.url), {
-        workerData: { source, entry, outPath, flag },
-      });
-    } catch (err) {
+    handle.worker = rt.cap.thread.spawn(new URL("./thr-worker.mjs", import.meta.url), { source, entry, outPath, flag });
+    if (!handle.worker) {
       // 起不来就交回 -1（一个无效句柄）。不用编号：那不是「拒绝」，是这个线程压根没出生，
       // 而调用方拿到 -1 之后 join 会得到 R0221——一条路，不是两条。
       return -1;
     }
     // 顺手把错误也记下来：不让一个起不来的线程把主线程一直挂着。
-    handle.worker.on("error", () => { Atomics.store(handle.flag, 0, 9); Atomics.notify(handle.flag, 0); });
+    handle.worker.on("error", () => rt.cap.thread.store(handle.flag, 9));
     // 不让一个还活着的线程拖住整个进程：宿主该退就退。
     if (typeof handle.worker.unref === "function") handle.worker.unref();
-    handle.worker.on("exit", (code) => { if (Atomics.load(handle.flag, 0) === 0) { Atomics.store(handle.flag, 0, code === 0 ? 1 : 9); Atomics.notify(handle.flag, 0); } });
+    handle.worker.on("exit", (code) => { if (rt.cap.thread.load(handle.flag) === 0) rt.cap.thread.store(handle.flag, code === 0 ? 1 : 9); });
     THREADS.set(id, handle);
     return id;
   },
@@ -587,14 +583,14 @@ const BUILTINS = {
     if (!h) rt.fail("HMYR-R0221", "no such thread handle: " + id);
     const timeout = args[1] === undefined || args[1] === null ? 30000 : Math.floor(rt.asNumber(args[1]));
     const 到 = Date.now() + timeout;
-    while (Atomics.load(h.flag, 0) === 0) {
+    while (rt.cap.thread.load(h.flag) === 0) {
       const 剩 = 到 - Date.now();
       if (剩 <= 0) rt.fail("HMYR-R0222", "thread " + id + " did not finish within " + timeout + "ms");
-      Atomics.wait(h.flag, 0, 0, Math.min(剩, 50));
+      rt.cap.thread.wait(h.flag, Math.min(剩, 50));
     }
     let 结果 = null;
-    try { 结果 = JSON.parse(fs.readFileSync(h.outPath, "utf8")); } catch (err) { 结果 = null; }
-    try { fs.unlinkSync(h.outPath); } catch (err) { /* 没有就算了 */ }
+    try { 结果 = JSON.parse(rt.cap.file.read(h.outPath).toString("utf8")); } catch (err) { 结果 = null; }
+    rt.cap.file.remove(h.outPath);
     THREADS.delete(id);
     if (!结果) return "";
     return 结果.ok ? String(结果.text) : "";
@@ -604,11 +600,11 @@ const BUILTINS = {
     const h = THREADS.get(id);
     if (!h) rt.fail("HMYR-R0221", "no such thread handle: " + id);
     try { if (h.worker) h.worker.terminate(); } catch (err) { /* 已经没了就算停住 */ }
-    try { fs.unlinkSync(h.outPath); } catch (err) { /* 同上 */ }
+    rt.cap.file.remove(h.outPath);
     THREADS.delete(id);
     return id;
   },
-  thr_count: () => Array.from(THREADS.values()).filter((h) => Atomics.load(h.flag, 0) === 0).length,
+  thr_count: (rt) => Array.from(THREADS.values()).filter((h) => rt.cap.thread.load(h.flag) === 0).length,
   // ---- 五、环境（只读，不需要效果） ----
   // 仓库根：语言文件里不该写死绝对路径，否则换一台机器就坏。
   // 这一对内置把「仓库在哪」与「解释器在哪」收成两处，而不是散在各文件里。
@@ -776,29 +772,22 @@ const BUILTINS = {
   // ---- 八、输入（与真实终端共用一个队列） ----
   key_push: (rt, args) => { KEY_QUEUE.push(rt.asString(args[0])); return KEY_QUEUE.length; },
   key_available: () => KEY_QUEUE.length > 0,
-  key_read: () => {
+  key_read: (rt) => {
     if (KEY_QUEUE.length) return KEY_QUEUE.shift();
     // 没有排队就读一次 stdin——同步读，raw 模式下它会阻塞到有键为止。
     // 为什么不用 'data' 事件：求值器是同步的，而 sleep_ms 是忙等，
     // 事件循环在那一刻是堵的，事件永远送不进来。同步读绕开了这件事。
-    if (!process.stdin.isTTY) return "";
+    if (!rt.cap.terminal.isTTY()) return "";
     try {
-      const buf = Buffer.alloc(64);
-      const n = fs.readSync(0, buf, 0, 64, null);
-      if (n > 0) {
-        for (const ch of buf.subarray(0, n).toString("utf8")) KEY_QUEUE.push(ch);
+      const buf = rt.cap.terminal.readSync(64);
+      if (buf && buf.length > 0) {
+        for (const ch of buf.toString("utf8")) KEY_QUEUE.push(ch);
         return KEY_QUEUE.length ? KEY_QUEUE.shift() : "";
       }
     } catch (err) { /* 读不到就是没有键 */ }
     return "";
   },
-  key_start: () => {
-    if (!process.stdin.isTTY || typeof process.stdin.setRawMode !== "function") return false;
-    try {
-      process.stdin.setRawMode(true);
-      return true;
-    } catch (err) { return false; }
-  },
+  key_start: (rt) => rt.cap.terminal.setRaw(true),
   // 环境说该是哪一套：语言看 Intl 给的区域，编码看控制台代码页。
   // 组合出来不在名单里就返回空串——环境说的话我们没档案，就如实说没有，不退回默认。
   // ---- 九、内存（三区模型未实现前的宿主桩） ----

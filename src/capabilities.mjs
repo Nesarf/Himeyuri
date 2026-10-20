@@ -23,12 +23,33 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { Worker } from "node:worker_threads";
 
 // 终端尺寸与控制序列：它们只交回字符串，所以不需要碰任何设备。
 // 真的终端会自己去问系统；套件里 call 一份假的就够了——这一层让那件事成立。
 const 转义 = (s) => "\u001b[" + s;
 
+// 线程那一组单独在这里，因为它要用 Worker 与 Atomics，而别的组都不需要。
+//
+// 为什么不是 postMessage：那个回调也在主线程的事件循环里，而主线程正堵在 Atomics.wait 上。
+// 于是结果经文件送达，共享内存只发「写完了」这一个信号。这一条与 CAPABILITIES.txt 里那段一致。
+const 线程能力 = () => ({
+  // 起不来就交回 null，让调用方决定怎么说话（契约里：交回一个无效句柄，不另设编号）。
+  // 而原因要留下来：静默的 null 会让「为什么起不来」变成一件要去猜的事，
+  // 今天这一格就是这样多花了时间——Worker 没 import，ReferenceError 被吞成了 null。
+  spawn: (scriptUrl, workerData) => {
+    try { return new Worker(scriptUrl, { workerData }); }
+    catch (err) { 线程能力.上次错误 = String(err && err.message ? err.message : err); return null; }
+  },
+  // 信号：一个 32 位整数，0 表示还在跑。
+  signal: () => new Int32Array(new SharedArrayBuffer(4)),
+  load: (flag) => Atomics.load(flag, 0),
+  store: (flag, v) => { Atomics.store(flag, 0, v); Atomics.notify(flag, 0); },
+  wait: (flag, ms) => Atomics.wait(flag, 0, 0, ms),
+});
+
 export const 本机能力 = (options = {}) => ({
+  thread: 线程能力(),
   file: {
     read: (p) => fs.readFileSync(p),
     exists: (p) => fs.existsSync(p),
@@ -36,6 +57,8 @@ export const 本机能力 = (options = {}) => ({
     // 建目录不让它失败：已经在就算了。这一条与「写」分开，因为「准备一个地方」
     // 与「往里写东西」是两件事，而契约里只有后者要求 file 效果。
     ensureDir: (p) => { try { fs.mkdirSync(p, { recursive: true }); } catch (err) { /* 已经在就算了 */ } },
+    // 删一个文件，删不掉就算了：调用方在收尾，而收尾失败不该变成一条诊断。
+    remove: (p) => { try { fs.unlinkSync(p); } catch (err) { /* 没有就算了 */ } },
   },
   process: {
     argv: () => process.argv.slice(),
@@ -75,6 +98,19 @@ export const 本机能力 = (options = {}) => ({
     color: (n) => 转义(String(n) + "m"),
     hide: () => 转义("?25l"),
     show: () => 转义("?25h"),
+    // 输入那一组：真的有一个终端时才有的三件事。
+    // 同步读而不是监听 'data'：求值器是同步的，而 sleep_ms 是忙等，
+    // 事件循环在那一刻是堵的，事件永远送不进来。这一条与 CAPABILITIES.txt 里那段一致。
+    isTTY: () => !!process.stdin.isTTY,
+    setRaw: (on) => {
+      if (!process.stdin.isTTY || typeof process.stdin.setRawMode !== "function") return false;
+      try { process.stdin.setRawMode(on); return true; } catch (err) { return false; }
+    },
+    readSync: (n) => {
+      const buf = Buffer.alloc(n);
+      const got = fs.readSync(0, buf, 0, n, null);
+      return got > 0 ? buf.subarray(0, got) : null;
+    },
   },
 });
 

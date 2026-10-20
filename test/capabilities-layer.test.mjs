@@ -142,19 +142,14 @@ console.log("六、宿主求值器里剩下的直连是一张清单，而不是�
   // 出现清单之外的一处就会红，而那时要么它该改走能力层，要么它该给一个理由。
   const 源 = 读("src/eval.mjs");
   const 允许 = [
-    [/^import .* from "node:(fs|os|path|url|child_process|worker_threads)";$/, "宿主模块的 import"],
+    [/^import .* from "node:(fs|path|url)";$/, "宿主模块的 import：只剩三个"],
     [/deps\/encodings/, "编码表：程序自己的数据，不是世界的接口"],
-    [/thr-worker\.mjs/, "worker 脚本：程序自己的数据"],
-    [/^import \{ Worker \} from "node:worker_threads";$/, "线程那一组还没走能力层"],
-    [/h\.outPath/, "线程结果文件（同上）"],
-    [/path\.join\(os\.tmpdir\(\), "hmyr-thread-"/, "线程结果文件的位置（同上）"],
     [/^const ROOT = path\.resolve\(path\.dirname\(fileURLToPath/, "模块自己的位置，不是世界"],
-    [/process\.stdin/, "终端的同步读：契约里写着它走 stdin"],
-    [/fs\.readSync\(0,/, "同一件事：终端读"],
+    [/process\.pid/, "线程结果文件名里的进程号（线程那一组已经走能力层了，进程号不是能力）"],
     [/^const isMain|^  const file = process\.argv\[2\]|usage: node eval\.mjs|process\.exit\(|run\(fs\.readFileSync\(file/, "CLI 尾部：不属于库"],
   ];
-  // 判据要排除 rt.cap.* 那几行：它们正是「已经走能力层」的行，被算成直连会把清单弄脏。
-  const 触碰 = 源.split(/\r?\n/).filter((l) => !l.includes("rt.cap.") && /fs\.|os\.|path\.|process\.|spawnSync|Worker|node:/.test(l));
+  // 判据要排除两类行：`rt.cap.*`（已经走能力层）与纯注释（不执行，只是提到那些名字）。
+  const 触碰 = 源.split(/\r?\n/).filter((l) => !l.includes("rt.cap.") && !/^\s*\/\//.test(l) && /fs\.|os\.|path\.|process\.|spawnSync|Worker|node:/.test(l));
   const 未覆盖 = 触碰.filter((l) => !允许.some(([论]) => 论.test(l)));
   ok("每一处直连都有一张清单替它说话", 未覆盖.length === 0, 未覆盖.join(" | "));
   ok("而清单不是空的（求值器确实还借了几样东西）", 触碰.length > 0, String(触碰.length));
@@ -165,8 +160,8 @@ console.log("六、宿主求值器里剩下的直连是一张清单，而不是�
   const 归类 = (l) => {
     if (/^import /.test(l)) return "import行";
     if (/^const ROOT =/.test(l)) return "模块位置";
-    if (/deps\/encodings|thr-worker|Worker|h\.outPath|hmyr-thread/.test(l)) return "内部资源";
-    if (/process\.stdin|fs\.readSync\(0,/.test(l)) return "终端输入";
+    if (/deps\/encodings/.test(l)) return "内部资源";
+    if (/process\.pid/.test(l)) return "进程号";
     if (/isMain|process\.argv\[2\]|usage: node|process\.exit\(|run\(fs\.readFileSync\(file/.test(l)) return "CLI尾部";
     return "（未归类）";
   };
