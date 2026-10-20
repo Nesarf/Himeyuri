@@ -336,7 +336,7 @@ class Scope {
 
 // A builtin that touches the outside world is a capability, and it is checked at the call site against
 // what the calling function declared. Without this, "effects" would only apply to functions we wrote.
-const BUILTIN_EFFECTS = { read_text: "file", write_text: "file", run_program: "process", chdir: "process", file_exists: "file", thr_spawn: "thread", thr_cancel: "thread" };
+const BUILTIN_EFFECTS = { read_text: "file", write_text: "file", run_program: "process", chdir: "process", argv: "process", file_exists: "file", print_err: "process", thr_spawn: "thread", thr_cancel: "thread" };
 
 /** 编码表按需读入并缓存：表是「字符 -> 字节」，从本运行时的解码器推出来的。 */
 const ENCODING_TABLES = new Map();
@@ -553,6 +553,14 @@ const BUILTINS = {
     return "python";
   },
   // ---- 二、输出：写到一个可替换的出口 ----
+  // 另一条通道：诊断与用法走这里，答案走 print。
+  // 分开是有用的——「把答案重定向出去」不该顺手把用法也塞进那个文件。
+  print_err: (rt, args) => {
+    const 文 = args.map((a) => rt.asString(a)).join("");
+    if (rt.writeErr) rt.writeErr(文);
+    else if (rt.write) rt.write(文);
+    return undefined;
+  },
   print: (rt, args) => { rt.write(args.map((a) => rt.asString(a)).join("")); return null; },
   // ---- 三、文件（需要 file 效果） ----
   read_text: (rt, args) => {
@@ -626,6 +634,9 @@ const BUILTINS = {
   },
   // The clock needs no capability - reading it changes nothing - but it is the one builtin that breaks
   // reproducibility, and the specification says so rather than leaving it to be discovered.
+  // 自己的命令行参数。交回一个元组，第一个是解释器名，之后是参数——
+  // 与大多数系统一致，于是「第几个」不必自己换算。
+  argv: (rt, args) => (rt.argv || []).map((x) => String(x)),
   chdir: (rt, args) => {
     const target = rt.asString(args[0]);
     try { process.chdir(target); return process.cwd(); }

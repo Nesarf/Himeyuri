@@ -37,7 +37,7 @@
       走表的那条路：逐字符查表，缺的字一次全报（前八个 + 还有多少个）；先查齐，再写，不写半个文件。
 
   四、进程（需要 process 效果）
-      run_program chdir
+      run_program chdir argv print_err
       语义：跑一个程序（必须带超时，缺省十秒）或改变进程的工作目录。
       返回形状：run_program 交回一个记录，字段是 code（没有退出码时为 -1）、stdout、stderr、
                 timedOut 与 error（跑不起来时带宿主的错误码，例如 ENOENT）。

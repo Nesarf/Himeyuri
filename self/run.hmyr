@@ -245,6 +245,54 @@ fn 跑文件入口(目录: String, 目标: String) -> Int effects(file) {
   return {ok: true, 文字: 跑模块们(读.源码们)}
 }
 
+// ---- 命令行入口：第三步的第一半 ----
+//
+// 这一段以前是宿主的 bin/hmyr.mjs 在做：取 argv、把路径拆成目录与名字、打印、定退出码。
+// 四件事里没有一件是「关于宿主的知识」——它们都是「一个语言怎么当程序用」。
+//
+// 于是现在由 HMYR 自己做完，而宿主只剩「把自举那一层读进来」与「把 argv 递过去」。
+
+// 最后一个路径分隔符的位置。认 / 与反斜杠两种，因为这台机器两种都会见到。
+fn 最后一个分隔从(路: String, i: Int, 末: Int) -> Int {
+  if i >= len(路) { return 末 }
+  let c = 路[i]
+  if c == "/" || c == chr(92) { return 最后一个分隔从(路, i + 1, i) }
+  return 最后一个分隔从(路, i + 1, 末)
+}
+
+fn 拆目录(路: String) -> String {
+  let at = 最后一个分隔从(路, 0, -1)
+  if at < 0 { return "." }
+  if at == 0 { return slice(路, 0, 1) }
+  return slice(路, 0, at)
+}
+
+fn 拆名字(路: String) -> String {
+  let at = 最后一个分隔从(路, 0, -1)
+  if at < 0 { return 路 }
+  return slice(路, at + 1, len(路))
+}
+
+// 交回退出码：0 表示跑通了，1 表示读不到或跑不动，2 表示参数不对。
+// 三个码与以前那个启动器一致——换主体不该悄悄改对外行为。
+fn 命令行入口() -> Int effects(process, file) {
+  let 参们 = argv()
+  // 两条通道：答案走 print，用法与失败走 print_err。
+  // 分开之后，"把答案重定向出去"就不必担心顺手把用法也塞进那个文件。
+  if len(参们) < 2 {
+    print_err("用法：hmyr <file.hmyr>" + chr(10))
+    return 2
+  }
+  let 目标 = 参们[1]
+  let 果 = 跑文件入口(拆目录(目标), 拆名字(目标))
+  if 果.ok == false {
+    print_err(果.文字 + chr(10))
+    return 1
+  }
+  print(果.文字 + chr(10))
+  return 0
+}
+
 fn main() -> Int effects(process) {
   print("1 + 2 * 3 → " + 跑("1 + 2 * 3") + "\n")
   print("(1 + 2) * 3 → " + 跑("(1 + 2) * 3") + "\n")
