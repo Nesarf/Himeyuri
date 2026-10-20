@@ -83,9 +83,12 @@ console.log("\nit is bounded, and the bound is stated rather than discovered");
 }
 {
   const huge = Array.from({ length: 300 }, (_, i) => "let x" + i + " = " + i).join("\n");
+  // 这一条原来钉「三百条 let 撞深度」。尾调用之后它过得去了——
+  // 那说明能力提升了，不是断言失效，于是改成钉「现在过得去」。
+  // 哪天又撞了，它会红，而那时读这一句的人会知道自己撞的是回归而不是新边界。
   let code = null;
   try { mineTokens(huge); } catch (e) { code = e.code || null; }
-  ok("a piece past the depth limit is refused, with the code that says so", code === "HMYR-R0108", String(code));
+  ok("three hundred lets now get through (tail calls ate that depth)", code === null, String(code));
 }
 {
   const nested = "let s = \"" + "a".repeat(400) + "\"\n";

@@ -33,8 +33,10 @@ console.log("一、默认栈下 lex 撞栈，8 MB 栈下不撞");
   ].join("\n"), "utf8");
   const 小 = spawnSync(process.execPath, [脚本], { encoding: "utf8", timeout: 300000 });
   const 大 = spawnSync(process.execPath, ["--stack-size=8000", 脚本], { encoding: "utf8", timeout: 300000 });
-  ok("默认栈下 lex 撞墙", String(小.stdout).trim() !== "跑得动", String(小.stdout).slice(0, 40));
-  ok("8 MB 栈下 lex 跑得动", String(大.stdout).trim() === "跑得动", String(大.stdout).slice(0, 40));
+  // 尾调用之后，默认栈下 lex 也跑得动了——自举里那些递归大多是尾递归，
+  // 于是它们不再吃宿主栈。这一条原来钉「默认栈下撞墙」，现在钉「不必放大栈也能过」。
+  ok("默认栈下 lex 现在也跑得动（尾调用的功劳）", String(小.stdout).trim() === "跑得动", String(小.stdout).slice(0, 40));
+  ok("8 MB 栈下仍然跑得动", String(大.stdout).trim() === "跑得动", String(大.stdout).slice(0, 40));
   fs.rmSync(临, { recursive: true, force: true });
 }
 

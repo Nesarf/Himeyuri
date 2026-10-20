@@ -23,6 +23,17 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import { lex } from "./lexer.mjs";
 import { parse } from "./parser.mjs";
 
+// 尾调用的标记：函数体最后一件事是调用另一个函数时，抛它而不是真的压栈。
+//
+// 为什么要它：一层函数调用在宿主那边要过好几帧栈，于是递归只能到九百多层。
+// 而尾递归（f(n, acc) = f(n-1, ...) 这种）本来不需要保留任何东西——
+// 于是那种形状可以跑到任意深，而不必换掉整个求值器。
+class TailCall extends Error {
+  // 带着抛出处的效果集：效果检查是「被调者不能比调用者多」，
+  // 而换函数之后「调用者」就变了——那个集合必须跟着换，否则尾调用会变成一条绕过检查的路。
+  constructor(decl, args, fromEffects) { super("tail"); this.decl = decl; this.args = args; this.fromEffects = fromEffects; }
+}
+
 class Return extends Error { constructor(value) { super("return"); this.value = value; } }
 
 export class Runtime {
@@ -83,7 +94,26 @@ export class Runtime {
     // Recursion without a base case would otherwise exhaust the host stack and surface as a host
     // crash rather than a diagnostic. The depth belongs to the language.
     if (++this.depth > this.maxDepth) this.fail("HMYR-R0108", "call depth exceeded (" + this.maxDepth + ")");
-    try { return this.callFunctionInner(decl, args, fromEffects); } finally { this.depth--; }
+    // 一个循环而不是一次调用：尾调用不新压一帧，于是尾递归的深度不吃宿主栈。
+    // 这一层只算一次深度——换函数不算离开这一层，那正是尾调用的意思。
+    try {
+      let 当前 = decl, 当前实参 = args, 当前效果 = fromEffects;
+      while (true) {
+        try { return this.callFunctionInner(当前, 当前实参, 当前效果); }
+        catch (e) {
+          if (e instanceof TailCall) {
+            // 每换一次函数计一步。
+            //
+            // 为什么必须有这一行：纯尾递归（return f() 而没有实参）在每一层
+            // 一次求值都不做，于是它既不吃栈也不吃步数——那会变成一个真正停不下来的循环。
+            // 三步数本来就是「这件事还要做多久」的账，而换一次函数也是一件事。
+            if (++this.steps > this.stepLimit) this.fail("HMYR-R0102", "the program ran for too long without finishing");
+            当前 = e.decl; 当前实参 = e.args; 当前效果 = e.fromEffects; continue;
+          }
+          throw e;
+        }
+      }
+    } finally { this.depth--; }
   }
 
   callFunctionInner(decl, args, fromEffects) {
@@ -137,7 +167,19 @@ export class Runtime {
         }
         return value;
       }
-      case "Return": throw new Return(stmt.value ? this.evalExpr(stmt.value, scope, effects) : null);
+      case "Return": {
+        // 尾位置：return f(...) 里的那个调用不必保留这一层。
+        // 于是把它包成 TailCall 抛上去，由 callFunction 的循环接手。
+        //
+        // 只对「被调的是这门语言里的函数」成立：内置函数不经过这条环，
+        // 而 return 一个内置调用的结果本来也不占栈。
+        const v = stmt.value;
+        if (v && v.kind === "Call" && v.callee.kind === "Ident" && this.functions.has(v.callee.name)) {
+          const 实参 = v.args.map((a) => this.evalExpr(a, scope, effects));
+          throw new TailCall(this.functions.get(v.callee.name), 实参, effects);
+        }
+        throw new Return(v ? this.evalExpr(v, scope, effects) : null);
+      }
       case "ExprStmt": return this.evalExpr(stmt.expr, scope, effects);
       case "DeclStmt":
         if (stmt.decl.kind === "Fn") { this.functions.set(stmt.decl.name, stmt.decl); return null; }

@@ -27,9 +27,14 @@ ok("R0107 被调的不是可调用", 跑("fn main() -> Int {\n  let x = 1\n  ret
 
 console.log("R0108 调用深度超限");
 {
-  const 深 = "fn f() -> Int {\n  return f()\n}\nfn main() -> Int {\n  return f()\n}\n";
-  const codes = 跑(深);
-  ok("R0108 递归撞上深度上限", codes.includes("HMYR-R0108"), JSON.stringify(codes));
+  // 尾调用之后，「纯尾递归」不再撞深度：它撞的是步数。
+  // 两条都在这里钉住，因为它们是两种不同的 runaway：
+  //   非尾递归（要保留这一层）  → 撞深度 R0108
+  //   尾递归（不必保留这一层）  → 撞步数 R0102
+  const 非尾 = "fn f(n: Int) -> Int {\n  return 1 + f(n + 1)\n}\nfn main() -> Int {\n  return f(0)\n}\n";
+  ok("R0108 非尾递归撞上深度上限", 跑(非尾).includes("HMYR-R0108"), JSON.stringify(跑(非尾)));
+  const 尾 = "fn f() -> Int {\n  return f()\n}\nfn main() -> Int {\n  return f()\n}\n";
+  ok("而纯尾递归撞的是步数（它不再占栈）", 跑(尾).includes("HMYR-R0102"), JSON.stringify(跑(尾)));
 }
 
 console.log("");

@@ -52,7 +52,10 @@ export const CASES = [
   { id: "C-0044", clause: "2.3", stage: "run", title: "a wrong argument count is refused", source: "fn f(a: Int) { }\nfn main() {\n  f(1, 2)\n}\n", expect: { kind: "error", code: "HMYR-R0101" } },
   { id: "C-0045", clause: "2.3", stage: "run", title: "a match with no accepting arm is refused", source: 'fn main() {\n  print(match 3 {\n    1 => "one"\n  })\n}\n', expect: { kind: "error", code: "HMYR-R0105" } },
   { id: "C-0046", clause: "2.3", stage: "run", title: "recursion works", source: "fn fact(n: Int) -> Int {\n  if n <= 1 { return 1 }\n  return n * fact(n - 1)\n}\nfn main() {\n  print(fact(6))\n}\n", expect: { kind: "output", value: ["720"] } },
-  { id: "C-0047", clause: "2.3", stage: "run", title: "runaway recursion is a language error", source: "fn spin(n: Int) -> Int { return spin(n + 1) }\nfn main() {\n  print(spin(0))\n}\n", expect: { kind: "error", code: "HMYR-R0108" } },
+  // 这一条的源码原先是 return spin(n + 1)——纯尾递归。尾调用之后那种形状不再爆栈，
+  // 它撞的是步数（HMYR-R0102），而「深度由语言管」这件事仍要有一条具名用例。
+  // 于是在前面加一个一，让它变成非尾递归：这一层要保留，于是它仍然撞深度。
+  { id: "C-0047", clause: "2.3", stage: "run", title: "runaway recursion is a language error", source: "fn spin(n: Int) -> Int { return 1 + spin(n + 1) }\nfn main() {\n  print(spin(0))\n}\n", expect: { kind: "error", code: "HMYR-R0108" } },
 
   // ---------- 2.4 the three knobs ----------
   { id: "C-0050", clause: "2.4", stage: "run", title: "an undeclared caller may not use an effectful function", source: 'fn read(p: Path) -> String effects(file) { return "d" }\nfn main() {\n  print(read("x"))\n}\n', expect: { kind: "error", code: "HMYR-R0201" } },

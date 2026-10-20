@@ -55,7 +55,10 @@ const FAILURES = [
   ["adding text to a number", 'fn main() { print(1 - "a") }\n', "HMYR-R0130"],
   ["a match with no arm", "fn main() { print(match 3 {\n  1 => \"one\"\n}) }\n", "HMYR-R0105"],
   ["calling a number", "fn main() {\n  let x = 1\n  print(x())\n}\n", "HMYR-R0107"],
-  ["runaway recursion", "fn spin(n: Int) -> Int { return spin(n + 1) }\nfn main() { print(spin(0)) }\n", "HMYR-R0108"],
+  // 尾调用之后，「无限尾递归」不再爆栈——它撞的是步数。
+  // 那是对的：这一门语言现在不会因为尾递归耗尽宿主栈，
+  // 于是「跑太久」才是它该报的那一条。非尾递归的 runaway 仍撞深度（见 tailcall 那一套）。
+  ["runaway tail recursion", "fn spin(n: Int) -> Int { return spin(n + 1) }\nfn main() { print(spin(0)) }\n", "HMYR-R0102"],
 ];
 for (const [label, source, code] of FAILURES) {
   const result = run(source, { stepLimit: 200000 });
