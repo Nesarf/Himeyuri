@@ -122,7 +122,7 @@ export const 切 = (源) => {
     // 标点：认两字符的那些先，认不着再试单字符。
     const 两 = 源.slice(i, i + 2);
     if (["==", "!=", "<=", ">=", "&&", "||", "->", "=>"].includes(两)) { 记({ type: "punct", value: 两 }); 进(2); continue; }
-    if ("(){}[]<>=+-*/%!,.&|:".includes(c)) {
+    if ("(){}[]<>=+-*/%!,.&|:?".includes(c)) {
       if (c === "(" || c === "[" || c === "{") 括.push(c);
       else if (c === ")" || c === "]" || c === "}") 括.pop();
       记({ type: "punct", value: c });
