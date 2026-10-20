@@ -57,6 +57,7 @@ const SUITES = [
   ["selfstmteval", "test/self-stmt-eval.test.mjs", "SPEC M7 - statements in the bootstrap evaluator: let, var, assign, return and if, with lookups that run backwards"],
   ["selfrun", "test/self-run.test.mjs", "SPEC M7 - Himeyuri runs Himeyuri: source through its own lexer, parser and evaluator"],
   ["selfwhile", "test/self-while.test.mjs", "SPEC M6 - while in the bootstrap: it parses, it runs, and both sides count the same"],
+  ["selfagree", "test/self-agree.test.mjs", "SPEC M6 - both paths agree: real programs give the same answer, and neither says yes where the other says no"],
   ["launcher", "test/launcher.test.mjs", "SPEC M7 - node bin/hmyr.mjs: the target program goes through the bootstrap, not the host language layer"],
   ["task", "test/task.test.mjs", "SPEC M7 - windows as tasks: a child cannot outlive its parent, and closing the main window closes the tree"],
   ["recordnew", "test/record-new.test.mjs", "SPEC M7 - building a record by name and reading a field by name, so the bootstrap can do both"],
