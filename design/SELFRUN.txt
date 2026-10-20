@@ -47,9 +47,12 @@ HMYR 全面自举：运行时、宿主依赖与启动
       node:child_process  跑一个程序（run_program）
       node:worker_threads 真线程（thr_spawn；已登记为专有模块，见 tools/conformance.mjs）
   ・规模（2026-10-19 实测）：宿主 src/ 2290 行；.mjs 89 个 9306 行，.hmyr 30 个 3492 行。
-  ・已经自制的那一半：self/lex.hmyr、self/chain.hmyr、self/stmt.hmyr、self/eval.hmyr
-    与 self/run.hmyr 证明「Himeyuri 能跑 Himeyuri」；它现在能造记录、能取字段（record_new／field_get），
-    而它仍然替代不了宿主：语句层的覆盖还不全，而宿主的能力内核（文件、进程、终端）也还没换。
+  ・已经自制的那一半：self/ 那六件（lex · chain · stmt · body · eval · run）证明「Himeyuri 能跑 Himeyuri」。
+    而「读它自己那一层」也交出去了：Stage 0 换成了 src/subset-lex.mjs 与 src/subset-parse.mjs，
+    于是宿主的 src/lexer.mjs 与 src/parser.mjs 不在启动那一条路上了。
+    它们留在仓库里，给要读更宽语法的工具用（格式化器、语言服务器、一致性检查）。
+    Stage 0 现在是 693 行：loader 112 · 子集切词 175 · 子集 parser 386 · 诊断 20。
+    还差的是求值器与能力内核——那两件就是下面第二步剩下的部分。
 
 走到第几步（2026-10-19）
 --------------------------------------------------------------------
@@ -57,8 +60,9 @@ HMYR 全面自举：运行时、宿主依赖与启动
   第一步 能力收敛：已做。九组能力写进了 design/CAPABILITIES.txt，
           而 tools/check-builtins.mjs 让「代码、规格第一圈、契约」三面对得上，
           并由 test/builtins.test.mjs 挂进每次全量。
-  第二步 启动器还原：做了一半。bin/hmyr.mjs 已经把目标程序交给自举的求值器，
-          但求值器本身仍在宿主的 src/eval.mjs 里跑，能力内核也还是宿主的七个模块。
+  第二步 启动器还原：做了一半多。bin/hmyr.mjs 已经把目标程序交给自举的求值器，
+          而「读它自己那一层」也交出去了（子集那两层，见 design/BOOTSTRAP.txt 与 design/SELFCOMPILE.txt）。
+          还差的是求值器本身：它仍在宿主的 src/eval.mjs 里跑，能力内核也还是宿主的七个模块。
   第三步 自举闭环：未开始。它要等第二步的求值器换过去。
 
 
