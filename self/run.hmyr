@@ -66,7 +66,7 @@ fn 跑程序文字(源码: String) -> String {
     let 全部 = parse_decls(tokens)
     if len(全部.fns) == 0 { return "错：声明里没有 fn" }
     let 选 = 选函数(全部.fns, "main")
-    let 体 = 选[1]
+    let 体 = 选[2]   // 声明现在是（名字, 参数名们, 语句们），语句们是第三件
     let r = 跑程序带函数(体, 全部.fns)
     if r.ok == false { return "错：" + r.text }
     return str(r.value)
@@ -112,7 +112,7 @@ fn 跑模块们(源码们: Int) -> String {
     return 跑程序文字(源码们[0])
   }
   let 选 = 选函数(函数们, "main")
-  let r = 跑程序带函数(选[1], 函数们)
+  let r = 跑程序带函数(选[2], 函数们)
   if r.ok == false { return "错：" + r.text }
   return str(r.value)
 }

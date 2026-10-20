@@ -66,8 +66,10 @@ console.log("二、整个程序：两边同一个答案");
   }
 }
 
-console.log("三、参数那条边界：报错，而不是算错");
+console.log("三、参数：边界已经补上了");
 {
+  // 这一节以前钉的是「自举会以没有这个名字失败」——那是它当时的边界。
+  // 2026-10-20 参数绑进环境之后，那条边界不存在了，于是这一节改成钉「两边都对」。
   const 源 = 写([
     "fn g(n: Int) -> Int {",
     "  return n",
@@ -78,9 +80,30 @@ console.log("三、参数那条边界：报错，而不是算错");
   ]);
   ok("宿主算得出 7", 宿主的(源) === 7, String(宿主的(源)));
   const 乙 = 那边的(源);
-  ok("自举报错而不是算错", 乙.err !== undefined, JSON.stringify(乙).slice(0, 100));
-  ok("而报的是「没有这个名字」", typeof 乙.err === "string" && 乙.err.includes("没有这个名字"), 乙.err);
-  ok("它没有交回零（零会被当成一个答案）", 乙.value === undefined, JSON.stringify(乙.value));
+  ok("自举也算得出 7", 乙.value === 7, JSON.stringify(乙).slice(0, 100));
+
+  // 两个参数、参数之间用表达式
+  const 两个 = 写([
+    "fn add(a: Int, b: Int) -> Int {",
+    "  return a + b",
+    "}",
+    "fn main() -> Int {",
+    "  return add(3, 4)",
+    "}",
+  ]);
+  ok("两个参数也行（两边都是 7）", 宿主的(两个) === 7 && 那边的(两个).value === 7, "宿主 " + 宿主的(两个) + " · 自举 " + JSON.stringify(那边的(两个)).slice(0, 80));
+
+  // 参数个数不对：那一条边界还在，而且它该在
+  const 少 = 写([
+    "fn f(a: Int, b: Int) -> Int {",
+    "  return a",
+    "}",
+    "fn main() -> Int {",
+    "  return f(1)",
+    "}",
+  ]);
+  const 丙 = 那边的(少);
+  ok("参数个数不对时自举报错", 丙.err !== undefined && String(丙.err).includes("参数个数不对"), JSON.stringify(丙).slice(0, 100));
 }
 
 console.log("四、没有 main 时说得出");

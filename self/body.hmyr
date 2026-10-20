@@ -57,8 +57,8 @@ fn parse_body(tokens: Int) -> Int {
 // ---- 多声明 ----
 //
 // parse_body 只找**第一个**花括号之后的体；这一层找**所有的** fn。
-// 只认「fn 名字 … { 体 }」这一种声明：参数、返回类型、效果声明都跳过，
-// 因为求值到这一步还用不上它们——用不上的东西不假装认得。
+// 只认「fn 名字 … { 体 }」这一种声明：返回类型与效果声明都跳过，而参数名收下来——
+// 求值器拿它们去绑环境，于那是用得上的东西。用不上的（返回类型、效果）才跳过。
 fn next_fn(tokens: Int, i: Int) -> Int {
   if i >= len(tokens) { return -1 }
   let t = tokens[i]
@@ -71,6 +71,43 @@ fn 名字在(tokens: Int, i: Int) -> String {
   return ""
 }
 
+// 从 fn 之后扫到 { 之前，把参数名收出来。
+//
+// 参数长这样：fn f(a: Int, b: String) -> Int
+// 于是「括号里、冒号之前」的那个 ident 就是参数名。
+// 而括号里也可能有逗号——逗号之后的第一个 ident 是下一个参数名。
+//
+// 为什么要它：函数表要带参数名，而求值器靠它把实参绑进环境。
+// 以前这一层把它们跳过了，于是带参数的函数跑不了——而那是半个语言。
+fn 括号位(tokens: Int, i: Int, 末: Int) -> Int {
+  if i >= 末 { return -1 }
+  if tokens[i].kind == "punct" && tokens[i].text == "(" { return i }
+  return 括号位(tokens, i + 1, 末)
+}
+
+fn 反括号位(tokens: Int, i: Int, 末: Int) -> Int {
+  if i >= 末 { return -1 }
+  if tokens[i].kind == "punct" && tokens[i].text == ")" { return i }
+  return 反括号位(tokens, i + 1, 末)
+}
+
+// 在括号里扫：等待一个 ident，收下它，然后等逗号。
+fn 收名从(tokens: Int, i: Int, 末: Int, 等下个: Bool, acc: Int) -> Int {
+  if i >= 末 { return acc }
+  let t = tokens[i]
+  if t.kind == "punct" && t.text == "," { return 收名从(tokens, i + 1, 末, true, acc) }
+  if 等下个 && t.kind == "ident" { return 收名从(tokens, i + 1, 末, false, acc + (t.text,)) }
+  return 收名从(tokens, i + 1, 末, 等下个, acc)
+}
+
+fn 参数名们(tokens: Int, 起: Int, 末: Int) -> Int {
+  let 开 = 括号位(tokens, 起, 末)
+  if 开 < 0 { return () }
+  let 闭 = 反括号位(tokens, 开 + 1, 末)
+  if 闭 < 0 { return () }
+  return 收名从(tokens, 开 + 1, 闭, true, ())
+}
+
 fn decls_from(tokens: Int, i: Int, acc: Int) -> Int {
   let at = next_fn(tokens, i)
   if at < 0 { return {fns: acc, next: len(tokens)} }
@@ -78,10 +115,12 @@ fn decls_from(tokens: Int, i: Int, acc: Int) -> Int {
   let open = find_open(tokens, at + 1)
   if open < 0 { return {fns: acc, next: len(tokens)} }
   let got = each(tokens, open + 1, ())
-  return decls_from(tokens, got.next, acc + ((名, got.list),))
+  // 三件：名字、参数名们、语句们。参数名从 fn 之后扫到 { 之前。
+  let 参名们 = 参数名们(tokens, at + 1, open)
+  return decls_from(tokens, got.next, acc + ((名, 参名们, got.list),))
 }
 
-// 交回 {fns: ((名字, 语句们), …), next}。
+// 交回 {fns: ((名字, 参数名们, 语句们), …), next}。
 fn parse_decls(tokens: Int) -> Int {
   return decls_from(tokens, 0, ())
 }
