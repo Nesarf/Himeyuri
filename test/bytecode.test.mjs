@@ -87,7 +87,24 @@ console.log("二、六条真实路径：两条执行路径给同一个答案");
   fs.rmSync(临, { recursive: true, force: true });
 }
 
-console.log("三、错误编号也照旧");
+console.log("三、聚合值不再靠宿主怎么看它们");
+{
+  // 元组与记录现在各是一个带标签的对象（src/vm-values.mjs）。执行器判断值是什么，
+  // 问的是 v.tag，不再问 Array.isArray，也不再问 typeof v === "object"。
+  // 静态检查说清它是静态的：它证明「源码里没有这两种写法」，不证明运行时一定没用到。
+  // 判据要剥掉注释：注释里提到那个名字，是为了说明「不用它」，那不算用到它。
+  const 剥注释 = (文) => 文.replace(/^[ \t]*\/\/.*$/gm, " ").replace(/([^:])\/\/.*$/gm, "$1");
+  for (const 相对 of ["src/vm.mjs", "src/vm-builtins.mjs"]) {
+    const 文 = 剥注释(fs.readFileSync(path.join(ROOT, 相对), "utf8"));
+    ok(相对 + " 里没有 Array.isArray", !文.includes("Array.isArray"));
+    ok(相对 + " 里没有靠 typeof 判对象", !/typeof\s+\w+\s*===\s*"object"/.test(文));
+  }
+  const 值 = fs.readFileSync(path.join(ROOT, "src/vm-values.mjs"), "utf8");
+  ok("两个值类各带一个标签", 值.includes('this.tag = "tuple"') && 值.includes('this.tag = "record"'));
+  ok("执行器与内置表共用同一份值定义", fs.readFileSync(path.join(ROOT, "src/vm-builtins.mjs"), "utf8").includes('from "./vm-values.mjs"'));
+}
+
+console.log("四、错误编号也照旧");
 {
   // 一个函数里除零：两条路都报 R0120，且都不给出一个值。
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-vm-err-"));

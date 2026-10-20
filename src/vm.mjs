@@ -3,25 +3,31 @@
 // 它与 src/minimal-eval.mjs 认同一张表（11 种表达式、5 种语句、16 个内置），
 // 差别只在执行模型：那边递归走树，这边在一个循环里读指令。前者吃宿主栈，后者不吃。
 //
-// 这是 SELFRUN 第三层的第一格，而它的定位要说清：**它还没有让执行器摆脱高级宿主。**
-// 它仍在 JS 里跑，仍用 JS 的数组与对象当值。这一格证明的是「执行模型能换成扁平的」——
-// 而那正是把自己的机器层接上来的前提：一个循环能交给一台机器，一棵树不能。
+// 这一版把「聚合值」收成自己的两种：元组与记录不再借用 JS 的数组与对象，而是两个带标签的
+// 东西（见下面的 类元组 / 类记录）。于是 VM 判断一个值是什么，靠它自己的标签，
+// 不再靠 Array.isArray 与 instanceof——那两样问的是「宿主怎么看它」，这里要问「它是什么」。
 //
-// 值仍是宿主的四种（数、串、布尔、null）加元组（数组）与记录（对象）。
-// 换成自己的表示是后面的事，写在 design/VM.txt 里，不假装已经做了。
+// 还没换掉的：数字、字符串、布尔、null 仍是宿主的标量（它们就是这些标量，换掉没有意义）；
+// 而错误仍靠 JS 的 throw 传播。那两样写在 design/VM.txt 的「还没做的」里，不假装做了。
 import { 内置表 } from "./vm-builtins.mjs";
 import { 编译模块, 合并程序 } from "./bytecode.mjs";
+
+// 值：两种聚合值自己带标签（定义在 src/vm-values.mjs，内置表也要用同一份）。
+import { 类元组, 类记录 } from "./vm-values.mjs";
+export { 类元组, 类记录 };
 
 class 运行错 extends Error {
   constructor(码, 话) { super(话); this.code = 码; }
 }
 
-// 语义辅助：与 minimal-eval 完全一致，因为它们定义的是这门语言的意思，不是实现细节。
+// 语义辅助：与 minimal-eval 一致，因为它们定义的是这门语言的意思，不是实现细节。
+// 一处细节要对齐：宿主那边 describe 一个记录会得到 "a host object"，
+// 而错误消息是照着那句写的——所以这里的记录也报同一句话。
 const 述 = (v) => {
   if (v === null) return "nil";
   if (typeof v === "string") return JSON.stringify(v);
-  if (Array.isArray(v)) return "tuple";
-  if (typeof v === "object") return "a host object";
+  if (v && v.tag === "tuple") return "tuple";
+  if (v && v.tag === "record") return "a host object";
   return String(v);
 };
 const 真 = (v) => !(v === false || v === null || v === 0 || v === "");
@@ -39,7 +45,6 @@ export class 虚拟机 {
     this.步限 = 选项.stepLimit || 5_000_000;
     this.深限 = 选项.maxDepth || 500;
     this.深 = 0;
-    this.输出 = [];
   }
 
   坏(码, 话) { throw new 运行错(码, 话); }
@@ -52,8 +57,8 @@ export class 虚拟机 {
   成串(v) {
     if (typeof v === "string") return v;
     if (v === null) return "nil";
-    if (Array.isArray(v)) return "[" + v.map((x) => this.成串(x)).join(", ") + "]";
-    return String(v);
+    if (v && v.tag === "tuple") return "[" + v.items.map((x) => this.成串(x)).join(", ") + "]";
+    return String(v);          // 记录走这一步，与宿主那边 String(obj) 相同
   }
   相等(a, b) { return typeof a === typeof b ? a === b : this.成串(a) === this.成串(b); }
   比(a, b) {
@@ -85,7 +90,7 @@ export class 虚拟机 {
     } finally { this.深--; }
   }
 
-  // 解释循环。返回值靠一个专门的退出：RET 直接 return。
+  // 解释循环。返回值靠 RET 直接 return。
   执行(码, 帧) {
     const 栈 = [];
     let pc = 0;
@@ -115,7 +120,7 @@ export class 虚拟机 {
         case "NEG": 压(-this.成数(弹())); pc++; break;
         case "NOT": 压(!真(弹())); pc++; break;
         case "ADD": { const b = 弹(), a = 弹();
-          if (Array.isArray(a) && Array.isArray(b)) 压([...a, ...b]);
+          if (a && b && a.tag === "tuple" && b.tag === "tuple") 压(new 类元组([...a.items, ...b.items]));
           else if (typeof a === "string" || typeof b === "string") 压(this.成串(a) + this.成串(b));
           else 压(this.成数(a) + this.成数(b));
           pc++; break; }
@@ -136,34 +141,39 @@ export class 虚拟机 {
         case "JMP": pc = 指令.a; break;
         case "JMPF": if (!真(弹())) pc = 指令.a; else pc++; break;
         case "JMPT": if (真(弹())) pc = 指令.a; else pc++; break;
-        // 短路那两个：跳走时**不弹**——栈上留着的就是整个表达式的值（再转成布尔）。
+        // 短路那两个：跳走时不弹栈——栈上留着的就是整个表达式的值（下一句 BOOL 转成布尔）。
         case "JMPF_KEEP": if (!真(栈[栈.length - 1])) pc = 指令.a; else { 弹(); pc++; } break;
         case "JMPT_KEEP": if (真(栈[栈.length - 1])) pc = 指令.a; else { 弹(); pc++; } break;
         case "TUPLE": {
           const n = 指令.a;
-          const 项 = 栈.splice(栈.length - n, n);
-          压(项);
+          压(new 类元组(栈.splice(栈.length - n, n)));
           pc++; break;
         }
         case "RECORD": {
           const 名们 = 指令.a;
           const 值们 = 栈.splice(栈.length - 名们.length, 名们.length);
-          const 记 = {};
-          for (let i = 0; i < 名们.length; i++) 记[名们[i]] = 值们[i];
-          压(记);
+          const 字段 = new Map();
+          for (let i = 0; i < 名们.length; i++) 字段.set(名们[i], 值们[i]);
+          压(new 类记录(字段));
           pc++; break;
         }
         case "FIELD": {
           const t = 弹();
-          if (t === null || typeof t !== "object" || !(指令.a in t)) this.坏("HMYR-R0106", "no field '" + 指令.a + "' on that value");
-          压(typeof t[指令.a] === "function" ? t[指令.a].bind(t) : t[指令.a]);
+          if (!t || t.tag !== "record" || !t.fields.has(指令.a)) this.坏("HMYR-R0106", "no field '" + 指令.a + "' on that value");
+          压(t.fields.get(指令.a));
           pc++; break;
         }
         case "INDEX": {
           const i = this.成数(弹()), t = 弹();
-          if (typeof t !== "string" && !Array.isArray(t)) this.坏("HMYR-R0152", "cannot index " + 述(t));
-          if (i < 0 || i >= t.length) this.坏("HMYR-R0151", "index " + i + " is outside a value of length " + t.length);
-          压(t[i]);
+          if (typeof t === "string") {
+            if (i < 0 || i >= t.length) this.坏("HMYR-R0151", "index " + i + " is outside a value of length " + t.length);
+            压(t[i]);
+          } else if (t && t.tag === "tuple") {
+            if (i < 0 || i >= t.items.length) this.坏("HMYR-R0151", "index " + i + " is outside a value of length " + t.items.length);
+            压(t.items[i]);
+          } else {
+            this.坏("HMYR-R0152", "cannot index " + 述(t));
+          }
           pc++; break;
         }
         case "CALLB": {
@@ -193,11 +203,9 @@ export class 虚拟机 {
 
 // 与 runUnit 同一件事：把加载器交出来的模块编译成一个程序，再交回一个虚拟机。
 //
-// 注意一个真实的差别：加载器交回的是「按依赖顺序排好的模块」，而这里把它们的函数表并起来。
+// 一个真实的差别：加载器交回的是「按依赖顺序排好的模块」，而这里把它们的函数表并起来。
 // 重名先到者赢（加载器那边已经为这件事报过 W0302）。
 export const 跑字节码 = (unit, 选项 = {}) => {
   const 几份 = unit.order.map((文件) => 编译模块(unit.modules.get(文件)));
-  const 程序 = 合并程序(几份);
-  return new 虚拟机(程序, 选项);
+  return new 虚拟机(合并程序(几份), 选项);
 };
-

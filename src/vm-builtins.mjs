@@ -5,10 +5,13 @@
 // 「需不需要效果」从一张旁表挪到条目自己身上，于是少了一处对不上。
 //
 // 世界仍然从那一个对象里取（vm.cap）。这一份文件不 import 任何 node: 模块。
+import { 类元组, 类记录 } from "./vm-values.mjs";
+
 export const 内置表 = {
   len: { 做: (vm, a) => {
     const v = a[0];
-    if (typeof v === "string" || Array.isArray(v)) return v.length;
+    if (typeof v === "string") return v.length;
+    if (v && v.tag === "tuple") return v.items.length;
     vm.坏("HMYR-R0140", "len() wants a string or a tuple");
   } },
   str: { 做: (vm, a) => vm.成串(a[0]) },
@@ -33,26 +36,26 @@ export const 内置表 = {
   is_mark: { 做: (vm, a) => /\p{M}/u.test(String(a[0])) },
   record_new: { 做: (vm, a) => {
     const pairs = a[0];
-    if (!Array.isArray(pairs)) vm.坏("HMYR-R0214", "record_of wants a tuple of (name, value) pairs");
-    const out = {};
-    for (const p of pairs) {
-      if (!Array.isArray(p) || p.length !== 2) vm.坏("HMYR-R0214", "every item must be a (name, value) pair");
-      const k = vm.成串(p[0]);
+    if (!pairs || pairs.tag !== "tuple") vm.坏("HMYR-R0214", "record_of wants a tuple of (name, value) pairs");
+    const 字段 = new Map();
+    for (const p of pairs.items) {
+      if (!p || p.tag !== "tuple" || p.items.length !== 2) vm.坏("HMYR-R0214", "every item must be a (name, value) pair");
+      const k = vm.成串(p.items[0]);
       if (!/^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u.test(k)) vm.坏("HMYR-R0214", "not a name a record could hold: " + JSON.stringify(k));
-      out[k] = p[1];
+      字段.set(k, p.items[1]);
     }
-    return out;
+    return new 类记录(字段);
   } },
   field_get: { 做: (vm, a) => {
     const rec = a[0], name = vm.成串(a[1]);
-    if (rec === null || typeof rec !== "object" || Array.isArray(rec)) vm.坏("HMYR-R0215", "field_get wants a record, found " + 述(rec));
-    if (!Object.prototype.hasOwnProperty.call(rec, name)) vm.坏("HMYR-R0216", "no field '" + name + "' on that record");
-    return rec[name];
+    if (!rec || rec.tag !== "record") vm.坏("HMYR-R0215", "field_get wants a record, found " + 述(rec));
+    if (!rec.fields.has(name)) vm.坏("HMYR-R0216", "no field '" + name + "' on that record");
+    return rec.fields.get(name);
   } },
   field_has: { 做: (vm, a) => {
     const rec = a[0], name = vm.成串(a[1]);
-    if (rec === null || typeof rec !== "object" || Array.isArray(rec)) return false;
-    return Object.prototype.hasOwnProperty.call(rec, name);
+    if (!rec || rec.tag !== "record") return false;
+    return rec.fields.has(name);
   } },
   print: { 做: (vm, a) => { vm.write(a.map((x) => vm.成串(x)).join("")); return null; } },
   print_err: { 效果: "process", 做: (vm, a) => {
@@ -81,15 +84,18 @@ export const 内置表 = {
   file_exists: { 效果: "file", 做: (vm, a) => {
     try { return vm.cap.file.exists(String(a[0])); } catch (err) { return false; }
   } },
-  argv: { 效果: "process", 做: (vm) => (vm.argv || []).map((x) => String(x)) },
+  // 它交回的是一个元组，不是 JS 数组：值现在自己带标签，两个求值器之间也是同一套值。
+  // 漏掉这一处会让 len(argv()) 报「要一个字符串或元组」——而那正是一次真实的失败。
+  argv: { 效果: "process", 做: (vm) => new 类元组((vm.argv || []).map((x) => String(x))) },
 };
 
 // 错误消息里要用「这个值长什么样」。这一份与 src/vm.mjs 里那份相同，而刻意不共享：
 // 两个模块互相 import 会把依赖绕成环，而这两个小函数不值得为它绕环。
+// 值现在自己带标签，所以这里不再靠 typeof 与 Array.isArray 去猜它是什么。
 const 述 = (v) => {
   if (v === null) return "nil";
   if (typeof v === "string") return JSON.stringify(v);
-  if (Array.isArray(v)) return "tuple";
-  if (typeof v === "object") return "a host object";
+  if (v && v.tag === "tuple") return "tuple";
+  if (v && v.tag === "record") return "a host object";
   return String(v);
 };
