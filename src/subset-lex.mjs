@@ -1,9 +1,11 @@
 // 子集切词器：一个更小的 Stage 0 的第一步。
 //
-// 现状：切词这一层对得上了，并且带位置（2026-10-20）。
+// 现状：这一层对得上了，带位置，并且已经被启动器拿去读自举层（2026-10-20）。
 //
-//   六份一致   lex 1988 · chain 2137 · stmt 1252 · body 1285 · eval 2687 · run 2246
-//              token 的种类、值、顺序与位置，与 src/lexer.mjs 逐个相同。
+//   六份一致   lex 1989 · chain 2138 · stmt 1253 · body 1286 · eval 2688 · run 2247
+//              token 的种类、值、顺序、位置与末尾那个 eof，与 src/lexer.mjs 逐个相同。
+//              数比早先各多一：末尾的 eof 现在也是一个 token，而它带着源码结束的位置。
+//              少了它，「块没关」这种错就指不到文件尾。
 //
 // 那处分歧（换行折叠的位置）查清了，它只有一个成因：ident 与 keyword 那一支
 // 曾经用 出.push 而不是 记()，于是 末个 停在更早的运算符上，续行() 误判。
@@ -15,21 +17,22 @@
 // 同一份用的是 CRLF 的源码，两边的列号会差出一个字符。
 //
 // 还差的是范围而不是规则：转义表只认 \n \t \r \\ \"，以及它不认全角标点的别名
-// （宿主有一张 ALIASES 表，而 self/ 那六份里没有用到全角标点）。
+// （宿主有一张 ALIASES 表，而仓库里现有的 .hmyr 没有用到全角标点）。
 //
-// 它仍然不接线到任何地方，也没被拿去当 lexer 用。理由变了一点：以前是「半成品不该被钉」，
-// 现在是「它还没有自己的立场」——它现在只证明能对齐，而 Stage 0 要的是能替代。
-// 接线的时机是它真被拿去读一份源码、而报错能用它的行号列号指回去的那一刻。
+// 它已经被用了：bin/hmyr.mjs 用这一层加子集 parser 读自举层，于是启动器那条路上
+// 没有宿主的 lexer 与 parser。而报错能用它的行号列号指回去——那正是接线的时机；
+// 接线之后 subset-lex / subset-parse / subset-diag / subset-load 四套替人看着。
 //
-// 它只认 self/ 那六份用到的东西，而目标是「把 Stage 0 从八百行缩到能读得清的大小」。
-// 现在它与 src/lexer.mjs 并存，而验收是两者对同一份源码给出同样的 token——
-// 「更小」只有在对得上的时候才算数。
+// 它认得窄，而窄这件事是数出来的：仓库里 37 份 .hmyr 现在全部读得进。
+// 其中 kpb/etude.hmyr 用了小数，于是补了浮点与进制——
+// 进制非补不可：不认它的话 0x10 会被静默地切成 int「0」加 ident「x10」，那是个静默的错。
 //
-// 认的五类（与 self/lex.hmyr 的说法一致）：
-//   ident · int · string · punct · newline
+// 认的几类：
+//   ident · int · float · string · punct · newline · eof
 //
-// 不认的：注释（跳过）、浮点、十六进制转义、字符字面量、全角标点别名。那些 self/ 里没有用到，
-// 而这一份的立场是「认得窄而说清」，于是遇上不认的东西它会报错而不是猜。
+// 不认的：注释（跳过）、十六进制转义、字符字面量、全角标点别名。
+// 这一份的立场是「认得窄而说清」，于是遇上不认的东西它会报错而不是猜——
+// 而「不认」这件事本身要写在这里，不然下一个人会以为它认得。
 // 关键字表与宿主保持一致——这一份自己的立场是「更小」，不是「另立一套」。
 const 关键字 = new Set(["import","as","pub","fn","type","const","effect","effects","requires","ensures","invariant","own","borrow","let","var","return","while","if","else","match","true","false","nil","arena","managed"]);
 
@@ -81,10 +84,44 @@ export const 切 = (源) => {
       continue;
     }
     if (是数字(c)) {
+      // 数字照宿主的规矩来：可带 _ 分隔，带小数点且点后有数字才算浮点，
+       // e/E 后面跟（可带符号的）数字才算指数，0x/0b/0o 是进制。
+      //
+      // 进制这一条不能省：不认它的话，0x10 会被切成 int「0」加 ident「x10」——
+      // 那是一个静默的错，而静默的错比报错的错糟得多（后面某一层会算出一个像个数的东西）。
       let j = i;
-      while (j < 源.length && 是数字(源[j])) j++;
-      if (源[j] === ".") throw new Error("子集不含浮点数（行 " + 行 + " 列 " + 列 + "）");
-      记({ type: "int", value: 源.slice(i, j) });
+      let 是浮 = false;
+      let 基 = 0;
+      if (源[i] === "0" && /[xXbBoO]/.test(源[i + 1] || "")) {
+        const 种 = 源[i + 1].toLowerCase();
+        基 = 种 === "x" ? 16 : 种 === "b" ? 2 : 8;
+        const 数字几 = (ch) => 基 === 16 ? /[0-9a-fA-F]/.test(ch || "") : 基 === 2 ? (ch === "0" || ch === "1") : (ch >= "0" && ch <= "7" && ch !== undefined);
+        j = i + 2;
+        while (j < 源.length && (数字几(源[j]) || 源[j] === "_")) j++;
+        const 词 = 源.slice(i, j);
+        const 数位 = 词.slice(2).replace(/_/g, "");
+        if (!数位) throw new Error("进制字面量没有数字：" + 词 + "（行 " + 行 + " 列 " + 列 + "）");
+        记({ type: "int", value: 词, base: 基, numeric: Number(词) });
+        进(j - i);
+        continue;
+      }
+      while (j < 源.length && (是数字(源[j]) || 源[j] === "_")) j++;
+      if (源[j] === "." && 是数字(源[j + 1] || "")) {
+        是浮 = true;
+        j++;
+        while (j < 源.length && (是数字(源[j]) || 源[j] === "_")) j++;
+      }
+      if (源[j] === "e" || 源[j] === "E") {
+        let k = j + 1;
+        if (源[k] === "+" || 源[k] === "-") k++;
+        if (是数字(源[k] || "")) {
+          是浮 = true;
+          j = k;
+          while (j < 源.length && 是数字(源[j])) j++;
+        }
+      }
+      const 词 = 源.slice(i, j);
+      记({ type: 是浮 ? "float" : "int", value: 词, numeric: Number(词.replace(/_/g, "")) });
       进(j - i);
       continue;
     }

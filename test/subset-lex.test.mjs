@@ -67,9 +67,12 @@ console.log("三、续行的两种情况仍然成立（规则不是靠吞掉一�
 
 console.log("四、它认得窄，而窄这件事是明说的");
 {
-  let 错 = "";
-  try { 切("let a = 1.5\n"); } catch (e) { 错 = e.message; }
-  ok("浮点数报错而不是猜", 错.includes("浮点"), 错);
+  // 浮点与进制认得：不认它们的话 0x10 会被切成 int「0」加 ident「x10」，那是个静默的错。
+  for (const [标, 源] of [["小数", "let a = 1.5\n"], ["指数", "let a = 1e3\n"], ["进制", "let a = 0x10\n"]]) {
+    const 主 = 简(lex(源).tokens);
+    const 子 = 简(切(源));
+    ok(标 + "：与宿主相同", JSON.stringify(主) === JSON.stringify(子), "宿主 " + 主.join(" ") + " · 子集 " + 子.join(" "));
+  }
   let 错2 = "";
   try { 切("let a = \"\\x41\"\n"); } catch (e) { 错2 = e.message; }
   ok("未认的转义报错而不是猜", 错2.includes("转义"), 错2);
@@ -91,14 +94,14 @@ console.log("五、位置：CRLF、注释与多行，位置都跟着宿主的算
   }
   // 报错也带位置：一个指不回源码的错误，等于没有位置。
   let 错 = "";
-  try { 切("let a = 1\nlet b = 1.5\n"); } catch (e) { 错 = e.message; }
-  ok("浮点报错带行列", 错.includes("行 2"), 错);
+  try { 切("let a = 1\nlet b = \"\\x41\"\n"); } catch (e) { 错 = e.message; }
+  ok("报错带行列", 错.includes("行 2"), 错);
 }
 
 console.log("六、它自己的注释写着现在的账");
 {
   const 文 = fs.readFileSync(path.join(ROOT, "src/subset-lex.mjs"), "utf8");
-  ok("注释里有六份的 token 数", /lex 1988/.test(文), "在");
+  ok("注释里有六份的 token 数", /lex 1989/.test(文), "在");
   ok("注释说清了那个笔误", 文.includes("出.push 而不是 记()"), "在");
   ok("注释说清了位置照谁抄", 文.includes("算法照 src/lexer.mjs"), "在");
 }
