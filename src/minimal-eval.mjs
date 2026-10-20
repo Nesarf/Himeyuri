@@ -112,7 +112,7 @@ const 内置 = {
   read_text: (rt, a) => {
     const 路径 = String(a[0]);
     let buf;
-    try { buf = rt.读文件(路径); } catch (err) { rt.坏("HMYR-R0211", "cannot read '" + 路径 + "': " + String(err && err.message ? err.message : err)); }
+    try { buf = rt.cap.file.read(路径); } catch (err) { rt.坏("HMYR-R0211", "cannot read '" + 路径 + "': " + String(err && err.message ? err.message : err)); }
     const enc = a[1] === undefined || a[1] === null ? null : rt.成串(a[1]);
     if (enc) {
       const 名 = String(enc).toLowerCase();
@@ -128,7 +128,7 @@ const 内置 = {
   },
   file_exists: (rt, a) => {
     const 路径 = String(a[0]);
-    try { return rt.有文件(路径); } catch (err) { return false; }
+    try { return rt.cap.file.exists(路径); } catch (err) { return false; }
   },
   argv: (rt) => (rt.argv || []).map((x) => String(x)),
 };
@@ -155,9 +155,13 @@ export class 最小运行时 {
     this.depth = 0;
     this.maxDepth = options.maxDepth || 深限;
     this.stepLimit = options.stepLimit || 步限;
-    // 读写文件交给调用方：一个求值器自己去碰 fs 就没法在别的地方用了。
-    this.读文件 = options.readFile || ((p) => { throw new Error("no file reader configured: " + p); });
-    this.有文件 = options.exists || (() => false);
+    // 能力内核交给调用方：一个求值器自己去 import node:fs 就没法在别的地方用了，
+    // 而「它借了世界什么」也就只能去读它的源码才知道。见 src/capabilities.mjs。
+    //
+    // 没给就当场拒绝，而不是等到第一次读文件：一份缺能力的运行时能跑到半路才失败，
+    // 那时错已经离开这一层很远了。
+    if (!options.capabilities) throw new Error("最小求值器需要一份能力（见 src/capabilities.mjs）");
+    this.cap = options.capabilities;
   }
 
   // 宿主那边这个方法叫 callFunction；名字留着，于是两个求值器可以互换着跑同一段代码，

@@ -69,6 +69,7 @@ const SUITES = [
   ["subsetdiag", "test/subset-diag.test.mjs", "SPEC M6 - the same syntax error gives the same code at the same place on both sides, and the subset's own refusals still throw"],
   ["stage0eval", "test/stage0-eval.test.mjs", "SPEC M6 - what stage 0's evaluator actually needs: eleven expression kinds, five statements and sixteen builtins, counted from real runs"],
   ["minimaleval", "test/minimal-eval.test.mjs", "SPEC M6 - a second evaluator written to that table alone: same answers, same codes, and it still refuses what is outside it"],
+  ["capabilitieslayer", "test/capabilities-layer.test.mjs", "SPEC M6 - the capability kernel: six groups, one static rule about node: imports, and a swapped implementation that changes nothing"],
   ["selfframes", "test/self-frames.test.mjs", "SPEC M6 - one level of recursion costs about eleven host frames, and why the cheap fix was refused"],
   ["tailcall", "test/tail-call.test.mjs", "SPEC M6 - tail calls: tail recursion reaches any depth, and nothing else about the language changes"],
   ["launcher", "test/launcher.test.mjs", "SPEC M7 - node bin/hmyr.mjs: the target program goes through the bootstrap, not the host language layer"],

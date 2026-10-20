@@ -14,6 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
 import { 最小运行 } from "../src/minimal-eval.mjs";
+import { 本机能力 } from "../src/capabilities.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -32,8 +33,7 @@ const 跑 = (入口, 用最小, argv) => {
     write: (t) => { 出.w += t; },
     writeErr: (t) => { 出.e += t; },
     argv: argv || [],
-    readFile: (p) => fs.readFileSync(p),
-    exists: (p) => fs.existsSync(p),
+    capabilities: 本机能力(),
   };
   let 码 = 0;
   try {
@@ -89,7 +89,7 @@ try {
     const 宿主 = runUnit(层);
     宿主.write = () => {};
     宿主.writeErr = () => {};
-    const 小 = 最小运行(层, { readFile: (p) => fs.readFileSync(p), exists: (p) => fs.existsSync(p) });
+    const 小 = 最小运行(层, { capabilities: 本机能力() });
     小.write = () => {};
     小.writeErr = () => {};
     const 跑 = (rt, s) => rt.callFunction(rt.functions.get("跑"), [s], null);
@@ -136,7 +136,7 @@ console.log("三、错误路径：同一个编号");
     };
     const 层 = loadUnit(入口, { reader: 宿主读 });
     let 错 = "";
-    try { 最小运行(层).callFunction(层.modules.get(path.resolve(入口)).decls.find((d) => d.name === "main"), [], null); } catch (e) { 错 = e.message; }
+    try { 最小运行(层, { capabilities: 本机能力() }).callFunction(层.modules.get(path.resolve(入口)).decls.find((d) => d.name === "main"), [], null); } catch (e) { 错 = e.message; }
     ok("最小这一份说清它不认 Match", 错.includes("Match"), 错 || "（没有抛）");
     // 而宿主跑得通：那证明「拒绝」是这一份的选择，不是这门语言的限制。
     const 主 = runUnit(层);

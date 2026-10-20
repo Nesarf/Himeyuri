@@ -77,12 +77,9 @@ console.log("四、启动器只做三件事");
   ok("它把自举那一层读进来", 文.includes("loadUnit"), "在");
   ok("它递 argv", 文.includes("rt.argv"), "在");
   ok("它按退出码退出", 文.includes("process.exit"), "在");
-  // 这一条以前写的是「启动器里不出现 readFileSync」。基线换了之后那句话不再对：
-  // fs 现在出现在启动器里，但只作为「交给求值器的能力」——它自己不决定读哪一份文件。
-  // 于是判据改成能区分这两件事的那个：fs 的每一次出现都在能力交接那一行上。
-  const 行们 = 文.split(/\r?\n/);
-  const 碰fs = 行们.filter((l) => l.includes("readFileSync") || l.includes("existsSync"));
-  ok("启动器只用 fs 把能力交出去，不自己读目标", 碰fs.length > 0 && 碰fs.every((l) => l.includes("readFile:") || l.includes("exists:")), 碰fs.join(" | ") || "（一处都没有）");
+  // 这一条以前写的是「启动器里不出现 readFileSync」，后来改成「fs 的每一次出现都在能力交接那一行上」。
+  // 现在它更强：启动器一点都不碰文件系统了——读文件这件事整个交给能力层（src/capabilities.mjs）。
+  ok("启动器不直接碰文件系统", !/readFileSync|existsSync|node:fs/.test(文), "仍在碰");
 }
 
 console.log("五、说明文档在，且说了「缩到零不在路线里」");

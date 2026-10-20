@@ -16,11 +16,11 @@
 // 一句明写的代价：子集那两层认得窄，遇上不认的构造会抛，而不是给一棵猜出来的树。
 // 于是将来谁往 self/ 里加一个子集还没认的写法，启动器会在这里失败——
 // 而在他跑到这里之前，subset-lex / subset-parse / subset-load 三套会先红，红在那个写法上。
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
 import { 最小运行 } from "../src/minimal-eval.mjs";
+import { 本机能力 } from "../src/capabilities.mjs";
 import { 切 } from "../src/subset-lex.mjs";
 import { 子集解 } from "../src/subset-parse.mjs";
 
@@ -61,7 +61,7 @@ const 递给语言 = 参数.filter((a) => a !== "--host-eval" && a !== "--minima
 
 const rt = 用宿主
   ? runUnit(层, { stage0: true })
-  : 最小运行(层, { readFile: (p) => fs.readFileSync(p), exists: (p) => fs.existsSync(p) });
+  : 最小运行(层, { capabilities: 本机能力() });
 rt.write = (s) => process.stdout.write(s);
 rt.writeErr = (s) => process.stderr.write(s);
 // 与宿主一致：第一个是「解释器名」位，之后才是参数。语言侧取 argv[1] 当目标。
