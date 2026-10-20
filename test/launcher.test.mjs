@@ -84,6 +84,20 @@ console.log("模块加载：import 进来的函数能调");
   }
 }
 
+console.log("读自举那一层用的是子集那两层，不是宿主那两层");
+{
+  // 静态检查，说清它是静态的：这一条不能证明「跑的时候没调到」，
+  // 它证明的是「启动器没有把宿主那两层引进来」——要调到，得先引进来。
+  const 源 = fs.readFileSync(path.join(ROOT, "bin/hmyr.mjs"), "utf8");
+  ok("引了子集切词器", /from "\.\.\/src\/subset-lex\.mjs"/.test(源));
+  ok("引了子集 parser", /from "\.\.\/src\/subset-parse\.mjs"/.test(源));
+  ok("没有引宿主切词器", !/from "\.\.\/src\/lexer\.mjs"/.test(源));
+  ok("没有引宿主 parser", !/from "\.\.\/src\/parser\.mjs"/.test(源));
+  // 而加载器本身照旧同时拥有两条路：默认那条仍会引它们，于是「没引」这件事只对启动器成立。
+  const 加载器 = fs.readFileSync(path.join(ROOT, "src/loader.mjs"), "utf8");
+  ok("加载器仍然默认用宿主那两层（口子是可选的）", /options\.reader \|\|/.test(加载器));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

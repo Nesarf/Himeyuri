@@ -4,22 +4,36 @@
 //
 // 它现在只剩三件事，而三件都是「宿主才知道」的：
 //
-//   一、把自举那一层读进来（它自己是 .hmyr，而读它需要宿主的词法与求值器）
+//   一、把自举那一层读进来（它自己是 .hmyr，而读它需要词法与语法）
 //   二、把命令行参数递过去（argv 从哪来是宿主的事）
 //   三、按语言交回的退出码退出（进程怎么退是宿主的事）
 //
-// 以前它还有「拆路径」「读目标」「认 import」「定退出码」，四件都搬进了 self/run.hmyr。
-// 那四件里没有一件是关于宿主的——它们都是「一门语言怎么当程序用」。
+// 第一件里的「词法与语法」现在用的是子集那两层（src/subset-lex.mjs + src/subset-parse.mjs），
+// 也就是 Stage 0 里不再有 src/lexer.mjs 与 src/parser.mjs 被调到。
+// 换过去的依据是那三套套件：六份 token 逐个相同、六份的树逐节点相同（含位置）、
+// 以及把它们接进加载器之后两路交出同样的模块顺序、函数表与答案。
 //
-// 剩下这一件的下一步是第三步的后半：连「读自举那一层」也由自举自己做。
-// 那需要一门语言能编译它自己，而那是另一件事，不假装它已经成立。
+// 一句明写的代价：子集那两层认得窄，遇上不认的构造会抛，而不是给一棵猜出来的树。
+// 于是将来谁往 self/ 里加一个子集还没认的写法，启动器会在这里失败——
+// 而在他跑到这里之前，subset-lex / subset-parse / subset-load 三套会先红，红在那个写法上。
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
+import { 切 } from "../src/subset-lex.mjs";
+import { 子集解 } from "../src/subset-parse.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const 子集读 = (source) => 子集解(切(source));
 
-const 层 = loadUnit(path.join(ROOT, "self/run.hmyr"));
+let 层;
+try {
+  层 = loadUnit(path.join(ROOT, "self/run.hmyr"), { reader: 子集读 });
+} catch (e) {
+  // 子集那一层是抛而不是记诊断，于是这里接住它，把它写成与「读不进来」同一种输出。
+  // 一个会露出栈的启动器，对读它的人没有用处。
+  process.stderr.write("HMYR-R0211 cannot load self/run.hmyr\n  " + e.message + "\n");
+  process.exit(1);
+}
 if (!层.ok) {
   // 自举那一层自己都读不进来，就没有语言可用来说这件事。宿主只好开口。
   process.stderr.write("HMYR-R0211 cannot load self/run.hmyr\n");
