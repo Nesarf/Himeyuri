@@ -1,26 +1,33 @@
 // 子集 parser：Stage 0 的第二层。token 进，树出。
 //
-// 现状：第一格（2026-10-20）。它认的是 self/ 那六份源码用到的构造，别的都报错。
+// 现状：两件事都对上了（2026-10-20）——树，六份共 6285 个节点，逐个相同（形状与位置）；
+// 以及错误路径上的话（与宿主同一批码、同一个位置）。
 //
-// 那六份用到的（数出来的，不是照着语法书抄的）：
+// 它的立场是认得窄而说清：遇到不认的构造就报出来，而不是猜一个树。
+// 一个猜出来的树会在后面某一层变成算错的数，而那时已经看不出源头。
+//
+// 它认的是 self/ 那六份源码用到的构造，别的都报错。那份普查是数出来的，不是照语法书抄的：
 //   声明   只有 fn，123 个；没有 type / const / effect / pub，没有类型参数，没有 requires/ensures
 //   参数   258 个，全部带类型，没有默认值，没有 own/borrow
-//   类型   只有三种：Int 189、String 65、Bool 4——全是单名，没有元组、没有 fn 类型、没有可空
+//   类型   只有三种：Int 189、String 65、Bool 4，全是单名
 //   语句   六种：let / var / assign / return / ExprStmt / Block
 //   表达式 十一种：Literal · Ident · Binary · Unary · Call · Index · Field · Tuple · Record · If · While
 //   运算符 十四种，五档优先级（与 src/parser.mjs 的 PRECEDENCE 同一张表）
 //
-// 它的立场是「认得窄而说清」：遇到不认的构造就抛错，说清是哪一行哪一列，
-// 而不是猜一个树出来。一个猜出来的树会在后面某一层变成算错的数，而那时已经看不出源头。
+// 错误分两种，而它们该被分开对待：
 //
-// 它的产物形状与 src/parser.mjs 相同（同样的 kind 名、同样的字段名），
-// 于是「两棵树一样」可以直接深比较，不需要一层适配。
+//   语法错      宿主也会报的。这里报同一批码（E0101 到 E0105），位置也照宿主的取法，
+//               并且照宿主的办法恢复：报一次，然后跳到下一个能开始语句的地方。
+//               恢复是必要的——没有它，一个错会变成一串连锁的错误，而读的人找不到第一个。
+//   本子集不认  宿主读得动、而这一份还不认的构造（type / const / effect / pub / match /
+//               泛型 / 可空 / 参数默认值 / own / 带参数的效果 / 无体函数）。
+//               这一类**抛**，不是记诊断：它是这一份的边界，而边界要大声说，不然会被当成语法错。
 //
-// 位置也对齐了：六份共 6285 个节点，逐个相同。过程里只查出一种取法要照抄——
-// Field 记的是「字段名之后那个 token」的位子。宿主如此，这里照办。
+// options.strict 为真时，连语法错也抛。那是给「只想问一句这棵树对不对」的调用方用的，
+// 而套件用它来钉住「不认的构造一定抛」这件事。
 //
-// Block 只带 line 不带 column，这一处也照抄：缺一个字段与有一个错的字段不是一回事，
-// 而「两棵树一样」这句话要经得起逐节点核。
+// 消息用中文，码用与宿主相同的英文编号。两样都写清：读码的人与读消息的人不是同一个人。
+// 验收只比码与位置，不比消息文本——措辞可以不同，而码是给人查的。
 const 优先级 = [
   ["||"],
   ["&&"],
@@ -29,32 +36,82 @@ const 优先级 = [
   ["*", "/", "%"],
 ];
 
-const 尾 = { type: "eof", value: "", line: 0, column: 0 };
+// 切词器在末尾产一个 eof token，于是「没有 token 了」这件事有位置可指。
+// 万一调用方递进来的 token 表里没有它（手工拼的表，或别的切词器），退回一个不带位置的尾——
+// 少了位置比编一个位置好。
+const 尾 = (tokens) => (tokens.length && tokens[tokens.length - 1].type === "eof"
+  ? tokens[tokens.length - 1]
+  : { type: "eof", value: "", line: 0, column: 0 });
 
-export const 子集解 = (tokens) => {
+// 与 src/lexer.mjs 的 Diagnostics 同构的一小份：调用方可以把宿主的那个递进来，也可以不递。
+const 新诊断 = () => ({
+  items: [], errors: [], warnings: [],
+  add(severity, code, message, line, column) {
+    const one = { severity, code, message, line, column };
+    this.items.push(one);
+    if (severity === "error") this.errors.push(one);
+    if (severity === "warning") this.warnings.push(one);
+  },
+  error(code, message, line, column) { this.add("error", code, message, line, column); },
+  warn(code, message, line, column) { this.add("warning", code, message, line, column); },
+});
+
+export const 子集解 = (tokens, options = {}) => {
+  const diagnostics = options.diagnostics || 新诊断();
+  const 严 = options.strict === true;
   let i = 0;
-  // 子集切词器不产 eof token，而 parser 需要一个「这里没有 token 了」的东西。
-  // 它的位置写成 0——一个不存在的位子不编一个数出来。
-  const 看 = (n = 0) => tokens[i + n] || 尾;
+  // 一个不前进的 parser 是它自己的错，不是输入的错。与其转到内存耗尽，不如数步数并说出来。
+  let steps = 0;
+  const 步限 = 200000;
+
+  const 文件尾 = 尾(tokens);
+  // 子集切词器不产 eof 之外的虚拟 token；越界就交回文件尾那个。
+  const 看 = (n = 0) => tokens[i + n] || 文件尾;
   const 是 = (type, value) => { const t = 看(); return t.type === type && (value === undefined || t.value === value); };
   const 是标 = (v) => 是("punct", v);
   const 进 = () => tokens[i++];
   const 说明 = (t) => t.type === "eof" ? "文件尾" : (t.type + " " + JSON.stringify(t.value));
   const 在哪 = (t) => "行 " + t.line + " 列 " + t.column;
+
+  // 报一个语法错。位置取当前 token 的——宿主也一样（它的 error 就是这么取的）。
+  const 报 = (code, 话, at) => {
+    const t = at || 看();
+    if (严) throw new Error(code + " " + 话 + "（" + 在哪(t) + "）");
+    diagnostics.error(code, 话, t.line, t.column);
+  };
+  // 报一条「本子集不认」的错。这一类总是抛：它是边界，不是语法错。
+  const 不认 = (话, at) => {
+    const t = at || 看();
+    throw new Error(话 + "（" + 在哪(t) + "）");
+  };
+
+  // 照宿主的 recover：报一次，然后从能开始一个语句的地方继续。
+  // 「停在 } 上就返回」是错的——那会让调用方停在同一个 token 上，一个多余的括号能生出成百条同样的错。
+  const 恢复 = () => {
+    while (!是("eof")) {
+      if (是("newline")) { 过空行(); return; }
+      if (是标("}")) { 进(); return; }
+      进();
+    }
+  };
+
   const 要标 = (v, 什么) => {
     if (是标(v)) return 进();
-    throw new Error("期望 " + JSON.stringify(v) + (什么 ? "（" + 什么 + "）" : "") + "，见到 " + 说明(看()) + "（" + 在哪(看()) + "）");
+    报("HMYR-E0101", "期望 " + JSON.stringify(v) + (什么 ? "（" + 什么 + "）" : "") + "，见到 " + 说明(看()));
+    return null;
   };
   const 要 = (type, 什么) => {
     if (是(type)) return 进();
-    throw new Error("期望 " + (什么 || type) + "，见到 " + 说明(看()) + "（" + 在哪(看()) + "）");
+    报("HMYR-E0101", "期望 " + (什么 || type) + "，见到 " + 说明(看()));
+    return null;
   };
   // 换行只在语句边界有意义，表达式里一律跳过。
   const 过空行 = () => { while (是("newline")) 进(); };
   const 收句 = () => {
     if (是("newline")) { 过空行(); return; }
     if (是标("}") || 是("eof")) return;
-    throw new Error("期望语句结束，见到 " + 说明(看()) + "（" + 在哪(看()) + "）");
+    报("HMYR-E0102", "期望语句结束，见到 " + 说明(看()));
+    恢复();
   };
 
   function 解析模块() {
@@ -63,7 +120,11 @@ export const 子集解 = (tokens) => {
     while (是("keyword", "import")) imports.push(解析导入());
     过空行();
     while (!是("eof")) {
-      decls.push(解析声明());
+      if (++steps > 步限) { 报("HMYR-E0105", "parser 在这一步停住了：" + 说明(看())); break; }
+      const 先 = i;
+      const decl = 解析声明();
+      if (decl) decls.push(decl);
+      if (i === 先) 恢复();
       过空行();
     }
     return { kind: "Module", imports, decls };
@@ -75,18 +136,25 @@ export const 子集解 = (tokens) => {
     let alias = null;
     if (是("keyword", "as")) { 进(); alias = 要("ident", "别名"); }
     收句();
-    return { kind: "Import", path: 路.value, alias: alias ? alias.value : null, line: kw.line, column: kw.column };
+    return { kind: "Import", path: 路 ? 路.value : "", alias: alias ? alias.value : null, line: kw.line, column: kw.column };
   }
 
   function 解析声明() {
     if (是("keyword", "fn")) return 解析函数();
-    throw new Error("子集只认 fn 声明，见到 " + 说明(看()) + "（" + 在哪(看()) + "）");
+    // 这几样宿主读得动，而这一份还不认——边界，抛。
+    if (是("keyword", "type") || 是("keyword", "const") || 是("keyword", "effect") || 是("keyword", "pub")) {
+      不认("子集只认 fn 声明，见到 " + 说明(看()));
+    }
+    // 而这些宿主也报「不能以它开始一个声明」，于是报同一个码。
+    报("HMYR-E0103", "不能以 " + 说明(看()) + " 开始一个声明");
+    恢复();
+    return null;
   }
 
   function 解析函数() {
     const kw = 进();
     const 名 = 要("ident", "函数名");
-    if (是标("<")) throw new Error("子集不含类型参数（" + 在哪(看()) + "）");
+    if (是标("<")) 不认("子集不含类型参数");
     要标("(", "开参数表");
     const params = 是标(")") ? [] : 解析参数们();
     要标(")", "关参数表");
@@ -94,20 +162,20 @@ export const 子集解 = (tokens) => {
     if (是标("->")) { 进(); returns = 解析类型(); }
     let effects = null;
     if (是("keyword", "effects")) effects = 解析效果们();
-    const body = 是标("{") ? 解析块() : null;
-    if (!body) throw new Error("子集的函数必须有函数体：" + 名.value + "（" + 在哪(kw) + "）");
-    return { kind: "Fn", name: 名.value, typeParams: [], params, returns, effects, contracts: { requires: [], ensures: [] }, body, pub: false, line: kw.line, column: kw.column };
+    if (!是标("{")) 不认("子集的函数必须有函数体：" + (名 ? 名.value : "?"));
+    const body = 解析块();
+    return { kind: "Fn", name: 名 ? 名.value : "<error>", typeParams: [], params, returns, effects, contracts: { requires: [], ensures: [] }, body, pub: false, line: kw.line, column: kw.column };
   }
 
   function 解析参数们() {
     const list = [];
     while (!是标(")") && !是("eof")) {
-      if (是("keyword", "own") || 是("keyword", "borrow")) throw new Error("子集不含 own/borrow 参数（" + 在哪(看()) + "）");
+      if (是("keyword", "own") || 是("keyword", "borrow")) 不认("子集不含 own/borrow 参数");
       const 名 = 要("ident", "参数名");
       要标(":", "参数名之后");
       const type = 解析类型();
-      if (是标("=")) throw new Error("子集不含参数默认值（" + 在哪(看()) + "）");
-      list.push({ name: 名.value, type, passing: null, fallback: null, line: 名.line, column: 名.column });
+      if (是标("=")) 不认("子集不含参数默认值");
+      if (名) list.push({ name: 名.value, type, passing: null, fallback: null, line: 名.line, column: 名.column });
       if (是标(",")) 进(); else break;
     }
     return list;
@@ -119,8 +187,9 @@ export const 子集解 = (tokens) => {
     const list = [];
     while (!是标(")") && !是("eof")) {
       if (是("ident") || 是("keyword")) list.push(进().value);
-      else throw new Error("效果名不对：" + 说明(看()) + "（" + 在哪(看()) + "）");
-      if (是标("(")) throw new Error("子集不含带参数的效果（" + 在哪(看()) + "）");
+      else { 报("HMYR-E0101", "期望效果名，见到 " + 说明(看())); break; }
+      // 检查点要在这儿：名字之后紧跟括号就是带参数的效果，而那种形式这一份还不认。
+      if (是标("(")) 不认("子集不含带参数的效果");
       if (是标(",")) 进(); else break;
     }
     要标(")", "关效果表");
@@ -130,11 +199,11 @@ export const 子集解 = (tokens) => {
   // 六份里只用过单名的 TypeRef。别的一律报错，因为报错比猜错有用。
   function 解析类型() {
     const t = 看();
-    if (是标("(") || 是("keyword", "fn")) throw new Error("子集只认单名类型，见到 " + 说明(t) + "（" + 在哪(t) + "）");
+    if (是标("(") || 是("keyword", "fn")) 不认("子集只认单名类型，见到 " + 说明(t), t);
     const 名 = 要("ident", "类型名");
-    if (是标("<")) throw new Error("子集不含泛型类型（" + 在哪(看()) + "）");
-    if (是标("?")) throw new Error("子集不含可空类型（" + 在哪(看()) + "）");
-    return { kind: "TypeRef", name: 名.value, args: [], nullable: false, line: t.line, column: t.column };
+    if (是标("<")) 不认("子集不含泛型类型");
+    if (是标("?")) 不认("子集不含可空类型");
+    return { kind: "TypeRef", name: 名 ? 名.value : "<error>", args: [], nullable: false, line: t.line, column: t.column };
   }
 
   function 解析块() {
@@ -142,11 +211,15 @@ export const 子集解 = (tokens) => {
     const statements = [];
     过空行();
     while (!是标("}") && !是("eof")) {
-      statements.push(解析语句());
+      if (++steps > 步限) { 报("HMYR-E0105", "parser 在这一步停住了：" + 说明(看())); break; }
+      const 先 = i;
+      const stmt = 解析语句();
+      if (stmt) statements.push(stmt);
+      if (i === 先) 恢复();
       过空行();
     }
     要标("}", "关块");
-    return { kind: "Block", statements, line: 开.line };
+    return { kind: "Block", statements, line: 开 ? 开.line : 看().line };
   }
 
   function 解析语句() {
@@ -162,11 +235,11 @@ export const 子集解 = (tokens) => {
     if (是("keyword", "let") || 是("keyword", "var")) {
       const kw = 进();
       const 名 = 要("ident", "名字");
-      if (是标(":")) throw new Error("子集不含带类型的 let/var（" + 在哪(看()) + "）");
+      if (是标(":")) 不认("子集不含带类型的 let/var");
       要标("=", "赋值号");
       const value = 解析表达式();
       收句();
-      return { kind: kw.value === "let" ? "Let" : "Var", name: 名.value, type: null, value, line: kw.line, column: kw.column };
+      return { kind: kw.value === "let" ? "Let" : "Var", name: 名 ? 名.value : "<error>", type: null, value, line: kw.line, column: kw.column };
     }
     if (是("keyword", "return")) {
       const kw = 进();
@@ -218,11 +291,10 @@ export const 子集解 = (tokens) => {
       if (是标(".")) {
         进();
         const 名 = (是("ident") || 是("keyword")) ? 进() : 要("ident", "字段名");
-        // 位置上的一处怪处，照抄而不是改对：宿主给 Field 记的是字段名**之后**那个 token 的位子。
+        // 位置上的一处怪处，照抄而不是改对：宿主给 Field 记的是字段名之后那个 token 的位子。
         // 照抄的理由是「两棵树一样」这句话要经得起逐节点核，而改对一处就等于把两棵树拆开。
-        // 哪天要改，两边一起改，并且那一笔要写明它在改位置的含义。
         const 后 = 看();
-        expr = { kind: "Field", target: expr, name: 名.value, line: 后.line, column: 后.column };
+        expr = { kind: "Field", target: expr, name: 名 ? 名.value : "<error>", line: 后.line, column: 后.column };
         continue;
       }
       if (是标("[")) {
@@ -248,15 +320,15 @@ export const 子集解 = (tokens) => {
     if (是("keyword", "while")) {
       进();
       const condition = 解析表达式();
-      const body = 是标("{") ? 解析块() : null;
-      if (!body) throw new Error("子集的 while 必须有块（" + 在哪(t) + "）");
+      if (!是标("{")) 不认("子集的 while 必须有块", t);
+      const body = 解析块();
       return { kind: "While", condition, body, line: t.line, column: t.column };
     }
     if (是("keyword", "if")) {
       进();
       const condition = 解析表达式();
-      const then = 是标("{") ? 解析块() : null;
-      if (!then) throw new Error("子集的 if 必须有块（" + 在哪(t) + "）");
+      if (!是标("{")) 不认("子集的 if 必须有块", t);
+      const then = 解析块();
       let otherwise = null;
       if (是("keyword", "else")) {
         进();
@@ -264,7 +336,7 @@ export const 子集解 = (tokens) => {
       }
       return { kind: "If", condition, then, otherwise, line: t.line, column: t.column };
     }
-    if (是("keyword", "match")) throw new Error("子集不含 match（" + 在哪(t) + "）");
+    if (是("keyword", "match")) 不认("子集不含 match", t);
 
     // 记录与块都以 { 开头。分开它们的规则：字段是「名字 冒号」。
     if (是标("{") && ((看(1).type === "ident" || 看(1).type === "keyword") && 看(2).type === "punct" && 看(2).value === ":") ||
@@ -276,7 +348,7 @@ export const 子集解 = (tokens) => {
         const 名 = (是("ident") || 是("keyword")) ? 进() : 要("ident", "字段名");
         要标(":", "字段名之后");
         const value = 解析表达式();
-        fields.push({ name: 名.value, value });
+        if (名) fields.push({ name: 名.value, value });
         过空行();
         if (是标(",")) { 进(); 过空行(); } else break;
       }
@@ -301,9 +373,14 @@ export const 子集解 = (tokens) => {
 
     if (t.type === "ident") { 进(); return { kind: "Ident", name: t.value, line: t.line, column: t.column }; }
 
-    throw new Error("期望一个表达式，见到 " + 说明(t) + "（" + 在哪(t) + "）");
+    报("HMYR-E0104", "期望一个表达式，见到 " + 说明(t), t);
+    // 恢复：照宿主——吃掉这个 token，再跳到下一个能开始语句的地方。少这一步，一个缺表达式
+    // 会引出第二条（收句）、第三条（外层），而那正是恢复要防的连锁。
+    进();
+    while (!是("eof") && !是("newline") && !是标("}") && !是标(")") && !是标(",")) 进();
+    return { kind: "Error", line: t.line, column: t.column };
   }
 
   const ast = 解析模块();
-  return { ast };
+  return { ast, diagnostics };
 };

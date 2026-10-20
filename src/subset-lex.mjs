@@ -131,5 +131,8 @@ export const 切 = (源) => {
     }
     throw new Error("子集不认这个字符：" + JSON.stringify(c) + "（行 " + 行 + " 列 " + 列 + "）");
   }
+  // 文件尾也要有一个 token：parser 需要知道「这里没有 token 了」，而不只是「越界了」——
+  // 一个没关的块，报错要指到源码末尾，而那个位置只有 eof 知道。宿主也产这一个。
+  出.push({ type: "eof", value: "", line: 行, column: 列 });
   return 出;
 };

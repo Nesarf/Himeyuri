@@ -21,8 +21,9 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-// 只看种类、值与位置：位置字段已经从宿主那边抄过来了，于是这里也该比它。
-const 简 = (tokens) => tokens.filter((t) => t.type !== "eof").map((t) => t.type + ":" + JSON.stringify(t.value) + "@" + t.line + ":" + t.column);
+// 种类、值、位置一起比。连末尾那个 eof 也比——它带着「源码到这里结束」的位置，
+// 而一个没关的块要靠它把报错指到对的位子。
+const 简 = (tokens) => tokens.map((t) => t.type + ":" + JSON.stringify(t.value) + "@" + t.line + ":" + t.column);
 
 console.log("一、六份源码：与宿主逐个 token 相同（含行号与列号）");
 let 总数 = 0;
