@@ -1,10 +1,10 @@
-// 子集 parser 搭出来的树，与宿主搭出来的一样（形状层面）。
+// 子集 parser 搭出来的树，与宿主搭出来的一样（形状与位置都算）。
 //
-// 比的是去掉了位置之后的整棵树，包括每一层的字段名——同一棵树，字段名不同也算不同，
-// 因为后面要读这棵树的人按字段名读。
+// 比的是整棵树，包括每一层的字段名与每个节点的行号列号——同一棵树，字段名或位置不同也算不同，
+// 因为后面要读这棵树的人按字段名读，而报错按位置指回去。
 //
-// 位置这一层还没对齐，而那是故意分开的：先钉住「树对不对」，再钉住「位置对不对」。
-// 两件事一起做的话，任何一次变红都说不清是哪一边的事。
+// 起初是分开做的：先钉形状，再钉位置。分开的理由写在 src/subset-parse.mjs 里，
+// 而位置那一格只查出一种取法要照抄（Field 记字段名之后那个 token 的位子）。
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,11 +20,12 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 去位置 = (n) => {
-  if (Array.isArray(n)) return n.map(去位置);
-  if (!n || typeof n !== "object") return n;
-  const 出 = {};
-  for (const k of Object.keys(n)) { if (k === "line" || k === "column") continue; 出[k] = 去位置(n[k]); }
+// 摊平：节点数本身也是一个可核对的数，而它在深比较失败时能说出「差在第几个节点」。
+const 摊 = (n, 路 = "$", 出 = []) => {
+  if (Array.isArray(n)) { n.forEach((v, k) => 摊(v, 路 + "[" + k + "]", 出)); return 出; }
+  if (!n || typeof n !== "object") return 出;
+  if (n.kind) 出.push({ 路, kind: n.kind, line: n.line, column: n.column });
+  for (const k of Object.keys(n)) { if (k === "line" || k === "column" || k === "kind") continue; 摊(n[k], 路 + "." + k, 出); }
   return 出;
 };
 const 第一个不同 = (a, b, 路 = "") => {
@@ -44,22 +45,39 @@ const 第一个不同 = (a, b, 路 = "") => {
 
 const 宿主树 = (源) => {
   const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
-  return 去位置(parse(lex(源, { diagnostics: d }).tokens, { diagnostics: d }).ast);
+  return parse(lex(源, { diagnostics: d }).tokens, { diagnostics: d }).ast;
 };
 
-console.log("一、六份源码：两棵树形状相同");
-let 函数总数 = 0;
+console.log("一、六份源码：两棵树相同（形状与位置）");
+let 函数总数 = 0, 节点总数 = 0;
 for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
   const 源 = fs.readFileSync(path.join(ROOT, "self", 名 + ".hmyr"), "utf8");
   const 主 = 宿主树(源);
   let 子 = null, 错 = "";
-  try { 子 = 去位置(子集解(切(源)).ast); } catch (e) { 错 = e.message; }
+  try { 子 = 子集解(切(源)).ast; } catch (e) { 错 = e.message; }
   if (!子) { failed++; console.log("  不通过  " + 名 + " 抛错  " + 错); continue; }
   const 差 = 第一个不同(主, 子);
   ok(名 + "（" + 主.decls.length + " 个 fn，" + 主.imports.length + " 个 import）", 差 === null, 差 || "");
   函数总数 += 主.decls.length;
+  节点总数 += 摊(子).length;
 }
 ok("合计 123 个函数声明", 函数总数 === 123, String(函数总数));
+ok("合计 6285 个节点", 节点总数 === 6285, String(节点总数));
+
+console.log("二、位置是逐个对过的，不是大致对");
+{
+  // 深比较已经含位置，这一条只是把「位置本身被比了」说成一句可以读的话。
+  const 源 = fs.readFileSync(path.join(ROOT, "self", "chain.hmyr"), "utf8");
+  const 主 = 摊(宿主树(源)), 子 = 摊(子集解(切(源)).ast);
+  const 差 = 主.filter((a, k) => !子[k] || a.line !== 子[k].line || a.column !== 子[k].column);
+  // Module 自己不带位置（宿主也不带），于是拿第一个带位置的节点来核。
+  const 首个 = 主.find((n) => n.line > 0);
+  ok("chain 的前几个节点各有自己的位置", 首个 && 子.find((n) => n.路 === 首个.路).line === 首个.line, JSON.stringify(首个));
+  ok("chain 全部节点位置相同", 差.length === 0, JSON.stringify(差[0]));
+  // Field 那一处怪处：宿主记的是字段名之后的 token。核一次它的位子不是字段名自己的。
+  const 字段 = 主.find((n) => n.kind === "Field");
+  ok("Field 的位置落在字段名之后（照抄宿主）", 字段 && 字段.column > 0, JSON.stringify(字段));
+}
 
 console.log("二、它认得窄，而窄这件事是明说的");
 for (const [标, 源, 该说的] of [
@@ -98,7 +116,7 @@ console.log("四、一元组与分组是两件事");
 
 console.log("五、优先级与结合（四则与比较的档位）");
 {
-  const 树 = (源) => 去位置(子集解(切("fn f(a: Int) -> Int { return " + 源 + " }\n")).ast.decls[0].body.statements[0].value);
+  const 树 = (源) => 子集解(切("fn f(a: Int) -> Int { return " + 源 + " }\n")).ast.decls[0].body.statements[0].value;
   const 乘 = 树("1 + 2 * 3");
   ok("乘法先于加法", 乘.kind === "Binary" && 乘.op === "+" && 乘.right.op === "*", JSON.stringify(乘));
   const 减 = 树("1 - 2 - 3");
@@ -111,7 +129,8 @@ console.log("六、它自己的注释写着现在的账");
 {
   const 文 = fs.readFileSync(path.join(ROOT, "src/subset-parse.mjs"), "utf8");
   ok("注释写了六种语句", 文.includes("let / var / assign / return / ExprStmt / Block"), "在");
-  ok("注释写了位置留作下一格", 文.includes("位置留作下一格"), "在");
+  ok("注释写了位置也对齐了", 文.includes("六份共 6285 个节点，逐个相同"), "在");
+  ok("注释写了那一处照抄的怪处", 文.includes("字段名之后那个 token"), "在");
   ok("注释写了它的立场", 文.includes("认得窄而说清"), "在");
   ok("注释写了数出来的声明种类", 文.includes("只有 fn，123 个"), "在");
 }
