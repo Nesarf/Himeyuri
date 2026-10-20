@@ -40,7 +40,15 @@ const files = walk(ROOT);
 let failed = 0;
 for (const file of files) {
   const text = fs.readFileSync(file, "utf8");
-  const offences = MARKERS.filter(([re]) => re.test(text)).map(([, label]) => label);
+  // 报的时候带上第一处违规的行号。只说「bold marker」不说哪一行，
+  // 找起来要翻整份文件——而一份文档里同一类标记往往只错一处。
+  const offences = [];
+  for (const [re, label] of MARKERS) {
+    const m = re.exec(text);
+    if (!m) continue;
+    const 行 = text.slice(0, m.index).split("\n").length;
+    offences.push(label + " (line " + 行 + ")");
+  }
   const rel = path.relative(ROOT, file).split(path.sep).join("/");
   if (offences.length) { failed++; console.log("  [不通过] " + rel + "  " + offences.join(", ")); }
   else console.log("  [通过] " + rel);
