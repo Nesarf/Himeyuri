@@ -74,6 +74,7 @@ const SUITES = [
   ["bytecode", "test/bytecode.test.mjs", "SPEC M6 - the same programmes through a flat instruction stream: it compiles, and both execution models answer alike"],
   ["scalars", "test/scalars.test.mjs", "SPEC M6 - what the scalars mean today: doubles, UTF-16 code units, and the three overloads of addition"],
   ["numbers", "test/numbers.test.mjs", "SPEC M6 - one place defines what a number means: 57 answers across three execution paths, and the bit pattern underneath"],
+  ["text", "test/text.test.mjs", "SPEC M6 - one place defines what a string means: code units, half a surrogate pair, and the same answers on all three paths"],
   ["selfframes", "test/self-frames.test.mjs", "SPEC M6 - one level of recursion costs about eleven host frames, and why the cheap fix was refused"],
   ["tailcall", "test/tail-call.test.mjs", "SPEC M6 - tail calls: tail recursion reaches any depth, and nothing else about the language changes"],
   ["launcher", "test/launcher.test.mjs", "SPEC M7 - node bin/hmyr.mjs: the target program goes through the bootstrap, not the host language layer"],

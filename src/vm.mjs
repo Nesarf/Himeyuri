@@ -11,10 +11,12 @@
 // 写在 design/VM.txt 的「还没做的」里，不假装做了。
 //
 // 而数字的意思在 src/numbers.mjs 里有一处定义：执行器不再自己写裸算术，
-// 也不再自己判断「这是不是数」。换掉标量那件事要改的是那一份文件。
+// 也不再自己判断「这是不是数」。字符串的码元操作同理，在 src/text.mjs。
+// 换掉标量那件事要改的就是这两份文件。
 import { 内置表 } from "./vm-builtins.mjs";
 import { 编译模块, 合并程序 } from "./bytecode.mjs";
 import * as 数 from "./numbers.mjs";
+import * as 文 from "./text.mjs";
 
 // 值：两种聚合值自己带标签（定义在 src/vm-values.mjs，内置表也要用同一份）。
 import { 类元组, 类记录 } from "./vm-values.mjs";
@@ -25,7 +27,7 @@ export { 类元组, 类记录 };
 // 而错误消息是照着那句写的——所以这里的记录也报同一句话。
 const 述 = (v) => {
   if (v === null) return "nil";
-  if (typeof v === "string") return JSON.stringify(v);
+  if (文.是串(v)) return JSON.stringify(v);
   if (v && v.tag === "tuple") return "tuple";
   if (v && v.tag === "record") return "a host object";
   if (数.是数(v)) return 数.成文(v);
@@ -66,7 +68,7 @@ export class 虚拟机 {
     return 0;                       // 停机之后这个值不会被用到，给个 0 免得算出 NaN
   }
   成串(v) {
-    if (typeof v === "string") return v;
+    if (文.是串(v)) return v;
     if (v === null) return "nil";
     if (v && v.tag === "tuple") return "[" + v.items.map((x) => this.成串(x)).join(", ") + "]";
     if (数.是数(v)) return 数.成文(v);
@@ -74,11 +76,12 @@ export class 虚拟机 {
   }
   相等(a, b) {
     if (数.是数(a) && 数.是数(b)) return 数.同(a, b);
+    if (文.是串(a) && 文.是串(b)) return 文.比(a, b) === 0;
     return typeof a === typeof b ? a === b : this.成串(a) === this.成串(b);
   }
   比(a, b) {
     if (数.是数(a) && 数.是数(b)) return 数.比(a, b);
-    if (typeof a === "string" && typeof b === "string") return a < b ? -1 : a > b ? 1 : 0;
+    if (文.是串(a) && 文.是串(b)) return 文.比(a, b);
     this.坏("HMYR-R0131", "cannot compare " + 述(a) + " with " + 述(b));
     return 0;
   }
@@ -151,7 +154,7 @@ export class 虚拟机 {
         case "NOT": 压(!真(弹())); pc++; break;
         case "ADD": { const b = 弹(), a = 弹();
           if (a && b && a.tag === "tuple" && b.tag === "tuple") 压(new 类元组([...a.items, ...b.items]));
-          else if (typeof a === "string" || typeof b === "string") 压(this.成串(a) + this.成串(b));
+          else if (文.是串(a) || 文.是串(b)) 压(文.拼(this.成串(a), this.成串(b)));
           else 压(数.加(this.成数(a), this.成数(b)));
           pc++; break; }
         case "SUB": { const b = 弹(), a = 弹(); 压(数.减(this.成数(a), this.成数(b))); pc++; break; }
@@ -198,9 +201,9 @@ export class 虚拟机 {
         }
         case "INDEX": {
           const i = this.成数(弹()), t = 弹();
-          if (typeof t === "string") {
-            if (i < 0 || i >= t.length) { this.坏("HMYR-R0151", "index " + 数.成文(i) + " is outside a value of length " + t.length); return null; }
-            压(t[i]);
+          if (文.是串(t)) {
+            if (!文.在界内(t, i)) { this.坏("HMYR-R0151", "index " + 数.成文(i) + " is outside a value of length " + 文.长(t)); return null; }
+            压(文.元(t, i));
           } else if (t && t.tag === "tuple") {
             if (i < 0 || i >= t.items.length) { this.坏("HMYR-R0151", "index " + 数.成文(i) + " is outside a value of length " + t.items.length); return null; }
             压(t.items[i]);
