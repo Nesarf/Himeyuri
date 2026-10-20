@@ -9,19 +9,18 @@
 //
 // 它**不做**的事情写在明处：没有命名空间。所以扁平函数表下，两个模块声明同名函数时会互相覆盖——
 // 这一步的处理是**把这件事说出来**（HMYR-W0302），而不是让它静默发生。可见性与命名空间是第二步。
-import fs from "node:fs";
-import path from "node:path";
 import { Diagnostics } from "./diagnostics.mjs";
 import { Runtime } from "./eval.mjs";
+import { 本机能力 } from "./capabilities.mjs";
 import { 切 } from "./subset-lex.mjs";
 import { 子集解 } from "./subset-parse.mjs";
 
-const short = (file) => path.basename(file);
+const short = (file) => file.split(/[\\/]/).pop() || file;
 
 /** 只处理路径形式的 import；包名留给包管理器。 */
-function resolveImport(fromFile, spec) {
-  if (spec.startsWith("./") || spec.startsWith("../") || /^[A-Za-z]:[\\/]/.test(spec) || path.isAbsolute(spec)) {
-    return path.resolve(path.dirname(fromFile), spec);
+function resolveImport(cap, fromFile, spec) {
+  if (spec.startsWith("./") || spec.startsWith("../") || /^[A-Za-z]:[\\/]/.test(spec) || cap.path.isAbsolute(spec)) {
+    return cap.path.resolve(cap.path.dirname(fromFile), spec);
   }
   return null;
 }
@@ -32,6 +31,9 @@ function resolveImport(fromFile, spec) {
  */
 export function loadUnit(entry, options = {}) {
   const diagnostics = options.diagnostics || new Diagnostics();
+  // 加载器也借世界：它读文件、拼路径。于是它也拿一份能力，而不是自己去 import fs。
+  // 默认给本机那一份；换掉它就能让「加载一份工程」这件事发生在没有文件系统的地方。
+  const cap = options.capabilities || 本机能力();
   const modules = new Map();     // absolute path -> ast
   const loading = new Set();     // the chain currently being loaded, for cycle detection
   const order = [];
@@ -51,22 +53,22 @@ export function loadUnit(entry, options = {}) {
   });
 
   function visit(file) {
-    const abs = path.resolve(file);
+    const abs = cap.path.resolve(file);
     if (modules.has(abs)) return;                       // loaded once, and that is the only time
     if (loading.has(abs)) {
       diagnostics.error("HMYR-E0301", "circular import: " + short(abs) + " is already being loaded", 0, 0);
       return;
     }
-    if (!fs.existsSync(abs)) {
+    if (!cap.file.exists(abs)) {
       diagnostics.error("HMYR-E0302", "imported file does not exist: " + abs, 0, 0);
       return;
     }
     loading.add(abs);
-    const source = fs.readFileSync(abs, "utf8");
+    const source = String(cap.file.read(abs));
     const { ast } = reader(source, abs);
 
     for (const imp of ast.imports) {
-      const target = resolveImport(abs, imp.path);
+      const target = resolveImport(cap, abs, imp.path);
       if (!target) {
         diagnostics.warn("HMYR-W0301", "import of '" + imp.path + "' is not a path; the package manager will own that", 0, 0);
         continue;

@@ -88,6 +88,7 @@ export const 本机能力 = (options = {}) => ({
     resolve: (...parts) => path.resolve(...parts),
     dirname: (p) => path.dirname(p),
     basename: (p) => path.basename(p),
+    isAbsolute: (p) => path.isAbsolute(p),
   },
   terminal: {
     // 尺寸取自 options（套件里给一份固定的），而序列是纯字符串。
@@ -127,11 +128,12 @@ export const 空能力 = (记下) => {
     return out;
   };
   return {
-    file: 组("file", ["read", "exists", "write"]),
+    file: 组("file", ["read", "exists", "write", "ensureDir", "remove"]),
     process: 组("process", ["argv", "exec", "chdir", "cwd"]),
     time: 组("time", ["now", "sleep"]),
-    env: 组("env", ["home", "temp"]),
-    path: 组("path", ["join", "resolve", "dirname", "basename"]),
-    terminal: 组("terminal", ["size", "clear", "escape", "color", "hide", "show"]),
+    env: 组("env", ["home", "temp", "get", "platform"]),
+    path: 组("path", ["join", "resolve", "dirname", "basename", "isAbsolute"]),
+    terminal: 组("terminal", ["size", "clear", "escape", "color", "hide", "show", "isTTY", "setRaw", "readSync"]),
+    thread: 组("thread", ["spawn", "signal", "load", "store", "wait"]),
   };
 };

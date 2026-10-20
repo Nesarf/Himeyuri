@@ -140,6 +140,8 @@ console.log("六、宿主求值器里已经没有一处直连");
   const 触碰 = 源.split(/\r?\n/).filter((l) => !l.includes("rt.cap.") && !/^\s*\/\//.test(l) && /fs\.|os\.|path\.|process\.|spawnSync|Worker|node:/.test(l));
   ok("求值器里一处直连都没有", 触碰.length === 0, 触碰.join(" | "));
   ok("也没有 node: 的 import", !/from "node:/.test(源), "仍在引");
+  // 加载器是 Stage 0 的另一份，它读文件、拼路径，于是它也要拿能力，而不是自己 import fs。
+  ok("加载器也不引 node: 模块", !/from "node:/.test(读("src/loader.mjs")), "仍在引");
   // 那两个不再需要的东西也该消失：Node 自己算模块位置（import.meta.dirname），
   // 编码表走能力层读。留着它们就说明还有一条绕过去的路。
   ok("不再用 fileURLToPath 算模块位置", !源.includes("fileURLToPath"));
