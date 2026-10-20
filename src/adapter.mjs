@@ -135,6 +135,11 @@ const 语句 = (节点) => {
       // 猜对一半的代价是：猜对的那一半不会告诉你猜错的那一半。
       return { kind: "if", cond: 转(节点.condition), then: 块(节点.then), otherwise: 块(节点.otherwise) };
 
+    case "While":
+      // 与 If 一样，条件在 condition 里（而 If 我一开始猜成 cond，踩过一次）。
+      // 体在 body 里，是 Block；而 If 那边叫 then。
+      return { kind: "while", cond: 转(节点.condition), body: 块(节点.body) };
+
     case "Block":
       // 裸的块：它的语句就是这一条「语句」，于是上面用 块() 展开它。
       return { kind: "err", text: "裸块不该单独出现" };

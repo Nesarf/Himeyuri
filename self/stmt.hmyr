@@ -49,6 +49,7 @@ fn statement(tokens: Int, i: Int) -> Int {
     return binding(tokens, i, t.text)
   }
   if is_word(t, "if") { return parse_if(tokens, i + 1) }
+  if is_word(t, "while") { return parse_while(tokens, i + 1) }
   if is_word(t, "return") {
     if i + 1 >= len(tokens) {
       return {node: {kind: "return", value: {kind: "nil"}}, next: i + 1}
@@ -106,6 +107,18 @@ fn parse_if(tokens: Int, i: Int) -> Int {
     }
   }
   return {node: {kind: "if", cond: cond.node, then: then.list, otherwise: otherwise}, next: next}
+}
+
+// while：条件是一个表达式，然后是一个块。
+// 与 if 相比它没有 else——而「什么时候停」由条件说，这一层不管。
+fn parse_while(tokens: Int, i: Int) -> Int {
+  let cond = from_here(tokens, i)
+  let at = skip_newlines(tokens, cond.next)
+  if at >= len(tokens) || !is_punct(tokens[at], "{") {
+    return {node: {kind: "err", text: "while"}, next: at}
+  }
+  let body = block(tokens, at + 1)
+  return {node: {kind: "while", cond: cond.node, body: body.list}, next: body.next}
 }
 
 // 宿主入口：读一条语句。

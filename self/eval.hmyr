@@ -233,8 +233,22 @@ fn 执行(节点: Int, 环境: Int) -> Int {
     if len(节点.otherwise) == 0 { return 好执行(环境, false, ()) }
     return 执行块(节点.otherwise, 环境)
   }
+  if 种 == "while" { return 执行反复(节点, 环境, 0) }
   if 种 == "err" { return 坏执行("语法层报的错：" + 节点.text) }
   return 坏执行("这一版还不认这种语句：" + 种)
+}
+
+// while：条件真就跑一遍体，然后拿**体交回的环境**再判一次。
+// 体里若有 i = i + 1，新环境在 r.env 里；不看它，循环就永远不前进。
+fn 执行反复(节点: Int, 环境: Int, 次数: Int) -> Int {
+  if 次数 >= 1000000 { return 坏执行("while 跑过一百万次还没结束") }
+  let c = 求值(节点.cond, 环境)
+  if c.ok == false { return 坏执行(c.text) }
+  if c.value == false { return 好执行(环境, false, ()) }
+  let r = 执行块(节点.body, 环境)
+  if r.ok == false { return 坏执行(r.text) }
+  if r.done == true { return r }
+  return 执行反复(节点, r.env, 次数 + 1)
 }
 
 fn 执行块从(语句们: Int, 环境: Int, i: Int) -> Int {
