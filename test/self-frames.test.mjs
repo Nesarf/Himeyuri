@@ -60,9 +60,11 @@ console.log("三、那个决定也记着：不从这儿下手");
   const 文档 = path.join(ROOT, "design/SELFCOMPILE.txt");
   ok("design/SELFCOMPILE.txt 在", fs.existsSync(文档));
   const 文 = fs.readFileSync(文档, "utf8");
+  // 这一节的意思在尾调用之后变了：十一帧仍成立，而对非尾递归成立。
+  // 于是断言跟着换——钉的是文档现在说的那件事，不是它曾经说过的。
   ok("写了第六节", 文.includes("六、一层递归值多少帧"), "在");
-  ok("写了「这一处不做」", 文.includes("这一处不做"), "在");
-  ok("并写了真正的出路是显式栈", 文.includes("显式栈"), "在");
+  ok("说明十一帧对非尾递归仍成立", 文.includes("对非尾递归而言") || 文.includes("只影响非尾递归"), "在");
+  ok("并说了尾递归不走那条环", 文.includes("尾递归不走那条环") || 文.includes("走的是一层循环"), "在");
 }
 
 console.log("");
