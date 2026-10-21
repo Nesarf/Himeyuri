@@ -29,7 +29,7 @@ console.log("一、六份，默认栈下，名字与顺序都与宿主一致");
 {
   // 这里的数字是各文件的规模，而不是不变量：自举层每长一个函数，它就得跟着长。
   // lex 从 25 变 26，是因为读转义那一处补了 read_escape（见 design/LIB.txt）。
-  const 期 = { lex: 26, chain: 20, stmt: 10, body: 14, eval: 31, run: 28 };
+  const 期 = { lex: 26, chain: 20, stmt: 10, body: 14, eval: 31, run: 29 };
   for (const 名 of Object.keys(期)) {
     const 路 = path.join(ROOT, "self", 名 + ".hmyr");
     const 甲 = 算名(路);

@@ -77,6 +77,8 @@ try {
   }
   {
     // 帧那一份：长度前缀 + 类型字节 + 载荷，小端。规矩来自 oak-barrels 的协议第 3 节。
+    // 它只 import protocol.hmyr，而 protocol 内部又 import 了 tuples ——
+    // 于是这一条同时钉住「间接 import 会被跟随」（自举的加载器曾经不跟）。
     const r = 启动([path.join(ROOT, "conformance/lib-protocol.hmyr")]);
     ok("帧库十九条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));

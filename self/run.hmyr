@@ -214,6 +214,16 @@ fn 读多从(目录: String, 路们: Int, i: Int, 已读: Int, 源码们: Int) -
   return 读多从(目录, 路们, i + 1, r.已读, r.源码们)
 }
 
+// 一个文件路径的目录部分：最后一个分隔符之前的那一段。没有分隔符就是 "."。
+// 这个函数存在的理由是一处真的错：早先 读一棵 把子模块的 import 也按**顶层目录**拼，
+// 于是 lib/protocol.hmyr 里那句 import "./tuples.hmyr" 被拼成了 conformance/tuples.hmyr，
+// 文件不在就按「可选引用」跳过 —— 症状是目标程序运行时报「没有这个函数：子段」。
+fn 目录部分(路: String) -> String {
+  let i = 最后一个分隔从(路, 0, 0 - 1)
+  if i < 0 { return "." }
+  return slice(路, 0, i)
+}
+
 fn 读一棵(目录: String, 相对: String, 已读: Int, 源码们: Int) -> Int effects(file) {
   let 路 = 拼路径(目录, 相对)
   if 含路(已读, 路, 0) { return {已读: 已读, 源码们: 源码们} }
@@ -221,7 +231,8 @@ fn 读一棵(目录: String, 相对: String, 已读: Int, 源码们: Int) -> Int
   // 而那件事以前靠宿主那边的 existsSync 做着。
   if file_exists(路) == false { return {已读: 已读 + (路,), 源码们: 源码们} }
   let 源码 = read_text(路, "utf8")
-  return 读多从(目录, 找导入们(源码), 0, 已读 + (路,), 源码们 + (源码,))
+  // 子模块的 import 相对**它自己**的目录，不是相对顶层目标。
+  return 读多从(目录部分(路), 找导入们(源码), 0, 已读 + (路,), 源码们 + (源码,))
 }
 
 // 启动器要的那一件事：给目录与目标名，交回跑出来的那段文字。

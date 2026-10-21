@@ -1,4 +1,3 @@
-import "../lib/tuples.hmyr"
 import "../lib/protocol.hmyr"
 
 fn 检(好: Bool, 号: Int) -> Int {
