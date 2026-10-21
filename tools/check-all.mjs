@@ -82,6 +82,7 @@ const SUITES = [
   ["corpus", "test/corpus.test.mjs", "SPEC M6 - three whole-table corpora: every code point classified, every code point normalised, and every Han character's Unihan properties"],
   ["redact", "test/redact.test.mjs", "SPEC M6 - diagnostics can keep the path out of the message and keep the code: a switch, an environment variable, and the launcher it has to survive"],
   ["writetext", "test/write-text.test.mjs", "SPEC 2.5 - write_text writes and reads back the same text, and an undeclared effect refuses instead of writing"],
+  ["codefile", "test/code-file.test.mjs", "SPEC M4 - bytecode survives a file round trip: same names, same slots, same effects, same instructions, same answer"],
   ["selfframes", "test/self-frames.test.mjs", "SPEC M6 - one level of recursion costs about eleven host frames, and why the cheap fix was refused"],
   ["tailcall", "test/tail-call.test.mjs", "SPEC M6 - tail calls: tail recursion reaches any depth, and nothing else about the language changes"],
   ["launcher", "test/launcher.test.mjs", "SPEC M7 - node bin/hmyr.mjs: the target program goes through the bootstrap, not the host language layer"],
