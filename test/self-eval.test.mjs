@@ -46,10 +46,13 @@ console.log("二元与一元：括号的优先级由 AST 决定，不由求值�
 一("一元负号", { kind: "unary", op: "-", operand: int("5") }, 空, "-5");
 一("字符串相加", bin("+", str("a"), str("b")), 空, "ab");
 
-console.log("调用：这一版只认三个内置");
+console.log("调用：这一版认的内置");
 一("len", { kind: "call", callee: name("len"), args: [str("abc")] }, 空, "3");
 一("str", { kind: "call", callee: name("str"), args: [int("9")] }, 空, "9");
-一("print 不在求值器里（打印是调用方的事）", { kind: "call", callee: name("print"), args: [str("x")] }, 空, "错：没有这个函数：print");
+// 早先这一条写的是「print 不在求值器里（打印是调用方的事）」。
+// 那句约定本身是错的：目标程序就是调用方，它跑在求值器内部，于是它连一句话都说不出。
+// 现在 print 会转发到宿主那一层，交回空元组（写出去的那一下没有值）。
+一("print 转发给宿主（交回空元组）", { kind: "call", callee: name("print"), args: [str("x")] }, 空, "[]");
 一("参数先求值", { kind: "call", callee: name("len"), args: [bin("+", str("ab"), str("cd"))] }, 空, "4");
 
 console.log("下标、字段、元组");

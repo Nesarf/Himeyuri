@@ -83,6 +83,17 @@ try {
     ok("帧库十九条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
   }
+  {
+    // 目标程序看得见自己的 argv：这一条同时钉住「print 与 argv 都在自举层的分派里」
+    // （这两支都是后来补的，补之前程序连一句话都说不出）。
+    const 程 = path.join(临, "argv.hmyr");
+    fs.writeFileSync(程, 'fn main() -> Int {\n  let a = argv()\n  print(str(len(a)))\n  return 0\n}\n', "utf8");
+    const r = 启动([程, "甲", "乙"]);
+    // 输出是 "30"：前一个 3 是程序自己 print 的，后一个 0 是自举层把 main 的返回值
+    // 也印了出来（conformance 那些程序正是靠这条通道报告失败的编号）。
+    ok("目标程序看到三个参数（自己加两个）", r.status === 0 && String(r.stdout).trim() === "30",
+      String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 60)));
+  }
   console.log("边界");
   {
     const r = 启动([path.join(临, "nope.hmyr")]);

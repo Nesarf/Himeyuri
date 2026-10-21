@@ -29,6 +29,9 @@ console.log("一、写得出来，而且读回来是同一份");
     let 码 = null, 错 = "";
     try {
       const rt = 最小运行(层, { write: () => {}, capabilities: 本机能力() });
+      // 目标程序从 argv 取路径 —— 自举层那条路已经把它交进环境，这里手动给同一份。
+      // 第一位是程序自己的名字，与语言的规矩一致。
+      rt.argv = ["conformance/write-text.hmyr", 路];
       码 = rt.callFunction(rt.functions.get("main"), [], null);
     } catch (e) { 错 = (e.code || "") + " " + e.message; }
     ok("main 交回零（写对了、读回来也对）", 码 === 0, String(码) + " " + 错.slice(0, 60));

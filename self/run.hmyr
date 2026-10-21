@@ -168,7 +168,7 @@ fn 找导入们(源码: String) -> Int {
   return 导入们从(拆行(源码), 0, ())
 }
 
-fn 跑模块们(源码们: Int) -> String {
+fn 跑模块们(源码们: Int, 参们: Int) -> String {
   let 函数们 = 合并从((), 源码们, 0)
   if len(函数们) == 0 {
     // 一个声明也没有：那它可能是裸语句（老用法）。交回那条路，而不是报「没有 fn」。
@@ -176,7 +176,7 @@ fn 跑模块们(源码们: Int) -> String {
     return 跑程序文字(源码们[0])
   }
   let 选 = 选函数(函数们, "main")
-  let r = 跑程序带函数(选[2], 函数们)
+  let r = 跑程序带函数与参(选[2], 函数们, 参们)
   if r.ok == false { return "错：" + r.text }
   return str(r.value)
 }
@@ -244,7 +244,20 @@ fn 读一棵(目录: String, 相对: String, 已读: Int, 源码们: Int) -> Int
 //
 // 这两件事以前都靠宿主一个 existsSync 判断，于是混在一起。分开说清之后，
 // 启动器不必自己再懂一遍「什么算致命」。
-fn 跑文件入口(目录: String, 目标: String) -> Int effects(file) {
+// 目标程序看到的 argv：从「脚本名之后」那一位开始。
+//
+// 自举层自己看到的是 [脚本名, 目标, 其余…]（启动器递过来的是那一份），
+// 而目标程序该看到 [目标, 其余…] —— 它问的是自己的参数，不是解释器的。
+fn 目标程序参数从(参们: Int, i: Int, 出: Int) -> Int {
+  if i >= len(参们) { return 出 }
+  return 目标程序参数从(参们, i + 1, 出 + (参们[i],))
+}
+
+fn 目标程序参数(参们: Int, 起: Int, 出: Int) -> Int {
+  return 目标程序参数从(参们, 起, 出)
+}
+
+fn 跑文件入口(目录: String, 目标: String, 参们: Int) -> Int effects(file) {
   let 路 = 拼路径(目录, 目标)
   if file_exists(路) == false {
     return {ok: false, 文字: "HMYR-R0211 cannot read '" + 路 + "': no such file"}
@@ -253,7 +266,7 @@ fn 跑文件入口(目录: String, 目标: String) -> Int effects(file) {
   if len(读.源码们) == 0 {
     return {ok: false, 文字: "HMYR-R0211 nothing read from '" + 路 + "'"}
   }
-  return {ok: true, 文字: 跑模块们(读.源码们)}
+  return {ok: true, 文字: 跑模块们(读.源码们, 参们)}
 }
 
 // ---- 命令行入口：第三步的第一半 ----
@@ -295,7 +308,7 @@ fn 命令行入口() -> Int effects(process, file) {
     return 2
   }
   let 目标 = 参们[1]
-  let 果 = 跑文件入口(拆目录(目标), 拆名字(目标))
+  let 果 = 跑文件入口(拆目录(目标), 拆名字(目标), 目标程序参数(参们, 1, ()))
   if 果.ok == false {
     print_err(果.文字 + chr(10))
     return 1

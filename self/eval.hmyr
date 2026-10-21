@@ -139,6 +139,37 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 2 { return 坏("write_text 要两个参数") }
     return 好(write_text(值们[0], 值们[1]))
   }
+  // 命令行参数：目标程序看到的是自己的那一份，由调用的那一层放进环境。
+  // 早先这里没有这一支，于是程序里写 argv() 会报「没有这个函数：argv」。
+  if 名 == "argv" {
+    if len(值们) != 0 { return 坏("argv 不要参数") }
+    let r = 查找(环境, "argv")
+    if r.found { return 好(r.value) }
+    return 好(())
+  }
+  // 输出：目标程序的 print 要落到宿主那一层去。
+  // 早先这里没有这一支 —— 于是「能算但说不出」：任何带 print 的程序都跑不了。
+  // 参数按 str 拼起来，因为这门语言的 print 就是「把每个值写成文字，连着写出去」。
+  if 名 == "print" {
+    var 出文 = ""
+    var i = 0
+    while i < len(值们) {
+      出文 = 出文 + str(值们[i])
+      i = i + 1
+    }
+    print(出文)
+    return 好(())
+  }
+  if 名 == "print_err" {
+    var 错文 = ""
+    var j = 0
+    while j < len(值们) {
+      错文 = 错文 + str(值们[j])
+      j = j + 1
+    }
+    print_err(错文)
+    return 好(())
+  }
   if 名 == "chr" {
     if len(值们) != 1 { return 坏("chr 要一个参数") }
     return 好(chr(值们[0]))
@@ -416,8 +447,14 @@ fn 装函数从(环境: Int, 函数们: Int, i: Int) -> Int {
   return 装函数从(更新(环境, "fn:" + 项[0], (项[1], 项[2])), 函数们, i + 1)
 }
 
+// 老的入口留着：两个套件按两参数调它，而它们测的是「适配层造出的语句表能不能跑」。
+// 新的一层带参数，因为目标程序要看得见自己的 argv —— 那件事以前根本做不到。
 fn 跑程序带函数(语句们: Int, 函数们: Int) -> Int {
-  return 执行块(语句们, 装函数从((), 函数们, 0))
+  return 跑程序带函数与参(语句们, 函数们, ())
+}
+
+fn 跑程序带函数与参(语句们: Int, 函数们: Int, 参们: Int) -> Int {
+  return 执行块(语句们, 更新(装函数从((), 函数们, 0), "argv", 参们))
 }
 
 // 造记录：先把每个值求出来，再交给 record_of。
