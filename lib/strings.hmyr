@@ -1,6 +1,6 @@
 // 字符串库：用这门语言自己的内置写出来的常用函数。
 //
-// 它为什么长这样，先说清四件事：
+// 它为什么长这样，先说清三件事：
 //
 //   一、没有复合条件。自举那一层的 parser 读不进两个与号，也读不进 and，
 //      所以「甲与乙」写成两层嵌套的 if —— 下面每一处范围判断都是这个形状。
@@ -10,8 +10,9 @@
 //   三、没有整数除法。除号给的是双精度，于是「除以十六取整」要写成先减余数再除 ——
 //      那一步精确，因为减完之后正好能被整除。
 //
-//   四、码点那一对里只有 chr 是不够的。ord 补上之前，大小写只能逐字符比较五十二行；
-//      补上之后它是「a 到 z 减三十二」两行范围判断。这个差别写在 design/LIB.txt 里。
+// 大小写这一对现在只是名字：to_upper 与 to_lower 是规格第一圈里的内置，
+// 它们在能力层查 UCD 的大小写表。这一份曾经自己逐字符比较（缺 ord 的时候），
+// 后来用 ord 写成范围判断，如今连范围判断也不必留。
 
 // 一个字符是不是空白。空白只有四种，而它们都不能用「或」连起来。
 fn 空白一(c: String) -> Bool {
@@ -30,50 +31,12 @@ fn 空白一(c: String) -> Bool {
   return false
 }
 
-// 大写的单个字符：a 到 z 减三十二就是大写。
-// 非 ASCII 的字母原样交回 —— 那一部分要查 UCD 的 CaseFolding，等它接进来再说。
-fn 大写一(c: String) -> String {
-  let k = ord(c)
-  if k >= 97 {
-    if k <= 122 {
-      return chr(k - 32)
-    }
-  }
-  return c
-}
-
-fn 小写一(c: String) -> String {
-  let k = ord(c)
-  if k >= 65 {
-    if k <= 90 {
-      return chr(k + 32)
-    }
-  }
-  return c
-}
-
-// 逐字符映射。两个大小写函数共用这一条。变 为 1 是大写，否则小写。
-fn 逐个换(s: String, 变: Int) -> String {
-  let n = len(s)
-  var 出 = ""
-  var i = 0
-  while i < n {
-    if 变 == 1 {
-      出 = 出 + 大写一(s[i])
-    } else {
-      出 = 出 + 小写一(s[i])
-    }
-    i = i + 1
-  }
-  return 出
-}
-
 fn 大写(s: String) -> String {
-  return 逐个换(s, 1)
+  return to_upper(s)
 }
 
 fn 小写(s: String) -> String {
-  return 逐个换(s, 0)
+  return to_lower(s)
 }
 
 // 修剪两头的空白。

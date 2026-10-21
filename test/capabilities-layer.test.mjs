@@ -85,7 +85,7 @@ console.log("二·五、能力报告：说类，不说版本，也不说路径")
 {
   // 这一条是从 oak-barrels 的协议第 4.3 节学来的：兼容性是一个类，不是一个版本。
   const 真 = 报告(本机能力());
-  ok("本机报了十八类", 真.类.length === 18, String(真.类.length));
+  ok("本机报了十九类", 真.类.length === 19, String(真.类.length));
   ok("本机没有「声明了却做不到」的", 真.缺.length === 0, JSON.stringify(真.缺));
   ok("它报的是类名，不是版本号", 真.类.every((c) => /^[a-z]+\.[a-z_.]+$/.test(c)), JSON.stringify(真.类.slice(0, 3)));
   const 文 = JSON.stringify(真);

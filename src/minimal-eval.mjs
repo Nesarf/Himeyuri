@@ -56,7 +56,7 @@ export function 述(v) {
   return String(v);
 }
 
-// 内置：只这十七个。实现照宿主的语义写，包括它们的失败编号。
+// 内置：只这十九个。实现照宿主的语义写，包括它们的失败编号。
 const 内置 = {
   len: (rt, a) => {
     const v = a[0];
@@ -84,6 +84,10 @@ const 内置 = {
     if (s.length === 0) rt.坏("HMYR-R0206", "ord of an empty string: there is no first character to read");
     return s.codePointAt(0);
   },
+  // 大小写：规格第一圈里有它们，而这一份一直没转发。
+  // 它们查的是一张随宿主来的大小写表，与归一化同一个性质 —— 所以表在能力层，这里只转发。
+  to_upper: (rt, a) => rt.cap.unicode.upper(rt.成串(a[0])),
+  to_lower: (rt, a) => rt.cap.unicode.lower(rt.成串(a[0])),
   chr: (rt, a) => {
     const cp = Math.floor(rt.成数(a[0]));
     if (cp < 0 || cp > 0x10ffff) rt.坏("HMYR-R0207", "not a code point: " + cp);

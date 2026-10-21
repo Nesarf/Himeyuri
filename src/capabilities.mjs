@@ -57,7 +57,7 @@ export const 本机能力 = (options = {}) => ({
     "time.wall_clock", "time.sleep",
     "env.locations", "env.variables", "path.manipulate",
     "terminal.size", "terminal.escape", "terminal.raw_input", "terminal.read",
-    "text.unicode.normalize", "text.unicode.properties", "thread.spawn",
+    "text.unicode.normalize", "text.unicode.properties", "text.unicode.case", "thread.spawn",
   ],
   thread: 线程能力(),
   file: {
@@ -124,12 +124,14 @@ export const 本机能力 = (options = {}) => ({
     },
   },
   unicode: {
-    // 归一化与「这个码元属于哪一类」各要一张 Unicode 表，而那张表是数据，不是这一层
-    // 能自制的。它属于世界这一侧：换一份表、或者换一个宿主，答案就可能不同 ——
+    // 归一化、大小写与「这个码元属于哪一类」各要一张 Unicode 表，而那张表是数据，
+    // 不是这一层能自制的。它属于世界这一侧：换一份表、或者换一个宿主，答案就可能不同 ——
     // 那正是「借」的意思，所以它在这里，而不是散在求值器里。
     //
-    // 这三条不需要效果：它们不读进程、不碰文件、不看时间，只查一张随宿主来的表。
+    // 这五条不需要效果：它们不读进程、不碰文件、不看时间，只查一张随宿主来的表。
     normalize: (s) => s.normalize("NFC"),
+    upper: (s) => s.toUpperCase(),
+    lower: (s) => s.toLowerCase(),
     isLetter: (s) => /\p{L}/u.test(s),
     isMark: (s) => /\p{M}/u.test(s),
   },
@@ -165,6 +167,7 @@ const 类表 = {
   "terminal.read": [["terminal", "readSync"]],
   "text.unicode.normalize": [["unicode", "normalize"]],
   "text.unicode.properties": [["unicode", "isLetter"]],
+  "text.unicode.case": [["unicode", "upper"], ["unicode", "lower"]],
   "thread.spawn": [["thread", "spawn"]],
 };
 
@@ -207,6 +210,6 @@ export const 空能力 = (记下) => {
     path: 组("path", ["join", "resolve", "dirname", "basename", "isAbsolute"]),
     terminal: 组("terminal", ["size", "clear", "escape", "color", "hide", "show", "isTTY", "setRaw", "readSync"]),
     thread: 组("thread", ["spawn", "signal", "load", "store", "wait"]),
-    unicode: 组("unicode", ["normalize", "isLetter", "isMark"]),
+    unicode: 组("unicode", ["normalize", "upper", "lower", "isLetter", "isMark"]),
   };
 };

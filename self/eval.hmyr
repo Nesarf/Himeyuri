@@ -107,6 +107,15 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 3 { return 坏("slice 要三个参数") }
     return 好(slice(值们[0], 值们[1], 值们[2]))
   }
+  // 大小写是规格第一圈里的内置。宿主那一份一直有，自举这一层补上转发就够了。
+  if 名 == "to_upper" {
+    if len(值们) != 1 { return 坏("to_upper 要一个参数") }
+    return 好(to_upper(值们[0]))
+  }
+  if 名 == "to_lower" {
+    if len(值们) != 1 { return 坏("to_lower 要一个参数") }
+    return 好(to_lower(值们[0]))
+  }
   if 名 == "chr" {
     if len(值们) != 1 { return 坏("chr 要一个参数") }
     return 好(chr(值们[0]))
