@@ -27,7 +27,7 @@ export const 版本 = 1;
 export const 操作码表 = [
   "ADD", "ASSIGN", "BOOL", "CALLB", "CALLF", "CONST", "DIV", "EQ", "FIELD", "GE",
   "GLOBAL", "GT", "INDEX", "JMP", "JMPF", "JMPF_KEEP", "JMPT", "JMPT_KEEP", "LE",
-  "LOAD", "LT", "MOD", "MUL", "NE", "NOT", "NEG", "POP", "RECORD", "RET", "STORE",
+  "LOAD", "LT", "MOD", "MUL", "NE", "NEG", "NOT", "POP", "RECORD", "RET", "STORE",
   "SUB", "TUPLE",
 ];
 

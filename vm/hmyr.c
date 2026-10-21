@@ -1,0 +1,790 @@
+/* hmyr.c -- a bytecode machine for HMYR, in C.
+ *
+ * Why this file exists: the language can already interpret itself, but the
+ * machine at the bottom of that stack is JavaScript. This is the same machine,
+ * written so that it is not. It reads the .hmyrb format that src/code-file.mjs
+ * writes and executes it. It knows nothing about HMYR syntax -- only the
+ * instruction stream -- which is the point: it is the machine, not the language.
+ *
+ * Scope of this first version, stated so nobody has to guess:
+ *   - opcodes: all of them
+ *   - builtins: print, print_err, str, len, chr, ord, to_int, slice
+ *     anything else reports HMYR-R0104 and stops
+ *   - memory: values are allocated and never freed (a run is short; a GC is a
+ *     different piece of work)
+ *   - numbers are printed with %.15g, which agrees with the JavaScript side on
+ *     integers and short fractions but not on every value; the exact
+ *     shortest-round-trip formatter is src/decimal.mjs and porting it is work
+ *     for a later round
+ *
+ * Build:  gcc -std=c11 -O2 -o hmyr-vm vm/hmyr.c
+ * Run:    ./hmyr-vm program.hmyrb
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+
+/* ---- values ---------------------------------------------------------- */
+
+typedef enum { T_NULL, T_NUM, T_STR, T_BOOL, T_TUPLE, T_RECORD } Tag;
+
+typedef struct Value Value;
+
+typedef struct {
+  const uint16_t *names_blob;   /* field names, packed one after another */
+  const uint32_t *name_lens;
+  Value *vals;
+  uint32_t n;
+} Record;
+
+struct Value {
+  Tag tag;
+  double num;
+  int boolean;
+  const uint16_t *s;   /* string: points into the file image, or into a heap copy */
+  uint32_t slen;
+  Value *items;        /* tuple items */
+  uint32_t ilen;
+  Record rec;
+};
+
+static Value v_null(void) { Value v; memset(&v, 0, sizeof v); v.tag = T_NULL; return v; }
+static Value v_num(double n) { Value v = v_null(); v.tag = T_NUM; v.num = n; return v; }
+static Value v_bool(int b) { Value v = v_null(); v.tag = T_BOOL; v.boolean = b ? 1 : 0; return v; }
+static Value v_str(const uint16_t *p, uint32_t len) {
+  Value v = v_null(); v.tag = T_STR; v.s = p; v.slen = len; return v;
+}
+
+static Value *alloc_values(uint32_t n) {
+  Value *p = (Value *)calloc(n ? n : 1, sizeof(Value));
+  if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  return p;
+}
+
+/* ---- reading the file ------------------------------------------------ */
+
+typedef struct {
+  const uint8_t *bytes;
+  size_t len;
+  size_t at;
+} Reader;
+
+static void need(Reader *r, size_t n) {
+  if (r->at + n > r->len) {
+    fprintf(stderr, "hmyr: the file ends in the middle of something (offset %llu)\n",
+            (unsigned long long)r->at);
+    exit(2);
+  }
+}
+
+static uint8_t rd_u8(Reader *r) { need(r, 1); return r->bytes[r->at++]; }
+
+static uint16_t rd_u16(Reader *r) {
+  need(r, 2);
+  uint16_t v = (uint16_t)(r->bytes[r->at] | (r->bytes[r->at + 1] << 8));
+  r->at += 2;
+  return v;
+}
+
+static uint32_t rd_u32(Reader *r) {
+  need(r, 4);
+  uint32_t v = (uint32_t)(r->bytes[r->at] | (r->bytes[r->at + 1] << 8)
+                          | (r->bytes[r->at + 2] << 16) | ((uint32_t)r->bytes[r->at + 3] << 24));
+  r->at += 4;
+  return v;
+}
+
+static double rd_f64(Reader *r) {
+  need(r, 8);
+  uint64_t bits = 0;
+  for (int i = 7; i >= 0; i--) bits = (bits << 8) | r->bytes[r->at + (size_t)i];
+  r->at += 8;
+  double d;
+  memcpy(&d, &bits, 8);
+  return d;
+}
+
+/* Strings are read as UTF-16 code units. They are kept in place in the file
+ * image (which stays mapped for the whole run), so nothing is copied. */
+static const uint16_t *rd_str(Reader *r, uint32_t *out_len) {
+  uint16_t n = rd_u16(r);
+  need(r, (size_t)n * 2);
+  /* The image is byte-aligned; we cannot hand out a uint16_t* safely unless we
+   * copy, so each string gets its own buffer. */
+  uint16_t *buf = (uint16_t *)malloc((size_t)(n ? n : 1) * sizeof(uint16_t));
+  if (!buf) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  for (uint32_t i = 0; i < n; i++) buf[i] = rd_u16(r);
+  *out_len = n;
+  return buf;
+}
+
+/* ---- program --------------------------------------------------------- */
+
+enum {
+  OP_ADD, OP_ASSIGN, OP_BOOL, OP_CALLB, OP_CALLF, OP_CONST, OP_DIV, OP_EQ,
+  OP_FIELD, OP_GE, OP_GLOBAL, OP_GT, OP_INDEX, OP_JMP, OP_JMPF, OP_JMPF_KEEP,
+  OP_JMPT, OP_JMPT_KEEP, OP_LE, OP_LOAD, OP_LT, OP_MOD, OP_MUL, OP_NE,
+  OP_NEG, OP_NOT, OP_POP, OP_RECORD, OP_RET, OP_STORE, OP_SUB, OP_TUPLE
+};
+
+static const char *op_names[] = {
+  "ADD", "ASSIGN", "BOOL", "CALLB", "CALLF", "CONST", "DIV", "EQ",
+  "FIELD", "GE", "GLOBAL", "GT", "INDEX", "JMP", "JMPF", "JMPF_KEEP",
+  "JMPT", "JMPT_KEEP", "LE", "LOAD", "LT", "MOD", "MUL", "NE",
+  "NEG", "NOT", "POP", "RECORD", "RET", "STORE", "SUB", "TUPLE"
+};
+
+typedef struct {
+  uint8_t op;
+  int64_t a;       /* slot, jump target, pool index, or count */
+  int64_t b;       /* second immediate (argument count, record arity) */
+  Value val;       /* CONST payload */
+} Ins;
+
+typedef struct {
+  uint16_t *name;
+  uint32_t name_len;
+  uint16_t nargs;
+  uint16_t nslots;
+  uint16_t neffects;
+  uint16_t **effects;
+  uint32_t *effect_lens;
+  uint32_t ncode;
+  Ins *code;
+} Func;
+
+/* A name pool: every string a caller might need to compare by name. */
+static uint16_t **pool_p;
+static uint32_t *pool_len;
+static uint32_t pool_n, pool_cap;
+
+static int64_t pool_add(const uint16_t *p, uint32_t len) {
+  if (pool_n == pool_cap) {
+    pool_cap = pool_cap ? pool_cap * 2 : 256;
+    pool_p = (uint16_t **)realloc(pool_p, pool_cap * sizeof(uint16_t *));
+    pool_len = (uint32_t *)realloc(pool_len, pool_cap * sizeof(uint32_t));
+    if (!pool_p || !pool_len) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  }
+  pool_p[pool_n] = (uint16_t *)p;
+  pool_len[pool_n] = len;
+  return (int64_t)pool_n++;
+}
+
+static int name_is(int64_t idx, const char *ascii) {
+  if (idx < 0 || (uint32_t)idx >= pool_n) return 0;
+  uint32_t n = pool_len[idx];
+  if (n != strlen(ascii)) return 0;
+  for (uint32_t i = 0; i < n; i++) if (pool_p[idx][i] != (uint16_t)(unsigned char)ascii[i]) return 0;
+  return 1;
+}
+
+static Func *funcs;
+static uint32_t nfuncs;
+
+static int64_t read_value(Reader *r, Value *out);
+
+static int64_t read_value(Reader *r, Value *out) {
+  uint8_t t = rd_u8(r);
+  if (t == 0x00) { *out = v_null(); return 0; }
+  if (t == 0x01) { *out = v_num(rd_f64(r)); return 0; }
+  if (t == 0x02) {
+    uint32_t n;
+    const uint16_t *p = rd_str(r, &n);
+    *out = v_str(p, n);
+    return 0;
+  }
+  if (t == 0x03) { *out = v_bool(rd_u8(r)); return 0; }
+  if (t == 0x04) {
+    uint16_t n = rd_u16(r);
+    Value *items = alloc_values(n);
+    for (uint16_t i = 0; i < n; i++) read_value(r, &items[i]);
+    Value v = v_null();
+    v.tag = T_TUPLE;
+    v.items = items;
+    v.ilen = n;
+    *out = v;
+    return 0;
+  }
+  if (t == 0x05) {
+    uint16_t n = rd_u16(r);
+    Value *vals = alloc_values(n);
+    const uint16_t **names = (const uint16_t **)calloc(n ? n : 1, sizeof(uint16_t *));
+    uint32_t *lens = (uint32_t *)calloc(n ? n : 1, sizeof(uint32_t));
+    for (uint16_t i = 0; i < n; i++) {
+      uint32_t len = 0;
+      names[i] = rd_str(r, &len);
+      lens[i] = len;
+      read_value(r, &vals[i]);
+    }
+    Value v = v_null();
+    v.tag = T_RECORD;
+    v.rec.vals = vals;
+    v.rec.name_lens = lens;
+    v.rec.n = n;
+    /* names are stored as a table of pointers; keep them reachable */
+    static const uint16_t **last_names;
+    last_names = names;
+    (void)last_names;
+    v.rec.names_blob = (const uint16_t *)names; /* reinterpreted in field lookup below */
+    *out = v;
+    return 0;
+  }
+  fprintf(stderr, "hmyr: unknown value tag %u\n", t);
+  exit(2);
+}
+
+static void load_program(const uint8_t *bytes, size_t len) {
+  Reader r = { bytes, len, 0 };
+  const char *magic = "HMYRB";
+  for (int i = 0; i < 5; i++) {
+    if (rd_u8(&r) != (uint8_t)magic[i]) { fprintf(stderr, "hmyr: not a .hmyrb file\n"); exit(2); }
+  }
+  uint16_t ver = rd_u16(&r);
+  if (ver != 1) { fprintf(stderr, "hmyr: file version %u, this reader knows 1\n", ver); exit(2); }
+
+  nfuncs = rd_u16(&r);
+  funcs = (Func *)calloc(nfuncs ? nfuncs : 1, sizeof(Func));
+  for (uint32_t i = 0; i < nfuncs; i++) {
+    Func *f = &funcs[i];
+    f->name = (uint16_t *)rd_str(&r, &f->name_len);
+    f->nargs = rd_u16(&r);
+    f->nslots = rd_u16(&r);
+    f->neffects = rd_u16(&r);
+    f->effects = (uint16_t **)calloc(f->neffects ? f->neffects : 1, sizeof(uint16_t *));
+    f->effect_lens = (uint32_t *)calloc(f->neffects ? f->neffects : 1, sizeof(uint32_t));
+    for (uint16_t e = 0; e < f->neffects; e++) f->effects[e] = (uint16_t *)rd_str(&r, &f->effect_lens[e]);
+    f->ncode = rd_u32(&r);
+    f->code = (Ins *)calloc(f->ncode ? f->ncode : 1, sizeof(Ins));
+    for (uint32_t c = 0; c < f->ncode; c++) {
+      Ins *in = &f->code[c];
+      in->op = rd_u8(&r);
+      in->a = 0;
+      in->b = 0;
+      in->val = v_null();
+      switch (in->op) {
+        case OP_CONST: read_value(&r, &in->val); break;
+        case OP_LOAD: case OP_ASSIGN: in->a = rd_u16(&r); break;
+        case OP_STORE: in->a = rd_u16(&r); in->b = rd_u8(&r); break;
+        case OP_GLOBAL: case OP_FIELD: {
+          uint32_t n; const uint16_t *p = rd_str(&r, &n); in->a = pool_add(p, n); break;
+        }
+        case OP_JMP: case OP_JMPF: case OP_JMPT: case OP_JMPF_KEEP: case OP_JMPT_KEEP:
+          in->a = rd_u32(&r); break;
+        case OP_TUPLE: in->a = rd_u16(&r); break;
+        case OP_RECORD: {
+          uint16_t n = rd_u16(&r);
+          int64_t start = (int64_t)pool_n;
+          for (uint16_t k = 0; k < n; k++) {
+            uint32_t len; const uint16_t *p = rd_str(&r, &len); pool_add(p, len);
+          }
+          in->a = start;
+          in->b = n;
+          break;
+        }
+        case OP_CALLB: case OP_CALLF: {
+          uint32_t n; const uint16_t *p = rd_str(&r, &n);
+          in->a = pool_add(p, n);
+          in->b = rd_u16(&r);
+          break;
+        }
+        default: break;
+      }
+    }
+  }
+  uint16_t nglob = rd_u16(&r);
+  for (uint16_t i = 0; i < nglob; i++) { uint32_t n; rd_str(&r, &n); }
+}
+
+/* ---- writing UTF-8 --------------------------------------------------- */
+
+static void put_utf8(uint32_t cp) {
+  if (cp < 0x80) { putchar((int)cp); return; }
+  if (cp < 0x800) {
+    putchar((int)(0xC0 | (cp >> 6)));
+    putchar((int)(0x80 | (cp & 0x3F)));
+    return;
+  }
+  if (cp < 0x10000) {
+    putchar((int)(0xE0 | (cp >> 12)));
+    putchar((int)(0x80 | ((cp >> 6) & 0x3F)));
+    putchar((int)(0x80 | (cp & 0x3F)));
+    return;
+  }
+  putchar((int)(0xF0 | (cp >> 18)));
+  putchar((int)(0x80 | ((cp >> 12) & 0x3F)));
+  putchar((int)(0x80 | ((cp >> 6) & 0x3F)));
+  putchar((int)(0x80 | (cp & 0x3F)));
+}
+
+static void write_utf8(const uint16_t *s, uint32_t len, FILE *out) {
+  for (uint32_t i = 0; i < len; i++) {
+    uint32_t cp = s[i];
+    if (cp >= 0xD800 && cp <= 0xDBFF && i + 1 < len) {
+      uint32_t lo = s[i + 1];
+      if (lo >= 0xDC00 && lo <= 0xDFFF) {
+        cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00);
+        i++;
+      }
+    }
+    if (out == stdout) put_utf8(cp);
+    else {
+      /* encode into a small buffer so print_err can share the code */
+      unsigned char b[4]; int n = 0;
+      if (cp < 0x80) { b[n++] = (unsigned char)cp; }
+      else if (cp < 0x800) { b[n++] = (unsigned char)(0xC0 | (cp >> 6)); b[n++] = (unsigned char)(0x80 | (cp & 0x3F)); }
+      else if (cp < 0x10000) { b[n++] = (unsigned char)(0xE0 | (cp >> 12)); b[n++] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F)); b[n++] = (unsigned char)(0x80 | (cp & 0x3F)); }
+      else { b[n++] = (unsigned char)(0xF0 | (cp >> 18)); b[n++] = (unsigned char)(0x80 | ((cp >> 12) & 0x3F)); b[n++] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F)); b[n++] = (unsigned char)(0x80 | (cp & 0x3F)); }
+      fwrite(b, 1, (size_t)n, out);
+    }
+  }
+}
+
+/* ---- number to text -------------------------------------------------- */
+
+/* Shortest form that round-trips, the way the JavaScript side does it for the
+ * values this machine has printed so far. Not the exact formatter in
+ * src/decimal.mjs -- see the header note. */
+static uint32_t num_to_text(double n, uint16_t *buf, uint32_t cap) {
+  char tmp[64];
+  if (n == (double)(long long)n && n > -1e15 && n < 1e15) snprintf(tmp, sizeof tmp, "%.0f", n);
+  else snprintf(tmp, sizeof tmp, "%.15g", n);
+  uint32_t len = (uint32_t)strlen(tmp);
+  if (len > cap) len = cap;
+  for (uint32_t i = 0; i < len; i++) buf[i] = (uint16_t)(unsigned char)tmp[i];
+  return len;
+}
+
+/* ---- the machine ----------------------------------------------------- */
+
+static int step_limit = 5000000;
+static long steps = 0;
+static Value *g_stack;
+static uint32_t g_stack_n, g_stack_cap;
+
+static void push(Value v) {
+  if (g_stack_n == g_stack_cap) {
+    g_stack_cap = g_stack_cap ? g_stack_cap * 2 : 256;
+    g_stack = (Value *)realloc(g_stack, g_stack_cap * sizeof(Value));
+    if (!g_stack) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  }
+  g_stack[g_stack_n++] = v;
+}
+
+static Value pop(void) {
+  if (g_stack_n == 0) return v_null();
+  return g_stack[--g_stack_n];
+}
+
+static int truthy(Value v) {
+  if (v.tag == T_BOOL) return v.boolean;
+  if (v.tag == T_NUM) return v.num != 0;
+  if (v.tag == T_STR) return v.slen != 0;
+  if (v.tag == T_NULL) return 0;
+  if (v.tag == T_TUPLE) return v.ilen != 0;
+  return 1;
+}
+
+static int g_failed = 0;
+static char g_fail_msg[512];
+
+static Value fail(const char *code, const char *msg) {
+  if (!g_failed) {
+    g_failed = 1;
+    snprintf(g_fail_msg, sizeof g_fail_msg, "%s %s", code, msg);
+  }
+  return v_null();
+}
+
+static double as_num(Value v, int *ok) {
+  *ok = (v.tag == T_NUM);
+  return v.num;
+}
+
+static Value value_to_text(Value v, Value *out);
+
+/* Text form of a value, matching what the JavaScript side prints for the kinds
+ * this machine supports. Returns the same value as a string. */
+static Value value_to_text(Value v, Value *out) {
+  if (v.tag == T_STR) { *out = v; return v; }
+  if (v.tag == T_NUM) {
+    uint16_t buf[64];
+    uint32_t n = num_to_text(v.num, buf, 64);
+    uint16_t *p = (uint16_t *)malloc((size_t)n * sizeof(uint16_t));
+    memcpy(p, buf, n * sizeof(uint16_t));
+    *out = v_str(p, n);
+    return *out;
+  }
+  if (v.tag == T_BOOL) {
+    const char *t = v.boolean ? "true" : "false";
+    uint16_t *p = (uint16_t *)malloc(strlen(t) * sizeof(uint16_t));
+    for (size_t i = 0; i < strlen(t); i++) p[i] = (uint16_t)(unsigned char)t[i];
+    *out = v_str(p, (uint32_t)strlen(t));
+    return *out;
+  }
+  if (v.tag == T_NULL) {
+    uint16_t *p = (uint16_t *)malloc(3 * sizeof(uint16_t));
+    p[0] = 'n'; p[1] = 'i'; p[2] = 'l';
+    *out = v_str(p, 3);
+    return *out;
+  }
+  if (v.tag == T_TUPLE) {
+    /* "[" + each + ", " + "]" */
+    uint32_t cap = 16, n = 0;
+    uint16_t *buf = (uint16_t *)malloc(cap * sizeof(uint16_t));
+    #define PUT(ch) do { if (n + 1 >= cap) { cap *= 2; buf = (uint16_t *)realloc(buf, cap * sizeof(uint16_t)); } buf[n++] = (uint16_t)(ch); } while (0)
+    PUT('[');
+    for (uint32_t i = 0; i < v.ilen; i++) {
+      if (i) { PUT(','); PUT(' '); }
+      Value inner;
+      value_to_text(v.items[i], &inner);
+      for (uint32_t k = 0; k < inner.slen; k++) PUT(inner.s[k]);
+    }
+    PUT(']');
+    #undef PUT
+    *out = v_str(buf, n);
+    return *out;
+  }
+  /* records: the JavaScript side uses String(obj), which is "[object Object]" */
+  {
+    const char *t = "[object Object]";
+    uint16_t *p = (uint16_t *)malloc(strlen(t) * sizeof(uint16_t));
+    for (size_t i = 0; i < strlen(t); i++) p[i] = (uint16_t)(unsigned char)t[i];
+    *out = v_str(p, (uint32_t)strlen(t));
+    return *out;
+  }
+}
+
+static int str_eq(Value a, Value b) {
+  if (a.slen != b.slen) return 0;
+  for (uint32_t i = 0; i < a.slen; i++) if (a.s[i] != b.s[i]) return 0;
+  return 1;
+}
+
+static int str_cmp(Value a, Value b) {
+  uint32_t n = a.slen < b.slen ? a.slen : b.slen;
+  for (uint32_t i = 0; i < n; i++) {
+    if (a.s[i] < b.s[i]) return -1;
+    if (a.s[i] > b.s[i]) return 1;
+  }
+  if (a.slen < b.slen) return -1;
+  if (a.slen > b.slen) return 1;
+  return 0;
+}
+
+static int values_equal(Value a, Value b) {
+  if (a.tag == T_NUM && b.tag == T_NUM) return a.num == b.num;
+  if (a.tag == T_STR && b.tag == T_STR) return str_eq(a, b);
+  if (a.tag != b.tag) return 0;
+  if (a.tag == T_BOOL) return a.boolean == b.boolean;
+  if (a.tag == T_NULL) return 1;
+  return 0;
+}
+
+static Func *find_func(int64_t name_idx) {
+  for (uint32_t i = 0; i < nfuncs; i++) {
+    if (funcs[i].name_len != pool_len[name_idx]) continue;
+    uint32_t same = 1;
+    for (uint32_t k = 0; k < funcs[i].name_len; k++) {
+      if (funcs[i].name[k] != pool_p[name_idx][k]) { same = 0; break; }
+    }
+    if (same) return &funcs[i];
+  }
+  return NULL;
+}
+
+static Value run_func(Func *f, Value *args, int nargs);
+
+/* Builtins. Each returns 1 on success and stores into *out; 0 means "not a
+ * builtin I know", and the failure is already recorded. */
+static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
+  if (name_is(name_idx, "print") || name_is(name_idx, "print_err")) {
+    FILE *to = name_is(name_idx, "print") ? stdout : stderr;
+    for (int i = 0; i < nargs; i++) {
+      Value t;
+      value_to_text(args[i], &t);
+      write_utf8(t.s, t.slen, to);
+    }
+    *out = v_null();
+    return 1;
+  }
+  if (name_is(name_idx, "str")) {
+    if (nargs != 1) { fail("HMYR-R0101", "str wants one argument"); return 1; }
+    value_to_text(args[0], out);
+    return 1;
+  }
+  if (name_is(name_idx, "len")) {
+    if (nargs != 1) { fail("HMYR-R0101", "len wants one argument"); return 1; }
+    if (args[0].tag == T_STR) { *out = v_num((double)args[0].slen); return 1; }
+    if (args[0].tag == T_TUPLE) { *out = v_num((double)args[0].ilen); return 1; }
+    fail("HMYR-R0107", "len wants a string or a tuple");
+    return 1;
+  }
+  if (name_is(name_idx, "chr")) {
+    if (nargs != 1) { fail("HMYR-R0101", "chr wants one argument"); return 1; }
+    int ok = 0; double cp = as_num(args[0], &ok);
+    if (!ok) { fail("HMYR-R0130", "chr wants a number"); return 1; }
+    uint16_t *p = (uint16_t *)malloc(sizeof(uint16_t));
+    p[0] = (uint16_t)(long long)cp;
+    *out = v_str(p, 1);
+    return 1;
+  }
+  if (name_is(name_idx, "ord")) {
+    if (nargs != 1) { fail("HMYR-R0101", "ord wants one argument"); return 1; }
+    if (args[0].tag != T_STR || args[0].slen == 0) { fail("HMYR-R0206", "ord of an empty string"); return 1; }
+    *out = v_num((double)args[0].s[0]);
+    return 1;
+  }
+  if (name_is(name_idx, "to_int")) {
+    if (nargs != 1) { fail("HMYR-R0101", "to_int wants one argument"); return 1; }
+    if (args[0].tag == T_NUM) { *out = args[0]; return 1; }
+    if (args[0].tag != T_STR) { fail("HMYR-R0130", "to_int wants a number or a string"); return 1; }
+    /* decimal only: digits with an optional leading minus */
+    uint32_t i = 0; int neg = 0; long long v = 0; int any = 0;
+    if (i < args[0].slen && args[0].s[i] == '-') { neg = 1; i++; }
+    for (; i < args[0].slen; i++) {
+      uint16_t ch = args[0].s[i];
+      if (ch < '0' || ch > '9') { fail("HMYR-R0130", "to_int wants a decimal integer"); return 1; }
+      v = v * 10 + (ch - '0');
+      any = 1;
+    }
+    if (!any) { fail("HMYR-R0130", "to_int wants a decimal integer"); return 1; }
+    *out = v_num((double)(neg ? -v : v));
+    return 1;
+  }
+  if (name_is(name_idx, "slice")) {
+    if (nargs != 3) { fail("HMYR-R0101", "slice wants three arguments"); return 1; }
+    if (args[0].tag != T_STR) { fail("HMYR-R0130", "slice wants a string"); return 1; }
+    int ok1 = 0, ok2 = 0;
+    double a = as_num(args[1], &ok1), b = as_num(args[2], &ok2);
+    if (!ok1 || !ok2) { fail("HMYR-R0130", "slice bounds must be numbers"); return 1; }
+    long long from = (long long)a, to = (long long)b;
+    if (from < 0) from = 0;
+    if (to > (long long)args[0].slen) to = (long long)args[0].slen;
+    if (to < from) to = from;
+    *out = v_str(args[0].s + from, (uint32_t)(to - from));
+    return 1;
+  }
+  fail("HMYR-R0104", "this machine does not have that builtin yet");
+  return 1;
+}
+
+static Value run_func(Func *f, Value *args, int nargs) {
+  if (g_failed) return v_null();
+  if (nargs != (int)f->nargs) {
+    fail("HMYR-R0101", "that function got the wrong number of arguments");
+    return v_null();
+  }
+  Value *slots = alloc_values(f->nslots);
+  for (int i = 0; i < nargs && i < (int)f->nslots; i++) slots[i] = args[i];
+  uint32_t base = g_stack_n;
+  int32_t pc = 0;
+  for (;;) {
+    if (g_failed) return v_null();
+    if (++steps > step_limit) { fail("HMYR-R0102", "the program ran for too long"); return v_null(); }
+    if ((uint32_t)pc >= f->ncode) { fail("HMYR-R0110", "the instruction stream ran off its end"); return v_null(); }
+    Ins *in = &f->code[pc];
+    switch (in->op) {
+      case OP_CONST: push(in->val); pc++; break;
+      case OP_LOAD: push(slots[in->a]); pc++; break;
+      case OP_STORE: slots[in->a] = pop(); pc++; break;
+      case OP_ASSIGN: slots[in->a] = pop(); pc++; break;
+      case OP_POP: pop(); pc++; break;
+      case OP_GLOBAL: { fail("HMYR-R0104", "globals are not in this machine yet"); return v_null(); }
+      case OP_BOOL: { Value v = pop(); push(v_bool(truthy(v))); pc++; break; }
+      case OP_NEG: { Value v = pop(); int ok = 0; double d = as_num(v, &ok);
+        if (!ok) { fail("HMYR-R0130", "expected a number"); return v_null(); } push(v_num(-d)); pc++; break; }
+      case OP_NOT: { Value v = pop(); push(v_bool(!truthy(v))); pc++; break; }
+      case OP_ADD: {
+        Value b = pop(), a = pop();
+        if (a.tag == T_TUPLE && b.tag == T_TUPLE) {
+          Value v = v_null(); v.tag = T_TUPLE; v.ilen = a.ilen + b.ilen;
+          v.items = alloc_values(v.ilen);
+          memcpy(v.items, a.items, a.ilen * sizeof(Value));
+          memcpy(v.items + a.ilen, b.items, b.ilen * sizeof(Value));
+          push(v);
+        } else if (a.tag == T_STR || b.tag == T_STR) {
+          Value sa, sb; value_to_text(a, &sa); value_to_text(b, &sb);
+          uint16_t *p = (uint16_t *)malloc((size_t)(sa.slen + sb.slen) * sizeof(uint16_t));
+          memcpy(p, sa.s, (size_t)sa.slen * sizeof(uint16_t));
+          memcpy(p + sa.slen, sb.s, (size_t)sb.slen * sizeof(uint16_t));
+          push(v_str(p, sa.slen + sb.slen));
+        } else {
+          int ok1 = 0, ok2 = 0;
+          double x = as_num(a, &ok1), y = as_num(b, &ok2);
+          if (!ok1 || !ok2) { fail("HMYR-R0130", "expected numbers"); return v_null(); }
+          push(v_num(x + y));
+        }
+        pc++; break;
+      }
+      case OP_SUB: { Value b = pop(), a = pop(); int o1 = 0, o2 = 0;
+        double x = as_num(a, &o1), y = as_num(b, &o2);
+        if (!o1 || !o2) { fail("HMYR-R0130", "expected numbers"); return v_null(); }
+        push(v_num(x - y)); pc++; break; }
+      case OP_MUL: { Value b = pop(), a = pop(); int o1 = 0, o2 = 0;
+        double x = as_num(a, &o1), y = as_num(b, &o2);
+        if (!o1 || !o2) { fail("HMYR-R0130", "expected numbers"); return v_null(); }
+        push(v_num(x * y)); pc++; break; }
+      case OP_DIV: { Value b = pop(), a = pop(); int o1 = 0, o2 = 0;
+        double x = as_num(a, &o1), y = as_num(b, &o2);
+        if (!o1 || !o2) { fail("HMYR-R0130", "expected numbers"); return v_null(); }
+        if (y == 0) { fail("HMYR-R0120", "division by zero"); return v_null(); }
+        push(v_num(x / y)); pc++; break; }
+      case OP_MOD: { Value b = pop(), a = pop(); int o1 = 0, o2 = 0;
+        double x = as_num(a, &o1), y = as_num(b, &o2);
+        if (!o1 || !o2) { fail("HMYR-R0130", "expected numbers"); return v_null(); }
+        if (y == 0) { fail("HMYR-R0120", "division by zero"); return v_null(); }
+        double m = x - y * (double)(long long)(x / y);
+        push(v_num(m)); pc++; break; }
+      case OP_EQ: { Value b = pop(), a = pop(); push(v_bool(values_equal(a, b))); pc++; break; }
+      case OP_NE: { Value b = pop(), a = pop(); push(v_bool(!values_equal(a, b))); pc++; break; }
+      case OP_LT: case OP_LE: case OP_GT: case OP_GE: {
+        Value b = pop(), a = pop();
+        int c = 0;
+        if (a.tag == T_NUM && b.tag == T_NUM) c = (a.num < b.num) ? -1 : (a.num > b.num ? 1 : 0);
+        else if (a.tag == T_STR && b.tag == T_STR) c = str_cmp(a, b);
+        else { fail("HMYR-R0131", "cannot compare those two values"); return v_null(); }
+        int r = 0;
+        if (in->op == OP_LT) r = c < 0;
+        else if (in->op == OP_LE) r = c <= 0;
+        else if (in->op == OP_GT) r = c > 0;
+        else r = c >= 0;
+        push(v_bool(r)); pc++; break;
+      }
+      case OP_JMP: pc = (int32_t)in->a; break;
+      case OP_JMPF: { Value v = pop(); if (!truthy(v)) pc = (int32_t)in->a; else pc++; break; }
+      case OP_JMPT: { Value v = pop(); if (truthy(v)) pc = (int32_t)in->a; else pc++; break; }
+      case OP_JMPF_KEEP: if (g_stack_n > base && !truthy(g_stack[g_stack_n - 1])) pc = (int32_t)in->a; else { pop(); pc++; } break;
+      case OP_JMPT_KEEP: if (g_stack_n > base && truthy(g_stack[g_stack_n - 1])) pc = (int32_t)in->a; else { pop(); pc++; } break;
+      case OP_TUPLE: {
+        uint32_t n = (uint32_t)in->a;
+        Value v = v_null(); v.tag = T_TUPLE; v.ilen = n;
+        v.items = alloc_values(n);
+        for (uint32_t i = 0; i < n; i++) v.items[i] = g_stack[g_stack_n - n + i];
+        g_stack_n -= n;
+        push(v); pc++; break;
+      }
+      case OP_RECORD: {
+        uint32_t n = (uint32_t)in->b;
+        Value v = v_null(); v.tag = T_RECORD; v.rec.n = n;
+        v.rec.vals = alloc_values(n);
+        uint32_t *lens = (uint32_t *)calloc(n ? n : 1, sizeof(uint32_t));
+        const uint16_t **names = (const uint16_t **)calloc(n ? n : 1, sizeof(uint16_t *));
+        for (uint32_t i = 0; i < n; i++) {
+          lens[i] = pool_len[in->a + i];
+          names[i] = pool_p[in->a + i];
+        }
+        for (uint32_t i = 0; i < n; i++) v.rec.vals[i] = g_stack[g_stack_n - n + i];
+        g_stack_n -= n;
+        v.rec.name_lens = lens;
+        v.rec.names_blob = (const uint16_t *)names;
+        push(v); pc++; break;
+      }
+      case OP_FIELD: {
+        Value t = pop();
+        if (t.tag != T_RECORD) { fail("HMYR-R0106", "no field on that value"); return v_null(); }
+        /* find the field by name */
+        int found = 0;
+        for (uint32_t i = 0; i < t.rec.n; i++) {
+          if (t.rec.name_lens[i] != pool_len[in->a]) continue;
+          const uint16_t **table = (const uint16_t **)t.rec.names_blob;
+          uint32_t same = 1;
+          for (uint32_t k = 0; k < t.rec.name_lens[i]; k++) {
+            if (table[i][k] != pool_p[in->a][k]) { same = 0; break; }
+          }
+          if (same) { push(t.rec.vals[i]); found = 1; break; }
+        }
+        if (!found) { fail("HMYR-R0106", "no field with that name"); return v_null(); }
+        pc++; break;
+      }
+      case OP_INDEX: {
+        Value i = pop(), t = pop();
+        int ok = 0; double d = as_num(i, &ok);
+        if (!ok) { fail("HMYR-R0130", "index must be a number"); return v_null(); }
+        long long idx = (long long)d;
+        if (t.tag == T_STR) {
+          if (idx < 0 || idx >= (long long)t.slen) { fail("HMYR-R0151", "index outside the value"); return v_null(); }
+          push(v_str(t.s + idx, 1));
+        } else if (t.tag == T_TUPLE) {
+          if (idx < 0 || idx >= (long long)t.ilen) { fail("HMYR-R0151", "index outside the value"); return v_null(); }
+          push(t.items[idx]);
+        } else { fail("HMYR-R0152", "cannot index that value"); return v_null(); }
+        pc++; break;
+      }
+      case OP_CALLB: {
+        uint32_t n = (uint32_t)in->b;
+        Value *args = (Value *)malloc((size_t)(n ? n : 1) * sizeof(Value));
+        for (uint32_t i = 0; i < n; i++) args[i] = g_stack[g_stack_n - n + i];
+        g_stack_n -= n;
+        Value out = v_null();
+        call_builtin(in->a, args, (int)n, &out);
+        free(args);
+        if (g_failed) return v_null();
+        push(out); pc++; break;
+      }
+      case OP_CALLF: {
+        Func *callee = find_func(in->a);
+        if (!callee) { fail("HMYR-R0104", "there is no such function"); return v_null(); }
+        uint32_t n = (uint32_t)in->b;
+        Value *args = (Value *)malloc((size_t)(n ? n : 1) * sizeof(Value));
+        for (uint32_t i = 0; i < n; i++) args[i] = g_stack[g_stack_n - n + i];
+        g_stack_n -= n;
+        Value r = run_func(callee, args, (int)n);
+        free(args);
+        if (g_failed) return v_null();
+        push(r); pc++; break;
+      }
+      case OP_RET: { Value v = pop(); g_stack_n = base; return v; }
+      default: {
+        char msg[160];
+        uint32_t k = in->op;
+        const char *nm = (k < sizeof op_names / sizeof *op_names) ? op_names[k] : "?";
+        snprintf(msg, sizeof msg, "cannot execute the instruction %s", nm);
+        fail("HMYR-R0110", msg);
+        return v_null();
+      }
+    }
+  }
+}
+
+static uint8_t *read_file(const char *path, size_t *out_len) {
+  FILE *f = fopen(path, "rb");
+  if (!f) { fprintf(stderr, "hmyr: cannot open %s\n", path); exit(1); }
+  fseek(f, 0, SEEK_END);
+  long n = ftell(f);
+  fseek(f, 0, SEEK_SET);
+  uint8_t *buf = (uint8_t *)malloc((size_t)(n > 0 ? n : 1));
+  if (!buf) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  size_t got = fread(buf, 1, (size_t)n, f);
+  fclose(f);
+  *out_len = got;
+  return buf;
+}
+
+int main(int argc, char **argv) {
+  if (argc < 2) {
+    fprintf(stderr, "usage: hmyr-vm program.hmyrb\n");
+    return 2;
+  }
+  size_t len = 0;
+  uint8_t *bytes = read_file(argv[1], &len);
+  load_program(bytes, len);
+
+  Func *entry = NULL;
+  for (uint32_t i = 0; i < nfuncs; i++) {
+    if (funcs[i].name_len == 4 && funcs[i].name[0] == 'm' && funcs[i].name[1] == 'a'
+        && funcs[i].name[2] == 'i' && funcs[i].name[3] == 'n') { entry = &funcs[i]; break; }
+  }
+  if (!entry) { fprintf(stderr, "hmyr: no main\n"); return 1; }
+
+  Value r = run_func(entry, NULL, 0);
+  if (g_failed) {
+    fprintf(stderr, "%s\n", g_fail_msg);
+    return 1;
+  }
+  /* The return value is the exit code, not output. The bootstrap prints it
+   * because its conformance programmes report a failing number that way; a
+   * machine does not owe anybody that. */
+  return (r.tag == T_NUM) ? (int)r.num : 0;
+}
