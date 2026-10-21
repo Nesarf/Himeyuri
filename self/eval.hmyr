@@ -134,6 +134,11 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 1 { return 坏("field_names 要一个参数") }
     return 好(field_names(值们[0]))
   }
+  // 写一份文本。这一层只转发 —— 编码与脱敏都在下面那一层管。
+  if 名 == "write_text" {
+    if len(值们) != 2 { return 坏("write_text 要两个参数") }
+    return 好(write_text(值们[0], 值们[1]))
+  }
   if 名 == "chr" {
     if len(值们) != 1 { return 坏("chr 要一个参数") }
     return 好(chr(值们[0]))

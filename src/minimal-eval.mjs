@@ -57,7 +57,7 @@ export function 述(v) {
   return String(v);
 }
 
-// 内置：只这二十个。实现照宿主的语义写，包括它们的失败编号。
+// 内置：只这二十一个。实现照宿主的语义写，包括它们的失败编号。
 const 内置 = {
   len: (rt, a) => {
     const v = a[0];
@@ -142,6 +142,19 @@ const 内置 = {
     }
     return Object.keys(rec);
   },
+  // 写一份文本。规格里有它，而这一层一直没转发 —— 库只有读的那一侧。
+  // 只认 utf8：别的编码要一张表，而表在 deps/encodings 下（宿主那一份用着）。
+  // 说清这个边界，比悄悄按 utf8 处理要好。
+  write_text: (rt, a) => {
+    const 路径 = rt.成串(a[0]);
+    const 文 = rt.成串(a[1]);
+    try { rt.cap.file.writeText(路径, 文); }
+    catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      return rt.坏("HMYR-R0212", "cannot write '" + 藏路径(路径) + "'" + 原因);
+    }
+    return 文.length;
+  },
   print: (rt, a) => { rt.write(a.map((x) => rt.成串(x)).join("")); return null; },
   print_err: (rt, a) => {
     const 文 = a.map((x) => rt.成串(x)).join("");
@@ -186,7 +199,7 @@ const 内置 = {
 };
 
 // 只有这四样碰世界。读文件与问文件在不在属 file，另两个通道属 process。
-const 内置效果 = { read_text: "file", file_exists: "file", argv: "process", print_err: "process" };
+const 内置效果 = { read_text: "file", write_text: "file", file_exists: "file", argv: "process", print_err: "process" };
 
 class 尾调用 {
   constructor(decl, args, fromEffects) { this.decl = decl; this.args = args; this.fromEffects = fromEffects; }

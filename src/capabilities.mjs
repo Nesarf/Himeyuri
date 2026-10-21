@@ -64,6 +64,10 @@ export const 本机能力 = (options = {}) => ({
     read: (p) => fs.readFileSync(p),
     exists: (p) => fs.existsSync(p),
     write: (p, buf) => fs.writeFileSync(p, buf),
+    // 写一份文本。这一条存在的理由是「谁负责把字变成字节」：
+    // 求值器如果自己调 Buffer，宿主依赖那一张表就多一项（test/host-deps.test.mjs 会红）。
+    // 而「字怎么变成字节」正是世界那一侧的事 —— 编码表随宿主来。
+    writeText: (p, s) => fs.writeFileSync(p, String(s), "utf8"),
     // 建目录不让它失败：已经在就算了。这一条与「写」分开，因为「准备一个地方」
     // 与「往里写东西」是两件事，而契约里只有后者要求 file 效果。
     ensureDir: (p) => { try { fs.mkdirSync(p, { recursive: true }); } catch (err) { /* 已经在就算了 */ } },
@@ -214,7 +218,7 @@ export const 空能力 = (记下) => {
     // 一份什么都不做的能力，声明是空的：报告会说它一类都不会。
     // 这正是「拒绝优于过宣称」的那一条 —— 它不假装自己会做什么。
     声明: [],
-    file: 组("file", ["read", "exists", "write", "stream", "ensureDir", "remove"]),
+    file: 组("file", ["read", "exists", "write", "writeText", "stream", "ensureDir", "remove"]),
     process: 组("process", ["argv", "exec", "chdir", "cwd"]),
     time: 组("time", ["now", "sleep"]),
     env: 组("env", ["home", "temp", "get", "platform"]),

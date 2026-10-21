@@ -1,4 +1,4 @@
-// 字节码那份执行器的内置表：二十个，与 src/minimal-eval.mjs 里那张表一一对应。
+// 字节码那份执行器的内置表：二十一个，与 src/minimal-eval.mjs 里那张表一一对应。
 //
 // 两张表不一致时行为会分叉，而分叉的那一头最容易被漏掉。所以这里不另写一套逻辑：
 // 每一条都照 minimal-eval 的实现抄，只把形状从 (rt, args) 换成 { 效果, 做(vm, args) }——
@@ -95,6 +95,17 @@ export const 内置表 = {
     const rec = a[0];
     if (!rec || rec.tag !== "record") return vm.坏("HMYR-R0217", "field_names wants a record, found " + 述(rec, vm.文));
     return new 类元组([...rec.fields.keys()]);
+  } },
+  // 写一份文本。与最小求值器那一份同一个边界：只认 utf8。
+  write_text: { 效果: "file", 做: (vm, a) => {
+    const 路径 = vm.成串(a[0]);
+    const 文 = vm.成串(a[1]);
+    try { vm.cap.file.writeText(路径, 文); }
+    catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      return vm.坏("HMYR-R0212", "cannot write '" + 藏路径(路径) + "'" + 原因);
+    }
+    return 文.length;
   } },
   print: { 做: (vm, a) => { vm.write(a.map((x) => vm.成串(x)).join("")); return null; } },
   print_err: { 效果: "process", 做: (vm, a) => {
