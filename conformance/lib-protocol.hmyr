@@ -1,0 +1,112 @@
+import "../lib/tuples.hmyr"
+import "../lib/protocol.hmyr"
+
+fn 检(好: Bool, 号: Int) -> Int {
+  if 好 {
+    return 0
+  }
+  return 号
+}
+
+fn main() -> Int {
+  let 帧 = 编帧(1, (7, 8))
+  // 长度字段数的是「类型加一个载荷」＝三；整帧是四加三，七个字节。
+  let a = 检(len(帧) == 7, 1)
+  if a != 0 {
+    return a
+  }
+  let b = 检(帧[0] == 3, 2)
+  if b != 0 {
+    return b
+  }
+  let c = 检(帧[1] == 0, 3)
+  if c != 0 {
+    return c
+  }
+  let d = 检(帧[4] == 1, 4)
+  if d != 0 {
+    return d
+  }
+  let e = 检(帧[5] == 7, 5)
+  if e != 0 {
+    return e
+  }
+  let f = 检(帧[6] == 8, 6)
+  if f != 0 {
+    return f
+  }
+  let 解 = 解帧(帧)
+  let g = 检(解.ok, 7)
+  if g != 0 {
+    return g
+  }
+  let h = 检(解.长度 == 3, 8)
+  if h != 0 {
+    return h
+  }
+  let i = 检(解.类型 == 1, 9)
+  if i != 0 {
+    return i
+  }
+  let j = 检(len(解.载荷) == 2, 10)
+  if j != 0 {
+    return j
+  }
+  let k = 检(解.载荷[1] == 8, 11)
+  if k != 0 {
+    return k
+  }
+  let l = 检(完整(帧), 12)
+  if l != 0 {
+    return l
+  }
+  // 半帧：长度说七，只有五个字节——那是一条等他再说的话，不是一条完整消息。
+  let 半 = (7, 0, 0, 0, 1)
+  let m = 检(完整(半) == false, 13)
+  if m != 0 {
+    return m
+  }
+  // 短于五个字节的，连类型都没有。
+  let 短 = 解帧((1, 2, 3))
+  let n = 检(短.ok == false, 14)
+  if n != 0 {
+    return n
+  }
+  // 空载荷也要编得出来：长度为一。
+  let 空帧 = 编帧(9, ())
+  let o = 检(len(空帧) == 5, 15)
+  if o != 0 {
+    return o
+  }
+  let p = 检(空帧[0] == 1, 16)
+  if p != 0 {
+    return p
+  }
+  let 空解 = 解帧(空帧)
+  let q = 检(len(空解.载荷) == 0, 17)
+  if q != 0 {
+    return q
+  }
+  // 长度到四字节的上界附近也要编得对：三百这一档跨了第一个字节。
+  let 大 = 编帧(2, 三百个零())
+  let r = 检(大[0] == 44, 18)
+  if r != 0 {
+    return r
+  }
+  let s = 检(大[1] == 1, 19)
+  if s != 0 {
+    return s
+  }
+  return 0
+}
+
+// 两百九十九个零：让载荷个数到三百（299 加类型那一个字节），长度写出来是 44 与 1。
+fn 三百个零() -> (Int,) {
+  var 出 = ()
+  var i = 0
+  while i < 299 {
+    出 = 出 + (0,)
+    i = i + 1
+  }
+  return 出
+}

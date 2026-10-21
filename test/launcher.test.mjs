@@ -75,6 +75,12 @@ try {
     ok("--out 之后标准流是空的", String(r.stdout).trim() === "", JSON.stringify(String(r.stdout).trim()));
     ok("--out 的值没有挪进语言侧的 argv", String(r.stderr) === "", JSON.stringify(String(r.stderr).slice(0, 60)));
   }
+  {
+    // 帧那一份：长度前缀 + 类型字节 + 载荷，小端。规矩来自 oak-barrels 的协议第 3 节。
+    const r = 启动([path.join(ROOT, "conformance/lib-protocol.hmyr")]);
+    ok("帧库十九条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
+      String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
+  }
   console.log("边界");
   {
     const r = 启动([path.join(临, "nope.hmyr")]);
