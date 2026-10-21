@@ -41,7 +41,7 @@ if (!有编译器) {
 // 二、把它编起来
 const exe = path.join(临, "hmyr-vm.exe");
 {
-  const r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-o", exe, path.join(ROOT, "vm/hmyr.c")], { encoding: "utf8" });
+  const r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c")], { encoding: "utf8" });
   ok("vm/hmyr.c 编得出来", r.status === 0, String(r.stderr).slice(0, 200));
   ok("而且没有警告", String(r.stderr).trim() === "", String(r.stderr).slice(0, 200));
 }
@@ -152,6 +152,22 @@ console.log("五、自举层本身：HMYR 写的解释器，跑在 C 机器上")
     ok("四段表达式的答案都对", 出.includes("1 + 2 * 3 → 7") && 出.includes("(1 + 2) * 3 → 9")
       && 出.includes('len("abcd") → 4') && 出.includes("10 % 4 → 2"), JSON.stringify(出.slice(0, 160)));
     ok("而且那四行就是全部输出", 出.trim().split("\n").length === 4, String(出.trim().split("\n").length));
+  }
+}
+
+console.log("六、用这台机器跑一个 .hmyr 文件");
+{
+  // 这是「不依赖宿主」那句话该有的形状：C 跑自举层，自举层读一个 .hmyr、
+  // 解析它、求值它。中间没有 JavaScript —— 上面第五节已经把字节码编好了。
+  const 码路 = path.join(临, "self.hmyrb");
+  if (fs.existsSync(码路)) {
+    const r = spawnSync(exe, [码路, path.join(ROOT, "examples/twice.hmyr")], { encoding: "utf8", timeout: 60000 });
+    const 出 = String(r.stdout || "");
+    ok("C 机器跑通了一个 .hmyr 文件", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 120));
+    ok("那个文件算对了 21 乘 2", 出.includes("hi 42"), JSON.stringify(出.slice(0, 120)));
+    ok("中文字符串也过得去", 出.includes("琥珀音"), JSON.stringify(出.slice(0, 120)));
+  } else {
+    ok("C 机器跑通了一个 .hmyr 文件", false, "把自举层编出来才能测这一条");
   }
 }
 

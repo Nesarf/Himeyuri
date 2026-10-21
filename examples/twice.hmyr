@@ -1,0 +1,12 @@
+fn 双(n: Int) -> Int {
+  return n * 2
+}
+
+fn main() -> Int {
+  print("hi ")
+  print(str(双(21)))
+  print(" ")
+  let 名 = "琥珀音"
+  print(名)
+  return 0
+}

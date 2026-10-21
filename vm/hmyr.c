@@ -383,6 +383,38 @@ static char *utf16_to_utf8(const uint16_t *s, uint32_t len) {
   return out;
 }
 
+/* UTF-8 to UTF-16. The file on disk is UTF-8; the language's strings are
+ * UTF-16 code units, so every read goes through this. */
+static uint16_t *utf8_to_utf16(const char *s, size_t len, uint32_t *out_len) {
+  uint16_t *out = (uint16_t *)malloc((len + 1) * sizeof(uint16_t));
+  if (!out) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  size_t n = 0, i = 0;
+  while (i < len) {
+    unsigned char b = (unsigned char)s[i];
+    uint32_t cp = 0;
+    int extra = 0;
+    if (b < 0x80) { cp = b; }
+    else if ((b & 0xE0) == 0xC0) { cp = b & 0x1F; extra = 1; }
+    else if ((b & 0xF0) == 0xE0) { cp = b & 0x0F; extra = 2; }
+    else if ((b & 0xF8) == 0xF0) { cp = b & 0x07; extra = 3; }
+    else { cp = 0xFFFD; }
+    i++;
+    for (int k = 0; k < extra && i < len; k++) {
+      cp = (cp << 6) | ((unsigned char)s[i] & 0x3F);
+      i++;
+    }
+    if (cp >= 0x10000) {
+      cp -= 0x10000;
+      out[n++] = (uint16_t)(0xD800 + (cp >> 10));
+      out[n++] = (uint16_t)(0xDC00 + (cp & 0x3FF));
+    } else {
+      out[n++] = (uint16_t)cp;
+    }
+  }
+  *out_len = (uint32_t)n;
+  return out;
+}
+
 /* ---- number to text -------------------------------------------------- */
 
 /* Shortest form that round-trips, the way the JavaScript side does it for the
@@ -430,6 +462,11 @@ static int truthy(Value v) {
 
 static int g_failed = 0;
 static char g_fail_msg[512];
+
+/* The argv the programme sees. Built in main from the real command line:
+ * the first element is where the bytecode came from, the rest are the
+ * programme's own arguments - the same shape the JavaScript machine uses. */
+static Value g_argv;
 
 static Value fail(const char *code, const char *msg) {
   if (!g_failed) {
@@ -715,6 +752,47 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     free(p);
     return 1;
   }
+  if (name_is(name_idx, "read_text")) {
+    if (nargs < 1) { fail("HMYR-R0101", "read_text wants at least one argument"); return 1; }
+    if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_text wants a path string"); return 1; }
+    char *p = utf16_to_utf8(args[0].s, args[0].slen);
+    FILE *f = fopen(p, "rb");
+    if (!f) { free(p); fail("HMYR-R0211", "cannot read that file"); return 1; }
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *buf = (char *)malloc((size_t)(n > 0 ? n : 1));
+    size_t got = (n > 0) ? fread(buf, 1, (size_t)n, f) : 0;
+    fclose(f);
+    free(p);
+    size_t at = 0;
+    if (got >= 3 && (unsigned char)buf[0] == 0xEF && (unsigned char)buf[1] == 0xBB && (unsigned char)buf[2] == 0xBF) at = 3;
+    uint32_t n16 = 0;
+    uint16_t *u = utf8_to_utf16(buf + at, got - at, &n16);
+    free(buf);
+    *out = v_str(u, n16);
+    return 1;
+  }
+  if (name_is(name_idx, "write_text")) {
+    if (nargs != 2) { fail("HMYR-R0101", "write_text wants two arguments"); return 1; }
+    if (args[0].tag != T_STR || args[1].tag != T_STR) { fail("HMYR-R0130", "write_text wants two strings"); return 1; }
+    char *p = utf16_to_utf8(args[0].s, args[0].slen);
+    char *t = utf16_to_utf8(args[1].s, args[1].slen);
+    FILE *f = fopen(p, "wb");
+    if (!f) { free(p); free(t); fail("HMYR-R0212", "cannot write that file"); return 1; }
+    size_t tl = strlen(t);
+    size_t wrote = fwrite(t, 1, tl, f);
+    fclose(f);
+    free(p);
+    free(t);
+    *out = v_num((double)(wrote == tl ? args[1].slen : 0));
+    return 1;
+  }
+  if (name_is(name_idx, "argv")) {
+    if (nargs != 0) { fail("HMYR-R0101", "argv takes no arguments"); return 1; }
+    *out = g_argv;
+    return 1;
+  }
   {
     /* Say which builtin is missing. A machine that only says "no" makes the
      * gap a guessing game; the name is the whole diagnostic. */
@@ -933,11 +1011,42 @@ int main(int argc, char **argv) {
   uint8_t *bytes = read_file(argv[1], &len);
   load_program(bytes, len);
 
-  Func *entry = NULL;
-  for (uint32_t i = 0; i < nfuncs; i++) {
-    if (funcs[i].name_len == 4 && funcs[i].name[0] == 'm' && funcs[i].name[1] == 'a'
-        && funcs[i].name[2] == 'i' && funcs[i].name[3] == 'n') { entry = &funcs[i]; break; }
+  /* argv: the .hmyrb path first, then whatever else was typed. The bootstrap's
+   * 命令行入口 reads element 1 as the target .hmyr, so the first slot has to
+   * stay where the script name would be. */
+  g_argv = v_null();
+  g_argv.tag = T_TUPLE;
+  g_argv.ilen = (uint32_t)(argc - 1);
+  g_argv.items = alloc_values(g_argv.ilen);
+  for (int i = 1; i < argc; i++) {
+    uint32_t n16 = 0;
+    uint16_t *u = utf8_to_utf16(argv[i], strlen(argv[i]), &n16);
+    g_argv.items[i - 1] = v_str(u, n16);
   }
+
+  /* Which function runs: 命令行入口 if the bytecode has one, otherwise main.
+   * The bootstrap has both - its own four-line self-test is main, and the real
+   * command line entry is 命令行入口. Picking main there ran the self-test and
+   * ignored the argument, which looks like "the file I asked for was not run". */
+  Func *entry = NULL;
+  Func *cli = NULL;
+  {
+    const uint16_t cli_name[] = { 0x547D, 0x4EE4, 0x884C, 0x5165, 0x53E3 };
+    for (uint32_t i = 0; i < nfuncs; i++) {
+      Func *f = &funcs[i];
+      if (f->name_len == 4 && f->name[0] == 'm' && f->name[1] == 'a' && f->name[2] == 'i' && f->name[3] == 'n') entry = f;
+      if (f->name_len == 5) {
+        uint32_t same = 1;
+        for (uint32_t k = 0; k < 5; k++) if (f->name[k] != cli_name[k]) { same = 0; break; }
+        if (same) cli = f;
+      }
+    }
+  }
+  /* With arguments, 命令行入口 runs; without, main. The bootstrap has both: main
+   * is its own four-line self-test, 命令行入口 is the real command line. That is
+   * also the shape a user sees - type a file and it runs, type nothing and you
+   * get the self-test. */
+  if (cli && argc > 2) entry = cli;
   if (!entry) { fprintf(stderr, "hmyr: no main\n"); return 1; }
 
   Value r = run_func(entry, NULL, 0);
