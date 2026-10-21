@@ -1,0 +1,142 @@
+// 数值库：整数与实数的常用函数。
+//
+// 这门语言里数字只有一种：双精度。所以「整数」不是一个类型，而是一个约定 ——
+// 这些函数在约定成立时给整数答案，在约定不成立时照双精度算。
+//
+// 四条规矩照旧（见 lib/strings.hmyr 开头）：没有复合条件、没有 break、
+// 没有整数除法（除号给浮点，整数商要写成先减余数再除）。
+//
+// 还有一条要写在明处：没有错误值可交回。负数开方没有答案，这里的约定是交回 -1，
+// 而调用方得自己知道这件事。真正的做法要等错误值或 option 那一层。
+
+fn 绝对值(n: Int) -> Int {
+  if n < 0 {
+    return 0 - n
+  }
+  return n
+}
+
+fn 符号(n: Int) -> Int {
+  if n < 0 {
+    return 0 - 1
+  }
+  if n > 0 {
+    return 1
+  }
+  return 0
+}
+
+fn 最小值(a: Int, b: Int) -> Int {
+  if a < b {
+    return a
+  }
+  return b
+}
+
+fn 最大值(a: Int, b: Int) -> Int {
+  if a > b {
+    return a
+  }
+  return b
+}
+
+// 把 n 夹在 低 与 高 之间。低比高大时原样交回 n —— 那是调用方写错了，不是这里该猜的。
+fn 夹住(n: Int, 低: Int, 高: Int) -> Int {
+  if 低 > 高 {
+    return n
+  }
+  if n < 低 {
+    return 低
+  }
+  if n > 高 {
+    return 高
+  }
+  return n
+}
+
+fn 是偶数(n: Int) -> Bool {
+  if n % 2 == 0 {
+    return true
+  }
+  return false
+}
+
+// 整除的商，往零那一头截断。除号给的是浮点，所以要先减掉余数再除 ——
+// 那一步精确，因为减完之后正好能被整除。
+fn 整除(a: Int, b: Int) -> Int {
+  if b == 0 {
+    return 0
+  }
+  let 余 = a % b
+  return (a - 余) / b
+}
+
+// 幂：次为非负整数。零次给一（包括零的零次，按惯例）。
+fn 幂(底: Int, 次: Int) -> Int {
+  if 次 < 0 {
+    return 0
+  }
+  var 出 = 1
+  var i = 0
+  while i < 次 {
+    出 = 出 * 底
+    i = i + 1
+  }
+  return 出
+}
+
+fn 阶乘(n: Int) -> Int {
+  if n < 0 {
+    return 0
+  }
+  var 出 = 1
+  var i = 2
+  while i <= n {
+    出 = 出 * i
+    i = i + 1
+  }
+  return 出
+}
+
+// 最大公约数：欧几里得。负数先取绝对值，交回的总是不小于零的那一个。
+fn 最大公约数(a: Int, b: Int) -> Int {
+  let x = 绝对值(a)
+  let y = 绝对值(b)
+  if y == 0 {
+    return x
+  }
+  return 最大公约数(y, x % y)
+}
+
+fn 最小公倍数(a: Int, b: Int) -> Int {
+  let g = 最大公约数(a, b)
+  if g == 0 {
+    return 0
+  }
+  return 整除(绝对值(a), g) * 绝对值(b)
+}
+
+// 平方根：牛顿迭代。四十轮对双精度足够了；负数交回 -1（见文件头那条约定）。
+fn 平方根(n: Int) -> Int {
+  if n < 0 {
+    return 0 - 1
+  }
+  if n == 0 {
+    return 0
+  }
+  var x = n
+  var i = 0
+  while i < 40 {
+    x = (x + n / x) / 2
+    i = i + 1
+  }
+  return x
+}
+
+// 部分占全部的百分之几。全部为零时交回零 —— 那是一个定义，不是猜。
+fn 百分比(部分: Int, 全部: Int) -> Int {
+  if 全部 == 0 {
+    return 0
+  }
+  return 部分 * 100 / 全部
+}

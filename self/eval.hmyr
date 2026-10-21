@@ -148,11 +148,47 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   return 好(())
 }
 
+// 十的幂。小数解析要用它。
+fn 幂十(n: Int) -> Int {
+  var 出 = 1
+  var i = 0
+  while i < n {
+    出 = 出 * 10
+    i = i + 1
+  }
+  return 出
+}
+
+fn 小数点位置(s: String) -> Int {
+  var i = 0
+  while i < len(s) {
+    if s[i] == "." {
+      return i
+    }
+    i = i + 1
+  }
+  return 0 - 1
+}
+
+// 一个数字字面量 → 数。整数交给 to_int；带小数点的要自己拆：
+// 早先这一层把所有字面量都交给 to_int，于是目标程序里写 1.5 会报
+// 「不是整数字面量」—— 数值库一写小数就撞上这件事。
+fn 数到(s: String) -> Int {
+  let 位 = 小数点位置(s)
+  if 位 < 0 {
+    return to_int(s)
+  }
+  let 整 = slice(s, 0, 位)
+  let 小 = slice(s, 位 + 1, len(s))
+  let 值 = to_int(小)
+  return to_int(整) + 值 / 幂十(len(小))
+}
+
 // 求一个节点。这是核心：节点种类一分派，其余都交给上面的帮手。
 fn 求值(节点: Int, 环境: Int) -> Int {
   let 种 = 节点.kind
   if 种 == "int" { return 好(to_int(节点.text)) }
-  if 种 == "num" { return 好(to_int(节点.text)) }
+  if 种 == "num" { return 好(数到(节点.text)) }
   if 种 == "str" { return 好(节点.text) }
   // nil：这门语言没有 null，空元组就是它。而求值器要认得出 {kind: "nil"} 这种节点，
   // 因为 stmt.hmyr 用它在「return 不带值」时占位。

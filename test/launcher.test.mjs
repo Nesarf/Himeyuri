@@ -45,6 +45,12 @@ try {
     ok("字符串库二十二条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
   }
+  {
+    // 数值库那一份：它用到小数，所以这一条同时钉住「自举层能解析小数字面量」。
+    const r = 启动([path.join(ROOT, "conformance/lib-numbers.hmyr")]);
+    ok("数值库二十三条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
+      String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
+  }
   console.log("边界");
   {
     const r = 启动([path.join(临, "nope.hmyr")]);
