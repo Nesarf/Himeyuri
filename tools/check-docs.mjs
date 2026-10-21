@@ -13,7 +13,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // .md 故意不在这个集合里：markdown 的存在就是为了渲染，而这份检查针对的是
 // 「本来该是普通文本、却混进了渲染语法」的文档。项目里的设计文档全是 .txt，所以它们受这一条约束。
 const EXT = new Set([".txt", ".rst", ".adoc"]);
-const SKIP = new Set(["node_modules", ".git", "build"]);
+// data/ 是第三方原始数据（Unicode 的 UCD 与 Unihan），它们有自己的格式与自己的规矩，
+// 而这份检查针对的是我们写下的文档。把它们扫进来会得到二十八份「不通过」，
+// 而那些「违规」全是数据本身：行首的井号、竖线表格、方括号引用，都是 UCD 的写法。
+const SKIP = new Set(["node_modules", ".git", "build", "data"]);
 
 const MARKERS = [
   [/^#{1,6}\s/m, "hash heading"],

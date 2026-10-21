@@ -14,7 +14,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { 本机能力 } from "../src/capabilities.mjs";
+import { 本机能力, 空能力, 报告 } from "../src/capabilities.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -79,6 +79,27 @@ console.log("二、终端那一组不需要真的有一个终端在场");
   const 尺 = cap.terminal.size();
   ok("尺寸取自传进来的那一份", 尺.columns === 120 && 尺.rows === 40, JSON.stringify(尺));
   ok("清屏交回一串转义而不是去清屏", typeof cap.terminal.clear() === "string" && cap.terminal.clear().length > 0);
+}
+
+console.log("二·五、能力报告：说类，不说版本，也不说路径");
+{
+  // 这一条是从 oak-barrels 的协议第 4.3 节学来的：兼容性是一个类，不是一个版本。
+  const 真 = 报告(本机能力());
+  ok("本机报了十八类", 真.类.length === 18, String(真.类.length));
+  ok("本机没有「声明了却做不到」的", 真.缺.length === 0, JSON.stringify(真.缺));
+  ok("它报的是类名，不是版本号", 真.类.every((c) => /^[a-z]+\.[a-z_.]+$/.test(c)), JSON.stringify(真.类.slice(0, 3)));
+  const 文 = JSON.stringify(真);
+  ok("报告里没有路径（正斜杠与反斜杠都不该出现）", !文.includes("/") && !文.includes("\\"));
+  ok("报告里没有版本样式的串", !/[0-9]+\.[0-9]+\.[0-9]+/.test(文));
+
+  const 空 = 报告(空能力());
+  ok("空能力一类都不报", 空.类.length === 0, String(空.类.length));
+  ok("空能力也没有「缺」—— 它什么都没声明", 空.缺.length === 0);
+
+  // 过宣称的守卫：声明了却没做出对应成员，要被报成缺，而不是被当成会。
+  const 假 = { 声明: ["io.file.read_write", "no.such.class"], file: { read: () => 1 } };
+  const 假报 = 报告(假);
+  ok("声明了但缺成员，报成缺", 假报.类.length === 0 && 假报.缺.length === 2, JSON.stringify(假报));
 }
 
 console.log("三、静态：能力层之外不出现 node: 模块");

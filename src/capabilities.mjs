@@ -49,6 +49,16 @@ const 线程能力 = () => ({
 });
 
 export const 本机能力 = (options = {}) => ({
+  // 这一份能力说自己会什么 —— 报告只读这一张单子，不从「有没有那个函数」去猜。
+  // 单上的每一项都由 报告 对照成员检查一遍，说了却做不到会被报成「缺」。
+  声明: [
+    "io.file.read_write", "io.file.exists", "io.file.directories",
+    "process.spawn", "process.argv", "process.directory",
+    "time.wall_clock", "time.sleep",
+    "env.locations", "env.variables", "path.manipulate",
+    "terminal.size", "terminal.escape", "terminal.raw_input", "terminal.read",
+    "text.unicode.normalize", "text.unicode.properties", "thread.spawn",
+  ],
   thread: 线程能力(),
   file: {
     read: (p) => fs.readFileSync(p),
@@ -125,6 +135,55 @@ export const 本机能力 = (options = {}) => ({
   },
 });
 
+// 能力报告：把一份能力说成「类」与「限制」，不说版本，也不说路径。
+//
+// 这一条是从 oak-barrels 学来的（它的协议第 4.3 节）：兼容性是一个类，
+// 不是一个版本号。一个「我支持文件读写」的答案，比「我支持某个版本」稳定得多 ——
+// 前者在版本变动之后仍然成立。
+//
+// 「不说路径」是同一条的另一面：一份报告不该顺手把机器的布局说出去。
+//
+// 类不是从「有没有那个函数」推断出来的：空的成员也是函数（一调就拒），
+// 于是推断会把一份空能力报成什么都会。类由能力对象自己声明，而这里只做两件事 ——
+// 把声明换算成类名，以及检查「声明了但成员不在」的那部分。后者是过宣称的守卫：
+// 说了自己会做而做不到，比什么都别说糟。
+const 类表 = {
+  "io.file.read_write": [["file", "read"], ["file", "write"]],
+  "io.file.exists": [["file", "exists"]],
+  "io.file.directories": [["file", "ensureDir"]],
+  "process.spawn": [["process", "exec"]],
+  "process.argv": [["process", "argv"]],
+  "process.directory": [["process", "chdir"]],
+  "time.wall_clock": [["time", "now"]],
+  "time.sleep": [["time", "sleep"]],
+  "env.locations": [["env", "home"], ["env", "temp"]],
+  "env.variables": [["env", "get"]],
+  "path.manipulate": [["path", "join"]],
+  "terminal.size": [["terminal", "size"]],
+  "terminal.escape": [["terminal", "escape"]],
+  "terminal.raw_input": [["terminal", "setRaw"]],
+  "terminal.read": [["terminal", "readSync"]],
+  "text.unicode.normalize": [["unicode", "normalize"]],
+  "text.unicode.properties": [["unicode", "isLetter"]],
+  "thread.spawn": [["thread", "spawn"]],
+};
+
+export const 报告 = (cap) => {
+  const 声明 = Array.isArray(cap && cap.声明) ? cap.声明 : [];
+  const 类 = [];
+  const 缺 = [];
+  for (const 名 of 声明) {
+    const 需要 = 类表[名];
+    if (!需要) { 缺.push(名 + "（没有这样一类）"); continue; }
+    if (需要.every(([组, 成员]) => cap[组] && typeof cap[组][成员] === "function")) 类.push(名);
+    else 缺.push(名);
+  }
+  // 组数只说「有几组」，不列组名：组名比类名更接近实现细节，而报告要的是能力。
+  // 声明 那一项不算一组 —— 它是单子本身，不是一种能力。
+  const 组数 = cap ? Object.keys(cap).filter((k) => k !== "声明").length : 0;
+  return { 类, 缺, 组数 };
+};
+
 // 一份「什么都不做」的能力，给只想知道「这一段用到哪些能力」的调用方用：
 // 任何一次真的访问都会被记下来并抛，于是漏掉的能力会当场说出来，而不是静默成功。
 export const 空能力 = (记下) => {
@@ -138,6 +197,9 @@ export const 空能力 = (记下) => {
     return out;
   };
   return {
+    // 一份什么都不做的能力，声明是空的：报告会说它一类都不会。
+    // 这正是「拒绝优于过宣称」的那一条 —— 它不假装自己会做什么。
+    声明: [],
     file: 组("file", ["read", "exists", "write", "ensureDir", "remove"]),
     process: 组("process", ["argv", "exec", "chdir", "cwd"]),
     time: 组("time", ["now", "sleep"]),
