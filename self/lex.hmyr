@@ -104,11 +104,21 @@ fn read_based(s: String, i: Int, acc: String) -> Int {
 }
 
 // 读一个数字（整数与小数都用同一段字面量，带下划线分隔也算）。
+//
+// 指数也算进字面量：e 或 E，后面可带一个符号，再跟数字。不认它的话
+// 1e3 会被读成「1」加一个标识符 e3 —— 那是个安静的错误：后面某一层会算出一个
+// 看起来像个数的东西。这一条与宿主 lexer.mjs 的规矩一致。
 fn read_number(s: String, i: Int, acc: String) -> Int {
   if i >= len(s) { return {next: i, text: acc} }
   if is_digit(s[i]) || s[i] == "_" { return read_number(s, i + 1, acc + s[i]) }
   // 小数点后面紧跟数字时，它属于这个字面量；否则句点是标点
   if s[i] == "." && i + 1 < len(s) && is_digit(s[i + 1]) { return read_number(s, i + 1, acc + ".") }
+  if s[i] == "e" || s[i] == "E" {
+    if i + 1 < len(s) && is_digit(s[i + 1]) { return read_number(s, i + 1, acc + "e") }
+    if i + 2 < len(s) && (s[i + 1] == "+" || s[i + 1] == "-") && is_digit(s[i + 2]) {
+      return read_number(s, i + 2, acc + "e" + s[i + 1])
+    }
+  }
   return {next: i, text: acc}
 }
 

@@ -157,8 +157,12 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   return 好(())
 }
 
-// 十的幂。小数解析要用它。
+// 十的幂。小数与指数解析都要用它。
+// 负指数是除以十的正次幂 —— 1e-3 那一类写法要有落点。
 fn 幂十(n: Int) -> Int {
+  if n < 0 {
+    return 1 / 幂十(0 - n)
+  }
   var 出 = 1
   var i = 0
   while i < n {
@@ -179,10 +183,19 @@ fn 小数点位置(s: String) -> Int {
   return 0 - 1
 }
 
-// 一个数字字面量 → 数。整数交给 to_int；带小数点的要自己拆：
-// 早先这一层把所有字面量都交给 to_int，于是目标程序里写 1.5 会报
-// 「不是整数字面量」—— 数值库一写小数就撞上这件事。
-fn 数到(s: String) -> Int {
+// 指数的位置：e 或 E。没有就交回 -1。
+fn 指数位置(s: String) -> Int {
+  var i = 0
+  while i < len(s) {
+    if s[i] == "e" { return i }
+    if s[i] == "E" { return i }
+    i = i + 1
+  }
+  return 0 - 1
+}
+
+// 没有指数的那些：整数交给 to_int，带小数点的自己拆。
+fn 小数到(s: String) -> Int {
   let 位 = 小数点位置(s)
   if 位 < 0 {
     return to_int(s)
@@ -191,6 +204,21 @@ fn 数到(s: String) -> Int {
   let 小 = slice(s, 位 + 1, len(s))
   let 值 = to_int(小)
   return to_int(整) + 值 / 幂十(len(小))
+}
+
+// 一个数字字面量 → 数。
+//
+// 三件都要处理：整数、小数、指数。早先这一层把所有字面量都交给 to_int，
+// 于是 1.5 报「不是整数字面量」；只补小数之后，1e3 还是被切成 1 与 e3。
+// 现在先看有没有指数，有就拆成「尾数乘十的幂」，尾数再走小数那一条。
+fn 数到(s: String) -> Int {
+  let 指 = 指数位置(s)
+  if 指 >= 0 {
+    let 尾 = slice(s, 0, 指)
+    let 次 = to_int(slice(s, 指 + 1, len(s)))
+    return 小数到(尾) * 幂十(次)
+  }
+  return 小数到(s)
 }
 
 // 求一个节点。这是核心：节点种类一分派，其余都交给上面的帮手。

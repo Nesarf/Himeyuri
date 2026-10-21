@@ -104,5 +104,19 @@ fn main() -> Int {
   if w != 0 {
     return w
   }
+  // 指数字面量。自举层刚认它：不认的时候 1e3 会被切成「1」与标识符 e3，
+  // 于是这一条会以「没有这个名字：e3」的形式红掉。
+  let x = 检(1e3 == 1000, 24)
+  if x != 0 {
+    return x
+  }
+  let y = 检(2.5e-1 == 0.25, 25)
+  if y != 0 {
+    return y
+  }
+  let z = 检(1E2 == 100, 26)
+  if z != 0 {
+    return z
+  }
   return 0
 }
