@@ -27,14 +27,39 @@ fn is_punct(t: Int, ch: String) -> Bool {
   return t.kind == "punct" && t.text == ch
 }
 
-// 类型：一个标识符，后面可能跟一个可空标记。
-fn type_at(tokens: Int, i: Int) -> String {
-  if i >= len(tokens) { return "" }
-  let name = tokens[i].text
-  if i + 1 < len(tokens) && is_punct(tokens[i + 1], "?") {
-    return name + "?"
+// 类型的边界：从 i 开始，交回类型之后的位置。
+//
+// 括号要跟着配平：元组类型 (String,) 或者 (Int, Int) 在参数表里是一整个类型，
+// 不是「一个括号加两个参数」。早先这一层只认一个标识符，于是
+// 连接(段们: (String,), 分隔: String) 只解析出一个参数 —— 错误消息是
+// 「参数个数不对：连接 要 1 个，给了 2」，看起来像调用写错了。
+fn 括号到(tokens: Int, i: Int, 深: Int) -> Int {
+  if i >= len(tokens) { return i }
+  if is_punct(tokens[i], "(") { return 括号到(tokens, i + 1, 深 + 1) }
+  if is_punct(tokens[i], ")") {
+    if 深 <= 1 { return i + 1 }
+    return 括号到(tokens, i + 1, 深 - 1)
   }
-  return name
+  return 括号到(tokens, i + 1, 深)
+}
+
+fn type_end(tokens: Int, i: Int) -> Int {
+  if i >= len(tokens) { return i }
+  if is_punct(tokens[i], "(") { return 括号到(tokens, i, 0) }
+  var j = i + 1
+  if j < len(tokens) && is_punct(tokens[j], "?") { j = j + 1 }
+  return j
+}
+
+// 把一段 token 的文字拼起来当类型名。元组类型就拼成它写下的样子。
+fn type_text(tokens: Int, 起: Int, 止: Int) -> String {
+  var 出 = ""
+  var i = 起
+  while i < 止 {
+    出 = 出 + tokens[i].text
+    i = i + 1
+  }
+  return 出
 }
 
 // 跳过默认值：从 = 之后一直跳到 , 或 ) 之前。
@@ -55,11 +80,9 @@ fn params(tokens: Int, i: Int, acc: Int) -> Int {
   if t.kind == "ident" {
     let name = t.text
     if i + 1 < len(tokens) && is_punct(tokens[i + 1], ":") {
-      let ty = type_at(tokens, i + 2)
-      // after 与 next 都要往前走，所以它们必须是 var——这门语言的 let 不可变。
-      var after = i + 2
-      if after + 1 < len(tokens) && is_punct(tokens[after + 1], "?") { after = after + 1 }
-      var next = after + 1
+      let 类止 = type_end(tokens, i + 2)
+      let ty = type_text(tokens, i + 2, 类止)
+      var next = 类止
       if next < len(tokens) && is_punct(tokens[next], "=") {
         next = skip_default(tokens, next + 1)
       }
@@ -107,10 +130,10 @@ fn signature(tokens: Int, i: Int, is_pub: Bool) -> Int {
   // returns 与 eff 都会被改写，所以是 var——let 不可变是这门语言的规则。
   var returns = ""
   if at < len(tokens) && is_punct(tokens[at], "->") {
-    returns = type_at(tokens, at + 1)
-    // 跨过箭头与类型名两格；若类型带可空标记，再跨一格
-    at = at + 2
-    if at < len(tokens) && is_punct(tokens[at], "?") { at = at + 1 }
+    // 返回类型也用同一对帮手：它可能带括号（元组类型），也可能带可空标记。
+    let 止 = type_end(tokens, at + 1)
+    returns = type_text(tokens, at + 1, 止)
+    at = 止
   }
   var eff = ()
   if at < len(tokens) && is_word(tokens[at], "effects") && at + 1 < len(tokens) && is_punct(tokens[at + 1], "(") {

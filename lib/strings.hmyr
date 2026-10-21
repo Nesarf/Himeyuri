@@ -213,3 +213,56 @@ fn 十六进制(n: Int) -> String {
   }
   return 出
 }
+
+// 按分隔切分，交回一串段。
+//
+// 返回类型写成 (String,) 是一个让步：类型系统不校验元组长度，而段数是运行时才知道的。
+// 于是那一行是说明，不是约束 —— 真正的约束要等变长元组类型。这一句写在这里，
+// 因为「声明两个元素却交回三个」在眼下的语言里不会报错，而那不是一件可以装看不见的事。
+//
+// 空的分隔原样交回一整段：切空串会切出无数段。
+fn 切分(s: String, 分隔: String) -> (String,) {
+  var 出 = ()
+  let m = len(分隔)
+  if m == 0 {
+    return (s,)
+  }
+  let n = len(s)
+  var i = 0
+  var 起 = 0
+  var 走 = true
+  while 走 {
+    if i > n - m {
+      走 = false
+    } else {
+      if 匹配在(s, i, 分隔) {
+        出 = 出 + (slice(s, 起, i),)
+        起 = i + m
+        i = i + m
+      } else {
+        i = i + 1
+      }
+    }
+  }
+  出 = 出 + (slice(s, 起, n),)
+  return 出
+}
+
+// 按换行切。
+fn 分行(s: String) -> (String,) {
+  return 切分(s, "\n")
+}
+
+// 把一串段接回去。空的段表交回空串。
+fn 连接(段们: (String,), 分隔: String) -> String {
+  if len(段们) == 0 {
+    return ""
+  }
+  var 出 = 段们[0]
+  var i = 1
+  while i < len(段们) {
+    出 = 出 + 分隔 + 段们[i]
+    i = i + 1
+  }
+  return 出
+}

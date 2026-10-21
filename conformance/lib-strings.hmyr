@@ -98,5 +98,49 @@ fn main() -> Int {
   if v != 0 {
     return v
   }
+  // 切分与连接。段数是运行时的，而返回类型只写了 (String,)：类型系统不校验元组长度，
+  // 这一条钉的是行为，不是类型。
+  let 段 = 切分("a-b-c", "-")
+  let w = 检(len(段) == 3, 23)
+  if w != 0 {
+    return w
+  }
+  let x = 检(段[0] == "a", 24)
+  if x != 0 {
+    return x
+  }
+  let y = 检(段[2] == "c", 25)
+  if y != 0 {
+    return y
+  }
+  let z = 检(len(切分("abc", "-")) == 1, 26)
+  if z != 0 {
+    return z
+  }
+  let 空段 = 切分("a--b", "-")
+  let aa = 检(len(空段) == 3, 27)
+  if aa != 0 {
+    return aa
+  }
+  let ab = 检(空段[1] == "", 28)
+  if ab != 0 {
+    return ab
+  }
+  let ac = 检(连接(段, "-") == "a-b-c", 29)
+  if ac != 0 {
+    return ac
+  }
+  let ad = 检(连接((), "-") == "", 30)
+  if ad != 0 {
+    return ad
+  }
+  let ae = 检(len(分行("a\nb")) == 2, 31)
+  if ae != 0 {
+    return ae
+  }
+  let af = 检(切分("abc", "")[0] == "abc", 32)
+  if af != 0 {
+    return af
+  }
   return 0
 }

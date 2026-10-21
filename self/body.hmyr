@@ -85,27 +85,39 @@ fn 括号位(tokens: Int, i: Int, 末: Int) -> Int {
   return 括号位(tokens, i + 1, 末)
 }
 
-fn 反括号位(tokens: Int, i: Int, 末: Int) -> Int {
+// 配对的右括号。深度要跟着算：元组类型 (String,) 里有自己的括号，
+// 取第一个 ) 会把参数表的边界切在类型里面 —— 早先正是这样，
+// 于是 连接(段们: (String,), 分隔: String) 只认出 段们 一个参数。
+fn 反括号位(tokens: Int, i: Int, 末: Int, 深: Int) -> Int {
   if i >= 末 { return -1 }
-  if tokens[i].kind == "punct" && tokens[i].text == ")" { return i }
-  return 反括号位(tokens, i + 1, 末)
+  let t = tokens[i]
+  if t.kind == "punct" && t.text == "(" { return 反括号位(tokens, i + 1, 末, 深 + 1) }
+  if t.kind == "punct" && t.text == ")" {
+    if 深 <= 0 { return i }
+    return 反括号位(tokens, i + 1, 末, 深 - 1)
+  }
+  return 反括号位(tokens, i + 1, 末, 深)
 }
 
 // 在括号里扫：等待一个 ident，收下它，然后等逗号。
-fn 收名从(tokens: Int, i: Int, 末: Int, 等下个: Bool, acc: Int) -> Int {
+// 深 大于零表示正在一个内层括号里（元组类型），那里面的 ident 与逗号都不算数。
+fn 收名从(tokens: Int, i: Int, 末: Int, 等下个: Bool, 深: Int, acc: Int) -> Int {
   if i >= 末 { return acc }
   let t = tokens[i]
-  if t.kind == "punct" && t.text == "," { return 收名从(tokens, i + 1, 末, true, acc) }
-  if 等下个 && t.kind == "ident" { return 收名从(tokens, i + 1, 末, false, acc + (t.text,)) }
-  return 收名从(tokens, i + 1, 末, 等下个, acc)
+  if t.kind == "punct" && t.text == "(" { return 收名从(tokens, i + 1, 末, 等下个, 深 + 1, acc) }
+  if t.kind == "punct" && t.text == ")" { return 收名从(tokens, i + 1, 末, 等下个, 0, acc) }
+  if 深 > 0 { return 收名从(tokens, i + 1, 末, 等下个, 深, acc) }
+  if t.kind == "punct" && t.text == "," { return 收名从(tokens, i + 1, 末, true, 深, acc) }
+  if 等下个 && t.kind == "ident" { return 收名从(tokens, i + 1, 末, false, 深, acc + (t.text,)) }
+  return 收名从(tokens, i + 1, 末, 等下个, 深, acc)
 }
 
 fn 参数名们(tokens: Int, 起: Int, 末: Int) -> Int {
   let 开 = 括号位(tokens, 起, 末)
   if 开 < 0 { return () }
-  let 闭 = 反括号位(tokens, 开 + 1, 末)
+  let 闭 = 反括号位(tokens, 开 + 1, 末, 0)
   if 闭 < 0 { return () }
-  return 收名从(tokens, 开 + 1, 闭, true, ())
+  return 收名从(tokens, 开 + 1, 闭, true, 0, ())
 }
 
 fn decls_from(tokens: Int, i: Int, acc: Int) -> Int {
