@@ -16,6 +16,7 @@
 // Effect checking follows SPEC 2.4: a function may only call what its own declared effects allow.
 // Runtime diagnostics use an R range, which the spec does not yet define - marked [议] as well.
 import { 本机能力 } from "./capabilities.mjs";
+import { 藏路径, 在用脱敏 } from "./redact.mjs";
 import { lex } from "./lexer.mjs";
 import { parse } from "./parser.mjs";
 
@@ -662,7 +663,13 @@ const BUILTINS = {
     const 路径 = String(args[0]);
     let buf;
     try { buf = rt.cap.file.read(路径); }
-    catch (err) { rt.fail("HMYR-R0211", "cannot read '" + 路径 + "': " + String(err && err.message ? err.message : err)); }
+    // 消息里的路径可以被藏起来（--redact 或 HMYR_REDACT）。编号不动 ——
+    // 「靠编号分辨是什么错」这件事不受影响，被藏起来的只是那一截路径。
+    // 宿主那份原因也一并省掉：它通常就是「系统找不到路径」，带着同一条路径。
+    catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      rt.fail("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+    }
     const enc = args[1] === undefined || args[1] === null ? null : rt.asString(args[1]);
     if (enc) return decodeBytes(rt, buf, enc);
     if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) return buf.subarray(3).toString("utf8");

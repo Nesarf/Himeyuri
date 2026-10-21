@@ -24,6 +24,7 @@ import { 本机能力 } from "../src/capabilities.mjs";
 import { 切 } from "../src/subset-lex.mjs";
 import { 子集解 } from "../src/subset-parse.mjs";
 import * as 数 from "../src/numbers.mjs";
+import { 设脱敏, 脱线 } from "../src/redact.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 子集读 = (source) => 子集解(切(source));
@@ -59,18 +60,23 @@ if (!层.ok) {
 // 它能跑、答案不变，而代价是整数密集处慢约四倍、浮点密集处慢约三百倍
 // （design/F64.txt 里量过的那两个数）。所以它不是一个默认，是一个能开的门。
 //
+// --redact 把诊断里的路径藏起来（换成 <path>），编号一个都不动。
+// 默认不藏，因为多数时候人在本地看自己的日志；发出去的日志不该替人说出机器布局。
+// 同名环境变量 HMYR_REDACT 也认：有些调用方不方便加参数。
+//
 // 开关都从 argv 里剔掉：语言侧取 argv[1] 当目标文件，多一个参数会把它挪错位。
 const 参数 = process.argv.slice(1);
 const 用宿主 = 参数.includes("--host-eval");
 const 自家标量 = 参数.includes("--own-scalars");
 if (自家标量) 数.用自家算术(true);
-const 递给语言 = 参数.filter((a) => a !== "--host-eval" && a !== "--minimal-eval" && a !== "--own-scalars");
+if (参数.includes("--redact") || process.env.HMYR_REDACT === "1") 设脱敏(true);
+const 递给语言 = 参数.filter((a) => a !== "--host-eval" && a !== "--minimal-eval" && a !== "--own-scalars" && a !== "--redact");
 
 const rt = 用宿主
   ? runUnit(层, { stage0: true })
   : 最小运行(层, { capabilities: 本机能力(), 字符串用码元序列: 自家标量 });
 rt.write = (s) => process.stdout.write(s);
-rt.writeErr = (s) => process.stderr.write(s);
+rt.writeErr = (s) => process.stderr.write(脱线(s));
 // 与宿主一致：第一个是「解释器名」位，之后才是参数。语言侧取 argv[1] 当目标。
 rt.argv = 递给语言;
 

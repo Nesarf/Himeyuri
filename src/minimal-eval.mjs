@@ -26,6 +26,7 @@
 // src/units.mjs 的码元序列，宿主串只在两处出现（字面量进来、输出出去）。
 // 默认仍是宿主串 —— 与算术那两条路同一个安排：能换，而换不换由调用方说。
 import * as 码元 from "./units.mjs";
+import { 藏路径, 在用脱敏 } from "./redact.mjs";
 const 步限 = 5_000_000;
 const 深限 = 500;
 const 循环闸 = 1000000;
@@ -151,7 +152,13 @@ const 内置 = {
     // 路径与编码都是字符串值，先按那一条规矩写成宿主串（文件系统只认那个）。
     const 路径 = rt.成串(a[0]);
     let buf;
-    try { buf = rt.cap.file.read(路径); } catch (err) { rt.坏("HMYR-R0211", "cannot read '" + 路径 + "': " + String(err && err.message ? err.message : err)); }
+    // 路径可以被藏起来（--redact 或 HMYR_REDACT），编号不动；宿主的原因也省掉，
+    // 因为它通常带着同一条路径。
+    try { buf = rt.cap.file.read(路径); }
+    catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      rt.坏("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+    }
     const enc = a[1] === undefined || a[1] === null ? null : rt.成串(a[1]);
     // 解出来的东西是宿主串，而它是语言里的字符串值 —— 所以最后要落到那种底上。
     const 出 = (文) => (rt.码元串 ? 码元.由宿主(文) : 文);

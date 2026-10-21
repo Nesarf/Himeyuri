@@ -18,6 +18,7 @@ import { 类元组, 类记录 } from "./vm-values.mjs";
 import * as 数 from "./numbers.mjs";
 // 哪一层是码元序列，问它 —— 只为了一处：空串要交回那个底上的空值。
 import { 码元串层 } from "./text-impl.mjs";
+import { 藏路径, 在用脱敏 } from "./redact.mjs";
 
 export const 内置表 = {
   len: { 做: (vm, a) => {
@@ -105,8 +106,13 @@ export const 内置表 = {
     // 路径与编码都是字符串值，先写成宿主串（文件系统只认那个）。
     const 路径 = vm.成串(a[0]);
     let buf;
+    // 路径可以被藏起来（--redact 或 HMYR_REDACT），编号不动；宿主的原因也省掉，
+    // 因为它通常带着同一条路径。
     try { buf = vm.cap.file.read(路径); }
-    catch (err) { return vm.坏("HMYR-R0211", "cannot read '" + 路径 + "': " + String(err && err.message ? err.message : err)); }
+    catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      return vm.坏("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+    }
     // 解出来的东西是语言里的字符串值，所以最后一跳要落到选定的那种底上。
     const 出 = (文) => vm.文.由宿主(文);
     const enc = a[1] === undefined || a[1] === null ? null : vm.成串(a[1]);
