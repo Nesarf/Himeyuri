@@ -21,6 +21,11 @@
 //
 // 值与类型用宿主的同一套（字符串、数字、布尔、null、数组当元组、对象当记录），
 // 于是两个求值器在同一个程序上给出同一批值——对照才有意义。
+//
+// 而字符串的底可以换：选项 字符串用码元序列 打开之后，语言的字符串值是
+// src/units.mjs 的码元序列，宿主串只在两处出现（字面量进来、输出出去）。
+// 默认仍是宿主串 —— 与算术那两条路同一个安排：能换，而换不换由调用方说。
+import * as 码元 from "./units.mjs";
 const 步限 = 5_000_000;
 const 深限 = 500;
 const 循环闸 = 1000000;
@@ -45,6 +50,7 @@ class 作用域 {
 export function 述(v) {
   if (v === null) return "nil";
   if (typeof v === "string") return JSON.stringify(v);
+  if (码元.是码元序列(v)) return JSON.stringify(码元.成宿主(v));
   if (Array.isArray(v)) return "tuple";
   if (typeof v === "object") return "a host object";
   return String(v);
@@ -54,29 +60,37 @@ export function 述(v) {
 const 内置 = {
   len: (rt, a) => {
     const v = a[0];
+    if (码元.是码元序列(v)) return 码元.长(v);
     if (typeof v === "string" || Array.isArray(v)) return v.length;
     rt.坏("HMYR-R0140", "len() wants a string or a tuple");
   },
   str: (rt, a) => rt.成串(a[0]),
   slice: (rt, a) => {
-    const s = rt.成串(a[0]);
+    // 切片在两种底上各做一遍：码元序列走 units，宿主串走 slice。
+    // 夹界的那几条（起不小于零、止不超过长度）两边一致，所以结果也一致。
+    const v = a[0];
+    const s = 码元.是码元序列(v) ? v : rt.成串(v);
+    const 长 = 码元.是码元序列(v) ? 码元.长(s) : s.length;
     const 起 = a[1] === undefined || a[1] === null ? 0 : Math.max(0, Math.floor(rt.成数(a[1])));
-    const 止 = a[2] === undefined || a[2] === null ? s.length : Math.min(s.length, Math.floor(rt.成数(a[2])));
+    const 止 = a[2] === undefined || a[2] === null ? 长 : Math.min(长, Math.floor(rt.成数(a[2])));
+    if (码元.是码元序列(v)) return 起 >= 止 ? 码元.由宿主("") : 码元.切(s, 起, 止);
     return 起 >= 止 ? "" : s.slice(起, 止);
   },
   chr: (rt, a) => {
     const cp = Math.floor(rt.成数(a[0]));
     if (cp < 0 || cp > 0x10ffff) rt.坏("HMYR-R0207", "not a code point: " + cp);
-    return String.fromCodePoint(cp);
+    return rt.码元串 ? 码元.码点(cp) : String.fromCodePoint(cp);
   },
   to_int: (rt, a) => {
     const s = rt.成串(a[0]).trim();
     if (!/^-?[0-9]+$/.test(s)) rt.坏("HMYR-R0208", "not an integer literal: '" + s + "'");
     return Number(s);
   },
-  nfc: (rt, a) => String(a[0]).normalize("NFC"),
-  is_letter: (rt, a) => /\p{L}/u.test(String(a[0])),
-  is_mark: (rt, a) => /\p{M}/u.test(String(a[0])),
+  // 归一化与 Unicode 属性都要一张字符表，而那张表是能力，不是这一层能自制的。
+  // 于是这三条把值先写成宿主串，再交给世界的库 —— 借在明处，写在这里。
+  nfc: (rt, a) => rt.成串(a[0]).normalize("NFC"),
+  is_letter: (rt, a) => /\p{L}/u.test(rt.成串(a[0])),
+  is_mark: (rt, a) => /\p{M}/u.test(rt.成串(a[0])),
   record_new: (rt, a) => {
     const pairs = a[0];
     if (!Array.isArray(pairs)) rt.坏("HMYR-R0214", "record_of wants a tuple of (name, value) pairs");
@@ -110,27 +124,31 @@ const 内置 = {
     return null;
   },
   read_text: (rt, a) => {
-    const 路径 = String(a[0]);
+    // 路径与编码都是字符串值，先按那一条规矩写成宿主串（文件系统只认那个）。
+    const 路径 = rt.成串(a[0]);
     let buf;
     try { buf = rt.cap.file.read(路径); } catch (err) { rt.坏("HMYR-R0211", "cannot read '" + 路径 + "': " + String(err && err.message ? err.message : err)); }
     const enc = a[1] === undefined || a[1] === null ? null : rt.成串(a[1]);
+    // 解出来的东西是宿主串，而它是语言里的字符串值 —— 所以最后要落到那种底上。
+    const 出 = (文) => (rt.码元串 ? 码元.由宿主(文) : 文);
     if (enc) {
-      const 名 = String(enc).toLowerCase();
-      if (名 === "utf8" || 名 === "utf-8") return buf.toString("utf8");
-      if (名 === "utf16le" || 名 === "utf-16le") return new TextDecoder("utf-16le").decode(buf);
-      if (名 === "latin1") return buf.toString("latin1");
+      const 名 = enc.toLowerCase();
+      if (名 === "utf8" || 名 === "utf-8") return 出(buf.toString("utf8"));
+      if (名 === "utf16le" || 名 === "utf-16le") return 出(new TextDecoder("utf-16le").decode(buf));
+      if (名 === "latin1") return 出(buf.toString("latin1"));
       rt.坏("HMYR-R0212", "this runtime cannot decode '" + enc + "'");
     }
-    if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) return buf.subarray(3).toString("utf8");
-    if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) return new TextDecoder("utf-16le").decode(buf.subarray(2));
-    if (buf.length >= 2 && buf[0] === 0xfe && buf[1] === 0xff) return new TextDecoder("utf-16be").decode(buf.subarray(2));
-    return buf.toString("utf8");
+    if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) return 出(buf.subarray(3).toString("utf8"));
+    if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) return 出(new TextDecoder("utf-16le").decode(buf.subarray(2)));
+    if (buf.length >= 2 && buf[0] === 0xfe && buf[1] === 0xff) return 出(new TextDecoder("utf-16be").decode(buf.subarray(2)));
+    return 出(buf.toString("utf8"));
   },
   file_exists: (rt, a) => {
     const 路径 = String(a[0]);
     try { return rt.cap.file.exists(路径); } catch (err) { return false; }
   },
-  argv: (rt) => (rt.argv || []).map((x) => String(x)),
+  // 命令行参数也是字符串值，所以它们进语言时同样要落到那种底上。
+  argv: (rt) => (rt.argv || []).map((x) => (rt.码元串 ? 码元.由宿主(String(x)) : String(x))),
 };
 
 // 只有这四样碰世界。读文件与问文件在不在属 file，另两个通道属 process。
@@ -155,6 +173,9 @@ export class 最小运行时 {
     this.depth = 0;
     this.maxDepth = options.maxDepth || 深限;
     this.stepLimit = options.stepLimit || 步限;
+    // 字符串住在哪里：默认是宿主的串，打开之后是码元序列（src/units.mjs）。
+    // 打开时语言的每一个字符串值都是 Uint16Array，宿主串只在进出的两处出现。
+    this.码元串 = options.字符串用码元序列 === true;
     // 能力内核交给调用方：一个求值器自己去 import node:fs 就没法在别的地方用了，
     // 而「它借了世界什么」也就只能去读它的源码才知道。见 src/capabilities.mjs。
     //
@@ -275,7 +296,10 @@ export class 最小运行时 {
     if (++this.steps > this.stepLimit) this.坏("HMYR-R0102", "the program ran for too long without finishing");
     if (!node || node.kind === "Error") this.坏("HMYR-R0103", "a syntax error reached the evaluator");
     switch (node.kind) {
-      case "Literal": return node.value;
+      case "Literal":
+        // 字符串也可以住在码元序列里（选项 字符串用码元序列）。打开之后，
+        // 语言的每一个字符串值都是 Uint16Array，而宿主串只在进出这一层时出现。
+        return this.码元串 && typeof node.value === "string" ? 码元.由宿主(node.value) : node.value;
       case "Ident": {
         if (scope.has(node.name)) return scope.get(node.name);
         if (this.globals.has(node.name)) return this.globals.get(node.name);
@@ -318,6 +342,12 @@ export class 最小运行时 {
       case "Index": {
         const target = this.求值(node.target, scope, effects);
         const index = this.成数(this.求值(node.index, scope, effects));
+        if (码元.是码元序列(target)) {
+          const 长 = 码元.长(target);
+          if (!码元.在界内(target, index)) this.坏("HMYR-R0151", "index " + index + " is outside a value of length " + 长);
+          // 下标取一个码元，而取出来的那一个码元也是字符串值 —— 所以它是一个只有一位的序列。
+          return 码元.码点(码元.元(target, index));
+        }
         if (typeof target !== "string" && !Array.isArray(target)) this.坏("HMYR-R0152", "cannot index " + 述(target));
         if (index < 0 || index >= target.length) this.坏("HMYR-R0151", "index " + index + " is outside a value of length " + target.length);
         return target[index];
@@ -365,6 +395,12 @@ export class 最小运行时 {
       case "+":
         // 元组相加是串接：那一条让描述能递归地长出来，而不是把每个元素都列一遍。
         if (Array.isArray(a) && Array.isArray(b)) return [...a, ...b];
+        if (码元.是码元序列(a) || 码元.是码元序列(b)) {
+          // 有一边是码元序列，拼接就在那一层做；另一边先按「值写成字」的规矩转过去。
+          const 左 = 码元.是码元序列(a) ? a : 码元.由宿主(this.成串(a));
+          const 右 = 码元.是码元序列(b) ? b : 码元.由宿主(this.成串(b));
+          return 码元.拼(左, 右);
+        }
         if (typeof a === "string" || typeof b === "string") return this.成串(a) + this.成串(b);
         return this.成数(a) + this.成数(b);
       case "-": return this.成数(a) - this.成数(b);
@@ -391,14 +427,24 @@ export class 最小运行时 {
     this.坏("HMYR-R0130", "expected a number, found " + 述(v));
   }
   成串(v) {
+    // 这是「一个值怎么写成一个字符串」的那一条规矩。而在码元序列那种底上，
+    // 交回来的仍是宿主串 —— 它是写出去的那一头，也就是借世界的那一处。
+    if (码元.是码元序列(v)) return 码元.成宿主(v);
     if (typeof v === "string") return v;
     if (v === null) return "nil";
     if (Array.isArray(v)) return "[" + v.map((x) => this.成串(x)).join(", ") + "]";
     return String(v);
   }
-  真(v) { return !(v === false || v === null || v === 0 || v === ""); }
-  相等(a, b) { return typeof a === typeof b ? a === b : this.成串(a) === this.成串(b); }
+  真(v) {
+    if (码元.是码元序列(v)) return 码元.长(v) !== 0;
+    return !(v === false || v === null || v === 0 || v === "");
+  }
+  相等(a, b) {
+    if (码元.是码元序列(a) && 码元.是码元序列(b)) return 码元.比(a, b) === 0;
+    return typeof a === typeof b ? a === b : this.成串(a) === this.成串(b);
+  }
   比(a, b) {
+    if (码元.是码元序列(a) && 码元.是码元序列(b)) return 码元.比(a, b);
     if (typeof a === "number" && typeof b === "number") return a < b ? -1 : a > b ? 1 : 0;
     if (typeof a === "string" && typeof b === "string") return a < b ? -1 : a > b ? 1 : 0;
     this.坏("HMYR-R0131", "cannot compare " + 述(a) + " with " + 述(b));
