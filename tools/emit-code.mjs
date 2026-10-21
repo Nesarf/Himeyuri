@@ -21,6 +21,19 @@ if (!unit.ok) {
   process.exit(1);
 }
 const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));
+// 入口文件的 main 覆盖别人那一份。
+//
+// 为什么需要这一句：合并程序的规矩是「重名先到者赢」，而 import 的顺序是依赖在前 ——
+// 于是 self/run.hmyr 编译出来，main 会是 self/lex.hmyr 自己那个自测。
+// 症状是「跑起来没输出、退出码 19」—— 19 是 lex 的自测算出的词数，与入口毫无关系。
+// 那一类错最难猜，所以规则写在这里：谁是入口，谁的 main 说了算。
+const 入口名 = unit.order[unit.order.length - 1];
+const 入口函 = 编译模块(unit.modules.get(入口名)).函数们.get("main");
+if (!入口函) {
+  console.error("入口文件里没有 main：" + 入口名);
+  process.exit(1);
+}
+程序.函数们.set("main", 入口函);
 const 字节 = 写程序(程序);
 fs.writeFileSync(path.resolve(输出), 字节);
 const 指令数 = [...程序.函数们.values()].reduce((n, f) => n + f.码.length, 0);

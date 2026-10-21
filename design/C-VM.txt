@@ -29,8 +29,25 @@ C 版虚拟机：那台不是 JS 的机器
   这一台现在能做到什么
 
     指令   全部三十二条都实现了
-    内置   八个：print、print_err、str、len、chr、ord、to_int、slice
-    其它   报 HMYR-R0104 并停下
+    内置   十二个：print、print_err、str、len、chr、ord、to_int、slice、
+           is_letter、is_mark、nfc、to_upper、to_lower、record_new、
+           field_get、field_has、field_names、file_exists
+    其它   报 HMYR-R0104 并把缺的那个名字说出来
+
+  字符表随机器一起搬过去了：tools/ucd-c.mjs 从 runtime/ucd/codepoints.txt
+  生成 vm/ucd-letter.h（677 段）与 vm/ucd-mark.h（321 段），C 里二分查找。
+  于是 is_letter 不借任何人的表。
+
+  归一化不做，明说：真表是 17 MB 语料，这台机器把文本原样交回。
+  那对已经归一化的文本是恒等函数，对没归一化的就不对 —— 所以它记在这里。
+
+  入口的那一条规矩
+
+  self/run.hmyr 编译成字节码时，合并程序的规矩是「重名先到者赢」，
+  而 import 顺序是依赖在前 —— 于是 main 会是 self/lex.hmyr 自己那个自测。
+  症状是「跑起来没输出、退出码 19」：19 是 lex 自测算出的词数，与入口毫无关系。
+  现在 tools/emit-code.mjs 在合并之后用入口文件的 main 覆盖，
+  规则写在注释里：谁是入口，谁的 main 说了算。
 
   三处差异，写在明处而不是藏着
 
@@ -46,10 +63,15 @@ C 版虚拟机：那台不是 JS 的机器
 
   test/c-vm.test.mjs：找一个 C 编译器（没有就明说跳过），把它编起来
   （并且要求零警告），然后对同一份源码，JS 那台与 C 那台各跑一遍比输出。
-  四组程序：算数与递归、比较与分支、字符串（含中文与码点）、坏文件被拒。
+  五组：算数与递归、比较与分支、字符串（含中文与码点）、坏文件被拒，
+  以及最后一组 —— 自举层本身。
+
+  第五组是这一份存在的理由：self/run.hmyr 编成 40963 字节字节码，
+  由 C 机器执行，跑出它自己的四行自测（1 + 2 * 3 → 7 等）。
+  那四行是 HMYR 写的解释器在做真实解析与求值，而下面那台不是 JS。
 
   下一步
 
-  补内置到与 JS 那侧齐平，然后就可以问那个真问题了：
-  self/ 那六份能不能编译成字节码，由 C 这台机器跑起来。
-  能的话，「HMYR 不依赖宿主」就不只是一句话。
+  file_exists 有了，read_text 与 write_text 还没有 —— 补上之后，
+  自举层的 跑文件入口 那条路也能在 C 上走通，于是「用这台机器跑一个 .hmyr 文件」
+  就不再需要 JavaScript。

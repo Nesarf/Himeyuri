@@ -26,6 +26,23 @@
 #include <string.h>
 #include <stdint.h>
 
+/* Two range tables generated from the Unicode corpus by tools/ucd-c.mjs.
+ * They live in the repository as C arrays so this machine can answer "is this
+ * a letter" without borrowing anybody's table at run time. */
+#include "ucd-letter.h"
+#include "ucd-mark.h"
+
+static int in_ranges(const uint32_t *r, size_t count, uint32_t cp) {
+  size_t lo = 0, hi = count;
+  while (lo < hi) {
+    size_t mid = lo + (hi - lo) / 2;
+    if (cp < r[mid * 2]) hi = mid;
+    else if (cp > r[mid * 2 + 1]) lo = mid + 1;
+    else return 1;
+  }
+  return 0;
+}
+
 /* ---- values ---------------------------------------------------------- */
 
 typedef enum { T_NULL, T_NUM, T_STR, T_BOOL, T_TUPLE, T_RECORD } Tag;
@@ -33,8 +50,8 @@ typedef enum { T_NULL, T_NUM, T_STR, T_BOOL, T_TUPLE, T_RECORD } Tag;
 typedef struct Value Value;
 
 typedef struct {
-  const uint16_t *names_blob;   /* field names, packed one after another */
-  const uint32_t *name_lens;
+  const uint16_t **names;      /* field names, one allocation per name */
+  uint32_t *name_lens;
   Value *vals;
   uint32_t n;
 } Record;
@@ -221,13 +238,9 @@ static int64_t read_value(Reader *r, Value *out) {
     Value v = v_null();
     v.tag = T_RECORD;
     v.rec.vals = vals;
+    v.rec.names = names;
     v.rec.name_lens = lens;
     v.rec.n = n;
-    /* names are stored as a table of pointers; keep them reachable */
-    static const uint16_t **last_names;
-    last_names = names;
-    (void)last_names;
-    v.rec.names_blob = (const uint16_t *)names; /* reinterpreted in field lookup below */
     *out = v;
     return 0;
   }
@@ -339,6 +352,35 @@ static void write_utf8(const uint16_t *s, uint32_t len, FILE *out) {
       fwrite(b, 1, (size_t)n, out);
     }
   }
+}
+
+/* UTF-16 to UTF-8, for the file names this machine has to hand to the OS. */
+static char *utf16_to_utf8(const uint16_t *s, uint32_t len) {
+  size_t cap = (size_t)len * 4 + 1;
+  char *out = (char *)malloc(cap);
+  if (!out) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  size_t n = 0;
+  for (uint32_t i = 0; i < len; i++) {
+    uint32_t cp = s[i];
+    if (cp >= 0xD800 && cp <= 0xDBFF && i + 1 < len) {
+      uint32_t lo = s[i + 1];
+      if (lo >= 0xDC00 && lo <= 0xDFFF) { cp = 0x10000 + ((cp - 0xD800) << 10) + (lo - 0xDC00); i++; }
+    }
+    if (cp < 0x80) out[n++] = (char)cp;
+    else if (cp < 0x800) { out[n++] = (char)(0xC0 | (cp >> 6)); out[n++] = (char)(0x80 | (cp & 0x3F)); }
+    else if (cp < 0x10000) {
+      out[n++] = (char)(0xE0 | (cp >> 12));
+      out[n++] = (char)(0x80 | ((cp >> 6) & 0x3F));
+      out[n++] = (char)(0x80 | (cp & 0x3F));
+    } else {
+      out[n++] = (char)(0xF0 | (cp >> 18));
+      out[n++] = (char)(0x80 | ((cp >> 12) & 0x3F));
+      out[n++] = (char)(0x80 | ((cp >> 6) & 0x3F));
+      out[n++] = (char)(0x80 | (cp & 0x3F));
+    }
+  }
+  out[n] = 0;
+  return out;
 }
 
 /* ---- number to text -------------------------------------------------- */
@@ -566,8 +608,129 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_str(args[0].s + from, (uint32_t)(to - from));
     return 1;
   }
-  fail("HMYR-R0104", "this machine does not have that builtin yet");
-  return 1;
+  /* ---- the character tables ---- */
+  if (name_is(name_idx, "is_letter") || name_is(name_idx, "is_mark")) {
+    if (nargs != 1) { fail("HMYR-R0101", "that builtin wants one argument"); return 1; }
+    if (args[0].tag != T_STR || args[0].slen == 0) { *out = v_bool(0); return 1; }
+    uint32_t cp = args[0].s[0];
+    if (name_is(name_idx, "is_letter")) *out = v_bool(in_ranges(ucd_letter_ranges, ucd_letter_count, cp));
+    else *out = v_bool(in_ranges(ucd_mark_ranges, ucd_mark_count, cp));
+    return 1;
+  }
+  /* Normalisation is not done here, and saying so is better than doing it
+   * half way: the real table is 17 MB of corpus data. This machine hands the
+   * text back unchanged, which is the identity function and therefore right
+   * for any text that was already normalised. */
+  if (name_is(name_idx, "nfc")) {
+    if (nargs != 1) { fail("HMYR-R0101", "nfc wants one argument"); return 1; }
+    if (args[0].tag != T_STR) { fail("HMYR-R0130", "nfc wants a string"); return 1; }
+    *out = args[0];
+    return 1;
+  }
+  /* ASCII case folding. The full table is again corpus data; a letter outside
+   * ASCII comes back unchanged, which is what most callers want anyway. */
+  if (name_is(name_idx, "to_upper") || name_is(name_idx, "to_lower")) {
+    if (nargs != 1) { fail("HMYR-R0101", "that builtin wants one argument"); return 1; }
+    if (args[0].tag != T_STR) { fail("HMYR-R0130", "that builtin wants a string"); return 1; }
+    uint32_t n = args[0].slen;
+    uint16_t *p = (uint16_t *)malloc((size_t)(n ? n : 1) * sizeof(uint16_t));
+    int up = name_is(name_idx, "to_upper");
+    for (uint32_t i = 0; i < n; i++) {
+      uint16_t ch = args[0].s[i];
+      if (up && ch >= 'a' && ch <= 'z') ch = (uint16_t)(ch - 32);
+      if (!up && ch >= 'A' && ch <= 'Z') ch = (uint16_t)(ch + 32);
+      p[i] = ch;
+    }
+    *out = v_str(p, n);
+    return 1;
+  }
+  /* ---- records ---- */
+  if (name_is(name_idx, "record_new")) {
+    if (nargs != 1) { fail("HMYR-R0101", "record_new wants one argument"); return 1; }
+    if (args[0].tag != T_TUPLE) { fail("HMYR-R0214", "record_new wants a tuple of (name, value) pairs"); return 1; }
+    uint32_t n = args[0].ilen;
+    Value v = v_null();
+    v.tag = T_RECORD;
+    v.rec.n = n;
+    v.rec.vals = alloc_values(n);
+    v.rec.names = (const uint16_t **)calloc(n ? n : 1, sizeof(uint16_t *));
+    v.rec.name_lens = (uint32_t *)calloc(n ? n : 1, sizeof(uint32_t));
+    for (uint32_t i = 0; i < n; i++) {
+      Value pair = args[0].items[i];
+      if (pair.tag != T_TUPLE || pair.ilen != 2 || pair.items[0].tag != T_STR) {
+        fail("HMYR-R0214", "every item must be a (name, value) pair with a string name");
+        return 1;
+      }
+      v.rec.names[i] = pair.items[0].s;
+      v.rec.name_lens[i] = pair.items[0].slen;
+      v.rec.vals[i] = pair.items[1];
+    }
+    *out = v;
+    return 1;
+  }
+  if (name_is(name_idx, "field_get") || name_is(name_idx, "field_has")) {
+    if (nargs != 2) { fail("HMYR-R0101", "that builtin wants two arguments"); return 1; }
+    if (args[0].tag != T_RECORD) {
+      if (name_is(name_idx, "field_has")) { *out = v_bool(0); return 1; }
+      fail("HMYR-R0215", "field_get wants a record");
+      return 1;
+    }
+    if (args[1].tag != T_STR) { fail("HMYR-R0130", "a field name must be a string"); return 1; }
+    for (uint32_t i = 0; i < args[0].rec.n; i++) {
+      if (args[0].rec.name_lens[i] != args[1].slen) continue;
+      uint32_t same = 1;
+      for (uint32_t k = 0; k < args[1].slen; k++) {
+        if (args[0].rec.names[i][k] != args[1].s[k]) { same = 0; break; }
+      }
+      if (same) {
+        if (name_is(name_idx, "field_has")) { *out = v_bool(1); return 1; }
+        *out = args[0].rec.vals[i];
+        return 1;
+      }
+    }
+    if (name_is(name_idx, "field_has")) { *out = v_bool(0); return 1; }
+    fail("HMYR-R0216", "no field with that name on that record");
+    return 1;
+  }
+  if (name_is(name_idx, "field_names")) {
+    if (nargs != 1) { fail("HMYR-R0101", "field_names wants one argument"); return 1; }
+    if (args[0].tag != T_RECORD) { fail("HMYR-R0217", "field_names wants a record"); return 1; }
+    uint32_t n = args[0].rec.n;
+    Value v = v_null();
+    v.tag = T_TUPLE;
+    v.ilen = n;
+    v.items = alloc_values(n);
+    for (uint32_t i = 0; i < n; i++) v.items[i] = v_str(args[0].rec.names[i], args[0].rec.name_lens[i]);
+    *out = v;
+    return 1;
+  }
+  /* ---- files ---- */
+  if (name_is(name_idx, "file_exists")) {
+    if (nargs != 1) { fail("HMYR-R0101", "file_exists wants one argument"); return 1; }
+    if (args[0].tag != T_STR) { *out = v_bool(0); return 1; }
+    char *p = utf16_to_utf8(args[0].s, args[0].slen);
+    FILE *f = fopen(p, "rb");
+    if (f) fclose(f);
+    *out = v_bool(f != NULL);
+    free(p);
+    return 1;
+  }
+  {
+    /* Say which builtin is missing. A machine that only says "no" makes the
+     * gap a guessing game; the name is the whole diagnostic. */
+    char msg[256];
+    uint32_t n = pool_len[name_idx];
+    if (n > 200) n = 200;
+    for (uint32_t i = 0; i < n; i++) {
+      uint16_t ch = pool_p[name_idx][i];
+      msg[i] = (ch < 128) ? (char)ch : '?';
+    }
+    msg[n] = 0;
+    char full[320];
+    snprintf(full, sizeof full, "this machine does not have the builtin '%s'", msg);
+    fail("HMYR-R0104", full);
+    return 1;
+  }
 }
 
 static Value run_func(Func *f, Value *args, int nargs) {
@@ -678,7 +841,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         for (uint32_t i = 0; i < n; i++) v.rec.vals[i] = g_stack[g_stack_n - n + i];
         g_stack_n -= n;
         v.rec.name_lens = lens;
-        v.rec.names_blob = (const uint16_t *)names;
+        v.rec.names = names;
         push(v); pc++; break;
       }
       case OP_FIELD: {
@@ -688,10 +851,9 @@ static Value run_func(Func *f, Value *args, int nargs) {
         int found = 0;
         for (uint32_t i = 0; i < t.rec.n; i++) {
           if (t.rec.name_lens[i] != pool_len[in->a]) continue;
-          const uint16_t **table = (const uint16_t **)t.rec.names_blob;
           uint32_t same = 1;
           for (uint32_t k = 0; k < t.rec.name_lens[i]; k++) {
-            if (table[i][k] != pool_p[in->a][k]) { same = 0; break; }
+            if (t.rec.names[i][k] != pool_p[in->a][k]) { same = 0; break; }
           }
           if (same) { push(t.rec.vals[i]); found = 1; break; }
         }

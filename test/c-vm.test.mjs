@@ -136,6 +136,25 @@ console.log("四、坏文件要被拒绝，而不是跑出怪结果");
   ok("空文件也拒绝", r2.status !== 0, String(r2.status));
 }
 
+console.log("五、自举层本身：HMYR 写的解释器，跑在 C 机器上");
+{
+  // 这一条是这一套存在的理由。self/run.hmyr 是「HMYR 写的解释器」，
+  // 它自己的自测会真的解析并求值四段小表达式 —— 全是这台 C 机器在做，
+  // 没有一步经过 JavaScript。
+  const 码路 = path.join(临, "self.hmyrb");
+  const emit = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"),
+    path.join(ROOT, "self/run.hmyr"), 码路], { encoding: "utf8" });
+  ok("自举层编得出字节码", emit.status === 0 && fs.existsSync(码路), String(emit.stderr).slice(0, 200));
+  if (fs.existsSync(码路)) {
+    const r = spawnSync(exe, [码路], { encoding: "utf8", timeout: 60000 });
+    const 出 = String(r.stdout || "");
+    ok("C 机器跑得出自举层的自测", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 120));
+    ok("四段表达式的答案都对", 出.includes("1 + 2 * 3 → 7") && 出.includes("(1 + 2) * 3 → 9")
+      && 出.includes('len("abcd") → 4') && 出.includes("10 % 4 → 2"), JSON.stringify(出.slice(0, 160)));
+    ok("而且那四行就是全部输出", 出.trim().split("\n").length === 4, String(出.trim().split("\n").length));
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
