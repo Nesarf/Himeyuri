@@ -17,6 +17,8 @@ import { 最小运行 } from "../src/minimal-eval.mjs";
 import { 跑字节码 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
 import * as 数 from "../src/numbers.mjs";
+import * as 浮点 from "../src/f64.mjs";
+import { 位, 由位 } from "../src/bits.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -161,6 +163,38 @@ console.log("一·二、把算术换成自己的那条路，同一批案子仍�
   }
   ok("自家算术下五十七条也没有分叉", 分叉 === 0, 细节.slice(0, 3).join("  ·  "));
   ok("换回来之后默认仍是宿主那一条", 数.在用自家算术() === false);
+}
+
+console.log("一·三、整数快路：它省的是拆装，不是精度");
+{
+  // 安全整数范围内，加、减、乘、比都是精确的，所以快路与 f64 那条路必须给出
+  // 同一个位模式 —— 这一条就是它敢存在的全部理由。出了这个范围它会落回 f64，
+  // 那一段由 test/f64.test.mjs 三十万次对照看着。
+  数.用自家算术(true);
+  let 种 = 20261026;
+  const 随 = () => { 种 = (种 * 1103515245 + 12345) % 2147483648; return 种 / 2147483648; };
+  let 不同 = 0, 次数 = 0;
+  const 例 = [];
+  try {
+    for (let i = 0; i < 4000; i++) {
+      const a = Math.floor((随() - 0.5) * 2000000);
+      const b = Math.floor((随() - 0.5) * 2000000);
+      const 对 = [
+        ["加", 数.加(a, b), 由位(浮点.加(位(a), 位(b)))],
+        ["减", 数.减(a, b), 由位(浮点.减(位(a), 位(b)))],
+        ["乘", 数.乘(a, b), 由位(浮点.乘(位(a), 位(b)))],
+      ];
+      次数 += 3;
+      for (const [名, 快, 慢] of 对) {
+        if (!Object.is(快, 慢)) { 不同++; if (例.length < 4) 例.push(名 + " " + a + " " + b + " " + 快 + " / " + 慢); }
+      }
+      if (数.比(a, b) !== 浮点.比(位(a), 位(b))) { 不同++; if (例.length < 4) 例.push("比 " + a + " " + b); }
+      次数++;
+    }
+  } finally {
+    数.用自家算术(false);
+  }
+  ok("一万六千次对照，快路与 f64 的位模式相同", 不同 === 0, 例.join("  ·  "));
 }
 
 console.log("二、那四份文件不再自己写数的原语，而入口与出口也交出去了");

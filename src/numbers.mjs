@@ -91,28 +91,44 @@ const 自家比 = (a, b) => {
   const r = 浮点.比(位(a), 位(b));
   return r === null ? 0 : r;      // 不可比压成 0：这是旧行为，换实现时要一起定
 };
+
+// 整数快路。自举里绝大多数算术是整数：下标、长度、计数器、循环变量。
+// 双精度能精确表示到 2 的 53 次方，所以在这一段里的整数加减乘与比较，
+// 用宿主的整数算就是精确的 —— 它与 f64 那条路给出的位模式完全相同，
+// 而这一步省掉的是 BigInt 的拆与装。
+//
+// 它借的是「整数」而不是「浮点」：安全整数范围内的加减乘没有舍入，
+// 借不借宿主的加法在这件事上没有差别。而一旦出了这个范围，
+// 立刻落回 f64 那一条 —— 那里才有舍入要管。
+const 快整数 = (x) => Number.isSafeInteger(x);
+const 快加 = (a, b) => { const s = a + b; return Number.isSafeInteger(s) ? s : 自家加(a, b); };
+const 快减 = (a, b) => { const s = a - b; return Number.isSafeInteger(s) ? s : 自家减(a, b); };
+const 快乘 = (a, b) => { const p = a * b; return Number.isSafeInteger(p) ? p : 自家乘(a, b); };
 // 往小的那一头取整。切片与码点用它，而下标不用它 —— 下标不取整是一个刻意的洞，
 // 见 design/SCALARS.txt「还没量的」那一节。
 // 它仍是宿主的 floor：取整不是双精度的运算，而是「下标与切片要把小数怎么办」
 // 这一层的决定，落在 numbers 里、落在 f64 里都没有位置。
 export const 下整 = (n) => Math.floor(n);
 
-export const 加 = (a, b) => (走自家 ? 自家加(a, b) : a + b);
-export const 减 = (a, b) => (走自家 ? 自家减(a, b) : a - b);
-export const 乘 = (a, b) => (走自家 ? 自家乘(a, b) : a * b);
+export const 加 = (a, b) => (走自家 ? (快整数(a) && 快整数(b) ? 快加(a, b) : 自家加(a, b)) : a + b);
+export const 减 = (a, b) => (走自家 ? (快整数(a) && 快整数(b) ? 快减(a, b) : 自家减(a, b)) : a - b);
+export const 乘 = (a, b) => (走自家 ? (快整数(a) && 快整数(b) ? 快乘(a, b) : 自家乘(a, b)) : a * b);
 export const 除 = (a, b) => (走自家 ? 自家除(a, b) : a / b);
 export const 余 = (a, b) => (走自家 ? 自家余(a, b) : a % b);
 export const 反 = (a) => (走自家 ? 自家反(a) : -a);
 
 // 零的判定要单独有名字：除法与取余都要它，而「等于零」在这里不是相等 ——
 // 相等是跨类型的那一条规则（见执行器的 相等），这一条只问一个数是不是零。
-export const 是零 = (n) => (走自家 ? 自家是零(n) : n === 0);
+// 安全整数里 0 与 -0 都等于零，所以这一条不必走 f64。
+export const 是零 = (n) => (走自家 ? (快整数(n) ? n === 0 : 自家是零(n)) : n === 0);
 
 // 两个数相等。负数零与正零相等（那正是 IEEE 的规矩），NaN 与任何东西都不等。
-export const 同 = (a, b) => (走自家 ? 自家同(a, b) : a === b);
+export const 同 = (a, b) => (走自家 ? (快整数(a) && 快整数(b) ? a === b : 自家同(a, b)) : a === b);
 
 // 比较：-1 / 0 / 1。相等不算出错，所以它总是在这三个里交回一个。
-export const 比 = (a, b) => (走自家 ? 自家比(a, b) : a < b ? -1 : a > b ? 1 : 0);
+export const 比 = (a, b) => (走自家
+  ? (快整数(a) && 快整数(b) ? (a < b ? -1 : a > b ? 1 : 0) : 自家比(a, b))
+  : a < b ? -1 : a > b ? 1 : 0);
 
 // 位模式：双精度 ↔ 六十四位。定义搬到 src/bits.mjs 了 —— numbers、f64 与 decimal
 // 三份都要用它，而它们彼此之间已经有各自的方向，把桥单独放一份才不会有环。
