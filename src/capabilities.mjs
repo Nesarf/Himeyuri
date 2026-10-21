@@ -69,6 +69,17 @@ export const 本机能力 = (options = {}) => ({
     ensureDir: (p) => { try { fs.mkdirSync(p, { recursive: true }); } catch (err) { /* 已经在就算了 */ } },
     // 删一个文件，删不掉就算了：调用方在收尾，而收尾失败不该变成一条诊断。
     remove: (p) => { try { fs.unlinkSync(p); } catch (err) { /* 没有就算了 */ } },
+    // 一个写出口：开着、写多段、最后关掉。write 一次写整份 buffer，适合「一次算完再落盘」；
+    // 而程序的输出是一段一段来的，每段开一次文件会让顺序乱。
+    //
+    // 它在能力层，因为「怎么开一个文件」属于世界那一侧 —— 启动器用 --out 时正是要这个。
+    stream: (p) => {
+      const fd = fs.openSync(p, "w");
+      return {
+        write: (s) => fs.writeSync(fd, s),
+        close: () => { try { fs.closeSync(fd); } catch (err) { /* 已经关了就算了 */ } },
+      };
+    },
   },
   process: {
     argv: () => process.argv.slice(),
@@ -203,7 +214,7 @@ export const 空能力 = (记下) => {
     // 一份什么都不做的能力，声明是空的：报告会说它一类都不会。
     // 这正是「拒绝优于过宣称」的那一条 —— 它不假装自己会做什么。
     声明: [],
-    file: 组("file", ["read", "exists", "write", "ensureDir", "remove"]),
+    file: 组("file", ["read", "exists", "write", "stream", "ensureDir", "remove"]),
     process: 组("process", ["argv", "exec", "chdir", "cwd"]),
     time: 组("time", ["now", "sleep"]),
     env: 组("env", ["home", "temp", "get", "platform"]),

@@ -65,6 +65,16 @@ try {
     ok("表库二十条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
   }
+  {
+    // 出口可替换：print 写到一个由调用方给的地方。第一个用法是标准流（默认），
+    // 第二个就是这个文件；第三个会是管道或 socket，而语言侧一行都不用改。
+    const 出 = path.join(临, "out.txt");
+    const r = 启动(["--out", 出, path.join(ROOT, "examples/hello.hmyr")]);
+    ok("--out 把输出写进文件", r.status === 0 && String(fs.readFileSync(出, "utf8")).trim() === "5",
+      String(r.status) + " " + JSON.stringify(String(fs.existsSync(出) ? fs.readFileSync(出, "utf8") : "(没有文件)")));
+    ok("--out 之后标准流是空的", String(r.stdout).trim() === "", JSON.stringify(String(r.stdout).trim()));
+    ok("--out 的值没有挪进语言侧的 argv", String(r.stderr) === "", JSON.stringify(String(r.stderr).slice(0, 60)));
+  }
   console.log("边界");
   {
     const r = 启动([path.join(临, "nope.hmyr")]);

@@ -64,20 +64,48 @@ if (!层.ok) {
 // 默认不藏，因为多数时候人在本地看自己的日志；发出去的日志不该替人说出机器布局。
 // 同名环境变量 HMYR_REDACT 也认：有些调用方不方便加参数。
 //
+// --out <文件> 把 print 的出口换成一个文件。这是「出口可替换」那条规矩的第二个用法：
+// 第一个是标准流（默认），第三个会是命名管道或 socket，而它们都不需要语言侧改一行 ——
+// print 只认那个出口对象，出口由调用方给。
+//
 // 开关都从 argv 里剔掉：语言侧取 argv[1] 当目标文件，多一个参数会把它挪错位。
 const 参数 = process.argv.slice(1);
 const 用宿主 = 参数.includes("--host-eval");
 const 自家标量 = 参数.includes("--own-scalars");
 if (自家标量) 数.用自家算术(true);
 if (参数.includes("--redact") || process.env.HMYR_REDACT === "1") 设脱敏(true);
-const 递给语言 = 参数.filter((a) => a !== "--host-eval" && a !== "--minimal-eval" && a !== "--own-scalars" && a !== "--redact");
 
+// 带值的开关要从两处剔掉：开关本身与它后面那一个值。
+const 取带值 = (名) => {
+  const i = 参数.indexOf(名);
+  if (i < 0 || i + 1 >= 参数.length) return null;
+  return 参数[i + 1];
+};
+const 出路径 = 取带值("--out");
+const 递给语言 = 参数.filter((a, i) => {
+  if (a === "--host-eval" || a === "--minimal-eval" || a === "--own-scalars" || a === "--redact") return false;
+  if (a === "--out") return false;
+  if (i > 0 && 参数[i - 1] === "--out") return false;
+  return true;
+});
+
+const 能力 = 本机能力();
 const rt = 用宿主
   ? runUnit(层, { stage0: true })
-  : 最小运行(层, { capabilities: 本机能力(), 字符串用码元序列: 自家标量 });
-rt.write = (s) => process.stdout.write(s);
+  : 最小运行(层, { capabilities: 能力, 字符串用码元序列: 自家标量 });
+
+// 出口：标准流，或者一个文件。文件那个出口经能力层拿 —— 启动器不自己碰文件系统，
+// 那是这一层的规矩（test/bootstrap.test.mjs 钉着它）。
+let 出口 = null;
+if (出路径) 出口 = 能力.file.stream(出路径);
+rt.write = (s) => {
+  if (出口 !== null) 出口.write(s);
+  else process.stdout.write(s);
+};
 rt.writeErr = (s) => process.stderr.write(脱线(s));
 // 与宿主一致：第一个是「解释器名」位，之后才是参数。语言侧取 argv[1] 当目标。
 rt.argv = 递给语言;
 
-process.exit(rt.callFunction(rt.functions.get("命令行入口"), [], null));
+const 码 = rt.callFunction(rt.functions.get("命令行入口"), [], null);
+if (出口 !== null) 出口.close();
+process.exit(码);
