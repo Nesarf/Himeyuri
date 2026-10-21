@@ -1,0 +1,121 @@
+import "../lib/tuples.hmyr"
+
+fn 检(好: Bool, 号: Int) -> Int {
+  if 好 {
+    return 0
+  }
+  return 号
+}
+
+fn main() -> Int {
+  let 原 = (3, 1, 2)
+  let 排过 = 排序(原)
+  let a = 检(排过[0] == 1, 1)
+  if a != 0 {
+    return a
+  }
+  let b = 检(排过[1] == 2, 2)
+  if b != 0 {
+    return b
+  }
+  let c = 检(排过[2] == 3, 3)
+  if c != 0 {
+    return c
+  }
+  let d = 检(len(原) == 3, 4)
+  if d != 0 {
+    return d
+  }
+  // 原来的那个没被改动：元组不可变，排出来的是一串新的。
+  let e = 检(原[0] == 3, 5)
+  if e != 0 {
+    return e
+  }
+  let 反 = 反转((1, 2, 3))
+  let f = 检(反[0] == 3, 6)
+  if f != 0 {
+    return f
+  }
+  let g = 检(反[2] == 1, 7)
+  if g != 0 {
+    return g
+  }
+  let h = 检(和((1, 2, 3, 4)) == 10, 8)
+  if h != 0 {
+    return h
+  }
+  let i = 检(和(()) == 0, 9)
+  if i != 0 {
+    return i
+  }
+  let j = 检(最小((4, 2, 9)) == 2, 10)
+  if j != 0 {
+    return j
+  }
+  let k = 检(最大((4, 2, 9)) == 9, 11)
+  if k != 0 {
+    return k
+  }
+  let l = 检(最小(()) == 0, 12)
+  if l != 0 {
+    return l
+  }
+  let m = 检(含((1, 2, 3), 2), 13)
+  if m != 0 {
+    return m
+  }
+  let n = 检(含((1, 2, 3), 5) == false, 14)
+  if n != 0 {
+    return n
+  }
+  let o = 检(len(子段((1, 2, 3, 4), 1, 3)) == 2, 15)
+  if o != 0 {
+    return o
+  }
+  let p = 检(子段((1, 2, 3, 4), 1, 3)[0] == 2, 16)
+  if p != 0 {
+    return p
+  }
+  // 越界的起止不报错，只是少拿几个。
+  let q = 检(len(子段((1, 2, 3), 0 - 2, 2)) == 2, 17)
+  if q != 0 {
+    return q
+  }
+  let 接 = 接起来((1, 2), (3,))
+  let r = 检(len(接) == 3, 18)
+  if r != 0 {
+    return r
+  }
+  let s = 检(接[2] == 3, 19)
+  if s != 0 {
+    return s
+  }
+  let 串排 = 串排序(("pear", "apple", "fig"))
+  let t = 检(串排[0] == "apple", 20)
+  if t != 0 {
+    return t
+  }
+  let u = 检(串排[2] == "pear", 21)
+  if u != 0 {
+    return u
+  }
+  let v = 检(串含(串排, "fig"), 22)
+  if v != 0 {
+    return v
+  }
+  // 空表与单元素是排序的两条边界。
+  let w = 检(len(排序(())) == 0, 23)
+  if w != 0 {
+    return w
+  }
+  let x = 检(排序((7,))[0] == 7, 24)
+  if x != 0 {
+    return x
+  }
+  // 有重复时也要稳住：三个二排完还是三个二。
+  let y = 检(len(排序((2, 2, 2))) == 3, 25)
+  if y != 0 {
+    return y
+  }
+  return 0
+}

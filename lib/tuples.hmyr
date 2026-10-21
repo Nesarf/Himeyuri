@@ -1,0 +1,163 @@
+// 元组库：排序、反转、查找、求和、极值、子段。
+//
+// 元组不可变，所以「排好」这件事只能是一串新的元组：每次插进一个元素，
+// 产生一个新元组。插入排序在不可变数据上不算慢得离谱，而且它写出来短。
+//
+// 两条规矩照旧：没有复合条件（嵌套 if），没有 break（循环靠标志收尾）。
+//
+// 类型声明写的是具体元素类型（Int 或 String），因为类型系统没有泛型参数这一层 ——
+// 同一条算法要为两种元素各写一份。这是缺口，不是选择。
+
+// 把一个数插进已排好的元组里，保持升序。
+fn 插入(t: (Int,), x: Int) -> (Int,) {
+  var 出 = ()
+  var i = 0
+  var 放 = false
+  while i < len(t) {
+    if 放 == false {
+      if x <= t[i] {
+        出 = 出 + (x,)
+        放 = true
+      }
+    }
+    出 = 出 + (t[i],)
+    i = i + 1
+  }
+  if 放 == false {
+    出 = 出 + (x,)
+  }
+  return 出
+}
+
+fn 排序(t: (Int,)) -> (Int,) {
+  var 出 = ()
+  var i = 0
+  while i < len(t) {
+    出 = 插入(出, t[i])
+    i = i + 1
+  }
+  return 出
+}
+
+fn 反转(t: (Int,)) -> (Int,) {
+  var 出 = ()
+  var i = len(t) - 1
+  while i >= 0 {
+    出 = 出 + (t[i],)
+    i = i - 1
+  }
+  return 出
+}
+
+fn 和(t: (Int,)) -> Int {
+  var 出 = 0
+  var i = 0
+  while i < len(t) {
+    出 = 出 + t[i]
+    i = i + 1
+  }
+  return 出
+}
+
+// 空的元组交回零。那是定义，不是猜 —— 调用方要知道这一条。
+fn 最小(t: (Int,)) -> Int {
+  if len(t) == 0 {
+    return 0
+  }
+  var 出 = t[0]
+  var i = 1
+  while i < len(t) {
+    if t[i] < 出 {
+      出 = t[i]
+    }
+    i = i + 1
+  }
+  return 出
+}
+
+fn 最大(t: (Int,)) -> Int {
+  if len(t) == 0 {
+    return 0
+  }
+  var 出 = t[0]
+  var i = 1
+  while i < len(t) {
+    if t[i] > 出 {
+      出 = t[i]
+    }
+    i = i + 1
+  }
+  return 出
+}
+
+fn 含(t: (Int,), x: Int) -> Bool {
+  var i = 0
+  while i < len(t) {
+    if t[i] == x {
+      return true
+    }
+    i = i + 1
+  }
+  return false
+}
+
+// 子段：起止都在下标位置上，越界的部分自然被跳过。
+fn 子段(t: (Int,), 起: Int, 止: Int) -> (Int,) {
+  var 出 = ()
+  var i = 起
+  while i < 止 {
+    if i >= 0 {
+      if i < len(t) {
+        出 = 出 + (t[i],)
+      }
+    }
+    i = i + 1
+  }
+  return 出
+}
+
+fn 接起来(t: (Int,), u: (Int,)) -> (Int,) {
+  return t + u
+}
+
+// 字符串那一份：同一条算法，换元素类型。排的是码元序。
+fn 串插入(t: (String,), x: String) -> (String,) {
+  var 出 = ()
+  var i = 0
+  var 放 = false
+  while i < len(t) {
+    if 放 == false {
+      if x <= t[i] {
+        出 = 出 + (x,)
+        放 = true
+      }
+    }
+    出 = 出 + (t[i],)
+    i = i + 1
+  }
+  if 放 == false {
+    出 = 出 + (x,)
+  }
+  return 出
+}
+
+fn 串排序(t: (String,)) -> (String,) {
+  var 出 = ()
+  var i = 0
+  while i < len(t) {
+    出 = 串插入(出, t[i])
+    i = i + 1
+  }
+  return 出
+}
+
+fn 串含(t: (String,), x: String) -> Bool {
+  var i = 0
+  while i < len(t) {
+    if t[i] == x {
+      return true
+    }
+    i = i + 1
+  }
+  return false
+}

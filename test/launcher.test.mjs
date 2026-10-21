@@ -51,6 +51,13 @@ try {
     ok("数值库二十六条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
   }
+  {
+    // 元组库那一份：排序在不可变的元组上只能造一串新元组，
+    // 这一条同时钉住「元组类型能进参数表」（那一处前一格刚修）。
+    const r = 启动([path.join(ROOT, "conformance/lib-tuples.hmyr")]);
+    ok("元组库二十五条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
+      String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
+  }
   console.log("边界");
   {
     const r = 启动([path.join(临, "nope.hmyr")]);
