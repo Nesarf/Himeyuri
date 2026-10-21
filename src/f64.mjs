@@ -12,7 +12,8 @@
 //
 // 借的是什么：BigInt 与位运算。那是最小机器层要提供的东西（定长整数与移位），
 // 而浮点这件事本身一页都不借。
-import { 位, 由位 } from "./numbers.mjs";
+// 位模式那一对在 src/bits.mjs：它是唯一需要知道宿主双精度长什么样的地方。
+import { 位, 由位 } from "./bits.mjs";
 
 const 尾掩 = (1n << 52n) - 1n;
 const 隐含 = 1n << 52n;

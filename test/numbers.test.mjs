@@ -139,7 +139,7 @@ console.log("一、五十七条：三条执行路给同一个答案");
   console.log("    （" + 案子.length + " 条，覆盖算术、比较、相等、成串、解析、取整与五个拒绝编号）");
 }
 
-console.log("二、那四份文件不再自己写数的原语");
+console.log("二、那四份文件不再自己写数的原语，而入口与出口也交出去了");
 {
   // 判据要剥掉注释：注释里提到那些名字，是为了说明「不用它们」，那不算用到。
   const 剥注释 = (文) => 文.replace(/^[ \t]*\/\/.*$/gm, " ").replace(/([^:])\/\/.*$/gm, "$1");
@@ -153,6 +153,14 @@ console.log("二、那四份文件不再自己写数的原语");
     ok(相对 + " 里没有 Infinity 与 NaN 这两个字面名", !/\bInfinity\b/.test(文) && !/\bNaN\b/.test(文));
     ok(相对 + " 读的是同一份数的定义", /from "\.\/numbers\.mjs"/.test(文));
   }
+  // 数的入口与出口：解析与成文现在走 src/decimal.mjs，而位模式那一对搬到了 bits。
+  const 数源 = 读("src/numbers.mjs");
+  ok("numbers.mjs 里不再有 parseInt", !/Number\.parseInt/.test(数源));
+  ok("numbers.mjs 读的是自己的十进制往返", /from "\.\/decimal\.mjs"/.test(数源));
+  ok("numbers.mjs 不再自己碰 DataView", !/DataView|setFloat64|getBigUint64/.test(数源));
+  const 桥 = 读("src/bits.mjs");
+  ok("位模式那一对住在 bits.mjs", /setFloat64/.test(桥) && /getBigUint64/.test(桥));
+  ok("f64 也读那一份桥，不读 numbers", /from "\.\/bits\.mjs"/.test(读("src/f64.mjs")));
   for (const 相对 of ["src/lexer.mjs", "src/subset-lex.mjs"]) {
     const 文 = 读(相对);
     ok(相对 + " 里没有 Number(", !文.includes("Number("));

@@ -7,9 +7,13 @@
 // 而运气不会在换实现之后还继续成立。design/SCALARS.txt 那五十三条量出来的行为，
 // 就是这一层要保住的东西；test/numbers.test.mjs 把它们跑在三执行路上。
 //
-// 而实现仍是宿主的双精度浮点：加、减、乘、除、比较、成串、解析，一件都不是自己做的。
-// 所以 design/VM.txt 的「还没做的」里，标量那一条仍然成立。这一层只是第一次让
-// 「数是什么」有一个地址。
+// 此刻的位置（2026-10-24）：入口与出口已经换掉了。解析与成文走 src/decimal.mjs，
+// 那是自己写的十进制往返，一位不差地对过宿主；进制那一支也自己数。
+// 而算术与比较仍是宿主的双精度 —— 加、减、乘、除、余、比、下整这几行还是裸运算。
+// 所以 design/VM.txt 的「还没做的」里，标量那一条仍然成立，只是短了一半。
+import * as 十进 from "./decimal.mjs";
+import { 位, 由位 } from "./bits.mjs";
+export { 位, 由位 };
 
 // 一个值是数吗。执行器判断值是什么，问这里，而不是自己写 typeof。
 export const 是数 = (v) => typeof v === "number";
@@ -26,15 +30,35 @@ export const 造 = (n) => n;
 // 源码里的字面量 → 数。进制给 0 表示按前缀走（0x / 0b / 0o 由文本自己说），
 // 否则按给的进制读那串数字（切词器已经把前缀剥掉了）。
 //
-// `1e308` 与 `0.1` 都要照宿主那一套读写，因为那是双精度的十进制往返：
-// 换实现时最麻烦的一件正是这个，所以它必须在这一层，而不是藏在某个切词器里。
+// 十进制那一支现在走 src/decimal.mjs：那是自己写的往返，一位不差地对过宿主的成文与解析。
+// 进制那一支是整数，自己逐字符累加 —— 它是整数的意思，不是浮点的意思。
 export const 解析 = (文, 进制 = 0) => {
   const 净 = String(文).replace(/_/g, "");
-  return 进制 ? Number.parseInt(净, 进制) : Number(净);
+  if (进制) {
+    if (!净) return NaN;
+    let 值 = 0n;
+    for (const ch of 净) {
+      const d = 数字值(ch);
+      if (d < 0 || d >= 进制) return NaN;
+      值 = 值 * BigInt(进制) + BigInt(d);
+    }
+    return Number(值);
+  }
+  const 位们 = 十进.解析(净);
+  return 位们 === null ? NaN : 由位(位们);
 };
 
-// 数 → 文本。最短往返由实现决定（现在是宿主那双精度打印）。
-export const 成文 = (n) => String(n);
+const 数字值 = (ch) => {
+  const c = ch.codePointAt(0);
+  if (c >= 48 && c <= 57) return c - 48;        // 0 到 9
+  if (c >= 97 && c <= 122) return c - 87;       // a 到 z
+  if (c >= 65 && c <= 90) return c - 55;        // A 到 Z
+  return -1;
+};
+
+// 数 → 文本。走 src/decimal.mjs：最短的、还能读回来的那一串。
+// 位数与排版都已经与宿主的 String() 逐条对过，所以这一句换过之后行为不变。
+export const 成文 = (n) => 十进.成文(位(n));
 
 // 算术。除与余不在这里判零：拒绝的编号是这门语言的选择，放在执行器那一侧。
 export const 加 = (a, b) => a + b;
@@ -58,10 +82,7 @@ export const 比 = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 // 见 design/SCALARS.txt「还没量的」那一节。
 export const 下整 = (n) => Math.floor(n);
 
-// 位模式：双精度 ↔ 六十四位。这一对现在只有套件在用，而它是下一格的地基——
-// 要用自己的整数算术实现双精度，第一件事就是能把它拆成符号、指数、尾数。
-// 一个 ArrayBuffer 与一个 DataView 就是宿主要提供的全部东西。
-const 缓冲 = new ArrayBuffer(8);
-const 视 = new DataView(缓冲);
-export const 位 = (n) => { 视.setFloat64(0, n); return 视.getBigUint64(0); };
-export const 由位 = (b) => { 视.setBigUint64(0, b); return 视.getFloat64(0); };
+// 位模式：双精度 ↔ 六十四位。定义搬到 src/bits.mjs 了 —— numbers、f64 与 decimal
+// 三份都要用它，而它们彼此之间已经有各自的方向，把桥单独放一份才不会有环。
+// 这里转出去，是为了让「数的意思只在这里找」这句话仍然成立。
+
