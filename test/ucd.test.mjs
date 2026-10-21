@@ -84,6 +84,31 @@ console.log("三、原始数据真的在仓库里");
   ok("块表读出来的块数超过三百", 块表().length > 300, String(块表().length));
 }
 
+console.log("四、全码点表：一百一十一个码点各一行");
+{
+  const 文件 = path.join(ROOT, "runtime/ucd/codepoints.txt");
+  ok("表在", fs.existsSync(文件));
+  const 大小 = fs.statSync(文件).size;
+  ok("四十兆以上", 大小 > 40 * 1024 * 1024, (大小 / 1024 / 1024).toFixed(2) + " MB");
+
+  const 文 = fs.readFileSync(文件, "utf8");
+  const 行们 = 文.split("\n");
+  if (行们[行们.length - 1] === "") 行们.pop();
+  ok("行数正好是一百一十一万四千一百一十二", 行们.length === 1114112, String(行们.length));
+  ok("第一行是 U+0000", 行们[0].startsWith("U+0000;"), 行们[0]);
+  ok("最后一行是 U+10FFFF", 行们[行们.length - 1].startsWith("U+10FFFF;"), 行们[行们.length - 1]);
+
+  const 行 = (cp) => 行们[cp];
+  ok("U+0041 那一行说对了名字与类别", 行(0x41) === "U+0041;LATIN CAPITAL LETTER A;Lu;Basic Latin;Latin", 行(0x41));
+  ok("U+3042 那一行说对了块", 行(0x3042).includes(";Hiragana;Hiragana"), 行(0x3042));
+  // 区间展开的证据：CJK 那一大片在 UnicodeData 里只有两行，展开之后中间这个码点才有名字。
+  ok("U+4E2D 有名字（区间展开了）", 行(0x4E2D).includes("<CJK Ideograph>"), 行(0x4E2D));
+  ok("U+4E2D 的类别是 Lo、块是 CJK Unified Ideographs、脚本是 Han",
+    行(0x4E2D) === "U+4E2D;<CJK Ideograph>;Lo;CJK Unified Ideographs;Han", 行(0x4E2D));
+  ok("U+10FFFF 在补充私用区", 行(0x10FFFF).includes("Supplementary Private Use Area-B"), 行(0x10FFFF));
+  ok("每一行都是五个字段", 行们[0x41].split(";").length === 5 && 行们[0x1F600].split(";").length === 5);
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

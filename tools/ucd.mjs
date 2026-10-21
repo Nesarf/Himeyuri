@@ -41,34 +41,53 @@ const 解析区间表 = (文) => {
   return 出;
 };
 
-// UnicodeData.txt 的行：码点;名字;类别;...（十五个字段）
+// UnicodeData.txt 的行：码点;名字;类别;...（十五个字段）。
+//
+// 区间要展开：CJK 那一大片在文件里只写成两行（第一行与最后一行），
+// 中间十万多个码点不出现。不展开的话它们会全被当成「未分配」，
+// 而那不是事实 —— 那是文件格式的省略。
 const 解析字符数据 = () => {
   const 出 = [];
+  let 待收 = null;
   for (const 行 of 读("UnicodeData.txt").split("\n")) {
     if (!行.trim()) continue;
     const f = 行.split(";");
     if (f.length < 3) continue;
-    出.push({
-      码点: Number.parseInt(f[0], 16),
-      名字: f[1],
-      类别: f[2],
-    });
+    const 码点 = Number.parseInt(f[0], 16);
+    const 名字 = f[1];
+    const 首 = /^<(.+), First>$/.exec(名字);
+    const 尾 = /^<(.+), Last>$/.exec(名字);
+    if (首) { 待收 = { 起: 码点, 前缀: 首[1], 类别: f[2] }; continue; }
+    if (尾 && 待收) {
+      for (let cp = 待收.起; cp <= 码点; cp++) {
+        出.push({ 码点: cp, 名字: "<" + 待收.前缀 + ">", 类别: 待收.类别 });
+      }
+      待收 = null;
+      continue;
+    }
+    出.push({ 码点, 名字, 类别: f[2] });
   }
   return 出;
 };
 
-export const 块表 = () => 解析区间表(读("Blocks.txt"));
-export const 脚本表 = () => 解析区间表(读("Scripts.txt"));
+export const 块表 = () => 解析区间表(读("Blocks.txt")).sort((a, b) => a.起 - b.起);
+export const 脚本表 = () => 解析区间表(读("Scripts.txt")).sort((a, b) => a.起 - b.起);
 
-export const 块名 = (cp) => {
-  for (const b of 块表()) if (cp >= b.起 && cp <= b.止) return b.名;
-  return "No_Block";
+// 区间表是有序的，所以查一个码点用二分，不用整表扫。
+// 全码点表要插一百一十一次，线性扫会变成三亿多次比较。
+const 二分查 = (表, cp) => {
+  let 低 = 0, 高 = 表.length - 1;
+  while (低 <= 高) {
+    const 中 = (低 + 高) >> 1;
+    if (cp < 表[中].起) 高 = 中 - 1;
+    else if (cp > 表[中].止) 低 = 中 + 1;
+    else return 表[中].名;
+  }
+  return null;
 };
 
-export const 脚本名 = (cp) => {
-  for (const s of 脚本表()) if (cp >= s.起 && cp <= s.止) return s.名;
-  return "Unknown";
-};
+export const 块名 = (cp) => 二分查(块表(), cp) || "No_Block";
+export const 脚本名 = (cp) => 二分查(脚本表(), cp) || "Unknown";
 
 // 字符数据按码点索引，方便查类别与名字。
 export const 字符表 = new Map(解析字符数据().map((c) => [c.码点, c]));
@@ -108,6 +127,39 @@ const 生成块函数 = () => {
   return 行们.join("\n");
 };
 
+// 全码点表：一百一十一个码点各一行，属性全部摊平。
+//
+// 体积约六十兆，而它是真数据：从 UCD 派生、每行可核、没有一处是填充。
+// 用途有两条 —— 查任意码点的属性（标准库与工具都要），以及做回归对照：
+// 下一次升级 Unicode 时把新旧两张表逐行比，差异就是升级带来的变化，
+// 而这件事没有这张表就得靠一套专门的比对器重新生成。
+//
+// 分批写：一百一十万行如果先拼成一个大字符串再落盘，会先吃掉几百兆内存。
+export const 生成全码点表 = () => {
+  const 块们 = 块表();
+  const 脚本们 = 脚本表();
+  const 出 = path.join(产物目录, "codepoints.txt");
+  const fd = fs.openSync(出, "w");
+  let 批 = [];
+  let 行数 = 0;
+  for (let cp = 0; cp <= 0x10FFFF; cp++) {
+    const c = 字符表.get(cp);
+    const 名 = c ? c.名字 : "";
+    const 类 = c ? c.类别 : "Cn";
+    批.push(
+      "U+" + cp.toString(16).toUpperCase().padStart(4, "0") + ";" +
+      名 + ";" + 类 + ";" +
+      (二分查(块们, cp) || "No_Block") + ";" +
+      (二分查(脚本们, cp) || "Unknown")
+    );
+    行数++;
+    if (批.length >= 20000) { fs.writeSync(fd, 批.join("\n") + "\n"); 批 = []; }
+  }
+  if (批.length) fs.writeSync(fd, 批.join("\n") + "\n");
+  fs.closeSync(fd);
+  return 行数;
+};
+
 export const 主 = () => {
   const 字符 = 解析字符数据();
   const 块们 = 块表();
@@ -131,6 +183,8 @@ export const 主 = () => {
       { 码点: "U+10FFFF", 块: 块名(0x10FFFF), 脚本: 脚本名(0x10FFFF) },
     ],
   };
+  // 先生成表，再把行数写进摘要 —— 顺序反了的话，摘要里的那一项是上一趟的。
+  摘要.全码点表行数 = 生成全码点表();
   fs.writeFileSync(path.join(产物目录, "summary.json"), JSON.stringify(摘要, null, 2) + "\n", "utf8");
   fs.writeFileSync(path.join(产物目录, "blocks.hmyr"), 生成块函数(), "utf8");
   return 摘要;
