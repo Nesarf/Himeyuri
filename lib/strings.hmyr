@@ -1,0 +1,398 @@
+// 字符串库：用这门语言自己的内置写出来的常用函数。
+//
+// 它为什么长这样，先说清四件事：
+//
+//   一、没有 ord。内置只有 chr（码点 → 字符），没有反方向，于是「这个字符的码点是多少」
+//      在这里问不到。大小写转换只能一条一条地比字符本身 —— 下面是五十二行 if。
+//      这不是风格，是缺口的形状：一个语言要走得远，ord 迟早要有。
+//
+//   二、没有复合条件。自举那一层的 parser 读不进两个与号，也读不进 and，
+//      所以「甲或乙」要写成先判断甲、返回，再判断乙、返回。
+//
+//   三、没有 break。循环靠一个标志收尾，标志本身用 var 才能改。
+//
+//   四、没有整数除法。除号给的是双精度，于是「除以十六取整」要写成先减余数再除 ——
+//      那一步精确，因为减完之后正好能被整除。
+//
+// 这些规矩写在文件头，是因为它们决定了下面每一行的形状；换个写法就会在自举那条路上读不进。
+
+// 一个字符是不是空白。空白只有四种，而它们都不能用「或」连起来。
+fn 空白一(c: String) -> Bool {
+  if c == " " {
+    return true
+  }
+  if c == "\t" {
+    return true
+  }
+  if c == "\n" {
+    return true
+  }
+  if c == "\r" {
+    return true
+  }
+  return false
+}
+
+// 大写的单个字符。非 ASCII 的字母原样交回 —— 这一版只管拉丁字母表里那二十六个。
+fn 大写一(c: String) -> String {
+  if c == "a" {
+    return "A"
+  }
+  if c == "b" {
+    return "B"
+  }
+  if c == "c" {
+    return "C"
+  }
+  if c == "d" {
+    return "D"
+  }
+  if c == "e" {
+    return "E"
+  }
+  if c == "f" {
+    return "F"
+  }
+  if c == "g" {
+    return "G"
+  }
+  if c == "h" {
+    return "H"
+  }
+  if c == "i" {
+    return "I"
+  }
+  if c == "j" {
+    return "J"
+  }
+  if c == "k" {
+    return "K"
+  }
+  if c == "l" {
+    return "L"
+  }
+  if c == "m" {
+    return "M"
+  }
+  if c == "n" {
+    return "N"
+  }
+  if c == "o" {
+    return "O"
+  }
+  if c == "p" {
+    return "P"
+  }
+  if c == "q" {
+    return "Q"
+  }
+  if c == "r" {
+    return "R"
+  }
+  if c == "s" {
+    return "S"
+  }
+  if c == "t" {
+    return "T"
+  }
+  if c == "u" {
+    return "U"
+  }
+  if c == "v" {
+    return "V"
+  }
+  if c == "w" {
+    return "W"
+  }
+  if c == "x" {
+    return "X"
+  }
+  if c == "y" {
+    return "Y"
+  }
+  if c == "z" {
+    return "Z"
+  }
+  return c
+}
+
+fn 小写一(c: String) -> String {
+  if c == "A" {
+    return "a"
+  }
+  if c == "B" {
+    return "b"
+  }
+  if c == "C" {
+    return "c"
+  }
+  if c == "D" {
+    return "d"
+  }
+  if c == "E" {
+    return "e"
+  }
+  if c == "F" {
+    return "f"
+  }
+  if c == "G" {
+    return "g"
+  }
+  if c == "H" {
+    return "h"
+  }
+  if c == "I" {
+    return "i"
+  }
+  if c == "J" {
+    return "j"
+  }
+  if c == "K" {
+    return "k"
+  }
+  if c == "L" {
+    return "l"
+  }
+  if c == "M" {
+    return "m"
+  }
+  if c == "N" {
+    return "n"
+  }
+  if c == "O" {
+    return "o"
+  }
+  if c == "P" {
+    return "p"
+  }
+  if c == "Q" {
+    return "q"
+  }
+  if c == "R" {
+    return "r"
+  }
+  if c == "S" {
+    return "s"
+  }
+  if c == "T" {
+    return "t"
+  }
+  if c == "U" {
+    return "u"
+  }
+  if c == "V" {
+    return "v"
+  }
+  if c == "W" {
+    return "w"
+  }
+  if c == "X" {
+    return "x"
+  }
+  if c == "Y" {
+    return "y"
+  }
+  if c == "Z" {
+    return "z"
+  }
+  return c
+}
+
+// 逐字符映射。两个大小写函数共用这一条。变 为 1 是大写，否则小写。
+fn 逐个换(s: String, 变: Int) -> String {
+  let n = len(s)
+  var 出 = ""
+  var i = 0
+  while i < n {
+    if 变 == 1 {
+      出 = 出 + 大写一(s[i])
+    } else {
+      出 = 出 + 小写一(s[i])
+    }
+    i = i + 1
+  }
+  return 出
+}
+
+fn 大写(s: String) -> String {
+  return 逐个换(s, 1)
+}
+
+fn 小写(s: String) -> String {
+  return 逐个换(s, 0)
+}
+
+// 修剪两头的空白。
+fn 修剪(s: String) -> String {
+  let n = len(s)
+  var 起 = 0
+  var 走 = true
+  while 走 {
+    if 起 >= n {
+      走 = false
+    } else {
+      if 空白一(s[起]) {
+        起 = 起 + 1
+      } else {
+        走 = false
+      }
+    }
+  }
+  var 止 = n
+  走 = true
+  while 走 {
+    if 止 <= 起 {
+      走 = false
+    } else {
+      if 空白一(s[止 - 1]) {
+        止 = 止 - 1
+      } else {
+        走 = false
+      }
+    }
+  }
+  if 起 >= 止 {
+    return ""
+  }
+  return slice(s, 起, 止)
+}
+
+// s 从位置 起 开始是不是那一段。越界当假。
+fn 匹配在(s: String, 起: Int, 子: String) -> Bool {
+  let n = len(s)
+  let m = len(子)
+  if 起 < 0 {
+    return false
+  }
+  if 起 + m > n {
+    return false
+  }
+  var i = 0
+  var 好 = true
+  while i < m {
+    if s[起 + i] == 子[i] {
+      i = i + 1
+    } else {
+      好 = false
+      i = m
+    }
+  }
+  return 好
+}
+
+fn 开始于(s: String, 前: String) -> Bool {
+  return 匹配在(s, 0, 前)
+}
+
+fn 结束于(s: String, 后: String) -> Bool {
+  return 匹配在(s, len(s) - len(后), 后)
+}
+
+// 找子串，交回下标；没有就交回 -1。
+fn 查找(s: String, 子: String) -> Int {
+  let n = len(s)
+  let m = len(子)
+  if m == 0 {
+    return 0
+  }
+  if m > n {
+    return -1
+  }
+  var i = 0
+  var 有 = true
+  while 有 {
+    if i > n - m {
+      有 = false
+    } else {
+      if 匹配在(s, i, 子) {
+        return i
+      } else {
+        i = i + 1
+      }
+    }
+  }
+  return -1
+}
+
+fn 含(s: String, 子: String) -> Bool {
+  if 查找(s, 子) >= 0 {
+    return true
+  }
+  return false
+}
+
+fn 重复(s: String, 次: Int) -> String {
+  var 出 = ""
+  var i = 0
+  while i < 次 {
+    出 = 出 + s
+    i = i + 1
+  }
+  return 出
+}
+
+// 把每一处 旧 换成 新。空的老串原样交回 —— 换空串会无限长。
+fn 替换(s: String, 旧: String, 新: String) -> String {
+  if len(旧) == 0 {
+    return s
+  }
+  let n = len(s)
+  let m = len(旧)
+  var 出 = ""
+  var i = 0
+  var 走 = true
+  while 走 {
+    if i >= n {
+      走 = false
+    } else {
+      if 匹配在(s, i, 旧) {
+        出 = 出 + 新
+        i = i + m
+      } else {
+        出 = 出 + s[i]
+        i = i + 1
+      }
+    }
+  }
+  return 出
+}
+
+fn 左填(s: String, 宽: Int, 填: String) -> String {
+  let n = len(s)
+  if n >= 宽 {
+    return s
+  }
+  return 重复(填, 宽 - n) + s
+}
+
+fn 右填(s: String, 宽: Int, 填: String) -> String {
+  let n = len(s)
+  if n >= 宽 {
+    return s
+  }
+  return s + 重复(填, 宽 - n)
+}
+
+// 一个非负整数写成十六进制。零写成 0，不补前导零 —— 补零是调用方的事。
+fn 十六进制(n: Int) -> String {
+  if n < 0 {
+    return 十六进制(0 - n)
+  }
+  if n == 0 {
+    return "0"
+  }
+  let 位 = "0123456789abcdef"
+  var 出 = ""
+  var 余 = n
+  var 走 = true
+  while 走 {
+    if 余 == 0 {
+      走 = false
+    } else {
+      let 个 = 余 % 16
+      出 = slice(位, 个, 个 + 1) + 出
+      余 = (余 - 个) / 16
+    }
+  }
+  return 出
+}

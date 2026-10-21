@@ -101,6 +101,32 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 1 { return 坏("str 要一个参数") }
     return 好(str(值们[0]))
   }
+  // 字符串那一层还差几个纯函数，而标准库把它们当砖用。
+  // 它们不碰世界、不改状态，所以在这一层直接转给语言自己的同名内置。
+  if 名 == "slice" {
+    if len(值们) != 3 { return 坏("slice 要三个参数") }
+    return 好(slice(值们[0], 值们[1], 值们[2]))
+  }
+  if 名 == "chr" {
+    if len(值们) != 1 { return 坏("chr 要一个参数") }
+    return 好(chr(值们[0]))
+  }
+  if 名 == "to_int" {
+    if len(值们) != 1 { return 坏("to_int 要一个参数") }
+    return 好(to_int(值们[0]))
+  }
+  if 名 == "nfc" {
+    if len(值们) != 1 { return 坏("nfc 要一个参数") }
+    return 好(nfc(值们[0]))
+  }
+  if 名 == "is_letter" {
+    if len(值们) != 1 { return 坏("is_letter 要一个参数") }
+    return 好(is_letter(值们[0]))
+  }
+  if 名 == "is_mark" {
+    if len(值们) != 1 { return 坏("is_mark 要一个参数") }
+    return 好(is_mark(值们[0]))
+  }
   let 找 = 查找(环境, "fn:" + 名)
   if 找.found == false { return 坏("没有这个函数：" + 名) }
   // 找.value 是 (参数名们, 语句们)。绑参数要在**新的一层**上绑，
@@ -126,6 +152,12 @@ fn 求值(节点: Int, 环境: Int) -> Int {
   // 因为 stmt.hmyr 用它在「return 不带值」时占位。
   if 种 == "nil" { return 好(()) }
   if 种 == "name" {
+    // 布尔字面量：自举那一层的切词器把关键字一律当成标识符（见 lex.hmyr 开头那段），
+    // 于是 true 与 false 到这一步是「一个名字」。要在这里把它们认回来，
+    // 否则目标程序里写一个 true 就会报「没有这个名字：true」。
+    // 这两个词是语言的关键字，不可能是用户起的名字，所以先认它们没有歧义。
+    if 节点.text == "true" { return 好(1 == 1) }
+    if 节点.text == "false" { return 好(1 == 2) }
     let r = 查找(环境, 节点.text)
     if r.found == false { return 坏("没有这个名字：" + 节点.text) }
     return 好(r.value)

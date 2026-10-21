@@ -39,6 +39,12 @@ try {
     ok("--own-scalars 也算出 5", r.status === 0 && String(r.stdout).trim() === "5", String(r.status) + " " + JSON.stringify(String(r.stdout).trim()));
     ok("--own-scalars 不把开关算进 argv", !String(r.stderr).includes("--own-scalars"));
   }
+  {
+    // 标准库那一份的验收：它在自举层上跑，所以这一条同时是「自举层认得它用的东西」的证据。
+    const r = 启动([path.join(ROOT, "conformance/lib-strings.hmyr")]);
+    ok("字符串库二十二条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
+      String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
+  }
   console.log("边界");
   {
     const r = 启动([path.join(临, "nope.hmyr")]);

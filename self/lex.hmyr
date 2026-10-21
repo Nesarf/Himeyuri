@@ -112,12 +112,29 @@ fn read_number(s: String, i: Int, acc: String) -> Int {
   return {next: i, text: acc}
 }
 
-// 读一个字符串，停在收尾的引号上；内容保留原文。
+// 读一个字符串，停在收尾的引号上。
+//
+// 转义要在这里解：早先这一版把内容原样留着，于是目标程序里写 "\t" 拿到的是
+// 反斜杠加 t 两个字符 —— 而标准库的空白判断正是靠那一个字符，
+// 症状是「修剪不认制表符」，看起来像库里写错了。
+// 认五个：n、t、r、反斜杠、引号；别的一律原样留两个字符，不猜。
 fn read_string(s: String, i: Int, acc: String) -> Int {
   if i >= len(s) { return {next: i, text: acc, closed: false} }
   if s[i] == "\"" { return {next: i + 1, text: acc, closed: true} }
   if s[i] == "\n" { return {next: i, text: acc, closed: false} }
+  if s[i] == "\\" { return read_escape(s, i, acc) }
   return read_string(s, i + 1, acc + s[i])
+}
+
+fn read_escape(s: String, i: Int, acc: String) -> Int {
+  if i + 1 >= len(s) { return {next: i + 1, text: acc + "\\"} }
+  let c = s[i + 1]
+  if c == "n" { return read_string(s, i + 2, acc + "\n") }
+  if c == "t" { return read_string(s, i + 2, acc + "\t") }
+  if c == "r" { return read_string(s, i + 2, acc + "\r") }
+  if c == "\\" { return read_string(s, i + 2, acc + "\\") }
+  if c == "\"" { return read_string(s, i + 2, acc + "\"") }
+  return read_string(s, i + 2, acc + "\\" + c)
 }
 
 // 读一个标点：先看两字符的组合，再看单字符。

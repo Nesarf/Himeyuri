@@ -104,7 +104,10 @@ console.log("\nthe two boundaries it states about itself are real");
 {
   const mine = mineTokens('let a = "a\\nb"\n');
   const stringToken = mine.find((t) => t.kind === "string");
-  ok("a string keeps its source text, escapes and all", stringToken && stringToken.text === "a\\nb", JSON.stringify(stringToken));
+  // 转义现在会解：早先这一层把内容原样留着，于是 "\t" 拿到的是反斜杠加 t 两个字符，
+  // 而标准库的空白判断正是靠那一个字符。这一条改成「解出来」，
+  // 因为它描述的正是那一处修补之后的规矩。
+  ok("a string resolves its escapes", stringToken && stringToken.text === "a\nb", JSON.stringify(stringToken));
 }
 {
   const mine = mineTokens("let x = 1 // trailing\n");

@@ -1,0 +1,102 @@
+import "../lib/strings.hmyr"
+
+// 一条断言：通过了交回 0，不通过交回它的编号。
+// 编号而不是布尔，是为了在启动器上跑的时候，失败能说出是哪一条。
+fn 检(好: Bool, 号: Int) -> Int {
+  if 好 {
+    return 0
+  }
+  return 号
+}
+
+fn main() -> Int {
+  let a = 检(大写("abc") == "ABC", 1)
+  if a != 0 {
+    return a
+  }
+  let b = 检(小写("ABC") == "abc", 2)
+  if b != 0 {
+    return b
+  }
+  let c = 检(大写("aBc1") == "ABC1", 3)
+  if c != 0 {
+    return c
+  }
+  let d = 检(修剪("  ab  ") == "ab", 4)
+  if d != 0 {
+    return d
+  }
+  let e = 检(修剪("\t\nab\r\n") == "ab", 5)
+  if e != 0 {
+    return e
+  }
+  let f = 检(修剪("   ") == "", 6)
+  if f != 0 {
+    return f
+  }
+  let g = 检(开始于("hello", "he"), 7)
+  if g != 0 {
+    return g
+  }
+  let h = 检(开始于("hello", "lo") == false, 8)
+  if h != 0 {
+    return h
+  }
+  let i = 检(结束于("hello", "lo"), 9)
+  if i != 0 {
+    return i
+  }
+  let j = 检(结束于("hello", "he") == false, 10)
+  if j != 0 {
+    return j
+  }
+  let k = 检(查找("hello", "ll") == 2, 11)
+  if k != 0 {
+    return k
+  }
+  let l = 检(查找("hello", "x") == 0 - 1, 12)
+  if l != 0 {
+    return l
+  }
+  let m = 检(含("hello", "ell"), 13)
+  if m != 0 {
+    return m
+  }
+  let n = 检(含("hello", "xyz") == false, 14)
+  if n != 0 {
+    return n
+  }
+  let o = 检(重复("ab", 3) == "ababab", 15)
+  if o != 0 {
+    return o
+  }
+  let p = 检(替换("a-b-c", "-", "+") == "a+b+c", 16)
+  if p != 0 {
+    return p
+  }
+  let q = 检(替换("aaa", "aa", "b") == "ba", 17)
+  if q != 0 {
+    return q
+  }
+  let r = 检(左填("7", 3, "0") == "007", 18)
+  if r != 0 {
+    return r
+  }
+  let s = 检(右填("7", 3, ".") == "7..", 19)
+  if s != 0 {
+    return s
+  }
+  let t = 检(十六进制(255) == "ff", 20)
+  if t != 0 {
+    return t
+  }
+  let u = 检(十六进制(0) == "0", 21)
+  if u != 0 {
+    return u
+  }
+  let v = 检(十六进制(4096) == "1000", 22)
+  if v != 0 {
+    return v
+  }
+  return 0
+}
