@@ -44,14 +44,20 @@ const 记账能力 = () => {
       env: { home: 包("env", "home", () => os.homedir()), temp: 包("env", "temp", () => os.tmpdir()) },
       path: { join: 包("path", "join", (...p) => path.join(...p)), resolve: 包("path", "resolve", (...p) => path.resolve(...p)), dirname: 包("path", "dirname", (p) => path.dirname(p)), basename: 包("path", "basename", (p) => path.basename(p)) },
       terminal: { size: 包("terminal", "size", () => ({ columns: 80, rows: 24 })), clear: 包("terminal", "clear", () => ""), escape: 包("terminal", "escape", () => ""), color: 包("terminal", "color", () => ""), hide: 包("terminal", "hide", () => ""), show: 包("terminal", "show", () => "") },
+      // Unicode 那一组也在这里：它是数据，和别的组一样可能被换掉。
+      unicode: {
+        normalize: 包("unicode", "normalize", (s) => s.normalize("NFC")),
+        isLetter: 包("unicode", "isLetter", (s) => /\p{L}/u.test(s)),
+        isMark: 包("unicode", "isMark", (s) => /\p{M}/u.test(s)),
+      },
     },
   };
 };
 
-console.log("一、能力层的形状：七组，而每一组都有那一份契约里写着的成员");
+console.log("一、能力层的形状：八组，而每一组都有那一份契约里写着的成员");
 {
   const cap = 本机能力();
-  for (const 组 of ["file", "process", "time", "env", "path", "terminal"]) {
+  for (const 组 of ["file", "process", "time", "env", "path", "terminal", "unicode"]) {
     ok(组 + " 这一组在", cap[组] && typeof cap[组] === "object", typeof cap[组]);
   }
   ok("file 有读、写、问在不在", ["read", "exists", "write"].every((k) => typeof cap.file[k] === "function"));
@@ -59,6 +65,9 @@ console.log("一、能力层的形状：七组，而每一组都有那一份契�
   ok("time 有现在与等一会儿", ["now", "sleep"].every((k) => typeof cap.time[k] === "function"));
   ok("path 有拼、拆", ["join", "resolve", "dirname", "basename"].every((k) => typeof cap.path[k] === "function"));
   ok("terminal 只交回字符串（六件都在）", ["size", "clear", "escape", "color", "hide", "show"].every((k) => typeof cap.terminal[k] === "function"));
+  ok("unicode 有归一化与两条属性", ["normalize", "isLetter", "isMark"].every((k) => typeof cap.unicode[k] === "function"));
+  ok("unicode 真的能归一化", cap.unicode.normalize("e\u0301") === "\u00e9");
+  ok("unicode 真的能分辨字母与附加符", cap.unicode.isLetter("a") === true && cap.unicode.isMark("\u0301") === true);
   // 真的读一次：这一条让「是不是真的接上了」有一个可核的答案。
   ok("file.read 真的读得到一个已知文件", String(cap.file.read(path.join(ROOT, "SPEC.txt")).subarray(0, 8)).toLowerCase().includes("himeyuri"), "读不到");
   ok("file.exists 对不存在的东西说假", cap.file.exists(path.join(ROOT, "没有这个文件.txt")) === false);

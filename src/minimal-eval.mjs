@@ -88,9 +88,11 @@ const 内置 = {
   },
   // 归一化与 Unicode 属性都要一张字符表，而那张表是能力，不是这一层能自制的。
   // 于是这三条把值先写成宿主串，再交给世界的库 —— 借在明处，写在这里。
-  nfc: (rt, a) => rt.成串(a[0]).normalize("NFC"),
-  is_letter: (rt, a) => /\p{L}/u.test(rt.成串(a[0])),
-  is_mark: (rt, a) => /\p{M}/u.test(rt.成串(a[0])),
+  // 归一化与 Unicode 属性要一张字符表，而那张表是数据 —— 它住在能力层的 unicode 组里。
+  // 于是求值器不再直接对宿主串调 normalize，也不再自己写一条属性正则。
+  nfc: (rt, a) => rt.cap.unicode.normalize(rt.成串(a[0])),
+  is_letter: (rt, a) => rt.cap.unicode.isLetter(rt.成串(a[0])),
+  is_mark: (rt, a) => rt.cap.unicode.isMark(rt.成串(a[0])),
   record_new: (rt, a) => {
     const pairs = a[0];
     if (!Array.isArray(pairs)) rt.坏("HMYR-R0214", "record_of wants a tuple of (name, value) pairs");

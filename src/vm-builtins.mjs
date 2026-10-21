@@ -50,11 +50,12 @@ export const 内置表 = {
     if (!/^-?[0-9]+$/.test(s)) return vm.坏("HMYR-R0208", "not an integer literal: '" + s + "'");
     return 数.解析(s);
   } },
-  // 归一化与 Unicode 属性要一张字符表，那是能力而不是这一层能自制的。
-  // 所以这三条先把值写成宿主串，再交给世界的库 —— 借在明处。
-  nfc: { 做: (vm, a) => vm.文.由宿主(vm.成串(a[0]).normalize("NFC")) },
-  is_letter: { 做: (vm, a) => /\p{L}/u.test(vm.成串(a[0])) },
-  is_mark: { 做: (vm, a) => /\p{M}/u.test(vm.成串(a[0])) },
+  // 归一化与 Unicode 属性要一张字符表，而那张表是数据 —— 它住在能力层的 unicode 组里。
+  // 于是内置表不再直接对宿主串调 normalize，也不再自己写一条属性正则。
+  // 值先写成宿主串（那张表是按宿主串查的），回来再落到选定的那种底上。
+  nfc: { 做: (vm, a) => vm.文.由宿主(vm.cap.unicode.normalize(vm.成串(a[0]))) },
+  is_letter: { 做: (vm, a) => vm.cap.unicode.isLetter(vm.成串(a[0])) },
+  is_mark: { 做: (vm, a) => vm.cap.unicode.isMark(vm.成串(a[0])) },
   record_new: { 做: (vm, a) => {
     const pairs = a[0];
     if (!pairs || pairs.tag !== "tuple") return vm.坏("HMYR-R0214", "record_of wants a tuple of (name, value) pairs");
