@@ -1,0 +1,14 @@
+import "../runtime/ucd/blocks.hmyr"
+
+fn main() -> Int {
+  if 块名(65) != "Basic Latin" {
+    return 1
+  }
+  if 块名(12354) != "Hiragana" {
+    return 2
+  }
+  if 块名(20013) != "CJK Unified Ideographs" {
+    return 3
+  }
+  return 0
+}

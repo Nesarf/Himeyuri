@@ -1,0 +1,1696 @@
+// 这张表是从 data/ucd/Blocks.txt 生成的：码点 → 块名。
+// 生成器是 tools/ucd.mjs，验收在 test/ucd.test.mjs。手改这里会被下一次生成覆盖。
+// 边界写十进制：自举那一层的 to_int 只认十进制，十六进制会让它在那边读不进来。
+fn 块名(码点: Int) -> String {
+  if 码点 >= 0 {  // 0x0..0x7F
+    if 码点 <= 127 {
+      return "Basic Latin"
+    }
+  }
+  if 码点 >= 128 {  // 0x80..0xFF
+    if 码点 <= 255 {
+      return "Latin-1 Supplement"
+    }
+  }
+  if 码点 >= 256 {  // 0x100..0x17F
+    if 码点 <= 383 {
+      return "Latin Extended-A"
+    }
+  }
+  if 码点 >= 384 {  // 0x180..0x24F
+    if 码点 <= 591 {
+      return "Latin Extended-B"
+    }
+  }
+  if 码点 >= 592 {  // 0x250..0x2AF
+    if 码点 <= 687 {
+      return "IPA Extensions"
+    }
+  }
+  if 码点 >= 688 {  // 0x2B0..0x2FF
+    if 码点 <= 767 {
+      return "Spacing Modifier Letters"
+    }
+  }
+  if 码点 >= 768 {  // 0x300..0x36F
+    if 码点 <= 879 {
+      return "Combining Diacritical Marks"
+    }
+  }
+  if 码点 >= 880 {  // 0x370..0x3FF
+    if 码点 <= 1023 {
+      return "Greek and Coptic"
+    }
+  }
+  if 码点 >= 1024 {  // 0x400..0x4FF
+    if 码点 <= 1279 {
+      return "Cyrillic"
+    }
+  }
+  if 码点 >= 1280 {  // 0x500..0x52F
+    if 码点 <= 1327 {
+      return "Cyrillic Supplement"
+    }
+  }
+  if 码点 >= 1328 {  // 0x530..0x58F
+    if 码点 <= 1423 {
+      return "Armenian"
+    }
+  }
+  if 码点 >= 1424 {  // 0x590..0x5FF
+    if 码点 <= 1535 {
+      return "Hebrew"
+    }
+  }
+  if 码点 >= 1536 {  // 0x600..0x6FF
+    if 码点 <= 1791 {
+      return "Arabic"
+    }
+  }
+  if 码点 >= 1792 {  // 0x700..0x74F
+    if 码点 <= 1871 {
+      return "Syriac"
+    }
+  }
+  if 码点 >= 1872 {  // 0x750..0x77F
+    if 码点 <= 1919 {
+      return "Arabic Supplement"
+    }
+  }
+  if 码点 >= 1920 {  // 0x780..0x7BF
+    if 码点 <= 1983 {
+      return "Thaana"
+    }
+  }
+  if 码点 >= 1984 {  // 0x7C0..0x7FF
+    if 码点 <= 2047 {
+      return "NKo"
+    }
+  }
+  if 码点 >= 2048 {  // 0x800..0x83F
+    if 码点 <= 2111 {
+      return "Samaritan"
+    }
+  }
+  if 码点 >= 2112 {  // 0x840..0x85F
+    if 码点 <= 2143 {
+      return "Mandaic"
+    }
+  }
+  if 码点 >= 2144 {  // 0x860..0x86F
+    if 码点 <= 2159 {
+      return "Syriac Supplement"
+    }
+  }
+  if 码点 >= 2160 {  // 0x870..0x89F
+    if 码点 <= 2207 {
+      return "Arabic Extended-B"
+    }
+  }
+  if 码点 >= 2208 {  // 0x8A0..0x8FF
+    if 码点 <= 2303 {
+      return "Arabic Extended-A"
+    }
+  }
+  if 码点 >= 2304 {  // 0x900..0x97F
+    if 码点 <= 2431 {
+      return "Devanagari"
+    }
+  }
+  if 码点 >= 2432 {  // 0x980..0x9FF
+    if 码点 <= 2559 {
+      return "Bengali"
+    }
+  }
+  if 码点 >= 2560 {  // 0xA00..0xA7F
+    if 码点 <= 2687 {
+      return "Gurmukhi"
+    }
+  }
+  if 码点 >= 2688 {  // 0xA80..0xAFF
+    if 码点 <= 2815 {
+      return "Gujarati"
+    }
+  }
+  if 码点 >= 2816 {  // 0xB00..0xB7F
+    if 码点 <= 2943 {
+      return "Oriya"
+    }
+  }
+  if 码点 >= 2944 {  // 0xB80..0xBFF
+    if 码点 <= 3071 {
+      return "Tamil"
+    }
+  }
+  if 码点 >= 3072 {  // 0xC00..0xC7F
+    if 码点 <= 3199 {
+      return "Telugu"
+    }
+  }
+  if 码点 >= 3200 {  // 0xC80..0xCFF
+    if 码点 <= 3327 {
+      return "Kannada"
+    }
+  }
+  if 码点 >= 3328 {  // 0xD00..0xD7F
+    if 码点 <= 3455 {
+      return "Malayalam"
+    }
+  }
+  if 码点 >= 3456 {  // 0xD80..0xDFF
+    if 码点 <= 3583 {
+      return "Sinhala"
+    }
+  }
+  if 码点 >= 3584 {  // 0xE00..0xE7F
+    if 码点 <= 3711 {
+      return "Thai"
+    }
+  }
+  if 码点 >= 3712 {  // 0xE80..0xEFF
+    if 码点 <= 3839 {
+      return "Lao"
+    }
+  }
+  if 码点 >= 3840 {  // 0xF00..0xFFF
+    if 码点 <= 4095 {
+      return "Tibetan"
+    }
+  }
+  if 码点 >= 4096 {  // 0x1000..0x109F
+    if 码点 <= 4255 {
+      return "Myanmar"
+    }
+  }
+  if 码点 >= 4256 {  // 0x10A0..0x10FF
+    if 码点 <= 4351 {
+      return "Georgian"
+    }
+  }
+  if 码点 >= 4352 {  // 0x1100..0x11FF
+    if 码点 <= 4607 {
+      return "Hangul Jamo"
+    }
+  }
+  if 码点 >= 4608 {  // 0x1200..0x137F
+    if 码点 <= 4991 {
+      return "Ethiopic"
+    }
+  }
+  if 码点 >= 4992 {  // 0x1380..0x139F
+    if 码点 <= 5023 {
+      return "Ethiopic Supplement"
+    }
+  }
+  if 码点 >= 5024 {  // 0x13A0..0x13FF
+    if 码点 <= 5119 {
+      return "Cherokee"
+    }
+  }
+  if 码点 >= 5120 {  // 0x1400..0x167F
+    if 码点 <= 5759 {
+      return "Unified Canadian Aboriginal Syllabics"
+    }
+  }
+  if 码点 >= 5760 {  // 0x1680..0x169F
+    if 码点 <= 5791 {
+      return "Ogham"
+    }
+  }
+  if 码点 >= 5792 {  // 0x16A0..0x16FF
+    if 码点 <= 5887 {
+      return "Runic"
+    }
+  }
+  if 码点 >= 5888 {  // 0x1700..0x171F
+    if 码点 <= 5919 {
+      return "Tagalog"
+    }
+  }
+  if 码点 >= 5920 {  // 0x1720..0x173F
+    if 码点 <= 5951 {
+      return "Hanunoo"
+    }
+  }
+  if 码点 >= 5952 {  // 0x1740..0x175F
+    if 码点 <= 5983 {
+      return "Buhid"
+    }
+  }
+  if 码点 >= 5984 {  // 0x1760..0x177F
+    if 码点 <= 6015 {
+      return "Tagbanwa"
+    }
+  }
+  if 码点 >= 6016 {  // 0x1780..0x17FF
+    if 码点 <= 6143 {
+      return "Khmer"
+    }
+  }
+  if 码点 >= 6144 {  // 0x1800..0x18AF
+    if 码点 <= 6319 {
+      return "Mongolian"
+    }
+  }
+  if 码点 >= 6320 {  // 0x18B0..0x18FF
+    if 码点 <= 6399 {
+      return "Unified Canadian Aboriginal Syllabics Extended"
+    }
+  }
+  if 码点 >= 6400 {  // 0x1900..0x194F
+    if 码点 <= 6479 {
+      return "Limbu"
+    }
+  }
+  if 码点 >= 6480 {  // 0x1950..0x197F
+    if 码点 <= 6527 {
+      return "Tai Le"
+    }
+  }
+  if 码点 >= 6528 {  // 0x1980..0x19DF
+    if 码点 <= 6623 {
+      return "New Tai Lue"
+    }
+  }
+  if 码点 >= 6624 {  // 0x19E0..0x19FF
+    if 码点 <= 6655 {
+      return "Khmer Symbols"
+    }
+  }
+  if 码点 >= 6656 {  // 0x1A00..0x1A1F
+    if 码点 <= 6687 {
+      return "Buginese"
+    }
+  }
+  if 码点 >= 6688 {  // 0x1A20..0x1AAF
+    if 码点 <= 6831 {
+      return "Tai Tham"
+    }
+  }
+  if 码点 >= 6832 {  // 0x1AB0..0x1AFF
+    if 码点 <= 6911 {
+      return "Combining Diacritical Marks Extended"
+    }
+  }
+  if 码点 >= 6912 {  // 0x1B00..0x1B7F
+    if 码点 <= 7039 {
+      return "Balinese"
+    }
+  }
+  if 码点 >= 7040 {  // 0x1B80..0x1BBF
+    if 码点 <= 7103 {
+      return "Sundanese"
+    }
+  }
+  if 码点 >= 7104 {  // 0x1BC0..0x1BFF
+    if 码点 <= 7167 {
+      return "Batak"
+    }
+  }
+  if 码点 >= 7168 {  // 0x1C00..0x1C4F
+    if 码点 <= 7247 {
+      return "Lepcha"
+    }
+  }
+  if 码点 >= 7248 {  // 0x1C50..0x1C7F
+    if 码点 <= 7295 {
+      return "Ol Chiki"
+    }
+  }
+  if 码点 >= 7296 {  // 0x1C80..0x1C8F
+    if 码点 <= 7311 {
+      return "Cyrillic Extended-C"
+    }
+  }
+  if 码点 >= 7312 {  // 0x1C90..0x1CBF
+    if 码点 <= 7359 {
+      return "Georgian Extended"
+    }
+  }
+  if 码点 >= 7360 {  // 0x1CC0..0x1CCF
+    if 码点 <= 7375 {
+      return "Sundanese Supplement"
+    }
+  }
+  if 码点 >= 7376 {  // 0x1CD0..0x1CFF
+    if 码点 <= 7423 {
+      return "Vedic Extensions"
+    }
+  }
+  if 码点 >= 7424 {  // 0x1D00..0x1D7F
+    if 码点 <= 7551 {
+      return "Phonetic Extensions"
+    }
+  }
+  if 码点 >= 7552 {  // 0x1D80..0x1DBF
+    if 码点 <= 7615 {
+      return "Phonetic Extensions Supplement"
+    }
+  }
+  if 码点 >= 7616 {  // 0x1DC0..0x1DFF
+    if 码点 <= 7679 {
+      return "Combining Diacritical Marks Supplement"
+    }
+  }
+  if 码点 >= 7680 {  // 0x1E00..0x1EFF
+    if 码点 <= 7935 {
+      return "Latin Extended Additional"
+    }
+  }
+  if 码点 >= 7936 {  // 0x1F00..0x1FFF
+    if 码点 <= 8191 {
+      return "Greek Extended"
+    }
+  }
+  if 码点 >= 8192 {  // 0x2000..0x206F
+    if 码点 <= 8303 {
+      return "General Punctuation"
+    }
+  }
+  if 码点 >= 8304 {  // 0x2070..0x209F
+    if 码点 <= 8351 {
+      return "Superscripts and Subscripts"
+    }
+  }
+  if 码点 >= 8352 {  // 0x20A0..0x20CF
+    if 码点 <= 8399 {
+      return "Currency Symbols"
+    }
+  }
+  if 码点 >= 8400 {  // 0x20D0..0x20FF
+    if 码点 <= 8447 {
+      return "Combining Diacritical Marks for Symbols"
+    }
+  }
+  if 码点 >= 8448 {  // 0x2100..0x214F
+    if 码点 <= 8527 {
+      return "Letterlike Symbols"
+    }
+  }
+  if 码点 >= 8528 {  // 0x2150..0x218F
+    if 码点 <= 8591 {
+      return "Number Forms"
+    }
+  }
+  if 码点 >= 8592 {  // 0x2190..0x21FF
+    if 码点 <= 8703 {
+      return "Arrows"
+    }
+  }
+  if 码点 >= 8704 {  // 0x2200..0x22FF
+    if 码点 <= 8959 {
+      return "Mathematical Operators"
+    }
+  }
+  if 码点 >= 8960 {  // 0x2300..0x23FF
+    if 码点 <= 9215 {
+      return "Miscellaneous Technical"
+    }
+  }
+  if 码点 >= 9216 {  // 0x2400..0x243F
+    if 码点 <= 9279 {
+      return "Control Pictures"
+    }
+  }
+  if 码点 >= 9280 {  // 0x2440..0x245F
+    if 码点 <= 9311 {
+      return "Optical Character Recognition"
+    }
+  }
+  if 码点 >= 9312 {  // 0x2460..0x24FF
+    if 码点 <= 9471 {
+      return "Enclosed Alphanumerics"
+    }
+  }
+  if 码点 >= 9472 {  // 0x2500..0x257F
+    if 码点 <= 9599 {
+      return "Box Drawing"
+    }
+  }
+  if 码点 >= 9600 {  // 0x2580..0x259F
+    if 码点 <= 9631 {
+      return "Block Elements"
+    }
+  }
+  if 码点 >= 9632 {  // 0x25A0..0x25FF
+    if 码点 <= 9727 {
+      return "Geometric Shapes"
+    }
+  }
+  if 码点 >= 9728 {  // 0x2600..0x26FF
+    if 码点 <= 9983 {
+      return "Miscellaneous Symbols"
+    }
+  }
+  if 码点 >= 9984 {  // 0x2700..0x27BF
+    if 码点 <= 10175 {
+      return "Dingbats"
+    }
+  }
+  if 码点 >= 10176 {  // 0x27C0..0x27EF
+    if 码点 <= 10223 {
+      return "Miscellaneous Mathematical Symbols-A"
+    }
+  }
+  if 码点 >= 10224 {  // 0x27F0..0x27FF
+    if 码点 <= 10239 {
+      return "Supplemental Arrows-A"
+    }
+  }
+  if 码点 >= 10240 {  // 0x2800..0x28FF
+    if 码点 <= 10495 {
+      return "Braille Patterns"
+    }
+  }
+  if 码点 >= 10496 {  // 0x2900..0x297F
+    if 码点 <= 10623 {
+      return "Supplemental Arrows-B"
+    }
+  }
+  if 码点 >= 10624 {  // 0x2980..0x29FF
+    if 码点 <= 10751 {
+      return "Miscellaneous Mathematical Symbols-B"
+    }
+  }
+  if 码点 >= 10752 {  // 0x2A00..0x2AFF
+    if 码点 <= 11007 {
+      return "Supplemental Mathematical Operators"
+    }
+  }
+  if 码点 >= 11008 {  // 0x2B00..0x2BFF
+    if 码点 <= 11263 {
+      return "Miscellaneous Symbols and Arrows"
+    }
+  }
+  if 码点 >= 11264 {  // 0x2C00..0x2C5F
+    if 码点 <= 11359 {
+      return "Glagolitic"
+    }
+  }
+  if 码点 >= 11360 {  // 0x2C60..0x2C7F
+    if 码点 <= 11391 {
+      return "Latin Extended-C"
+    }
+  }
+  if 码点 >= 11392 {  // 0x2C80..0x2CFF
+    if 码点 <= 11519 {
+      return "Coptic"
+    }
+  }
+  if 码点 >= 11520 {  // 0x2D00..0x2D2F
+    if 码点 <= 11567 {
+      return "Georgian Supplement"
+    }
+  }
+  if 码点 >= 11568 {  // 0x2D30..0x2D7F
+    if 码点 <= 11647 {
+      return "Tifinagh"
+    }
+  }
+  if 码点 >= 11648 {  // 0x2D80..0x2DDF
+    if 码点 <= 11743 {
+      return "Ethiopic Extended"
+    }
+  }
+  if 码点 >= 11744 {  // 0x2DE0..0x2DFF
+    if 码点 <= 11775 {
+      return "Cyrillic Extended-A"
+    }
+  }
+  if 码点 >= 11776 {  // 0x2E00..0x2E7F
+    if 码点 <= 11903 {
+      return "Supplemental Punctuation"
+    }
+  }
+  if 码点 >= 11904 {  // 0x2E80..0x2EFF
+    if 码点 <= 12031 {
+      return "CJK Radicals Supplement"
+    }
+  }
+  if 码点 >= 12032 {  // 0x2F00..0x2FDF
+    if 码点 <= 12255 {
+      return "Kangxi Radicals"
+    }
+  }
+  if 码点 >= 12272 {  // 0x2FF0..0x2FFF
+    if 码点 <= 12287 {
+      return "Ideographic Description Characters"
+    }
+  }
+  if 码点 >= 12288 {  // 0x3000..0x303F
+    if 码点 <= 12351 {
+      return "CJK Symbols and Punctuation"
+    }
+  }
+  if 码点 >= 12352 {  // 0x3040..0x309F
+    if 码点 <= 12447 {
+      return "Hiragana"
+    }
+  }
+  if 码点 >= 12448 {  // 0x30A0..0x30FF
+    if 码点 <= 12543 {
+      return "Katakana"
+    }
+  }
+  if 码点 >= 12544 {  // 0x3100..0x312F
+    if 码点 <= 12591 {
+      return "Bopomofo"
+    }
+  }
+  if 码点 >= 12592 {  // 0x3130..0x318F
+    if 码点 <= 12687 {
+      return "Hangul Compatibility Jamo"
+    }
+  }
+  if 码点 >= 12688 {  // 0x3190..0x319F
+    if 码点 <= 12703 {
+      return "Kanbun"
+    }
+  }
+  if 码点 >= 12704 {  // 0x31A0..0x31BF
+    if 码点 <= 12735 {
+      return "Bopomofo Extended"
+    }
+  }
+  if 码点 >= 12736 {  // 0x31C0..0x31EF
+    if 码点 <= 12783 {
+      return "CJK Strokes"
+    }
+  }
+  if 码点 >= 12784 {  // 0x31F0..0x31FF
+    if 码点 <= 12799 {
+      return "Katakana Phonetic Extensions"
+    }
+  }
+  if 码点 >= 12800 {  // 0x3200..0x32FF
+    if 码点 <= 13055 {
+      return "Enclosed CJK Letters and Months"
+    }
+  }
+  if 码点 >= 13056 {  // 0x3300..0x33FF
+    if 码点 <= 13311 {
+      return "CJK Compatibility"
+    }
+  }
+  if 码点 >= 13312 {  // 0x3400..0x4DBF
+    if 码点 <= 19903 {
+      return "CJK Unified Ideographs Extension A"
+    }
+  }
+  if 码点 >= 19904 {  // 0x4DC0..0x4DFF
+    if 码点 <= 19967 {
+      return "Yijing Hexagram Symbols"
+    }
+  }
+  if 码点 >= 19968 {  // 0x4E00..0x9FFF
+    if 码点 <= 40959 {
+      return "CJK Unified Ideographs"
+    }
+  }
+  if 码点 >= 40960 {  // 0xA000..0xA48F
+    if 码点 <= 42127 {
+      return "Yi Syllables"
+    }
+  }
+  if 码点 >= 42128 {  // 0xA490..0xA4CF
+    if 码点 <= 42191 {
+      return "Yi Radicals"
+    }
+  }
+  if 码点 >= 42192 {  // 0xA4D0..0xA4FF
+    if 码点 <= 42239 {
+      return "Lisu"
+    }
+  }
+  if 码点 >= 42240 {  // 0xA500..0xA63F
+    if 码点 <= 42559 {
+      return "Vai"
+    }
+  }
+  if 码点 >= 42560 {  // 0xA640..0xA69F
+    if 码点 <= 42655 {
+      return "Cyrillic Extended-B"
+    }
+  }
+  if 码点 >= 42656 {  // 0xA6A0..0xA6FF
+    if 码点 <= 42751 {
+      return "Bamum"
+    }
+  }
+  if 码点 >= 42752 {  // 0xA700..0xA71F
+    if 码点 <= 42783 {
+      return "Modifier Tone Letters"
+    }
+  }
+  if 码点 >= 42784 {  // 0xA720..0xA7FF
+    if 码点 <= 43007 {
+      return "Latin Extended-D"
+    }
+  }
+  if 码点 >= 43008 {  // 0xA800..0xA82F
+    if 码点 <= 43055 {
+      return "Syloti Nagri"
+    }
+  }
+  if 码点 >= 43056 {  // 0xA830..0xA83F
+    if 码点 <= 43071 {
+      return "Common Indic Number Forms"
+    }
+  }
+  if 码点 >= 43072 {  // 0xA840..0xA87F
+    if 码点 <= 43135 {
+      return "Phags-pa"
+    }
+  }
+  if 码点 >= 43136 {  // 0xA880..0xA8DF
+    if 码点 <= 43231 {
+      return "Saurashtra"
+    }
+  }
+  if 码点 >= 43232 {  // 0xA8E0..0xA8FF
+    if 码点 <= 43263 {
+      return "Devanagari Extended"
+    }
+  }
+  if 码点 >= 43264 {  // 0xA900..0xA92F
+    if 码点 <= 43311 {
+      return "Kayah Li"
+    }
+  }
+  if 码点 >= 43312 {  // 0xA930..0xA95F
+    if 码点 <= 43359 {
+      return "Rejang"
+    }
+  }
+  if 码点 >= 43360 {  // 0xA960..0xA97F
+    if 码点 <= 43391 {
+      return "Hangul Jamo Extended-A"
+    }
+  }
+  if 码点 >= 43392 {  // 0xA980..0xA9DF
+    if 码点 <= 43487 {
+      return "Javanese"
+    }
+  }
+  if 码点 >= 43488 {  // 0xA9E0..0xA9FF
+    if 码点 <= 43519 {
+      return "Myanmar Extended-B"
+    }
+  }
+  if 码点 >= 43520 {  // 0xAA00..0xAA5F
+    if 码点 <= 43615 {
+      return "Cham"
+    }
+  }
+  if 码点 >= 43616 {  // 0xAA60..0xAA7F
+    if 码点 <= 43647 {
+      return "Myanmar Extended-A"
+    }
+  }
+  if 码点 >= 43648 {  // 0xAA80..0xAADF
+    if 码点 <= 43743 {
+      return "Tai Viet"
+    }
+  }
+  if 码点 >= 43744 {  // 0xAAE0..0xAAFF
+    if 码点 <= 43775 {
+      return "Meetei Mayek Extensions"
+    }
+  }
+  if 码点 >= 43776 {  // 0xAB00..0xAB2F
+    if 码点 <= 43823 {
+      return "Ethiopic Extended-A"
+    }
+  }
+  if 码点 >= 43824 {  // 0xAB30..0xAB6F
+    if 码点 <= 43887 {
+      return "Latin Extended-E"
+    }
+  }
+  if 码点 >= 43888 {  // 0xAB70..0xABBF
+    if 码点 <= 43967 {
+      return "Cherokee Supplement"
+    }
+  }
+  if 码点 >= 43968 {  // 0xABC0..0xABFF
+    if 码点 <= 44031 {
+      return "Meetei Mayek"
+    }
+  }
+  if 码点 >= 44032 {  // 0xAC00..0xD7AF
+    if 码点 <= 55215 {
+      return "Hangul Syllables"
+    }
+  }
+  if 码点 >= 55216 {  // 0xD7B0..0xD7FF
+    if 码点 <= 55295 {
+      return "Hangul Jamo Extended-B"
+    }
+  }
+  if 码点 >= 55296 {  // 0xD800..0xDB7F
+    if 码点 <= 56191 {
+      return "High Surrogates"
+    }
+  }
+  if 码点 >= 56192 {  // 0xDB80..0xDBFF
+    if 码点 <= 56319 {
+      return "High Private Use Surrogates"
+    }
+  }
+  if 码点 >= 56320 {  // 0xDC00..0xDFFF
+    if 码点 <= 57343 {
+      return "Low Surrogates"
+    }
+  }
+  if 码点 >= 57344 {  // 0xE000..0xF8FF
+    if 码点 <= 63743 {
+      return "Private Use Area"
+    }
+  }
+  if 码点 >= 63744 {  // 0xF900..0xFAFF
+    if 码点 <= 64255 {
+      return "CJK Compatibility Ideographs"
+    }
+  }
+  if 码点 >= 64256 {  // 0xFB00..0xFB4F
+    if 码点 <= 64335 {
+      return "Alphabetic Presentation Forms"
+    }
+  }
+  if 码点 >= 64336 {  // 0xFB50..0xFDFF
+    if 码点 <= 65023 {
+      return "Arabic Presentation Forms-A"
+    }
+  }
+  if 码点 >= 65024 {  // 0xFE00..0xFE0F
+    if 码点 <= 65039 {
+      return "Variation Selectors"
+    }
+  }
+  if 码点 >= 65040 {  // 0xFE10..0xFE1F
+    if 码点 <= 65055 {
+      return "Vertical Forms"
+    }
+  }
+  if 码点 >= 65056 {  // 0xFE20..0xFE2F
+    if 码点 <= 65071 {
+      return "Combining Half Marks"
+    }
+  }
+  if 码点 >= 65072 {  // 0xFE30..0xFE4F
+    if 码点 <= 65103 {
+      return "CJK Compatibility Forms"
+    }
+  }
+  if 码点 >= 65104 {  // 0xFE50..0xFE6F
+    if 码点 <= 65135 {
+      return "Small Form Variants"
+    }
+  }
+  if 码点 >= 65136 {  // 0xFE70..0xFEFF
+    if 码点 <= 65279 {
+      return "Arabic Presentation Forms-B"
+    }
+  }
+  if 码点 >= 65280 {  // 0xFF00..0xFFEF
+    if 码点 <= 65519 {
+      return "Halfwidth and Fullwidth Forms"
+    }
+  }
+  if 码点 >= 65520 {  // 0xFFF0..0xFFFF
+    if 码点 <= 65535 {
+      return "Specials"
+    }
+  }
+  if 码点 >= 65536 {  // 0x10000..0x1007F
+    if 码点 <= 65663 {
+      return "Linear B Syllabary"
+    }
+  }
+  if 码点 >= 65664 {  // 0x10080..0x100FF
+    if 码点 <= 65791 {
+      return "Linear B Ideograms"
+    }
+  }
+  if 码点 >= 65792 {  // 0x10100..0x1013F
+    if 码点 <= 65855 {
+      return "Aegean Numbers"
+    }
+  }
+  if 码点 >= 65856 {  // 0x10140..0x1018F
+    if 码点 <= 65935 {
+      return "Ancient Greek Numbers"
+    }
+  }
+  if 码点 >= 65936 {  // 0x10190..0x101CF
+    if 码点 <= 65999 {
+      return "Ancient Symbols"
+    }
+  }
+  if 码点 >= 66000 {  // 0x101D0..0x101FF
+    if 码点 <= 66047 {
+      return "Phaistos Disc"
+    }
+  }
+  if 码点 >= 66176 {  // 0x10280..0x1029F
+    if 码点 <= 66207 {
+      return "Lycian"
+    }
+  }
+  if 码点 >= 66208 {  // 0x102A0..0x102DF
+    if 码点 <= 66271 {
+      return "Carian"
+    }
+  }
+  if 码点 >= 66272 {  // 0x102E0..0x102FF
+    if 码点 <= 66303 {
+      return "Coptic Epact Numbers"
+    }
+  }
+  if 码点 >= 66304 {  // 0x10300..0x1032F
+    if 码点 <= 66351 {
+      return "Old Italic"
+    }
+  }
+  if 码点 >= 66352 {  // 0x10330..0x1034F
+    if 码点 <= 66383 {
+      return "Gothic"
+    }
+  }
+  if 码点 >= 66384 {  // 0x10350..0x1037F
+    if 码点 <= 66431 {
+      return "Old Permic"
+    }
+  }
+  if 码点 >= 66432 {  // 0x10380..0x1039F
+    if 码点 <= 66463 {
+      return "Ugaritic"
+    }
+  }
+  if 码点 >= 66464 {  // 0x103A0..0x103DF
+    if 码点 <= 66527 {
+      return "Old Persian"
+    }
+  }
+  if 码点 >= 66560 {  // 0x10400..0x1044F
+    if 码点 <= 66639 {
+      return "Deseret"
+    }
+  }
+  if 码点 >= 66640 {  // 0x10450..0x1047F
+    if 码点 <= 66687 {
+      return "Shavian"
+    }
+  }
+  if 码点 >= 66688 {  // 0x10480..0x104AF
+    if 码点 <= 66735 {
+      return "Osmanya"
+    }
+  }
+  if 码点 >= 66736 {  // 0x104B0..0x104FF
+    if 码点 <= 66815 {
+      return "Osage"
+    }
+  }
+  if 码点 >= 66816 {  // 0x10500..0x1052F
+    if 码点 <= 66863 {
+      return "Elbasan"
+    }
+  }
+  if 码点 >= 66864 {  // 0x10530..0x1056F
+    if 码点 <= 66927 {
+      return "Caucasian Albanian"
+    }
+  }
+  if 码点 >= 66928 {  // 0x10570..0x105BF
+    if 码点 <= 67007 {
+      return "Vithkuqi"
+    }
+  }
+  if 码点 >= 67008 {  // 0x105C0..0x105FF
+    if 码点 <= 67071 {
+      return "Todhri"
+    }
+  }
+  if 码点 >= 67072 {  // 0x10600..0x1077F
+    if 码点 <= 67455 {
+      return "Linear A"
+    }
+  }
+  if 码点 >= 67456 {  // 0x10780..0x107BF
+    if 码点 <= 67519 {
+      return "Latin Extended-F"
+    }
+  }
+  if 码点 >= 67584 {  // 0x10800..0x1083F
+    if 码点 <= 67647 {
+      return "Cypriot Syllabary"
+    }
+  }
+  if 码点 >= 67648 {  // 0x10840..0x1085F
+    if 码点 <= 67679 {
+      return "Imperial Aramaic"
+    }
+  }
+  if 码点 >= 67680 {  // 0x10860..0x1087F
+    if 码点 <= 67711 {
+      return "Palmyrene"
+    }
+  }
+  if 码点 >= 67712 {  // 0x10880..0x108AF
+    if 码点 <= 67759 {
+      return "Nabataean"
+    }
+  }
+  if 码点 >= 67808 {  // 0x108E0..0x108FF
+    if 码点 <= 67839 {
+      return "Hatran"
+    }
+  }
+  if 码点 >= 67840 {  // 0x10900..0x1091F
+    if 码点 <= 67871 {
+      return "Phoenician"
+    }
+  }
+  if 码点 >= 67872 {  // 0x10920..0x1093F
+    if 码点 <= 67903 {
+      return "Lydian"
+    }
+  }
+  if 码点 >= 67968 {  // 0x10980..0x1099F
+    if 码点 <= 67999 {
+      return "Meroitic Hieroglyphs"
+    }
+  }
+  if 码点 >= 68000 {  // 0x109A0..0x109FF
+    if 码点 <= 68095 {
+      return "Meroitic Cursive"
+    }
+  }
+  if 码点 >= 68096 {  // 0x10A00..0x10A5F
+    if 码点 <= 68191 {
+      return "Kharoshthi"
+    }
+  }
+  if 码点 >= 68192 {  // 0x10A60..0x10A7F
+    if 码点 <= 68223 {
+      return "Old South Arabian"
+    }
+  }
+  if 码点 >= 68224 {  // 0x10A80..0x10A9F
+    if 码点 <= 68255 {
+      return "Old North Arabian"
+    }
+  }
+  if 码点 >= 68288 {  // 0x10AC0..0x10AFF
+    if 码点 <= 68351 {
+      return "Manichaean"
+    }
+  }
+  if 码点 >= 68352 {  // 0x10B00..0x10B3F
+    if 码点 <= 68415 {
+      return "Avestan"
+    }
+  }
+  if 码点 >= 68416 {  // 0x10B40..0x10B5F
+    if 码点 <= 68447 {
+      return "Inscriptional Parthian"
+    }
+  }
+  if 码点 >= 68448 {  // 0x10B60..0x10B7F
+    if 码点 <= 68479 {
+      return "Inscriptional Pahlavi"
+    }
+  }
+  if 码点 >= 68480 {  // 0x10B80..0x10BAF
+    if 码点 <= 68527 {
+      return "Psalter Pahlavi"
+    }
+  }
+  if 码点 >= 68608 {  // 0x10C00..0x10C4F
+    if 码点 <= 68687 {
+      return "Old Turkic"
+    }
+  }
+  if 码点 >= 68736 {  // 0x10C80..0x10CFF
+    if 码点 <= 68863 {
+      return "Old Hungarian"
+    }
+  }
+  if 码点 >= 68864 {  // 0x10D00..0x10D3F
+    if 码点 <= 68927 {
+      return "Hanifi Rohingya"
+    }
+  }
+  if 码点 >= 68928 {  // 0x10D40..0x10D8F
+    if 码点 <= 69007 {
+      return "Garay"
+    }
+  }
+  if 码点 >= 69216 {  // 0x10E60..0x10E7F
+    if 码点 <= 69247 {
+      return "Rumi Numeral Symbols"
+    }
+  }
+  if 码点 >= 69248 {  // 0x10E80..0x10EBF
+    if 码点 <= 69311 {
+      return "Yezidi"
+    }
+  }
+  if 码点 >= 69312 {  // 0x10EC0..0x10EFF
+    if 码点 <= 69375 {
+      return "Arabic Extended-C"
+    }
+  }
+  if 码点 >= 69376 {  // 0x10F00..0x10F2F
+    if 码点 <= 69423 {
+      return "Old Sogdian"
+    }
+  }
+  if 码点 >= 69424 {  // 0x10F30..0x10F6F
+    if 码点 <= 69487 {
+      return "Sogdian"
+    }
+  }
+  if 码点 >= 69488 {  // 0x10F70..0x10FAF
+    if 码点 <= 69551 {
+      return "Old Uyghur"
+    }
+  }
+  if 码点 >= 69552 {  // 0x10FB0..0x10FDF
+    if 码点 <= 69599 {
+      return "Chorasmian"
+    }
+  }
+  if 码点 >= 69600 {  // 0x10FE0..0x10FFF
+    if 码点 <= 69631 {
+      return "Elymaic"
+    }
+  }
+  if 码点 >= 69632 {  // 0x11000..0x1107F
+    if 码点 <= 69759 {
+      return "Brahmi"
+    }
+  }
+  if 码点 >= 69760 {  // 0x11080..0x110CF
+    if 码点 <= 69839 {
+      return "Kaithi"
+    }
+  }
+  if 码点 >= 69840 {  // 0x110D0..0x110FF
+    if 码点 <= 69887 {
+      return "Sora Sompeng"
+    }
+  }
+  if 码点 >= 69888 {  // 0x11100..0x1114F
+    if 码点 <= 69967 {
+      return "Chakma"
+    }
+  }
+  if 码点 >= 69968 {  // 0x11150..0x1117F
+    if 码点 <= 70015 {
+      return "Mahajani"
+    }
+  }
+  if 码点 >= 70016 {  // 0x11180..0x111DF
+    if 码点 <= 70111 {
+      return "Sharada"
+    }
+  }
+  if 码点 >= 70112 {  // 0x111E0..0x111FF
+    if 码点 <= 70143 {
+      return "Sinhala Archaic Numbers"
+    }
+  }
+  if 码点 >= 70144 {  // 0x11200..0x1124F
+    if 码点 <= 70223 {
+      return "Khojki"
+    }
+  }
+  if 码点 >= 70272 {  // 0x11280..0x112AF
+    if 码点 <= 70319 {
+      return "Multani"
+    }
+  }
+  if 码点 >= 70320 {  // 0x112B0..0x112FF
+    if 码点 <= 70399 {
+      return "Khudawadi"
+    }
+  }
+  if 码点 >= 70400 {  // 0x11300..0x1137F
+    if 码点 <= 70527 {
+      return "Grantha"
+    }
+  }
+  if 码点 >= 70528 {  // 0x11380..0x113FF
+    if 码点 <= 70655 {
+      return "Tulu-Tigalari"
+    }
+  }
+  if 码点 >= 70656 {  // 0x11400..0x1147F
+    if 码点 <= 70783 {
+      return "Newa"
+    }
+  }
+  if 码点 >= 70784 {  // 0x11480..0x114DF
+    if 码点 <= 70879 {
+      return "Tirhuta"
+    }
+  }
+  if 码点 >= 71040 {  // 0x11580..0x115FF
+    if 码点 <= 71167 {
+      return "Siddham"
+    }
+  }
+  if 码点 >= 71168 {  // 0x11600..0x1165F
+    if 码点 <= 71263 {
+      return "Modi"
+    }
+  }
+  if 码点 >= 71264 {  // 0x11660..0x1167F
+    if 码点 <= 71295 {
+      return "Mongolian Supplement"
+    }
+  }
+  if 码点 >= 71296 {  // 0x11680..0x116CF
+    if 码点 <= 71375 {
+      return "Takri"
+    }
+  }
+  if 码点 >= 71376 {  // 0x116D0..0x116FF
+    if 码点 <= 71423 {
+      return "Myanmar Extended-C"
+    }
+  }
+  if 码点 >= 71424 {  // 0x11700..0x1174F
+    if 码点 <= 71503 {
+      return "Ahom"
+    }
+  }
+  if 码点 >= 71680 {  // 0x11800..0x1184F
+    if 码点 <= 71759 {
+      return "Dogra"
+    }
+  }
+  if 码点 >= 71840 {  // 0x118A0..0x118FF
+    if 码点 <= 71935 {
+      return "Warang Citi"
+    }
+  }
+  if 码点 >= 71936 {  // 0x11900..0x1195F
+    if 码点 <= 72031 {
+      return "Dives Akuru"
+    }
+  }
+  if 码点 >= 72096 {  // 0x119A0..0x119FF
+    if 码点 <= 72191 {
+      return "Nandinagari"
+    }
+  }
+  if 码点 >= 72192 {  // 0x11A00..0x11A4F
+    if 码点 <= 72271 {
+      return "Zanabazar Square"
+    }
+  }
+  if 码点 >= 72272 {  // 0x11A50..0x11AAF
+    if 码点 <= 72367 {
+      return "Soyombo"
+    }
+  }
+  if 码点 >= 72368 {  // 0x11AB0..0x11ABF
+    if 码点 <= 72383 {
+      return "Unified Canadian Aboriginal Syllabics Extended-A"
+    }
+  }
+  if 码点 >= 72384 {  // 0x11AC0..0x11AFF
+    if 码点 <= 72447 {
+      return "Pau Cin Hau"
+    }
+  }
+  if 码点 >= 72448 {  // 0x11B00..0x11B5F
+    if 码点 <= 72543 {
+      return "Devanagari Extended-A"
+    }
+  }
+  if 码点 >= 72640 {  // 0x11BC0..0x11BFF
+    if 码点 <= 72703 {
+      return "Sunuwar"
+    }
+  }
+  if 码点 >= 72704 {  // 0x11C00..0x11C6F
+    if 码点 <= 72815 {
+      return "Bhaiksuki"
+    }
+  }
+  if 码点 >= 72816 {  // 0x11C70..0x11CBF
+    if 码点 <= 72895 {
+      return "Marchen"
+    }
+  }
+  if 码点 >= 72960 {  // 0x11D00..0x11D5F
+    if 码点 <= 73055 {
+      return "Masaram Gondi"
+    }
+  }
+  if 码点 >= 73056 {  // 0x11D60..0x11DAF
+    if 码点 <= 73135 {
+      return "Gunjala Gondi"
+    }
+  }
+  if 码点 >= 73440 {  // 0x11EE0..0x11EFF
+    if 码点 <= 73471 {
+      return "Makasar"
+    }
+  }
+  if 码点 >= 73472 {  // 0x11F00..0x11F5F
+    if 码点 <= 73567 {
+      return "Kawi"
+    }
+  }
+  if 码点 >= 73648 {  // 0x11FB0..0x11FBF
+    if 码点 <= 73663 {
+      return "Lisu Supplement"
+    }
+  }
+  if 码点 >= 73664 {  // 0x11FC0..0x11FFF
+    if 码点 <= 73727 {
+      return "Tamil Supplement"
+    }
+  }
+  if 码点 >= 73728 {  // 0x12000..0x123FF
+    if 码点 <= 74751 {
+      return "Cuneiform"
+    }
+  }
+  if 码点 >= 74752 {  // 0x12400..0x1247F
+    if 码点 <= 74879 {
+      return "Cuneiform Numbers and Punctuation"
+    }
+  }
+  if 码点 >= 74880 {  // 0x12480..0x1254F
+    if 码点 <= 75087 {
+      return "Early Dynastic Cuneiform"
+    }
+  }
+  if 码点 >= 77712 {  // 0x12F90..0x12FFF
+    if 码点 <= 77823 {
+      return "Cypro-Minoan"
+    }
+  }
+  if 码点 >= 77824 {  // 0x13000..0x1342F
+    if 码点 <= 78895 {
+      return "Egyptian Hieroglyphs"
+    }
+  }
+  if 码点 >= 78896 {  // 0x13430..0x1345F
+    if 码点 <= 78943 {
+      return "Egyptian Hieroglyph Format Controls"
+    }
+  }
+  if 码点 >= 78944 {  // 0x13460..0x143FF
+    if 码点 <= 82943 {
+      return "Egyptian Hieroglyphs Extended-A"
+    }
+  }
+  if 码点 >= 82944 {  // 0x14400..0x1467F
+    if 码点 <= 83583 {
+      return "Anatolian Hieroglyphs"
+    }
+  }
+  if 码点 >= 90368 {  // 0x16100..0x1613F
+    if 码点 <= 90431 {
+      return "Gurung Khema"
+    }
+  }
+  if 码点 >= 92160 {  // 0x16800..0x16A3F
+    if 码点 <= 92735 {
+      return "Bamum Supplement"
+    }
+  }
+  if 码点 >= 92736 {  // 0x16A40..0x16A6F
+    if 码点 <= 92783 {
+      return "Mro"
+    }
+  }
+  if 码点 >= 92784 {  // 0x16A70..0x16ACF
+    if 码点 <= 92879 {
+      return "Tangsa"
+    }
+  }
+  if 码点 >= 92880 {  // 0x16AD0..0x16AFF
+    if 码点 <= 92927 {
+      return "Bassa Vah"
+    }
+  }
+  if 码点 >= 92928 {  // 0x16B00..0x16B8F
+    if 码点 <= 93071 {
+      return "Pahawh Hmong"
+    }
+  }
+  if 码点 >= 93504 {  // 0x16D40..0x16D7F
+    if 码点 <= 93567 {
+      return "Kirat Rai"
+    }
+  }
+  if 码点 >= 93760 {  // 0x16E40..0x16E9F
+    if 码点 <= 93855 {
+      return "Medefaidrin"
+    }
+  }
+  if 码点 >= 93952 {  // 0x16F00..0x16F9F
+    if 码点 <= 94111 {
+      return "Miao"
+    }
+  }
+  if 码点 >= 94176 {  // 0x16FE0..0x16FFF
+    if 码点 <= 94207 {
+      return "Ideographic Symbols and Punctuation"
+    }
+  }
+  if 码点 >= 94208 {  // 0x17000..0x187FF
+    if 码点 <= 100351 {
+      return "Tangut"
+    }
+  }
+  if 码点 >= 100352 {  // 0x18800..0x18AFF
+    if 码点 <= 101119 {
+      return "Tangut Components"
+    }
+  }
+  if 码点 >= 101120 {  // 0x18B00..0x18CFF
+    if 码点 <= 101631 {
+      return "Khitan Small Script"
+    }
+  }
+  if 码点 >= 101632 {  // 0x18D00..0x18D7F
+    if 码点 <= 101759 {
+      return "Tangut Supplement"
+    }
+  }
+  if 码点 >= 110576 {  // 0x1AFF0..0x1AFFF
+    if 码点 <= 110591 {
+      return "Kana Extended-B"
+    }
+  }
+  if 码点 >= 110592 {  // 0x1B000..0x1B0FF
+    if 码点 <= 110847 {
+      return "Kana Supplement"
+    }
+  }
+  if 码点 >= 110848 {  // 0x1B100..0x1B12F
+    if 码点 <= 110895 {
+      return "Kana Extended-A"
+    }
+  }
+  if 码点 >= 110896 {  // 0x1B130..0x1B16F
+    if 码点 <= 110959 {
+      return "Small Kana Extension"
+    }
+  }
+  if 码点 >= 110960 {  // 0x1B170..0x1B2FF
+    if 码点 <= 111359 {
+      return "Nushu"
+    }
+  }
+  if 码点 >= 113664 {  // 0x1BC00..0x1BC9F
+    if 码点 <= 113823 {
+      return "Duployan"
+    }
+  }
+  if 码点 >= 113824 {  // 0x1BCA0..0x1BCAF
+    if 码点 <= 113839 {
+      return "Shorthand Format Controls"
+    }
+  }
+  if 码点 >= 117760 {  // 0x1CC00..0x1CEBF
+    if 码点 <= 118463 {
+      return "Symbols for Legacy Computing Supplement"
+    }
+  }
+  if 码点 >= 118528 {  // 0x1CF00..0x1CFCF
+    if 码点 <= 118735 {
+      return "Znamenny Musical Notation"
+    }
+  }
+  if 码点 >= 118784 {  // 0x1D000..0x1D0FF
+    if 码点 <= 119039 {
+      return "Byzantine Musical Symbols"
+    }
+  }
+  if 码点 >= 119040 {  // 0x1D100..0x1D1FF
+    if 码点 <= 119295 {
+      return "Musical Symbols"
+    }
+  }
+  if 码点 >= 119296 {  // 0x1D200..0x1D24F
+    if 码点 <= 119375 {
+      return "Ancient Greek Musical Notation"
+    }
+  }
+  if 码点 >= 119488 {  // 0x1D2C0..0x1D2DF
+    if 码点 <= 119519 {
+      return "Kaktovik Numerals"
+    }
+  }
+  if 码点 >= 119520 {  // 0x1D2E0..0x1D2FF
+    if 码点 <= 119551 {
+      return "Mayan Numerals"
+    }
+  }
+  if 码点 >= 119552 {  // 0x1D300..0x1D35F
+    if 码点 <= 119647 {
+      return "Tai Xuan Jing Symbols"
+    }
+  }
+  if 码点 >= 119648 {  // 0x1D360..0x1D37F
+    if 码点 <= 119679 {
+      return "Counting Rod Numerals"
+    }
+  }
+  if 码点 >= 119808 {  // 0x1D400..0x1D7FF
+    if 码点 <= 120831 {
+      return "Mathematical Alphanumeric Symbols"
+    }
+  }
+  if 码点 >= 120832 {  // 0x1D800..0x1DAAF
+    if 码点 <= 121519 {
+      return "Sutton SignWriting"
+    }
+  }
+  if 码点 >= 122624 {  // 0x1DF00..0x1DFFF
+    if 码点 <= 122879 {
+      return "Latin Extended-G"
+    }
+  }
+  if 码点 >= 122880 {  // 0x1E000..0x1E02F
+    if 码点 <= 122927 {
+      return "Glagolitic Supplement"
+    }
+  }
+  if 码点 >= 122928 {  // 0x1E030..0x1E08F
+    if 码点 <= 123023 {
+      return "Cyrillic Extended-D"
+    }
+  }
+  if 码点 >= 123136 {  // 0x1E100..0x1E14F
+    if 码点 <= 123215 {
+      return "Nyiakeng Puachue Hmong"
+    }
+  }
+  if 码点 >= 123536 {  // 0x1E290..0x1E2BF
+    if 码点 <= 123583 {
+      return "Toto"
+    }
+  }
+  if 码点 >= 123584 {  // 0x1E2C0..0x1E2FF
+    if 码点 <= 123647 {
+      return "Wancho"
+    }
+  }
+  if 码点 >= 124112 {  // 0x1E4D0..0x1E4FF
+    if 码点 <= 124159 {
+      return "Nag Mundari"
+    }
+  }
+  if 码点 >= 124368 {  // 0x1E5D0..0x1E5FF
+    if 码点 <= 124415 {
+      return "Ol Onal"
+    }
+  }
+  if 码点 >= 124896 {  // 0x1E7E0..0x1E7FF
+    if 码点 <= 124927 {
+      return "Ethiopic Extended-B"
+    }
+  }
+  if 码点 >= 124928 {  // 0x1E800..0x1E8DF
+    if 码点 <= 125151 {
+      return "Mende Kikakui"
+    }
+  }
+  if 码点 >= 125184 {  // 0x1E900..0x1E95F
+    if 码点 <= 125279 {
+      return "Adlam"
+    }
+  }
+  if 码点 >= 126064 {  // 0x1EC70..0x1ECBF
+    if 码点 <= 126143 {
+      return "Indic Siyaq Numbers"
+    }
+  }
+  if 码点 >= 126208 {  // 0x1ED00..0x1ED4F
+    if 码点 <= 126287 {
+      return "Ottoman Siyaq Numbers"
+    }
+  }
+  if 码点 >= 126464 {  // 0x1EE00..0x1EEFF
+    if 码点 <= 126719 {
+      return "Arabic Mathematical Alphabetic Symbols"
+    }
+  }
+  if 码点 >= 126976 {  // 0x1F000..0x1F02F
+    if 码点 <= 127023 {
+      return "Mahjong Tiles"
+    }
+  }
+  if 码点 >= 127024 {  // 0x1F030..0x1F09F
+    if 码点 <= 127135 {
+      return "Domino Tiles"
+    }
+  }
+  if 码点 >= 127136 {  // 0x1F0A0..0x1F0FF
+    if 码点 <= 127231 {
+      return "Playing Cards"
+    }
+  }
+  if 码点 >= 127232 {  // 0x1F100..0x1F1FF
+    if 码点 <= 127487 {
+      return "Enclosed Alphanumeric Supplement"
+    }
+  }
+  if 码点 >= 127488 {  // 0x1F200..0x1F2FF
+    if 码点 <= 127743 {
+      return "Enclosed Ideographic Supplement"
+    }
+  }
+  if 码点 >= 127744 {  // 0x1F300..0x1F5FF
+    if 码点 <= 128511 {
+      return "Miscellaneous Symbols and Pictographs"
+    }
+  }
+  if 码点 >= 128512 {  // 0x1F600..0x1F64F
+    if 码点 <= 128591 {
+      return "Emoticons"
+    }
+  }
+  if 码点 >= 128592 {  // 0x1F650..0x1F67F
+    if 码点 <= 128639 {
+      return "Ornamental Dingbats"
+    }
+  }
+  if 码点 >= 128640 {  // 0x1F680..0x1F6FF
+    if 码点 <= 128767 {
+      return "Transport and Map Symbols"
+    }
+  }
+  if 码点 >= 128768 {  // 0x1F700..0x1F77F
+    if 码点 <= 128895 {
+      return "Alchemical Symbols"
+    }
+  }
+  if 码点 >= 128896 {  // 0x1F780..0x1F7FF
+    if 码点 <= 129023 {
+      return "Geometric Shapes Extended"
+    }
+  }
+  if 码点 >= 129024 {  // 0x1F800..0x1F8FF
+    if 码点 <= 129279 {
+      return "Supplemental Arrows-C"
+    }
+  }
+  if 码点 >= 129280 {  // 0x1F900..0x1F9FF
+    if 码点 <= 129535 {
+      return "Supplemental Symbols and Pictographs"
+    }
+  }
+  if 码点 >= 129536 {  // 0x1FA00..0x1FA6F
+    if 码点 <= 129647 {
+      return "Chess Symbols"
+    }
+  }
+  if 码点 >= 129648 {  // 0x1FA70..0x1FAFF
+    if 码点 <= 129791 {
+      return "Symbols and Pictographs Extended-A"
+    }
+  }
+  if 码点 >= 129792 {  // 0x1FB00..0x1FBFF
+    if 码点 <= 130047 {
+      return "Symbols for Legacy Computing"
+    }
+  }
+  if 码点 >= 131072 {  // 0x20000..0x2A6DF
+    if 码点 <= 173791 {
+      return "CJK Unified Ideographs Extension B"
+    }
+  }
+  if 码点 >= 173824 {  // 0x2A700..0x2B73F
+    if 码点 <= 177983 {
+      return "CJK Unified Ideographs Extension C"
+    }
+  }
+  if 码点 >= 177984 {  // 0x2B740..0x2B81F
+    if 码点 <= 178207 {
+      return "CJK Unified Ideographs Extension D"
+    }
+  }
+  if 码点 >= 178208 {  // 0x2B820..0x2CEAF
+    if 码点 <= 183983 {
+      return "CJK Unified Ideographs Extension E"
+    }
+  }
+  if 码点 >= 183984 {  // 0x2CEB0..0x2EBEF
+    if 码点 <= 191471 {
+      return "CJK Unified Ideographs Extension F"
+    }
+  }
+  if 码点 >= 191472 {  // 0x2EBF0..0x2EE5F
+    if 码点 <= 192095 {
+      return "CJK Unified Ideographs Extension I"
+    }
+  }
+  if 码点 >= 194560 {  // 0x2F800..0x2FA1F
+    if 码点 <= 195103 {
+      return "CJK Compatibility Ideographs Supplement"
+    }
+  }
+  if 码点 >= 196608 {  // 0x30000..0x3134F
+    if 码点 <= 201551 {
+      return "CJK Unified Ideographs Extension G"
+    }
+  }
+  if 码点 >= 201552 {  // 0x31350..0x323AF
+    if 码点 <= 205743 {
+      return "CJK Unified Ideographs Extension H"
+    }
+  }
+  if 码点 >= 917504 {  // 0xE0000..0xE007F
+    if 码点 <= 917631 {
+      return "Tags"
+    }
+  }
+  if 码点 >= 917760 {  // 0xE0100..0xE01EF
+    if 码点 <= 917999 {
+      return "Variation Selectors Supplement"
+    }
+  }
+  if 码点 >= 983040 {  // 0xF0000..0xFFFFF
+    if 码点 <= 1048575 {
+      return "Supplementary Private Use Area-A"
+    }
+  }
+  if 码点 >= 1048576 {  // 0x100000..0x10FFFF
+    if 码点 <= 1114111 {
+      return "Supplementary Private Use Area-B"
+    }
+  }
+  return "No_Block"
+}

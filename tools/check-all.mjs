@@ -78,6 +78,7 @@ const SUITES = [
   ["f64", "test/f64.test.mjs", "SPEC M6 - doubles written in integer arithmetic: addition, subtraction, multiplication, division and comparison, three million comparisons with no divergence"],
   ["decimal", "test/decimal.test.mjs", "SPEC M6 - the shortest decimal that reads back, printed and parsed with integers on both ends"],
   ["units", "test/units.test.mjs", "SPEC M6 - the same string rules on a code-unit array: length, index, slice, join, compare and code points, checked against the host"],
+  ["ucd", "test/ucd.test.mjs", "SPEC M6 - the Unicode character database as part of the library: fifty megabytes of tables, a generator, and a block lookup the language can run"],
   ["selfframes", "test/self-frames.test.mjs", "SPEC M6 - one level of recursion costs about eleven host frames, and why the cheap fix was refused"],
   ["tailcall", "test/tail-call.test.mjs", "SPEC M6 - tail calls: tail recursion reaches any depth, and nothing else about the language changes"],
   ["launcher", "test/launcher.test.mjs", "SPEC M7 - node bin/hmyr.mjs: the target program goes through the bootstrap, not the host language layer"],
