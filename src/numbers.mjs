@@ -106,9 +106,10 @@ const 快减 = (a, b) => { const s = a - b; return Number.isSafeInteger(s) ? s :
 const 快乘 = (a, b) => { const p = a * b; return Number.isSafeInteger(p) ? p : 自家乘(a, b); };
 // 往小的那一头取整。切片与码点用它，而下标不用它 —— 下标不取整是一个刻意的洞，
 // 见 design/SCALARS.txt「还没量的」那一节。
-// 它仍是宿主的 floor：取整不是双精度的运算，而是「下标与切片要把小数怎么办」
-// 这一层的决定，落在 numbers 里、落在 f64 里都没有位置。
-export const 下整 = (n) => Math.floor(n);
+//
+// 宿主的 floor 与自己的那一份各一条：自家那条在 src/f64.mjs，它从指数与尾数上
+// 把整数部分读出来，不借宿主的取整。默认仍走宿主那一行 —— 与算术的其他几行同一个安排。
+export const 下整 = (n) => (走自家 ? 由位(浮点.下整(位(n))) : Math.floor(n));
 
 export const 加 = (a, b) => (走自家 ? (快整数(a) && 快整数(b) ? 快加(a, b) : 自家加(a, b)) : a + b);
 export const 减 = (a, b) => (走自家 ? (快整数(a) && 快整数(b) ? 快减(a, b) : 自家减(a, b)) : a - b);
