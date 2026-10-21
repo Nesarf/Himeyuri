@@ -56,7 +56,7 @@ export function 述(v) {
   return String(v);
 }
 
-// 内置：只这十六个。实现照宿主的语义写，包括它们的失败编号。
+// 内置：只这十七个。实现照宿主的语义写，包括它们的失败编号。
 const 内置 = {
   len: (rt, a) => {
     const v = a[0];
@@ -75,6 +75,14 @@ const 内置 = {
     const 止 = a[2] === undefined || a[2] === null ? 长 : Math.min(长, Math.floor(rt.成数(a[2])));
     if (码元.是码元序列(v)) return 起 >= 止 ? 码元.由宿主("") : 码元.切(s, 起, 止);
     return 起 >= 止 ? "" : s.slice(起, 止);
+  },
+  // 取第一个码元的码点。空串拒绝，而不是交回一个编出来的零 —— 那正是 R0206 的意思。
+  // 宿主那一份（src/eval.mjs）早就有它，最小求值器一直没转发：标准库写大小写时
+  // 才撞上这件事（没有它，大小写只能写成五十二行字符比较）。
+  ord: (rt, a) => {
+    const s = rt.成串(a[0]);
+    if (s.length === 0) rt.坏("HMYR-R0206", "ord of an empty string: there is no first character to read");
+    return s.codePointAt(0);
   },
   chr: (rt, a) => {
     const cp = Math.floor(rt.成数(a[0]));

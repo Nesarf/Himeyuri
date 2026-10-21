@@ -145,7 +145,7 @@
   而它照样会碰到别的写法，所以每一条不认的构造都各自报错，并说清是哪一行哪一列。
 
   验收是两棵树整棵深比较，连字段名与每个节点的行号列号一起比：六份全部相同，
-  26 · 20 · 10 · 14 · 26 · 28 个函数，合计 124；节点合计 6609，位置逐个相同。
+  26 · 20 · 10 · 14 · 26 · 28 个函数，合计 124；节点合计 6635，位置逐个相同。
 
   位置起初是分开做的（先形状、后位置），理由是两者混在一起查，红了说不清是哪一边的事。
   而位置那一格只查出一种取法要照抄：Field 记的是「字段名之后那个 token」的位子。
@@ -215,7 +215,7 @@
     表达式  十一种：Binary · Call · Field · Ident · If · Index · Literal · Record ·
                     Tuple · Unary · While
     语句    五种：Assign · ExprStmt · Let · Return · Var
-    内置    十六个：argv · chr · field_get · field_has · file_exists · is_letter ·
+    内置    十七个：argv · chr · field_get · field_has · file_exists · is_letter ·
                     is_mark · len · nfc · print · print_err · read_text ·
                     record_new · slice · str · to_int
 
@@ -244,7 +244,7 @@
 --------------------------------------------------------------------
 
   src/minimal-eval.mjs 是第二份求值器，而它只认第九节那张表：
-  十一种表达式、五种语句、十六个内置。表外的节点与内置它不是「碰巧没实现」，
+  十一种表达式、五种语句、十七个内置。表外的节点与内置它不是「碰巧没实现」，
   而是抛并说清是哪一种——于是它自己就是那张表的执行体。
 
   规模：宿主 src/eval.mjs 八百三十四行，这一份四百零九行。

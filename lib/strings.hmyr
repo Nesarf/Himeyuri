@@ -2,19 +2,16 @@
 //
 // 它为什么长这样，先说清四件事：
 //
-//   一、没有 ord。内置只有 chr（码点 → 字符），没有反方向，于是「这个字符的码点是多少」
-//      在这里问不到。大小写转换只能一条一条地比字符本身 —— 下面是五十二行 if。
-//      这不是风格，是缺口的形状：一个语言要走得远，ord 迟早要有。
+//   一、没有复合条件。自举那一层的 parser 读不进两个与号，也读不进 and，
+//      所以「甲与乙」写成两层嵌套的 if —— 下面每一处范围判断都是这个形状。
 //
-//   二、没有复合条件。自举那一层的 parser 读不进两个与号，也读不进 and，
-//      所以「甲或乙」要写成先判断甲、返回，再判断乙、返回。
+//   二、没有 break。循环靠一个标志收尾，标志本身用 var 才能改。
 //
-//   三、没有 break。循环靠一个标志收尾，标志本身用 var 才能改。
-//
-//   四、没有整数除法。除号给的是双精度，于是「除以十六取整」要写成先减余数再除 ——
+//   三、没有整数除法。除号给的是双精度，于是「除以十六取整」要写成先减余数再除 ——
 //      那一步精确，因为减完之后正好能被整除。
 //
-// 这些规矩写在文件头，是因为它们决定了下面每一行的形状；换个写法就会在自举那条路上读不进。
+//   四、码点那一对里只有 chr 是不够的。ord 补上之前，大小写只能逐字符比较五十二行；
+//      补上之后它是「a 到 z 减三十二」两行范围判断。这个差别写在 design/LIB.txt 里。
 
 // 一个字符是不是空白。空白只有四种，而它们都不能用「或」连起来。
 fn 空白一(c: String) -> Bool {
@@ -33,167 +30,24 @@ fn 空白一(c: String) -> Bool {
   return false
 }
 
-// 大写的单个字符。非 ASCII 的字母原样交回 —— 这一版只管拉丁字母表里那二十六个。
+// 大写的单个字符：a 到 z 减三十二就是大写。
+// 非 ASCII 的字母原样交回 —— 那一部分要查 UCD 的 CaseFolding，等它接进来再说。
 fn 大写一(c: String) -> String {
-  if c == "a" {
-    return "A"
-  }
-  if c == "b" {
-    return "B"
-  }
-  if c == "c" {
-    return "C"
-  }
-  if c == "d" {
-    return "D"
-  }
-  if c == "e" {
-    return "E"
-  }
-  if c == "f" {
-    return "F"
-  }
-  if c == "g" {
-    return "G"
-  }
-  if c == "h" {
-    return "H"
-  }
-  if c == "i" {
-    return "I"
-  }
-  if c == "j" {
-    return "J"
-  }
-  if c == "k" {
-    return "K"
-  }
-  if c == "l" {
-    return "L"
-  }
-  if c == "m" {
-    return "M"
-  }
-  if c == "n" {
-    return "N"
-  }
-  if c == "o" {
-    return "O"
-  }
-  if c == "p" {
-    return "P"
-  }
-  if c == "q" {
-    return "Q"
-  }
-  if c == "r" {
-    return "R"
-  }
-  if c == "s" {
-    return "S"
-  }
-  if c == "t" {
-    return "T"
-  }
-  if c == "u" {
-    return "U"
-  }
-  if c == "v" {
-    return "V"
-  }
-  if c == "w" {
-    return "W"
-  }
-  if c == "x" {
-    return "X"
-  }
-  if c == "y" {
-    return "Y"
-  }
-  if c == "z" {
-    return "Z"
+  let k = ord(c)
+  if k >= 97 {
+    if k <= 122 {
+      return chr(k - 32)
+    }
   }
   return c
 }
 
 fn 小写一(c: String) -> String {
-  if c == "A" {
-    return "a"
-  }
-  if c == "B" {
-    return "b"
-  }
-  if c == "C" {
-    return "c"
-  }
-  if c == "D" {
-    return "d"
-  }
-  if c == "E" {
-    return "e"
-  }
-  if c == "F" {
-    return "f"
-  }
-  if c == "G" {
-    return "g"
-  }
-  if c == "H" {
-    return "h"
-  }
-  if c == "I" {
-    return "i"
-  }
-  if c == "J" {
-    return "j"
-  }
-  if c == "K" {
-    return "k"
-  }
-  if c == "L" {
-    return "l"
-  }
-  if c == "M" {
-    return "m"
-  }
-  if c == "N" {
-    return "n"
-  }
-  if c == "O" {
-    return "o"
-  }
-  if c == "P" {
-    return "p"
-  }
-  if c == "Q" {
-    return "q"
-  }
-  if c == "R" {
-    return "r"
-  }
-  if c == "S" {
-    return "s"
-  }
-  if c == "T" {
-    return "t"
-  }
-  if c == "U" {
-    return "u"
-  }
-  if c == "V" {
-    return "v"
-  }
-  if c == "W" {
-    return "w"
-  }
-  if c == "X" {
-    return "x"
-  }
-  if c == "Y" {
-    return "y"
-  }
-  if c == "Z" {
-    return "z"
+  let k = ord(c)
+  if k >= 65 {
+    if k <= 90 {
+      return chr(k + 32)
+    }
   }
   return c
 }

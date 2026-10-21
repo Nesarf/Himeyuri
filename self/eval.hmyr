@@ -111,6 +111,12 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 1 { return 坏("chr 要一个参数") }
     return 好(chr(值们[0]))
   }
+  // 码点那一对是配套的：chr 造字符，ord 读回来。少了 ord，任何按码点分类的
+  // 字符串处理都得写成逐字符比较 —— 标准库第一份正是这样撞上的。
+  if 名 == "ord" {
+    if len(值们) != 1 { return 坏("ord 要一个参数") }
+    return 好(ord(值们[0]))
+  }
   if 名 == "to_int" {
     if len(值们) != 1 { return 坏("to_int 要一个参数") }
     return 好(to_int(值们[0]))

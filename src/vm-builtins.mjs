@@ -1,4 +1,4 @@
-// 字节码那份执行器的内置表：十六个，与 src/minimal-eval.mjs 里那张表一一对应。
+// 字节码那份执行器的内置表：十七个，与 src/minimal-eval.mjs 里那张表一一对应。
 //
 // 两张表不一致时行为会分叉，而分叉的那一头最容易被漏掉。所以这里不另写一套逻辑：
 // 每一条都照 minimal-eval 的实现抄，只把形状从 (rt, args) 换成 { 效果, 做(vm, args) }——
@@ -39,6 +39,12 @@ export const 内置表 = {
     const 止 = 数.比(止原, 长) > 0 ? 长 : 止原;
     if (数.比(起, 止) >= 0) return 是码元 ? vm.文.由宿主("") : "";
     return vm.文.切(s, 起, 止);
+  } },
+  // 取第一个码元的码点。空串拒绝（R0206），理由与最小求值器那一份相同。
+  ord: { 做: (vm, a) => {
+    const s = vm.成串(a[0]);
+    if (s.length === 0) return vm.坏("HMYR-R0206", "ord of an empty string: there is no first character to read");
+    return s.codePointAt(0);
   } },
   chr: { 做: (vm, a) => {
     const cp = 数.下整(vm.成数(a[0]));
