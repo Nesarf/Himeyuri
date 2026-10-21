@@ -87,6 +87,38 @@ fn 求参数(节点们: Int, 环境: Int) -> Int {
 //
 // 这一版是**动态作用域**（被调函数看得见调用者的局部名字），不是词法作用域。
 // 先这样，因为真正的词法作用域要等闭包那一层；这一点写在明处，不装作已经是词法作用域。
+// 一个效果名在不在这一串里。
+fn 效在(效们: Int, 名: String, i: Int) -> Bool {
+  if i >= len(效们) { return false }
+  if 效们[i] == 名 { return true }
+  return 效在(效们, 名, i + 1)
+}
+
+// 交回第一个缺的效果名；一个也不缺就交回空串。
+fn 缺效果从(要的: Int, 有的: Int, i: Int) -> String {
+  if i >= len(要的) { return "" }
+  if 效在(有的, 要的[i], 0) == false { return 要的[i] }
+  return 缺效果从(要的, 有的, i + 1)
+}
+
+fn 缺效果(要的: Int, 有的: Int) -> String {
+  return 缺效果从(要的, 有的, 0)
+}
+
+// 当前函数有哪些效果：环境里那个 "效果" 键，由调用的那一层放进来。
+// 没有就是空 —— 顶层没写 effects(...) 就是不要任何效果。
+fn 我的效果(环境: Int) -> Int {
+  let r = 查找(环境, "效果")
+  if r.found { return r.value }
+  return ()
+}
+
+// 一个内置要的效果够不够。够就交回空串，不够就交回那句话。
+fn 要效果(环境: Int, 效: String, 名: String) -> String {
+  if 效在(我的效果(环境), 效, 0) { return "" }
+  return "HMYR-R0201 " + 名 + " 要 " + 效 + " 效果，而调用它的函数没有声明"
+}
+
 fn 求调用(节点: Int, 环境: Int) -> Int {
   if 节点.callee.kind != "name" { return 坏("这一版只认按名字调用") }
   let 名 = 节点.callee.text
@@ -134,14 +166,26 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 1 { return 坏("field_names 要一个参数") }
     return 好(field_names(值们[0]))
   }
+  // 读一份文本。与 write_text 配成一对，两边都要 file 效果。
+  if 名 == "read_text" {
+    let 欠读 = 要效果(环境, "file", "read_text")
+    if 欠读 != "" { return 坏(欠读) }
+    if len(值们) < 1 { return 坏("read_text 至少要一个参数") }
+    if len(值们) == 1 { return 好(read_text(值们[0])) }
+    return 好(read_text(值们[0], 值们[1]))
+  }
   // 写一份文本。这一层只转发 —— 编码与脱敏都在下面那一层管。
   if 名 == "write_text" {
+    let 欠写 = 要效果(环境, "file", "write_text")
+    if 欠写 != "" { return 坏(欠写) }
     if len(值们) != 2 { return 坏("write_text 要两个参数") }
     return 好(write_text(值们[0], 值们[1]))
   }
   // 命令行参数：目标程序看到的是自己的那一份，由调用的那一层放进环境。
   // 早先这里没有这一支，于是程序里写 argv() 会报「没有这个函数：argv」。
   if 名 == "argv" {
+    let 欠参 = 要效果(环境, "process", "argv")
+    if 欠参 != "" { return 坏(欠参) }
     if len(值们) != 0 { return 坏("argv 不要参数") }
     let r = 查找(环境, "argv")
     if r.found { return 好(r.value) }
@@ -161,6 +205,8 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     return 好(())
   }
   if 名 == "print_err" {
+    let 欠错 = 要效果(环境, "process", "print_err")
+    if 欠错 != "" { return 坏(欠错) }
     var 错文 = ""
     var j = 0
     while j < len(值们) {
@@ -198,14 +244,20 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   }
   let 找 = 查找(环境, "fn:" + 名)
   if 找.found == false { return 坏("没有这个函数：" + 名) }
-  // 找.value 是 (参数名们, 语句们)。绑参数要在**新的一层**上绑，
+  // 找.value 是 (参数名们, 语句们, 效果名们)。绑参数要在**新的一层**上绑，
   // 而不是在调用者的环境上——否则函数的局部名字会漏回外面，
   // 而那是一门语言里最难查的一类错。
   let 参名们 = 找.value[0]
   let 体内 = 找.value[1]
+  // 效果要往下核：被调的那个要什么，调用者就得声明什么。这一条是效果检查的全部意思，
+  // 少了它就只是「把 effects 写进注释」。
+  var 子效 = ()
+  if len(找.value) > 2 { 子效 = 找.value[2] }
+  let 欠 = 缺效果(子效, 我的效果(环境))
+  if 欠 != "" { return 坏("HMYR-R0201 调 " + 名 + " 要 " + 欠 + " 效果，而调用它的函数没有声明") }
   if len(参名们) != len(值们) { return 坏("参数个数不对：" + 名 + " 要 " + str(len(参名们)) + " 个，给了 " + str(len(值们))) }
   let 体环境 = 绑参数(环境, 参名们, 值们, 0)
-  let r = 执行块(体内, 体环境)
+  let r = 执行块(体内, 更新(体环境, "效果", 子效))
   if r.ok == false { return 坏(r.text) }
   if r.done == true { return 好(r.value) }
   return 好(())
@@ -444,17 +496,24 @@ fn 装函数从(环境: Int, 函数们: Int, i: Int) -> Int {
   // 这一层的返回类型是环境，把一个记录当成环境装进去，后面每一步都会读到怪东西。
   // 而「跳过」也不是沉默：装表本来就不该收到坏形状，坏形状该在造表那一头被拦住。
   if len(项) < 3 { return 装函数从(环境, 函数们, i + 1) }
-  return 装函数从(更新(环境, "fn:" + 项[0], (项[1], 项[2])), 函数们, i + 1)
+  // 第四项是效果名们。老的三项形状也收 —— 那两条给套件用的解析器不带效果，
+  // 而「没有效果」与「效果那一项缺了」在这里是同一件事。
+  var 效 = ()
+  if len(项) > 3 { 效 = 项[3] }
+  return 装函数从(更新(环境, "fn:" + 项[0], (项[1], 项[2], 效)), 函数们, i + 1)
 }
 
 // 老的入口留着：两个套件按两参数调它，而它们测的是「适配层造出的语句表能不能跑」。
 // 新的一层带参数，因为目标程序要看得见自己的 argv —— 那件事以前根本做不到。
 fn 跑程序带函数(语句们: Int, 函数们: Int) -> Int {
-  return 跑程序带函数与参(语句们, 函数们, ())
+  return 跑程序带函数与参(语句们, 函数们, (), ())
 }
 
-fn 跑程序带函数与参(语句们: Int, 函数们: Int, 参们: Int) -> Int {
-  return 执行块(语句们, 更新(装函数从((), 函数们, 0), "argv", 参们))
+// 效们 是 main 自己声明的效果。它要放进环境，因为「当前函数有哪些效果」这件事
+// 只能在运行时知道 —— 效果检查靠的就是这个键。
+fn 跑程序带函数与参(语句们: Int, 函数们: Int, 参们: Int, 效们: Int) -> Int {
+  let 环境 = 更新(装函数从((), 函数们, 0), "argv", 参们)
+  return 执行块(语句们, 更新(环境, "效果", 效们))
 }
 
 // 造记录：先把每个值求出来，再交给 record_of。

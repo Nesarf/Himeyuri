@@ -223,6 +223,10 @@ export class 最小运行时 {
     // 字符串住在哪里：默认是宿主的串，打开之后是码元序列（src/units.mjs）。
     // 打开时语言的每一个字符串值都是 Uint16Array，宿主串只在进出的两处出现。
     this.码元串 = options.字符串用码元序列 === true;
+    // 效果检查默认开着。关掉它只有一个正当理由：这一层正在跑一个解释器
+    // （self/ 那六份），而那东西替目标程序执行，必然碰得到全部效果。
+    // 目标程序自己的效果仍然要查 —— 那一条在 self/eval.hmyr 里。
+    this.检查效果 = options.检查效果 !== false;
     // 能力内核交给调用方：一个求值器自己去 import node:fs 就没法在别的地方用了，
     // 而「它借了世界什么」也就只能去读它的源码才知道。见 src/capabilities.mjs。
     //
@@ -410,7 +414,10 @@ export class 最小运行时 {
     if (node.callee.kind === "Ident" && Object.prototype.hasOwnProperty.call(内置, node.callee.name)) {
       const name = node.callee.name;
       const need = 内置效果[name];
-      if (need && !(effects instanceof Set && effects.has(need))) {
+      // 检查效果，但自举那一层例外：它是解释器，替目标程序执行，
+      // 于是它自己必然碰得到全部效果 —— 真正该被查的是目标程序的函数，
+      // 而那一层的检查在 self/eval.hmyr 里（它读 functions 表里的效果项）。
+      if (this.检查效果 !== false && need && !(effects instanceof Set && effects.has(need))) {
         this.坏("HMYR-R0201", "builtin '" + name + "' needs effect '" + need + "', which the caller did not declare");
       }
       const args = node.args.map((a) => this.求值(a, scope, effects));

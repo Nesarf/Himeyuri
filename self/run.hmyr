@@ -176,7 +176,10 @@ fn 跑模块们(源码们: Int, 参们: Int) -> String {
     return 跑程序文字(源码们[0])
   }
   let 选 = 选函数(函数们, "main")
-  let r = 跑程序带函数与参(选[2], 函数们, 参们)
+  // 选[3] 是 main 自己声明的效果 —— 它决定这个程序能碰什么。
+  var 主效 = ()
+  if len(选) > 3 { 主效 = 选[3] }
+  let r = 跑程序带函数与参(选[2], 函数们, 参们, 主效)
   if r.ok == false { return "错：" + r.text }
   return str(r.value)
 }

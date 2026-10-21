@@ -87,12 +87,23 @@ try {
     // 目标程序看得见自己的 argv：这一条同时钉住「print 与 argv 都在自举层的分派里」
     // （这两支都是后来补的，补之前程序连一句话都说不出）。
     const 程 = path.join(临, "argv.hmyr");
-    fs.writeFileSync(程, 'fn main() -> Int {\n  let a = argv()\n  print(str(len(a)))\n  return 0\n}\n', "utf8");
+    // argv 要 process 效果，所以这个程序声明它 —— 声明之后才谈得上「看得到自己的参数」。
+    fs.writeFileSync(程, 'fn main() -> Int effects(process) {\n  let a = argv()\n  print(str(len(a)))\n  return 0\n}\n', "utf8");
     const r = 启动([程, "甲", "乙"]);
     // 输出是 "30"：前一个 3 是程序自己 print 的，后一个 0 是自举层把 main 的返回值
     // 也印了出来（conformance 那些程序正是靠这条通道报告失败的编号）。
     ok("目标程序看到三个参数（自己加两个）", r.status === 0 && String(r.stdout).trim() === "30",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 60)));
+  }
+  {
+    // 效果声明现在在自举那一层也认了：这个程序声明 effects(process, file)，
+    // 由启动器跑通，写出去再读回来。它同时是「效果被收进函数表」的证据。
+    const 出 = path.join(临, "write-text.txt");
+    const r = 启动([path.join(ROOT, "conformance/write-text.hmyr"), 出]);
+    ok("声明了效果的程序由启动器跑通（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
+      String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
+    ok("而它真的写出了那个文件", fs.existsSync(出) && fs.readFileSync(出, "utf8") === "写着玩的",
+      fs.existsSync(出) ? JSON.stringify(fs.readFileSync(出, "utf8")) : "(没有文件)");
   }
   console.log("边界");
   {
