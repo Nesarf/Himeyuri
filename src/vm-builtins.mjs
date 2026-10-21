@@ -1,4 +1,4 @@
-// 字节码那份执行器的内置表：十九个，与 src/minimal-eval.mjs 里那张表一一对应。
+// 字节码那份执行器的内置表：二十个，与 src/minimal-eval.mjs 里那张表一一对应。
 //
 // 两张表不一致时行为会分叉，而分叉的那一头最容易被漏掉。所以这里不另写一套逻辑：
 // 每一条都照 minimal-eval 的实现抄，只把形状从 (rt, args) 换成 { 效果, 做(vm, args) }——
@@ -87,6 +87,13 @@ export const 内置表 = {
     const rec = a[0], name = vm.成串(a[1]);
     if (!rec || rec.tag !== "record") return false;
     return rec.fields.has(name);
+  } },
+  // 字段名的列表，按造记录时的顺序。交回一个元组，不是 JS 数组 ——
+  // 两个求值器之间是同一套值，这一条与 argv 那一处同一个理由。
+  field_names: { 做: (vm, a) => {
+    const rec = a[0];
+    if (!rec || rec.tag !== "record") return vm.坏("HMYR-R0217", "field_names wants a record, found " + 述(rec, vm.文));
+    return new 类元组([...rec.fields.keys()]);
   } },
   print: { 做: (vm, a) => { vm.write(a.map((x) => vm.成串(x)).join("")); return null; } },
   print_err: { 效果: "process", 做: (vm, a) => {

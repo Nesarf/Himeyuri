@@ -116,6 +116,24 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 1 { return 坏("to_lower 要一个参数") }
     return 好(to_lower(值们[0]))
   }
+  // 记录那一组：造、取、问、列。四个都只是转发 —— 记录的形状由宿主那一层给。
+  if 名 == "record_new" {
+    if len(值们) != 1 { return 坏("record_new 要一个参数") }
+    return 好(record_new(值们[0]))
+  }
+  if 名 == "field_get" {
+    if len(值们) != 2 { return 坏("field_get 要两个参数") }
+    return 好(field_get(值们[0], 值们[1]))
+  }
+  if 名 == "field_has" {
+    if len(值们) != 2 { return 坏("field_has 要两个参数") }
+    return 好(field_has(值们[0], 值们[1]))
+  }
+  // 字段名的列表。有了它，「把一条记录摊开」才写得出来 —— 标准库的表那一份卡在这里。
+  if 名 == "field_names" {
+    if len(值们) != 1 { return 坏("field_names 要一个参数") }
+    return 好(field_names(值们[0]))
+  }
   if 名 == "chr" {
     if len(值们) != 1 { return 坏("chr 要一个参数") }
     return 好(chr(值们[0]))

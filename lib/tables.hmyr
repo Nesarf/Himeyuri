@@ -1,0 +1,90 @@
+// 表库：拿记录当字典。
+//
+// 记录不是哈希表 —— 字段名必须是标识符能写的形状（见 R0214）。所以这一份的名字叫「表」，
+// 而它的键只能是那种名字：ascii 字母、数字、下划线，且不以数字开头。
+// 这条限制写在文件头上，因为它是这一份能做的事的边界。
+//
+// 三件工具撑起它：field_names 列出键、field_get 按名取、record_new 造新的。
+// field_names 是这几格才补上的内置 —— 没有它，连「把旧表的字段搬到新表」都做不到，
+// 而置入与删除恰恰就是那件事。
+
+// 一条记录有哪些键。已内置，这里给一个好读的名字。
+fn 键们(t: Int) -> (String,) {
+  return field_names(t)
+}
+
+fn 有几件(t: Int) -> Int {
+  return len(field_names(t))
+}
+
+// 置入：造一条新记录，旧字段原样搬过去，然后加上（或者覆盖）这一个。
+// 元组拼接那一条让「搬字段」写得短：旧字段的对加新对。
+fn 置入(t: Int, 名: String, 值: Int) -> Int {
+  var 对 = ()
+  let 旧名 = field_names(t)
+  var i = 0
+  while i < len(旧名) {
+    if 旧名[i] != 名 {
+      对 = 对 + ((旧名[i], field_get(t, 旧名[i])),)
+    }
+    i = i + 1
+  }
+  对 = 对 + ((名, 值),)
+  return record_new(对)
+}
+
+// 删掉一个键。没有这个键就原样交回一条新记录 —— 删不存在的东西不是失败。
+fn 删(t: Int, 名: String) -> Int {
+  var 对 = ()
+  let 旧名 = field_names(t)
+  var i = 0
+  while i < len(旧名) {
+    if 旧名[i] != 名 {
+      对 = 对 + ((旧名[i], field_get(t, 旧名[i])),)
+    }
+    i = i + 1
+  }
+  return record_new(对)
+}
+
+// 取，但给一个默认值：没有那个键就交回它。
+// 这与 field_get 的立场不同 —— 那一个拒绝，这一个退让。两个都要有，用途不同。
+fn 取或(t: Int, 名: String, 缺: Int) -> Int {
+  if field_has(t, 名) {
+    return field_get(t, 名)
+  }
+  return 缺
+}
+
+// 合并：右边的盖住左边的。同名的键留下右边那一条 —— 后放进的对会覆盖先放的，
+// 那是 record_new 的行为，于是这里不必先剔左边。
+fn 合并(a: Int, b: Int) -> Int {
+  var 对 = ()
+  let 左 = field_names(a)
+  var i = 0
+  while i < len(左) {
+    对 = 对 + ((左[i], field_get(a, 左[i])),)
+    i = i + 1
+  }
+  let 右 = field_names(b)
+  var j = 0
+  while j < len(右) {
+    对 = 对 + ((右[j], field_get(b, 右[j])),)
+    j = j + 1
+  }
+  return record_new(对)
+}
+
+// 一条空表：一对都没有的记录。这不是让步 —— record_new(()) 就是空记录，
+// 而 键们 面对它交回空元组。（第一版以为记录至少要一个字段，借了一个占位键；
+// record-new 那一套的用例纠正了这件事。）
+fn 空表() -> Int {
+  return record_new(())
+}
+
+fn 是空表(t: Int) -> Bool {
+  if 有几件(t) == 0 {
+    return true
+  }
+  return false
+}

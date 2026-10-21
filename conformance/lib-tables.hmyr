@@ -1,0 +1,108 @@
+import "../lib/tables.hmyr"
+
+fn 检(好: Bool, 号: Int) -> Int {
+  if 好 {
+    return 0
+  }
+  return 号
+}
+
+fn 造(a: Int, b: Int) -> Int {
+  return record_new((("a", a), ("b", b)))
+}
+
+fn main() -> Int {
+  let t = 造(1, 2)
+  let a = 检(有几件(t) == 2, 1)
+  if a != 0 {
+    return a
+  }
+  let 名 = 键们(t)
+  let b = 检(len(名) == 2, 2)
+  if b != 0 {
+    return b
+  }
+  let c = 检(名[0] == "a", 3)
+  if c != 0 {
+    return c
+  }
+  let d = 检(名[1] == "b", 4)
+  if d != 0 {
+    return d
+  }
+  let 加过 = 置入(t, "c", 3)
+  let e = 检(有几件(加过) == 3, 5)
+  if e != 0 {
+    return e
+  }
+  let f = 检(field_get(加过, "c") == 3, 6)
+  if f != 0 {
+    return f
+  }
+  // 原来的表没被动过：记录不可变，置入交回的是一条新的。
+  let g = 检(有几件(t) == 2, 7)
+  if g != 0 {
+    return g
+  }
+  // 同名覆盖：件数不变，值换了。
+  let 盖过 = 置入(t, "a", 9)
+  let h = 检(有几件(盖过) == 2, 8)
+  if h != 0 {
+    return h
+  }
+  let i = 检(field_get(盖过, "a") == 9, 9)
+  if i != 0 {
+    return i
+  }
+  let 删过 = 删(t, "a")
+  let j = 检(有几件(删过) == 1, 10)
+  if j != 0 {
+    return j
+  }
+  let k = 检(field_has(删过, "a") == false, 11)
+  if k != 0 {
+    return k
+  }
+  let l = 检(field_get(删过, "b") == 2, 12)
+  if l != 0 {
+    return l
+  }
+  // 删一个不存在的键不是失败。
+  let m = 检(有几件(删(t, "zz")) == 2, 13)
+  if m != 0 {
+    return m
+  }
+  let n = 检(取或(t, "a", 0) == 1, 14)
+  if n != 0 {
+    return n
+  }
+  let o = 检(取或(t, "zz", 7) == 7, 15)
+  if o != 0 {
+    return o
+  }
+  // 合并：右边赢。
+  let 左 = 造(1, 2)
+  let 右 = 造(9, 8)
+  let 合 = 合并(左, 右)
+  let p = 检(有几件(合) == 2, 16)
+  if p != 0 {
+    return p
+  }
+  let q = 检(field_get(合, "a") == 9, 17)
+  if q != 0 {
+    return q
+  }
+  let r = 检(field_get(合, "b") == 8, 18)
+  if r != 0 {
+    return r
+  }
+  let s = 检(是空表(空表()), 19)
+  if s != 0 {
+    return s
+  }
+  let u = 检(是空表(t) == false, 20)
+  if u != 0 {
+    return u
+  }
+  return 0
+}

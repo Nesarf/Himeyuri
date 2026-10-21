@@ -23,7 +23,7 @@
   一、说了、做了、跑得到，是三件事。
      所以每一处能力都有三条线钉着：代码里有、契约里写着、套件里验过。
      tools/check-builtins.mjs 就是为此存在的——它对着三面看，缺一面就报。
-     而全部五十六个错误编号，每一个都有一句中文人话（conformance/plain.mjs）
+     而全部五十七个错误编号，每一个都有一句中文人话（conformance/plain.mjs）
      与至少一条能触发它的用例。
 
   二、边界写在明处。
@@ -69,4 +69,4 @@
   design/AUDIT.txt       一次通查与逐条对照的记录
   design/DISTRO.txt      一个发行版该有什么，以及这里到哪儿了
   design/SELFRUN.txt     最终目标与三步路线
-  conformance/plain.mjs  五十六句中文，一句一个编号
+  conformance/plain.mjs  五十七句中文，一句一个编号

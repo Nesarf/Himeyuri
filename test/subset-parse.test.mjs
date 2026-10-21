@@ -63,7 +63,7 @@ for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
 }
 // 这两个数随自举层的规模走。读转义那一处补了函数，于是它们从 123 与 6285 长到这里。
 ok("合计 129 个函数声明", 函数总数 === 129, String(函数总数));
-ok("合计 7098 个节点", 节点总数 === 7098, String(节点总数));
+ok("合计 7208 个节点", 节点总数 === 7208, String(节点总数));
 
 console.log("二、位置是逐个对过的，不是大致对");
 {
@@ -130,7 +130,7 @@ console.log("六、它自己的注释写着现在的账");
 {
   const 文 = fs.readFileSync(path.join(ROOT, "src/subset-parse.mjs"), "utf8");
   ok("注释写了六种语句", 文.includes("let / var / assign / return / ExprStmt / Block"), "在");
-  ok("注释写了位置也对齐了", 文.includes("六份共 7098 个节点，逐个相同"), "在");
+  ok("注释写了位置也对齐了", 文.includes("六份共 7208 个节点，逐个相同"), "在");
   ok("注释写了那一处照抄的怪处", 文.includes("字段名之后那个 token"), "在");
   ok("注释写了它的立场", 文.includes("认得窄而说清"), "在");
   ok("注释写了数出来的声明种类", 文.includes("只有 fn，129 个"), "在");

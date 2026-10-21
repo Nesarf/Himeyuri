@@ -59,6 +59,16 @@ ok("名字也是变量时照样能取", 跑('let r = record_new((("a", 5),))\n  
   ok("没有那个字段时被拒绝（R0216）", r2.error && r2.error.includes("HMYR-R0216"), String(r2.error).slice(0, 70));
 }
 
+console.log("field_names：字段名的列表");
+{
+  // 有了它，「把一条记录摊开」才写得出来 —— 标准库的表那一份卡在这里。
+  ok("两个字段按造的顺序列出", 跑('let r = record_new((("a", 1), ("b", 2)))\n  let n = field_names(r)\n  print(n[0])\n  print(n[1])').out === "ab");
+  ok("空记录交回空的元组", 跑('let r = record_new(())\n  print(str(len(field_names(r))))').out === "0");
+  // 非记录给 R0217：交回空表会把「这不是记录」说成「这是一条空记录」。
+  const r = 跑('let x = 5\n  print(str(field_names(x)))');
+  ok("不是记录时被拒绝（R0217）", r.error && r.error.includes("HMYR-R0217"), String(r.error).slice(0, 70));
+}
+
 console.log("自举那边也能造记录了");
 {
   const rt2 = runUnit(loadUnit(path.join(ROOT, "self/run.hmyr")));

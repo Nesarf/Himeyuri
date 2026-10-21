@@ -14,6 +14,7 @@ export const CODES = [
   { code: "HMYR-R0210", stage: "host", checkedBy: "test/while.test.mjs", meaning: "a while loop that ran past a million iterations without ending: stopped rather than hanging forever" },
   { code: "HMYR-R0215", stage: "host", checkedBy: "test/record-new.test.mjs", meaning: "field_get given something that is not a record" },
   { code: "HMYR-R0216", stage: "host", checkedBy: "test/record-new.test.mjs", meaning: "field_get asked for a field that record does not have: refused rather than handing back nothing" },
+  { code: "HMYR-R0217", stage: "host", checkedBy: "test/record-new.test.mjs", meaning: "field_names given something that is not a record: with no fields to list there is no name list to hand back" },
   { code: "HMYR-R0221", stage: "host", checkedBy: "test/threads.test.mjs", meaning: "a thread handle that does not exist" },
   { code: "HMYR-R0222", stage: "host", checkedBy: "test/threads.test.mjs", meaning: "a thread that did not finish within the given time" },
   { code: "HMYR-R0214", stage: "host", checkedBy: "test/record-new.test.mjs", meaning: "record_new given something that is not a (name, value) tuple, or a name a record cannot hold: records are not hashmaps" },

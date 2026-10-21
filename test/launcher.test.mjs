@@ -58,6 +58,13 @@ try {
     ok("元组库二十五条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
   }
+  {
+    // 表库那一份：它靠 field_names 把一条记录摊开，所以这一条同时钉住那个内置
+    // 在三处都转发了（这一格之前，自举层连 record_new 都没转发）。
+    const r = 启动([path.join(ROOT, "conformance/lib-tables.hmyr")]);
+    ok("表库二十条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
+      String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
+  }
   console.log("边界");
   {
     const r = 启动([path.join(临, "nope.hmyr")]);

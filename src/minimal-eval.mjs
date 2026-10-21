@@ -56,7 +56,7 @@ export function 述(v) {
   return String(v);
 }
 
-// 内置：只这十九个。实现照宿主的语义写，包括它们的失败编号。
+// 内置：只这二十个。实现照宿主的语义写，包括它们的失败编号。
 const 内置 = {
   len: (rt, a) => {
     const v = a[0];
@@ -130,6 +130,16 @@ const 内置 = {
     const name = rt.成串(a[1]);
     if (rec === null || typeof rec !== "object" || Array.isArray(rec)) return false;
     return Object.prototype.hasOwnProperty.call(rec, name);
+  },
+  // 字段名的列表，按造记录时的顺序。
+  // 没有它，「把一条记录摊开」这一类东西写不出来 —— 标准库的表那一份卡在这里。
+  // 非记录给 R0217：交回空表会把「这不是记录」说成「这是一条空记录」。
+  field_names: (rt, a) => {
+    const rec = a[0];
+    if (rec === null || typeof rec !== "object" || Array.isArray(rec)) {
+      return rt.坏("HMYR-R0217", "field_names wants a record, found " + 述(rec));
+    }
+    return Object.keys(rec);
   },
   print: (rt, a) => { rt.write(a.map((x) => rt.成串(x)).join("")); return null; },
   print_err: (rt, a) => {

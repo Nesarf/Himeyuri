@@ -50,6 +50,9 @@ export const isBuiltin = (name) => Object.prototype.hasOwnProperty.call(BUILTINS
 
 const STAGE0_EXPR = new Set(["Binary", "Call", "Field", "Ident", "If", "Index", "Literal", "Record", "Tuple", "Unary", "While"]);
 const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
+// 跑 self/ 那六份真正需要的内置。stage0 模式下只放这几个过去。
+// field_names 不在这一张里：自举层现在还不用它，而这张表的意思是「已经量过的必须项」，
+// 多写一个就把闸门放宽了一格。
 const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "is_letter", "is_mark", "len", "nfc", "print", "print_err", "read_text", "record_new", "slice", "str", "to_int"]);
 
 export class Runtime {
@@ -553,6 +556,21 @@ const BUILTINS = {
     const name = rt.asString(args[1]);
     if (rec === null || typeof rec !== "object" || Array.isArray(rec)) return false;
     return Object.prototype.hasOwnProperty.call(rec, name);
+  },
+  // 字段名的列表，按造记录时的顺序。
+  //
+  // 为什么需要它：没有枚举，就写不出「把一条记录摊开」这一类东西 ——
+  // 而记录当字典的第一步正是「知道有哪些键」。标准库的 tables 那一份就卡在这里：
+  // 不能列出字段，就无法做通用的置入、删除与合并。
+  //
+  // 非记录给 R0217：没有字段可列，也就没有名字可交回 —— 交回空表会把
+  // 「这不是记录」说成「这是一条空记录」。
+  field_names: (rt, args) => {
+    const rec = args[0];
+    if (rec === null || typeof rec !== "object" || Array.isArray(rec)) {
+      rt.fail("HMYR-R0217", "field_names wants a record, found " + describe(rec));
+    }
+    return Object.keys(rec);
   },
   // ---- 十、线程 ----
   // thr_spawn 起一个 worker；thr_join 同步等它；thr_cancel 叫停；thr_count 数活着的。
