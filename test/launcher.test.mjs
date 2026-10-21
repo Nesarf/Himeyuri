@@ -105,6 +105,13 @@ try {
     ok("而它真的写出了那个文件", fs.existsSync(出) && fs.readFileSync(出, "utf8") === "写着玩的",
       fs.existsSync(出) ? JSON.stringify(fs.readFileSync(出, "utf8")) : "(没有文件)");
   }
+  {
+    // JSON 那一份：解析与生成，二十八字断言。它压的是「没有类型反射」这件事 ——
+    // 于是每个值都带一条类标记，那是库能成立的前提。
+    const r = 启动([path.join(ROOT, "conformance/lib-json.hmyr")]);
+    ok("JSON 库二十八条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
+      String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
+  }
   console.log("边界");
   {
     const r = 启动([path.join(临, "nope.hmyr")]);
