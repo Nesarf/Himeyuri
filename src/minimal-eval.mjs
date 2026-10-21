@@ -144,7 +144,10 @@ const 内置 = {
     return 出(buf.toString("utf8"));
   },
   file_exists: (rt, a) => {
-    const 路径 = String(a[0]);
+    // 路径是字符串值，所以要走那一条规矩写成宿主串。写成 String(a[0]) 的话，
+    // 在码元那一层上会得到 "104,101,..." 这样一串数字 —— 文件当然不存在，
+    // 而报出来的话里却是正确路径，看上去像个假失败。
+    const 路径 = rt.成串(a[0]);
     try { return rt.cap.file.exists(路径); } catch (err) { return false; }
   },
   // 命令行参数也是字符串值，所以它们进语言时同样要落到那种底上。

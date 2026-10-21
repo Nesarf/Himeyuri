@@ -32,6 +32,13 @@ try {
     const r = 启动([p]);
     ok("带分支的程序也能跑", String(r.stdout).trim() === "1", JSON.stringify(String(r.stdout).trim()));
   }
+  {
+    // 标量换成自家那两套：算术走 f64，字符串走码元序列。
+    // 它能跑、答案不变，而代价写在 design/F64.txt 里 —— 所以它是一个能开的门，不是默认。
+    const r = 启动(["--own-scalars", path.join(ROOT, "examples/hello.hmyr")]);
+    ok("--own-scalars 也算出 5", r.status === 0 && String(r.stdout).trim() === "5", String(r.status) + " " + JSON.stringify(String(r.stdout).trim()));
+    ok("--own-scalars 不把开关算进 argv", !String(r.stderr).includes("--own-scalars"));
+  }
   console.log("边界");
   {
     const r = 启动([path.join(临, "nope.hmyr")]);

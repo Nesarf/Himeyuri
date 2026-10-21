@@ -23,6 +23,7 @@ import { 最小运行 } from "../src/minimal-eval.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
 import { 切 } from "../src/subset-lex.mjs";
 import { 子集解 } from "../src/subset-parse.mjs";
+import * as 数 from "../src/numbers.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 子集读 = (source) => 子集解(切(source));
@@ -54,14 +55,20 @@ if (!层.ok) {
 // --host-eval 换回宿主那份跑，那是给人对照用的：同一份程序两条路给出同一个答案，
 // 那才是「这一份能顶替」的证据。--minimal-eval 还认，但已经没有意义了——默认就是它。
 //
+// --own-scalars 把标量也换成自家那两套：算术走 src/f64.mjs，字符串走 src/units.mjs。
+// 它能跑、答案不变，而代价是整数密集处慢约四倍、浮点密集处慢约三百倍
+// （design/F64.txt 里量过的那两个数）。所以它不是一个默认，是一个能开的门。
+//
 // 开关都从 argv 里剔掉：语言侧取 argv[1] 当目标文件，多一个参数会把它挪错位。
 const 参数 = process.argv.slice(1);
 const 用宿主 = 参数.includes("--host-eval");
-const 递给语言 = 参数.filter((a) => a !== "--host-eval" && a !== "--minimal-eval");
+const 自家标量 = 参数.includes("--own-scalars");
+if (自家标量) 数.用自家算术(true);
+const 递给语言 = 参数.filter((a) => a !== "--host-eval" && a !== "--minimal-eval" && a !== "--own-scalars");
 
 const rt = 用宿主
   ? runUnit(层, { stage0: true })
-  : 最小运行(层, { capabilities: 本机能力() });
+  : 最小运行(层, { capabilities: 本机能力(), 字符串用码元序列: 自家标量 });
 rt.write = (s) => process.stdout.write(s);
 rt.writeErr = (s) => process.stderr.write(s);
 // 与宿主一致：第一个是「解释器名」位，之后才是参数。语言侧取 argv[1] 当目标。
