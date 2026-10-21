@@ -124,7 +124,9 @@ console.log("三、那两份文件不再自己写字符串的原语");
     ok(相对 + " 里没有自己判 typeof \"string\"", !/typeof\s+\w+\s*===\s*"string"/.test(源));
     ok(相对 + " 里没有 .slice(", !/\.slice\(/.test(源));
     ok(相对 + " 里没有 String.fromCodePoint", !源.includes("fromCodePoint"));
-    ok(相对 + " 读的是同一份文本的定义", /from "\.\/text\.mjs"/.test(源));
+    // 字符串的规矩在 text.mjs，而两条底（宿主串与码元序列）摆在 text-impl.mjs。
+    // 执行器读后者也算读了同一份规矩 —— 它只是多了一层「这一次用哪一种底」。
+    ok(相对 + " 读的是同一份文本的定义", /from "\.\/(text|text-impl)\.mjs"/.test(源));
   }
 }
 

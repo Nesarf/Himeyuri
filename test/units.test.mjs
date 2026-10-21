@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { run } from "../src/eval.mjs";
 import { loadUnit } from "../src/loader.mjs";
 import { 最小运行 } from "../src/minimal-eval.mjs";
+import { 跑字节码 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
 import * as u from "../src/units.mjs";
 
@@ -142,7 +143,56 @@ console.log("四、已经接到最小求值器上：打开开关，十六条与�
   ok(案子.length + " 条里没有一处分叉", 分叉 === 0, 例.slice(0, 4).join(" · "));
 }
 
-console.log("五、这一份借了什么");
+console.log("五、字节码那边也打开同一个开关，三条路仍然一致");
+{
+  // 选项名一样，两条执行路就能一起换。这一节要的是「三条路给同一个答案」：
+  // 宿主求值器用宿主串，最小求值器与字节码用码元序列。
+  const 临2 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-units-vm-"));
+  const 案子 = [
+    "len(\"abc\")", "slice(\"abcdef\", 1, 3)", "\"abc\"[1]", "\"a\" + \"b\"",
+    "\"abc\" + 1", "str(\"abc\")", "\"a\" < \"b\"", "\"abc\" == \"abc\"",
+    "chr(65)", "len(chr(128512))", "chr(128512) == chr(128512)", "str(len(\"abcd\"))",
+    "slice(\"abc\", 2, 1)", "nfc(\"e\")", "is_letter(\"a\")",
+  ];
+  const 描述 = (v) => {
+    if (typeof v === "number") return "num:" + String(v);
+    if (typeof v === "string") return "str:" + JSON.stringify(v);
+    if (v instanceof Uint16Array) return "str:" + JSON.stringify(u.成宿主(v));
+    if (typeof v === "boolean") return "bool:" + v;
+    if (v === null) return "nil";
+    if (Array.isArray(v)) return "聚合:tuple";
+    return "对象";
+  };
+  let 分叉 = 0;
+  const 例 = [];
+  try {
+    for (const 源 of 案子) {
+      const 文 = "fn main() -> Int {\n  return " + 源 + "\n}\n";
+      const p = path.join(临2, "case.hmyr");
+      fs.writeFileSync(p, 文);
+      const r = run(文);
+      const 甲 = r.diagnostics.errors.length ? "错:" + r.diagnostics.errors[0].code : 描述(r.value);
+      const 层 = loadUnit(p);
+      if (!层.ok) { 分叉++; 例.push("读不进 " + 源); continue; }
+      let 乙, 丙;
+      try {
+        const rt = 最小运行(层, { write: () => {}, capabilities: 本机能力(), argv: ["hmyr", p], 字符串用码元序列: true });
+        乙 = 描述(rt.callFunction(rt.functions.get("main"), [], null));
+      } catch (e) { 乙 = "错:" + (e.code || "?"); }
+      try {
+        const vm = 跑字节码(层, { write: () => {}, capabilities: 本机能力(), argv: ["hmyr", p], 字符串用码元序列: true });
+        const q = vm.调用("main", [], null);
+        丙 = q.ok ? 描述(q.值) : "错:" + q.码;
+      } catch (e) { 丙 = "错:" + (e.code || "?"); }
+      if (!(甲 === 乙 && 乙 === 丙)) { 分叉++; 例.push(源 + " -> " + 甲 + " / " + 乙 + " / " + 丙); }
+    }
+  } finally {
+    fs.rmSync(临2, { recursive: true, force: true });
+  }
+  ok("十五条文本程序，三条路一个答案", 分叉 === 0, 例.slice(0, 3).join(" · "));
+}
+
+console.log("六、这一份借了什么");
 {
   // 判据要剥掉注释：注释里提到那个名字，是为了说明「这里借的是什么」，那不算借。
   const 剥注释 = (文) => 文.replace(/^[ \t]*\/\/.*$/gm, " ").replace(/([^:])\/\/.*$/gm, "$1");

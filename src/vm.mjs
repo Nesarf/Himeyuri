@@ -17,6 +17,7 @@ import { 内置表 } from "./vm-builtins.mjs";
 import { 编译模块, 合并程序 } from "./bytecode.mjs";
 import * as 数 from "./numbers.mjs";
 import * as 文 from "./text.mjs";
+import { 按选项取, 收进来 } from "./text-impl.mjs";
 
 // 值：两种聚合值自己带标签（定义在 src/vm-values.mjs，内置表也要用同一份）。
 import { 类元组, 类记录 } from "./vm-values.mjs";
@@ -25,15 +26,21 @@ export { 类元组, 类记录 };
 // 语义辅助：与 minimal-eval 一致，因为它们定义的是这门语言的意思，不是实现细节。
 // 一处细节要对齐：宿主那边 describe 一个记录会得到 "a host object"，
 // 而错误消息是照着那句写的——所以这里的记录也报同一句话。
-const 述 = (v) => {
+//
+// 层的参数是「字符串的底」：默认宿主串，也可以是码元序列（src/text-impl.mjs）。
+// 述 要把值写进一句话里，所以它得把那个底的字符串写成宿主串。
+const 述 = (v, 层 = 文) => {
   if (v === null) return "nil";
-  if (文.是串(v)) return JSON.stringify(v);
+  if (层.是串(v)) return JSON.stringify(层.成宿主(v));
   if (v && v.tag === "tuple") return "tuple";
   if (v && v.tag === "record") return "a host object";
   if (数.是数(v)) return 数.成文(v);
   return String(v);
 };
-const 真 = (v) => !(v === false || v === null || v === 0 || v === "");
+const 真 = (v, 层 = 文) => {
+  if (层 !== 文 && 层.是串(v)) return 层.长(v) !== 0;
+  return !(v === false || v === null || v === 0 || v === "");
+};
 
 export class 虚拟机 {
   constructor(程序, 选项 = {}) {
@@ -44,6 +51,10 @@ export class 虚拟机 {
     this.argv = 选项.argv || [];
     this.cap = 选项.capabilities;
     if (!this.cap) throw new Error("虚拟机需要一份能力（见 src/capabilities.mjs）");
+    // 字符串住在哪里：默认宿主串，打开之后是码元序列（src/text-impl.mjs）。
+    // 与最小求值器用同一个选项名，于是两条执行路可以一起换。
+    this.码元串 = 选项.字符串用码元序列 === true;
+    this.文 = 按选项取(选项);
     this.步 = 0;
     this.步限 = 选项.stepLimit || 5_000_000;
     this.深限 = 选项.maxDepth || 500;
@@ -64,11 +75,12 @@ export class 虚拟机 {
   成数(v) {
     const n = 数.收(v);
     if (n !== null) return n;
-    this.坏("HMYR-R0130", "expected a number, found " + 述(v));
+    this.坏("HMYR-R0130", "expected a number, found " + 述(v, this.文));
     return 0;                       // 停机之后这个值不会被用到，给个 0 免得算出 NaN
   }
   成串(v) {
-    if (文.是串(v)) return v;
+    // 「一个值怎么写成一个字符串」：走到这一层就要落回宿主串，因为它是输出那一头。
+    if (this.文.是串(v)) return this.文.成宿主(v);
     if (v === null) return "nil";
     if (v && v.tag === "tuple") return "[" + v.items.map((x) => this.成串(x)).join(", ") + "]";
     if (数.是数(v)) return 数.成文(v);
@@ -76,13 +88,13 @@ export class 虚拟机 {
   }
   相等(a, b) {
     if (数.是数(a) && 数.是数(b)) return 数.同(a, b);
-    if (文.是串(a) && 文.是串(b)) return 文.比(a, b) === 0;
+    if (this.文.是串(a) && this.文.是串(b)) return this.文.比(a, b) === 0;
     return typeof a === typeof b ? a === b : this.成串(a) === this.成串(b);
   }
   比(a, b) {
     if (数.是数(a) && 数.是数(b)) return 数.比(a, b);
-    if (文.是串(a) && 文.是串(b)) return 文.比(a, b);
-    this.坏("HMYR-R0131", "cannot compare " + 述(a) + " with " + 述(b));
+    if (this.文.是串(a) && this.文.是串(b)) return this.文.比(a, b);
+    this.坏("HMYR-R0131", "cannot compare " + 述(a, this.文) + " with " + 述(b, this.文));
     return 0;
   }
 
@@ -134,7 +146,8 @@ export class 虚拟机 {
       const 指令 = 码[pc];
       if (!指令) { this.坏("HMYR-R0110", "the instruction stream ran off its end"); return null; }
       switch (指令.op) {
-        case "CONST": 压(指令.a); pc++; break;
+        // 字面量是编译期从宿主串来的，所以它进来时要落到选定的那种底上。
+        case "CONST": 压(this.码元串 && typeof 指令.a === "string" ? 收进来(this.文, 指令.a) : 指令.a); pc++; break;
         case "LOAD": 压(帧.槽[指令.a].v); pc++; break;
         case "STORE": 帧.槽[指令.a] = { v: 弹(), 可写: 指令.b === true }; pc++; break;
         case "ASSIGN": {
@@ -149,12 +162,13 @@ export class 虚拟机 {
           if (!this.全局.has(指令.a)) { this.坏("HMYR-R0104", "there is no name '" + 指令.a + "' in scope"); return null; }
           压(this.全局.get(指令.a)); pc++; break;
         }
-        case "BOOL": 压(真(弹())); pc++; break;
+        case "BOOL": 压(真(弹(), this.文)); pc++; break;
         case "NEG": 压(数.反(this.成数(弹()))); pc++; break;
-        case "NOT": 压(!真(弹())); pc++; break;
+        case "NOT": 压(!真(弹(), this.文)); pc++; break;
         case "ADD": { const b = 弹(), a = 弹();
           if (a && b && a.tag === "tuple" && b.tag === "tuple") 压(new 类元组([...a.items, ...b.items]));
-          else if (文.是串(a) || 文.是串(b)) 压(文.拼(this.成串(a), this.成串(b)));
+          // 拼接要在选定的那种底上做：先把这个值写成文本，再落到那层去。
+          else if (this.文.是串(a) || this.文.是串(b)) 压(this.文.拼(收进来(this.文, this.成串(a)), 收进来(this.文, this.成串(b))));
           else 压(数.加(this.成数(a), this.成数(b)));
           pc++; break; }
         case "SUB": { const b = 弹(), a = 弹(); 压(数.减(this.成数(a), this.成数(b))); pc++; break; }
@@ -172,11 +186,11 @@ export class 虚拟机 {
         case "GT": { const b = 弹(), a = 弹(); 压(this.比(a, b) > 0); pc++; break; }
         case "GE": { const b = 弹(), a = 弹(); 压(this.比(a, b) >= 0); pc++; break; }
         case "JMP": pc = 指令.a; break;
-        case "JMPF": if (!真(弹())) pc = 指令.a; else pc++; break;
-        case "JMPT": if (真(弹())) pc = 指令.a; else pc++; break;
+        case "JMPF": if (!真(弹(), this.文)) pc = 指令.a; else pc++; break;
+        case "JMPT": if (真(弹(), this.文)) pc = 指令.a; else pc++; break;
         // 短路那两个：跳走时不弹栈——栈上留着的就是整个表达式的值（下一句 BOOL 转成布尔）。
-        case "JMPF_KEEP": if (!真(栈[栈.length - 1])) pc = 指令.a; else { 弹(); pc++; } break;
-        case "JMPT_KEEP": if (真(栈[栈.length - 1])) pc = 指令.a; else { 弹(); pc++; } break;
+        case "JMPF_KEEP": if (!真(栈[栈.length - 1], this.文)) pc = 指令.a; else { 弹(); pc++; } break;
+        case "JMPT_KEEP": if (真(栈[栈.length - 1], this.文)) pc = 指令.a; else { 弹(); pc++; } break;
         case "TUPLE": {
           const n = 指令.a;
           压(new 类元组(栈.splice(栈.length - n, n)));
@@ -201,14 +215,14 @@ export class 虚拟机 {
         }
         case "INDEX": {
           const i = this.成数(弹()), t = 弹();
-          if (文.是串(t)) {
-            if (!文.在界内(t, i)) { this.坏("HMYR-R0151", "index " + 数.成文(i) + " is outside a value of length " + 文.长(t)); return null; }
-            压(文.元(t, i));
+          if (this.文.是串(t)) {
+            if (!this.文.在界内(t, i)) { this.坏("HMYR-R0151", "index " + 数.成文(i) + " is outside a value of length " + this.文.长(t)); return null; }
+            压(this.文.元(t, i));
           } else if (t && t.tag === "tuple") {
             if (i < 0 || i >= t.items.length) { this.坏("HMYR-R0151", "index " + 数.成文(i) + " is outside a value of length " + t.items.length); return null; }
             压(t.items[i]);
           } else {
-            this.坏("HMYR-R0152", "cannot index " + 述(t));
+            this.坏("HMYR-R0152", "cannot index " + 述(t, this.文));
             return null;
           }
           pc++; break;
