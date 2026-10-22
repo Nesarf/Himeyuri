@@ -68,7 +68,32 @@ export const 本机能力 = (options = {}) => ({
     // 求值器如果自己调 Buffer，宿主依赖那一张表就多一项（test/host-deps.test.mjs 会红）。
     // 而「字怎么变成字节」正是世界那一侧的事 —— 编码表随宿主来。
     writeText: (p, s) => fs.writeFileSync(p, String(s), "utf8"),
-    // 写一串字节。字节在语言里是「0 到 255 的整数元组」，因为这门语言没有字节类型。
+    // 按行读：从字节偏移 起点 读一行，交回 {行, 下一起点}。
+    //
+    // 为什么是「偏移 + 交回下一处」而不是「打开一个文件句柄」：这门语言没有句柄类型，
+    // 也没有「用完要关」的机制，而 read_text 一次读整份在大文件上不划算。
+    // 所以每一次调用自己开、自己关、自己 seek —— 开销大一点，但语义封闭，
+    // 而且调用者可以按自己的节奏一段一段读。
+    // 读完时交回 下一起点 = -1（行是空串），这样「空文件」与「最后一行是空行」分得开。
+    readLine: (p, 起点) => {
+      const 全 = fs.readFileSync(p);
+      const 起 = Math.max(0, Math.floor(Number(起点) || 0));
+      if (起 >= 全.length) return { 行: "", 下一起点: -1 };
+      let 末 = 全.indexOf(0x0a, 起);
+      if (末 < 0) 末 = 全.length;
+      let 行 = 全.slice(起, 末).toString("utf8");
+      if (行.endsWith("\r")) 行 = 行.slice(0, -1);
+      const 下 = 末 >= 全.length ? -1 : 末 + 1;
+      return { 行, 下一起点: 下 };
+    },
+    // 整份按行切好。给「知道自己要全部」的调用者一个省事的入口。
+    readLines: (p) => {
+      const 文 = fs.readFileSync(p, "utf8");
+      if (文 === "") return [];
+      const 行们 = 文.split("\n");
+      if (行们.length > 0 && 行们[行们.length - 1] === "") 行们.pop();
+      return 行们.map((行) => (行.endsWith("\r") ? 行.slice(0, -1) : 行));
+    },
     // 这一条是 .hmyrb 落盘要用的：把语言算出来的字节交出去，由世界这一侧落成文件。
     //
     // 也接受「块们的元组」（二维）：在语言里按块累积再拍平是线性的，
@@ -283,7 +308,7 @@ export const 空能力 = (记下) => {
     // 一份什么都不做的能力，声明是空的：报告会说它一类都不会。
     // 这正是「拒绝优于过宣称」的那一条 —— 它不假装自己会做什么。
     声明: [],
-    file: 组("file", ["read", "exists", "write", "writeText", "writeBytes", "f64Bytes", "packValue", "stream", "ensureDir", "remove"]),
+    file: 组("file", ["read", "exists", "write", "writeText", "writeBytes", "f64Bytes", "packValue", "readLine", "readLines", "stream", "ensureDir", "remove"]),
     process: 组("process", ["argv", "exec", "chdir", "cwd"]),
     time: 组("time", ["now", "sleep"]),
     env: 组("env", ["home", "temp", "get", "platform"]),

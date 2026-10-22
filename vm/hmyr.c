@@ -26,6 +26,36 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+/* 按 UTF-8 的路径开文件。
+ *
+ * 为什么需要这一条：Windows 的 fopen 按 ANSI 代码页解释路径，
+ * 于是「三行.txt」这种名字在 fopen 那里就是另一个不存在的东西 ——
+ * 而这一门语言里路径是 UTF-8 的串（或 UTF-16，转成 UTF-8 交过来）。
+ * 所以先转成宽字符再开，别让操作系统的默认代码页决定哪些文件读得到。
+ *
+ * 非 Windows 的机器上 utf8 就是它认的那个字节串，直接交给 fopen。 */
+static FILE *开文件(const char *utf8, const char *模式) {
+#ifdef _WIN32
+  int 宽长 = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
+  if (宽长 <= 0) return NULL;
+  wchar_t *宽 = (wchar_t *)malloc((size_t)宽长 * sizeof(wchar_t));
+  if (!宽) return NULL;
+  MultiByteToWideChar(CP_UTF8, 0, utf8, -1, 宽, 宽长);
+  int 宽模长 = MultiByteToWideChar(CP_UTF8, 0, 模式, -1, NULL, 0);
+  wchar_t 宽模[8];
+  if (宽模长 <= 0 || 宽模长 > 8) { free(宽); return NULL; }
+  MultiByteToWideChar(CP_UTF8, 0, 模式, -1, 宽模, 宽模长);
+  FILE *f = _wfopen(宽, 宽模);
+  free(宽);
+  return f;
+#else
+  return fopen(utf8, 模式);
+#endif
+}
 
 /* Two range tables generated from the Unicode corpus by tools/ucd-c.mjs.
  * They live in the repository as C arrays so this machine can answer "is this
@@ -943,7 +973,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     if (nargs != 1) { fail("HMYR-R0101", "file_exists wants one argument"); return 1; }
     if (args[0].tag != T_STR) { *out = v_bool(0); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
-    FILE *f = fopen(p, "rb");
+    FILE *f = 开文件(p, "rb");
     if (f) fclose(f);
     *out = v_bool(f != NULL);
     free(p);
@@ -953,7 +983,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     if (nargs < 1) { fail("HMYR-R0101", "read_text wants at least one argument"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_text wants a path string"); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
-    FILE *f = fopen(p, "rb");
+    FILE *f = 开文件(p, "rb");
     if (!f) { free(p); fail("HMYR-R0211", "cannot read that file"); return 1; }
     fseek(f, 0, SEEK_END);
     long n = ftell(f);
@@ -975,7 +1005,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     if (args[0].tag != T_STR || args[1].tag != T_STR) { fail("HMYR-R0130", "write_text wants two strings"); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
     char *t = utf16_to_utf8(args[1].s, args[1].slen);
-    FILE *f = fopen(p, "wb");
+    FILE *f = 开文件(p, "wb");
     if (!f) { free(p); free(t); fail("HMYR-R0212", "cannot write that file"); return 1; }
     size_t tl = strlen(t);
     size_t wrote = fwrite(t, 1, tl, f);
@@ -992,7 +1022,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "write_bytes wants a path string"); return 1; }
     if (args[1].tag != T_TUPLE) { fail("HMYR-R0130", "write_bytes wants a tuple of bytes"); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
-    FILE *f = fopen(p, "wb");
+    FILE *f = 开文件(p, "wb");
     free(p);
     if (!f) { fail("HMYR-R0212", "cannot write that file"); return 1; }
     /* 元素可以是字节，也可以是一块字节（语言那边按块累积，省掉平方复制）。 */
@@ -1052,6 +1082,92 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     v.ilen = 8;
     v.items = alloc_values(8);
     for (int i = 0; i < 8; i++) v.items[i] = v_num((double)((u >> (8 * i)) & 0xff));
+    *out = v;
+    return 1;
+  }
+  /* 按行读：从偏移读一行，交回 {行, 下一起点}；读完交回 下一起点 = -1。
+   * 语言里没有文件句柄，所以每次调用自己开、自己关 —— 语义封闭，能一段一段读。 */
+  if (name_is(name_idx, "read_line")) {
+    if (nargs != 2) { fail("HMYR-R0101", "read_line wants two arguments"); return 1; }
+    if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_line wants a path string"); return 1; }
+    int ok = 0;
+    double 起 = as_num(args[1], &ok);
+    if (!ok) { fail("HMYR-R0130", "read_line wants a number offset"); return 1; }
+    char *路 = utf16_to_utf8(args[0].s, args[0].slen);
+    FILE *f = 开文件(路, "rb");
+    free(路);
+    if (!f) { fail("HMYR-R0211", "cannot read that file"); return 1; }
+    if (fseek(f, (long)起, SEEK_SET) != 0) { fclose(f); fail("HMYR-R0211", "cannot seek in that file"); return 1; }
+    /* 一行：读到换行为止（不含换行）。 */
+    char 缓[4096];
+    size_t 得 = 0;
+    int c;
+    while ((c = fgetc(f)) != EOF && c != '\n') {
+      if (得 < sizeof 缓 - 1) 缓[得++] = (char)c;
+    }
+    缓[得] = 0;
+    long 下 = -1;
+    if (c == '\n') 下 = ftell(f);
+    fclose(f);
+    /* 去掉行尾的 \r，好让 CRLF 与 LF 两种文件读出来一样。 */
+    if (得 > 0 && 缓[得 - 1] == '\r') { 得--; 缓[得] = 0; }
+    uint32_t 行长 = 0;
+    uint16_t *行们 = utf8_to_utf16(缓, 得, &行长);
+    Value 行 = v_str(行们, 行长);
+    Value 记 = v_null();
+    记.tag = T_RECORD;
+    记.rec.n = 2;
+    记.rec.vals = alloc_values(2);
+    记.rec.names = (const uint16_t **)calloc(2, sizeof(uint16_t *));
+    记.rec.name_lens = (uint32_t *)calloc(2, sizeof(uint32_t));
+    static const uint16_t 名行[] = {0x884c};        /* 行 */
+    static const uint16_t 名下[] = {0x4e0b, 0x4e00, 0x8d77, 0x70b9}; /* 下一起点 */
+    记.rec.names[0] = 名行; 记.rec.name_lens[0] = 1; 记.rec.vals[0] = 行;
+    记.rec.names[1] = 名下; 记.rec.name_lens[1] = 4; 记.rec.vals[1] = v_num((double)下);
+    *out = 记;
+    return 1;
+  }
+  /* 整份按行切好。给「知道自己要全部」的调用者一个省事的入口。 */
+  if (name_is(name_idx, "read_lines")) {
+    if (nargs != 1) { fail("HMYR-R0101", "read_lines wants one argument"); return 1; }
+    if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_lines wants a path string"); return 1; }
+    char *路 = utf16_to_utf8(args[0].s, args[0].slen);
+    FILE *f = 开文件(路, "rb");
+    free(路);
+    if (!f) { fail("HMYR-R0211", "cannot read that file"); return 1; }
+    fseek(f, 0, SEEK_END);
+    long 大小 = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (大小 < 0) { fclose(f); fail("HMYR-R0211", "cannot read that file"); return 1; }
+    char *文 = (char *)malloc((size_t)大小 + 1);
+    if (!文) { fclose(f); fail("HMYR-R0211", "cannot read that file"); return 1; }
+    size_t 得 = fread(文, 1, (size_t)大小, f);
+    fclose(f);
+    文[得] = 0;
+    /* 切行：末尾那个空段不算（文件以换行收尾是常态），行尾的 \r 去掉。 */
+    uint32_t 数 = 0, 容 = 16;
+    Value v = v_null();
+    v.tag = T_TUPLE;
+    v.items = alloc_values(容);
+    size_t 起 = 0;
+    for (size_t i = 0; i <= 得; i++) {
+      if (i < 得 && 文[i] != '\n') continue;
+      size_t 末 = i;
+      if (末 > 起 && 文[末 - 1] == '\r') 末--;
+      if (i == 得 && 末 == 起) break;   /* 末尾空行 */
+      uint32_t 行长 = 0;
+      uint16_t *行们 = utf8_to_utf16(文 + 起, 末 - 起, &行长);
+      if (数 >= 容) {
+        容 *= 2;
+        Value *新 = alloc_values(容);
+        for (uint32_t k = 0; k < 数; k++) 新[k] = v.items[k];
+        v.items = 新;
+      }
+      v.items[数++] = v_str(行们, 行长);
+      起 = i + 1;
+    }
+    free(文);
+    v.ilen = 数;
     *out = v;
     return 1;
   }
@@ -1389,7 +1505,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
 }
 
 static uint8_t *read_file(const char *path, size_t *out_len) {
-  FILE *f = fopen(path, "rb");
+  FILE *f = 开文件(path, "rb");
   if (!f) { fprintf(stderr, "hmyr: cannot open %s\n", path); exit(1); }
   fseek(f, 0, SEEK_END);
   long n = ftell(f);

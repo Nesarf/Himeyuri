@@ -139,6 +139,28 @@ export const 内置表 = {
     try { return new 类元组(vm.cap.file.packValue(a[0])); }
     catch (err) { vm.坏("HMYR-R0214", "cannot encode this value: " + String(err && err.message ? err.message : err)); return null; }
   } },
+  // 按行读：从偏移读一行，交回 {行, 下一起点}；读完交回 下一起点 = -1。
+  // 语言里没有文件句柄，所以每次调用自己开、自己关 —— 语义封闭，能一段一段读。
+  read_line: { 效果: "file", 做: (vm, a) => {
+    const 路径 = vm.成串(a[0]);
+    const 起 = 数.下整(vm.成数(a[1]));
+    try {
+      const r = vm.cap.file.readLine(路径, 起);
+      return new 类记录(new Map([["行", r.行], ["下一起点", r.下一起点]]));
+    } catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      return vm.坏("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+    }
+  } },
+  // 整份按行切好。
+  read_lines: { 效果: "file", 做: (vm, a) => {
+    const 路径 = vm.成串(a[0]);
+    try { return new 类元组(vm.cap.file.readLines(路径)); }
+    catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      return vm.坏("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+    }
+  } },
   print: { 做: (vm, a) => { vm.write(a.map((x) => vm.成串(x)).join("")); return null; } },
   print_err: { 效果: "process", 做: (vm, a) => {
     const 文 = a.map((x) => vm.成串(x)).join("");

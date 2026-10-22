@@ -184,6 +184,27 @@ const 内置 = {
       return null;
     }
   },
+  // 按行读：从偏移读一行，交回 {行, 下一起点}；读完交回 下一起点 = -1。
+  read_line: (rt, a) => {
+    const 路径 = rt.成串(a[0]);
+    const 起 = Math.trunc(rt.成数(a[1]));
+    try {
+      const r = rt.cap.file.readLine(路径, 起);
+      return { 行: r.行, 下一起点: r.下一起点 };
+    } catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      return rt.坏("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+    }
+  },
+  // 整份按行切好。
+  read_lines: (rt, a) => {
+    const 路径 = rt.成串(a[0]);
+    try { return rt.cap.file.readLines(路径); }
+    catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      return rt.坏("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+    }
+  },
   print: (rt, a) => { rt.write(a.map((x) => rt.成串(x)).join("")); return null; },
   print_err: (rt, a) => {
     const 文 = a.map((x) => rt.成串(x)).join("");
@@ -228,7 +249,7 @@ const 内置 = {
 };
 
 // 只有这四样碰世界。读文件与问文件在不在属 file，另两个通道属 process。
-const 内置效果 = { read_text: "file", write_text: "file", write_bytes: "file", file_exists: "file", argv: "process", print_err: "process" };
+const 内置效果 = { read_text: "file", read_line: "file", read_lines: "file", write_text: "file", write_bytes: "file", file_exists: "file", argv: "process", print_err: "process" };
 
 class 尾调用 {
   constructor(decl, args, fromEffects) { this.decl = decl; this.args = args; this.fromEffects = fromEffects; }

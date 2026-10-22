@@ -54,7 +54,7 @@ const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
 // 跑 self/ 那六份真正需要的内置。stage0 模式下只放这几个过去。
 // field_names 不在这一张里：自举层现在还不用它，而这张表的意思是「已经量过的必须项」，
 // 多写一个就把闸门放宽了一格。
-const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "f64_bytes", "is_letter", "is_mark", "len", "nfc", "ord", "pack_value", "print", "print_err", "read_text", "record_new", "slice", "str", "to_int", "write_bytes"]);
+const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "f64_bytes", "is_letter", "is_mark", "len", "nfc", "ord", "pack_value", "print", "print_err", "read_line", "read_lines", "read_text", "record_new", "slice", "str", "to_int", "write_bytes"]);
 
 export class Runtime {
   constructor(options = {}) {
@@ -706,6 +706,22 @@ const BUILTINS = {
   },
   pack_value: (rt, args) => {
     return rt.cap.file.packValue(args[0]);
+  },
+  // 按行读：从偏移读一行，交回 {行, 下一起点}；读完交回 下一起点 = -1。
+  read_line: (rt, args) => {
+    const 路径 = String(args[0]);
+    const 起 = rt.asNumber(args[1]);
+    try {
+      const r = rt.cap.file.readLine(路径, 起);
+      return { 行: r.行, 下一起点: r.下一起点 };
+    } catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      throw new Error("cannot read a line" + 原因);
+    }
+  },
+  read_lines: (rt, args) => {
+    const 路径 = String(args[0]);
+    return rt.cap.file.readLines(路径);
   },
   write_text: (rt, args) => {
     const file = String(args[0]);
