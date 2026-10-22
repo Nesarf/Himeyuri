@@ -17,6 +17,7 @@
 // 于是将来谁往 self/ 里加一个子集还没认的写法，启动器会在这里失败——
 // 而在他跑到这里之前，subset-lex / subset-parse / subset-load 三套会先红，红在那个写法上。
 import path from "node:path";
+import net from "node:net";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
 import { 最小运行 } from "../src/minimal-eval.mjs";
@@ -68,7 +69,15 @@ if (!层.ok) {
 // 第一个是标准流（默认），第三个会是命名管道或 socket，而它们都不需要语言侧改一行 ——
 // print 只认那个出口对象，出口由调用方给。
 //
-// 开关都从 argv 里剔掉：语言侧取 argv[1] 当目标文件，多一个参数会把它挪错位。
+// --pipe <名字> 把 print 的出口换成一个命名管道。这是「出口可替换」那条规矩的第三个用法：
+// 第一个是标准流（默认），第二个是 --out 那个文件，而它们都不需要语言侧改一行 ——
+// print 只认那个出口对象，出口由调用方给。
+//
+// 为什么值得单独做一条：程序不必知道自己被谁接走。谁在管道那头听，是调用方的事；
+// 而语言侧写的仍然是 print("...")。
+//
+// 名字按调用方给的用：Windows 是 \\.\pipe\xxx，别的机器上就是一个 FIFO 的路径。
+// 默认不开网络这一条照抄 —— 管道是本机的，不是 socket。
 const 参数 = process.argv.slice(1);
 const 用宿主 = 参数.includes("--host-eval");
 const 自家标量 = 参数.includes("--own-scalars");
@@ -82,10 +91,11 @@ const 取带值 = (名) => {
   return 参数[i + 1];
 };
 const 出路径 = 取带值("--out");
+const 管道名 = 取带值("--pipe");
 const 递给语言 = 参数.filter((a, i) => {
   if (a === "--host-eval" || a === "--minimal-eval" || a === "--own-scalars" || a === "--redact") return false;
-  if (a === "--out") return false;
-  if (i > 0 && 参数[i - 1] === "--out") return false;
+  if (a === "--out" || a === "--pipe") return false;
+  if (i > 0 && (参数[i - 1] === "--out" || 参数[i - 1] === "--pipe")) return false;
   return true;
 });
 
@@ -99,10 +109,22 @@ const rt = 用宿主
   ? runUnit(层, { stage0: true })
   : 最小运行(层, { capabilities: 能力, 字符串用码元序列: 自家标量, 检查效果: false, stepLimit: 200000000 });
 
-// 出口：标准流，或者一个文件。文件那个出口经能力层拿 —— 启动器不自己碰文件系统，
-// 那是这一层的规矩（test/bootstrap.test.mjs 钉着它）。
+// 出口：标准流、一个文件，或者一条命名管道。
+// 文件那个出口经能力层拿 —— 启动器不自己碰文件系统，那是这一层的规矩
+// （test/bootstrap.test.mjs 钉着它）。管道用的是 net，不是文件系统，所以在这里直接连。
 let 出口 = null;
-if (出路径) 出口 = 能力.file.stream(出路径);
+let 管道 = null;
+if (管道名) {
+  管道 = net.connect(管道名);
+  // 连不上要出声：静静地把 print 丢掉，比报错更难查。
+  管道.on("error", (err) => {
+    process.stderr.write("HMYR-E0002 the pipe cannot be opened: " + (在用脱敏() ? "<path>" : String(err && err.message ? err.message : err)) + "\n");
+    process.exit(2);
+  });
+  出口 = { write: (s) => 管道.write(s), close: () => 管道.end() };
+} else if (出路径) {
+  出口 = 能力.file.stream(出路径);
+}
 rt.write = (s) => {
   if (出口 !== null) 出口.write(s);
   else process.stdout.write(s);
@@ -112,5 +134,19 @@ rt.writeErr = (s) => process.stderr.write(脱线(s));
 rt.argv = 递给语言;
 
 const 码 = rt.callFunction(rt.functions.get("命令行入口"), [], null);
-if (出口 !== null) 出口.close();
-process.exit(码);
+if (出口 !== null) {
+  出口.close();
+  if (管道 !== null) {
+    // 管道那边是异步的：end() 之后还有一段在飞，process.exit 不会替我们等。
+    // 不等的症状是「输出少了一截，而且只在快的时候少」。
+    let 走了 = false;
+    const 走 = () => { if (!走了) { 走了 = true; process.exit(码); } };
+    管道.on("finish", 走);
+    管道.on("close", 走);
+    setTimeout(走, 2000);
+  } else {
+    process.exit(码);
+  }
+} else {
+  process.exit(码);
+}

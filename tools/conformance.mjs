@@ -164,7 +164,7 @@ console.log("  " + (unexplained.length ? unexplained.length + " clause(s) with n
   // What "portable" means here is declared, not assumed: the modules all three runtimes provide
   // (Deno and Bun through node compatibility). readline belongs: reading a line-oriented stdio stream
   // is exactly what an embedded host needs, and all three have it.
-  const PORTABLE = new Set(["fs", "path", "url", "crypto", "os", "zlib", "child_process", "readline"]);
+  const PORTABLE = new Set(["fs", "path", "url", "crypto", "os", "zlib", "child_process", "readline", "net"]);
 
 // 专有模块：不是三个运行时都有，但某一组能力必须靠它。
 // 用了就登记在这里，并且要在 design 里写明为什么——而「登记」不是「视而不见」。

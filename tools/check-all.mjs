@@ -88,6 +88,7 @@ const SUITES = [
   ["hmyrpack", "test/hmyr-pack.test.mjs", "SPEC M4 - the writer moved into Himeyuri too: the same source packed by two packers, byte for byte"],
   ["readlines", "test/read-lines.test.mjs", "SPEC 4 - reading a file line by line, on both machines, with CRLF and LF agreeing"],
   ["returntypes", "test/return-types.test.mjs", "SPEC 2.3 - a declared return type is checked against what the function actually returns, with the boundary stated"],
+  ["pipe", "test/pipe.test.mjs", "SPEC 6 - the third use of a replaceable outlet: print goes into a named pipe, and a missing pipe says so"],
   ["selfframes", "test/self-frames.test.mjs", "SPEC M6 - one level of recursion costs about eleven host frames, and why the cheap fix was refused"],
   ["tailcall", "test/tail-call.test.mjs", "SPEC M6 - tail calls: tail recursion reaches any depth, and nothing else about the language changes"],
   ["launcher", "test/launcher.test.mjs", "SPEC M7 - node bin/hmyr.mjs: the target program goes through the bootstrap, not the host language layer"],
