@@ -47,15 +47,20 @@ fn 找槽(名表: Int, 名: String) -> Int {
 //
 // 这张表要与 src/bytecode.mjs 的 内置名、src/vm-builtins.mjs 与 vm/hmyr.c 里那一套对齐。
 fn 是内置(名: String) -> Bool {
+  if 名 == "abs" { return true }
   if 名 == "argv" { return true }
   if 名 == "chr" { return true }
   if 名 == "field_get" { return true }
   if 名 == "field_has" { return true }
   if 名 == "field_names" { return true }
   if 名 == "file_exists" { return true }
+  if 名 == "floor" { return true }
+  if 名 == "int" { return true }
   if 名 == "is_letter" { return true }
   if 名 == "is_mark" { return true }
   if 名 == "len" { return true }
+  if 名 == "max" { return true }
+  if 名 == "min" { return true }
   if 名 == "nfc" { return true }
   if 名 == "ord" { return true }
   if 名 == "print" { return true }
@@ -88,11 +93,86 @@ fn 二元码(op: String) -> String {  if op == "+" { return "ADD" }
   return ""
 }
 
+// 一个数字字面量 → 数。
+//
+// 词法层把整数、小数、指数都收成一段文本（lex.hmyr 的 read_number），
+// 而这里要把它变成数。早先这一层直接交给 to_int，于是 2.7 一进编译器就报
+// 「不是整数字面量」—— 而同一条源码走解释那条路（eval.hmyr 的数到）跑得动。
+// 两条路对同一份源码给出两种答案，是最难查的那一类：你以为自己在查算术。
+fn 数字值(s: String) -> Int {
+  var i = 0
+  var 负 = false
+  if i < len(s) {
+    if s[i] == "-" {
+      负 = true
+      i = i + 1
+    }
+  }
+  var 整 = 0
+  var 小 = 0
+  var 小长 = 0
+  var 在整 = true
+  var 在指 = false
+  var 指负 = false
+  var 指数 = 0
+  while i < len(s) {
+    let c = s[i]
+    let 码 = ord(c)
+    if 码 >= 48 {
+      if 码 <= 57 {
+        let 位 = 码 - 48
+        if 在指 {
+          指数 = 指数 * 10 + 位
+        } else {
+          if 在整 {
+            整 = 整 * 10 + 位
+          } else {
+            小 = 小 * 10 + 位
+            小长 = 小长 + 1
+          }
+        }
+      }
+    }
+    if c == "." { 在整 = false }
+    if c == "e" { 在指 = true }
+    if c == "E" { 在指 = true }
+    if c == "-" {
+      if 在指 { 指负 = true }
+    }
+    i = i + 1
+  }
+  var 值 = 整
+  if 小长 > 0 {
+    var 除 = 1
+    var k = 0
+    while k < 小长 {
+      除 = 除 * 10
+      k = k + 1
+    }
+    值 = 值 + 小 / 除
+  }
+  if 在指 {
+    var 倍 = 1
+    var t = 0
+    while t < 指数 {
+      倍 = 倍 * 10
+      t = t + 1
+    }
+    if 指负 {
+      值 = 值 / 倍
+    } else {
+      值 = 值 * 倍
+    }
+  }
+  if 负 { return 0 - 值 }
+  return 值
+}
+
 // 一个表达式：交回 {ok, 状态}。
 fn 表达(节点: Int, 状态: Int) {
   let 种 = 节点.kind
   if 种 == "num" {
-    return {ok: true, 状态: 发(状态, {op: "CONST", a: to_int(节点.text)})}
+    return {ok: true, 状态: 发(状态, {op: "CONST", a: 数字值(节点.text)})}
   }
   if 种 == "str" {
     return {ok: true, 状态: 发(状态, {op: "CONST", a: 节点.text})}

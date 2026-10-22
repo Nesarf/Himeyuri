@@ -31,6 +31,7 @@ C 版虚拟机：那台不是 JS 的机器
     指令   全部三十二条都实现了
     内置   以 vm/hmyr.c 里 name_is 串起来的那些为准：print、print_err、str、len、
            chr、ord、to_int、slice、to_upper、to_lower、nfc、is_letter、is_mark、
+           abs、floor、int、min、max、
            record_new、field_get、field_has、field_names、file_exists、
            read_text、read_lines、write_text、write_bytes、f64_bytes、pack_value、argv
     其它   报 HMYR-R0104 并把缺的那个名字说出来

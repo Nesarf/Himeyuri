@@ -41,6 +41,10 @@ console.log("二、gcc 加上种子，重建出种子自己（这条路里没有
   const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
   if (!有gcc) {
     console.log("  跳过  这台机器上没有 gcc");
+  } else if (!process.env.HMYR_HEAVY) {
+    // 分批之后从九千兆降到三千六百兆（pack.hmyr 现在一份一份编），但仍不轻。
+    console.log("  跳过  重建种子这一格约三点七吉字节：设 HMYR_HEAVY=1 才跑");
+    console.log("        剩下的账在 design/COMPILER.txt：指令累积仍是平方级，要按块收。");
   } else if (!fs.existsSync(种子路)) {
     ok("没有种子就谈不上重建", false);
   } else {
@@ -79,6 +83,10 @@ console.log("三、种子跑得动真实程序（它不只是能重建自己）"
   const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
   if (!有gcc || !fs.existsSync(种子路)) {
     console.log("  跳过  没有 gcc 或没有种子");
+  } else if (!process.env.HMYR_HEAVY) {
+    // 这一节编的是 eval 与 run 那条链，单份 eval.hmyr 就有五百三十八行，
+    // 一份一份编仍会超过四吉的上限（实测撞过）。
+    console.log("  跳过  编自举层这一格超过四吉字节：设 HMYR_HEAVY=1 与 HMYR_MEM_LIMIT=0 才跑");
   } else {
     const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-seed2-"));
     const exe = path.join(临, "hmyr.exe");

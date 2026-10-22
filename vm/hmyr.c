@@ -86,6 +86,54 @@ static FILE *开文件(const char *utf8, const char *模式) {
 static size_t g_mem_live = 0;
 static size_t g_mem_peak = 0;
 
+/* 分配上限。默认四吉字节 —— 这台机器没有回收，于是一个平方级的累积能把
+ * 整台机器的内存吃满，而「没有 GC」不等于「可以吃满」。
+ * 超过就明确退出（退出码 71），不让操作系统去收拾。
+ * HMYR_MEM_LIMIT 改这个数（兆字节）；给 0 表示不限，只给查的人用。 */
+static size_t g_mem_limit = (size_t)4 * 1024 * 1024 * 1024;
+
+/* 让路：这台机器不只跑这一个程序。可用物理内存低于这道水位时先歇一下，
+ * 等别人走完再分配；一直低就明确退出 —— 把内存吃满会触发系统那一层的内存压缩，
+ * 整机跟着卡，那比这个程序失败严重得多。 */
+#define 水位 ((size_t)1536 * 1024 * 1024)
+#define 每查一次 ((size_t)1024 * 1024)
+
+static size_t g_mem_since_check = 0;
+
+static size_t 空闲物理(void) {
+#ifdef _WIN32
+  MEMORYSTATUSEX 状;
+  状.dwLength = sizeof 状;
+  if (!GlobalMemoryStatusEx(&状)) return (size_t)-1;
+  return (size_t)状.ullAvailPhys;
+#else
+  return (size_t)-1;   /* 别的机器上先不判断，留给那一侧的移植 */
+#endif
+}
+
+static void 让一让(size_t n) {
+  g_mem_since_check += n;
+  if (g_mem_since_check < 每查一次) return;
+  g_mem_since_check = 0;
+  size_t 空 = 空闲物理();
+  if (空 == (size_t)-1) return;
+  if (空 > 水位) return;
+  /* 排队，不退出：等别人把内存让出来。这个程序慢一点没关系，
+   * 而它一退出就等于「别人的机器状态决定了我能不能干活」——
+   * 那种结果比慢一秒糟得多。等的时候打印一次，免得看起来像卡死。 */
+  fprintf(stderr,
+          "hmyr: waiting for memory (%llu MB free, low-water %llu MB) — other programmes go first\n",
+          (unsigned long long)(空 / (1024 * 1024)),
+          (unsigned long long)(水位 / (1024 * 1024)));
+  for (;;) {
+#ifdef _WIN32
+    Sleep(50);
+#endif
+    空 = 空闲物理();
+    if (空 == (size_t)-1 || 空 > 水位) return;
+  }
+}
+
 static void *(*const 原malloc)(size_t) = malloc;
 static void *(*const 原realloc)(void *, size_t) = realloc;
 static void (*const 原free)(void *) = free;
@@ -93,6 +141,15 @@ static void (*const 原free)(void *) = free;
 static void 记一笔(size_t n) {
   g_mem_live += n;
   if (g_mem_live > g_mem_peak) g_mem_peak = g_mem_live;
+  if (g_mem_limit && g_mem_live > g_mem_limit) {
+    fprintf(stderr,
+            "hmyr: this run went past its memory limit: %llu MB allocated and nothing is reclaimed "
+            "(limit %llu MB; HMYR_MEM_LIMIT changes it, 0 means no limit)\n",
+            (unsigned long long)(g_mem_live / (1024 * 1024)),
+            (unsigned long long)(g_mem_limit / (1024 * 1024)));
+    exit(71);
+  }
+  让一让(n);
 }
 
 static void *hm_malloc(size_t n) {
@@ -1205,6 +1262,31 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_num((double)(neg ? -v : v));
     return 1;
   }
+  /* 算术那一组：纯函数，不碰世界。两台机器对这五个该给出同一个数，
+   * 所以它们进了字节码内置表 —— 以前只在宿主求值器里有，编成字节码就找不着。 */
+  if (name_is(name_idx, "abs") || name_is(name_idx, "floor") || name_is(name_idx, "int")) {
+    if (nargs != 1) { fail("HMYR-R0101", "that builtin wants one argument"); return 1; }
+    int ok = 0;
+    double x = as_num(args[0], &ok);
+    if (!ok) { fail("HMYR-R0130", "that builtin wants a number"); return 1; }
+    if (name_is(name_idx, "abs")) *out = v_num(x < 0 ? -x : x);
+    else if (name_is(name_idx, "floor")) *out = v_num(floor(x));
+    else *out = v_num(trunc(x));
+    return 1;
+  }
+  if (name_is(name_idx, "min") || name_is(name_idx, "max")) {
+    if (nargs < 1) { fail("HMYR-R0101", "that builtin wants at least one argument"); return 1; }
+    int 取大 = name_is(name_idx, "max");
+    double 佳 = 0;
+    for (int i = 0; i < nargs; i++) {
+      int ok = 0;
+      double x = as_num(args[i], &ok);
+      if (!ok) { fail("HMYR-R0130", "min and max want numbers"); return 1; }
+      if (i == 0 || (取大 ? x > 佳 : x < 佳)) 佳 = x;
+    }
+    *out = v_num(佳);
+    return 1;
+  }
   if (name_is(name_idx, "slice")) {
     if (nargs != 3) { fail("HMYR-R0101", "slice wants three arguments"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "slice wants a string"); return 1; }
@@ -2158,6 +2240,14 @@ int main(int argc, char **argv) {
   g_fields_on = getenv("HMYR_FIELDS") != NULL;
   for (int i = 0; i < TRACE_N; i++) g_trace[i].op = 255;
   if (getenv("HMYR_MEM")) atexit(堆账报一下);
+  {
+    /* 上限：给了就照给的，给 0 表示不限。 */
+    const char *ml = getenv("HMYR_MEM_LIMIT");
+    if (ml) {
+      long v = atol(ml);
+      g_mem_limit = v > 0 ? (size_t)v * 1024 * 1024 : 0;
+    }
+  }
 
   /* 两个入口：给一份源码时先编再跑（启动器那一面），给一份字节码时直接跑。
    * 判据是后缀 —— 别看文件内容去猜，猜错的时候症状比报错难查得多。 */

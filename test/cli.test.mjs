@@ -139,6 +139,24 @@ console.log("七、临时那一份可以留下来查");
   }
 }
 
+console.log("八、两条启动器对同一份源给同一个答案");
+{
+  // 一条走自举层解释（bin/hmyr.mjs），一条走种子编译（这个可执行文件）。
+  // 两条路对同一份源码说出两种答案，是最难查的那一类错 —— 所以这一条要钉住。
+  const 源 = path.join(临, "arith.hmyr");
+  fs.writeFileSync(源, [
+    "fn main() -> Int {",
+    '  print(str(abs(0 - 7)) + " " + str(min(3, 9, 2)) + " " + str(floor(2.7)) + "\\n")',
+    "  return 0",
+    "}",
+  ].join("\n"), "utf8");
+  const c = 跑([源], { env: { HMYR_SEED: 种子 } });
+  ok("C 启动器算对了", c.出.trim() === "7 2 2", JSON.stringify(c.出.trim()) + " " + c.错.slice(0, 160));
+  const js = spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), 源], { encoding: "utf8", cwd: ROOT, timeout: 180000 });
+  const js行 = String(js.stdout || "").split("\n")[0].trim();
+  ok("自举层那一条算出同一行", js行 === "7 2 2", JSON.stringify(js行));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

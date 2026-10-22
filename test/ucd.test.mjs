@@ -92,13 +92,35 @@ console.log("四、全码点表：一百一十一个码点各一行");
   ok("四十兆以上", 大小 > 40 * 1024 * 1024, (大小 / 1024 / 1024).toFixed(2) + " MB");
 
   const 文 = fs.readFileSync(文件, "utf8");
-  const 行们 = 文.split("\n");
-  if (行们[行们.length - 1] === "") 行们.pop();
-  ok("行数正好是一百一十一万四千一百一十二", 行们.length === 1114112, String(行们.length));
-  ok("第一行是 U+0000", 行们[0].startsWith("U+0000;"), 行们[0]);
-  ok("最后一行是 U+10FFFF", 行们[行们.length - 1].startsWith("U+10FFFF;"), 行们[行们.length - 1]);
+  // 按行号取一行，不整份 split。四十四兆切下去是一百一十多万个短字符串，
+  // 光对象头就要几百兆 —— 而这里只用得到四行。这一套以前吃掉三百多兆，
+  // 全量跑起来像内存被提满，根子就在这一行 split。
+  const 取行 = (号) => {
+    let 起 = 0;
+    for (let i = 0; i < 号; i++) {
+      const 下 = 文.indexOf("\n", 起);
+      if (下 < 0) return "";
+      起 = 下 + 1;
+    }
+    const 末 = 文.indexOf("\n", 起);
+    return 末 < 0 ? 文.slice(起) : 文.slice(起, 末);
+  };
+  const 数行 = () => {
+    let n = 0, 起 = 0;
+    for (;;) {
+      const 下 = 文.indexOf("\n", 起);
+      if (下 < 0) break;
+      n++;
+      起 = 下 + 1;
+    }
+    return 起 < 文.length ? n + 1 : n;
+  };
+  const 行数 = 数行();
+  ok("行数正好是一百一十一万四千一百一十二", 行数 === 1114112, String(行数));
+  ok("第一行是 U+0000", 取行(0).startsWith("U+0000;"), 取行(0));
+  ok("最后一行是 U+10FFFF", 取行(行数 - 1).startsWith("U+10FFFF;"), 取行(行数 - 1));
 
-  const 行 = (cp) => 行们[cp];
+  const 行 = (cp) => 取行(cp);
   ok("U+0041 那一行说对了名字与类别", 行(0x41) === "U+0041;LATIN CAPITAL LETTER A;Lu;Basic Latin;Latin", 行(0x41));
   ok("U+3042 那一行说对了块", 行(0x3042).includes(";Hiragana;Hiragana"), 行(0x3042));
   // 区间展开的证据：CJK 那一大片在 UnicodeData 里只有两行，展开之后中间这个码点才有名字。
@@ -106,7 +128,7 @@ console.log("四、全码点表：一百一十一个码点各一行");
   ok("U+4E2D 的类别是 Lo、块是 CJK Unified Ideographs、脚本是 Han",
     行(0x4E2D) === "U+4E2D;<CJK Ideograph>;Lo;CJK Unified Ideographs;Han", 行(0x4E2D));
   ok("U+10FFFF 在补充私用区", 行(0x10FFFF).includes("Supplementary Private Use Area-B"), 行(0x10FFFF));
-  ok("每一行都是五个字段", 行们[0x41].split(";").length === 5 && 行们[0x1F600].split(";").length === 5);
+  ok("每一行都是五个字段", 行(0x41).split(";").length === 5 && 行(0x1F600).split(";").length === 5);
 }
 
 console.log("");

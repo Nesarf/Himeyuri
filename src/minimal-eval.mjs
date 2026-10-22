@@ -99,6 +99,22 @@ const 内置 = {
     if (!/^-?[0-9]+$/.test(s)) rt.坏("HMYR-R0208", "not an integer literal: '" + s + "'");
     return Number(s);
   },
+  // 算术那一组：纯函数，不碰世界。这一层一直没有转发它们，于是自举层解释程序时
+  // 遇到了也只能说「没有这个内置」。min 与 max 收任意多个参数 —— 少一个参数就报。
+  abs: (rt, a) => Math.abs(rt.成数(a[0])),
+  floor: (rt, a) => Math.floor(rt.成数(a[0])),
+  int: (rt, a) => {
+    // 只收数，不猜数字串 —— 猜法有宽有窄，而两窄不如一窄说得清。
+    return Math.trunc(rt.成数(a[0]));
+  },
+  min: (rt, a) => {
+    if (a.length === 0) rt.坏("HMYR-R0101", "min wants at least one argument");
+    return Math.min(...a.map((x) => rt.成数(x)));
+  },
+  max: (rt, a) => {
+    if (a.length === 0) rt.坏("HMYR-R0101", "max wants at least one argument");
+    return Math.max(...a.map((x) => rt.成数(x)));
+  },
   // 归一化与 Unicode 属性都要一张字符表，而那张表是能力，不是这一层能自制的。
   // 于是这三条把值先写成宿主串，再交给世界的库 —— 借在明处，写在这里。
   // 归一化与 Unicode 属性要一张字符表，而那张表是数据 —— 它住在能力层的 unicode 组里。

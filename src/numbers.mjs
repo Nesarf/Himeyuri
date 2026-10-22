@@ -131,6 +131,22 @@ export const 比 = (a, b) => (走自家
   ? (快整数(a) && 快整数(b) ? (a < b ? -1 : a > b ? 1 : 0) : 自家比(a, b))
   : a < b ? -1 : a > b ? 1 : 0);
 
+// 算术那一组内置要落在这里，而不是让内置表直接写 Math.abs / Math.trunc。
+// 理由与上面几行相同：数的意思收在一处，换实现只有一个落点。
+// 它们都是「一个有符号的零也照 IEEE 走」的形状 —— 绝对值的负数零仍是零。
+export const 绝对 = (n) => (n < 0 ? -n : n);
+export const 截断 = (n) => (n < 0 ? -Math.floor(-n) : Math.floor(n));
+export const 最小 = (们) => {
+  let 佳 = 们[0];
+  for (const x of 们) if (x < 佳) 佳 = x;
+  return 佳;
+};
+export const 最大 = (们) => {
+  let 佳 = 们[0];
+  for (const x of 们) if (x > 佳) 佳 = x;
+  return 佳;
+};
+
 // 位模式：双精度 ↔ 六十四位。定义搬到 src/bits.mjs 了 —— numbers、f64 与 decimal
 // 三份都要用它，而它们彼此之间已经有各自的方向，把桥单独放一份才不会有环。
 // 这里转出去，是为了让「数的意思只在这里找」这句话仍然成立。

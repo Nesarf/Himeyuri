@@ -181,6 +181,40 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 1 { return 坏("to_lower 要一个参数") }
     return 好(to_lower(值们[0]))
   }
+  // 算术那一组。abs、floor、int 是转发；min 与 max 自己走一遍，
+  // 因为它们是变长的，而「转给同一个名字」只能写出固定个数的参数。
+  if 名 == "abs" {
+    if len(值们) != 1 { return 坏("abs 要一个参数") }
+    return 好(abs(值们[0]))
+  }
+  if 名 == "floor" {
+    if len(值们) != 1 { return 坏("floor 要一个参数") }
+    return 好(floor(值们[0]))
+  }
+  if 名 == "int" {
+    if len(值们) != 1 { return 坏("int 要一个参数") }
+    return 好(int(值们[0]))
+  }
+  if 名 == "min" {
+    if len(值们) < 1 { return 坏("min 至少要一个参数") }
+    var 小 = 值们[0]
+    var 甲 = 1
+    while 甲 < len(值们) {
+      if 值们[甲] < 小 { 小 = 值们[甲] }
+      甲 = 甲 + 1
+    }
+    return 好(小)
+  }
+  if 名 == "max" {
+    if len(值们) < 1 { return 坏("max 至少要一个参数") }
+    var 大 = 值们[0]
+    var 乙 = 1
+    while 乙 < len(值们) {
+      if 值们[乙] > 大 { 大 = 值们[乙] }
+      乙 = 乙 + 1
+    }
+    return 好(大)
+  }
   // 记录那一组：造、取、问、列。四个都只是转发 —— 记录的形状由宿主那一层给。
   if 名 == "record_new" {
     if len(值们) != 1 { return 坏("record_new 要一个参数") }

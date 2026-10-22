@@ -153,7 +153,9 @@ export const 生成全码点表 = () => {
       (二分查(脚本们, cp) || "Unknown")
     );
     行数++;
-    if (批.length >= 20000) { fs.writeSync(fd, 批.join("\n") + "\n"); 批 = []; }
+    // 每两千行落一次盘，不攒两万行：一百一十万行如果攒成大数组，
+    // 光那些待写的短字符串就要再吃几十兆。落盘一次几十微秒，不值当攒。
+    if (批.length >= 2000) { fs.writeSync(fd, 批.join("\n") + "\n"); 批 = []; }
   }
   if (批.length) fs.writeSync(fd, 批.join("\n") + "\n");
   fs.closeSync(fd);
@@ -161,7 +163,10 @@ export const 生成全码点表 = () => {
 };
 
 export const 主 = () => {
-  const 字符 = 解析字符数据();
+  // 不再解析第二遍：模块顶上那份 字符表 已经把 UnicodeData 展开过了。
+  // 以前这里又调一次 解析字符数据()，于是同一张表在内存里存了两份（各二十九万个对象），
+  // 跑一次生成器要吃掉两百多兆 —— 而那一份重复的数据从头到尾只在算类别分布。
+  const 字符 = [...字符表.values()];
   const 块们 = 块表();
   const 脚本们 = 脚本表();
   const 类别 = new Map();

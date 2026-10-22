@@ -60,6 +60,20 @@ export const 内置表 = {
     if (!/^-?[0-9]+$/.test(s)) return vm.坏("HMYR-R0208", "not an integer literal: '" + s + "'");
     return 数.解析(s);
   } },
+  // 算术那一组：纯函数，不碰世界。字节码那条路上一直缺它们 ——
+  // 于是同一个程序在宿主求值器上跑得动，编成字节码就报「没有这个内置」。
+  // 全落进 numbers 模块：内置表里写 Math.abs 会让「数的意思收在一处」破一个口。
+  abs: { 做: (vm, a) => 数.绝对(vm.成数(a[0])) },
+  floor: { 做: (vm, a) => 数.下整(vm.成数(a[0])) },
+  int: { 做: (vm, a) => 数.截断(vm.成数(a[0])) },
+  min: { 做: (vm, a) => {
+    if (a.length === 0) return vm.坏("HMYR-R0101", "min wants at least one argument");
+    return 数.最小(a.map((x) => vm.成数(x)));
+  } },
+  max: { 做: (vm, a) => {
+    if (a.length === 0) return vm.坏("HMYR-R0101", "max wants at least one argument");
+    return 数.最大(a.map((x) => vm.成数(x)));
+  } },
   // 归一化与 Unicode 属性要一张字符表，而那张表是数据 —— 它住在能力层的 unicode 组里。
   // 于是内置表不再直接对宿主串调 normalize，也不再自己写一条属性正则。
   // 值先写成宿主串（那张表是按宿主串查的），回来再落到选定的那种底上。

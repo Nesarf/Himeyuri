@@ -464,15 +464,28 @@ console.log("十一、归一化：分解、排序、组合，这台机器也做"
     单码.add(cp);
   }
   const 语料 = new Map();
-  for (const 行 of fs.readFileSync(path.join(ROOT, "conformance/unicode-nfc.txt"), "utf8").split("\n")) {
-    if (!行) continue;
-    const 段 = 行.split(";");
-    if (段.length < 2) continue;
-    const cp = parseInt(段[0].slice(2), 16);
-    if (!单码.has(cp)) continue;
-    // 右边可能是一个码点，也可能是一串：组合被排除的那几个归一之后就是要分开的。
-    const 到 = 段[1].trim().split(/\s+/).map((h) => parseInt(h.slice(2), 16)).filter((v) => !Number.isNaN(v));
-    if (到.length) 语料.set(cp, 到);
+  {
+    // 不整份 split：这份语料十七点八兆，切下去是一百一十多万个短字符串，
+    // 光对象头就要几百兆，而这里只要样本里那些码点。逐行走一遍，命中才解析。
+    const 全文 = fs.readFileSync(path.join(ROOT, "conformance/unicode-nfc.txt"), "utf8");
+    let 起 = 0;
+    for (;;) {
+      const 下 = 全文.indexOf("\n", 起);
+      const 行 = 下 < 0 ? 全文.slice(起) : 全文.slice(起, 下);
+      if (行) {
+        const 分界 = 行.indexOf(";");
+        if (分界 > 2) {
+          const cp = parseInt(行.slice(2, 分界), 16);
+          if (单码.has(cp)) {
+            // 右边可能是一个码点，也可能是一串：组合被排除的那几个归一之后就是要分开的。
+            const 到 = 行.slice(分界 + 1).trim().split(/\s+/).map((h) => parseInt(h.slice(2), 16)).filter((v) => !Number.isNaN(v));
+            if (到.length) 语料.set(cp, 到);
+          }
+        }
+      }
+      if (下 < 0) break;
+      起 = 下 + 1;
+    }
   }
 
   const 行们 = [];
@@ -594,6 +607,28 @@ console.log("十二、堆账：这台机器分配了不回收，而那个数读�
   } else {
     ok("不问的时候不出这一行", false, "没有那一份字节码");
   }
+}
+
+console.log("十三、算术那一组：两台机器同一个数");
+{
+  // 这五个以前只在宿主求值器里有：同一段程序在宿主上跑得动，编成字节码就报
+  // 「没有这个内置」。现在它们进了字节码内置表，两台机器都得给同一个数。
+  const 源码 = [
+    "fn main() -> Int {",
+    '  print(str(abs(0 - 7)) + " ")',
+    '  print(str(floor(2.7)) + " ")',
+    '  print(str(floor(0 - 2.1)) + " ")',
+    '  print(str(int(0 - 2.7)) + " ")',
+    '  print(str(min(3, 9, 2)) + " ")',
+    '  print(str(max(3, 9, 2)) + "\\n")',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "arith");
+  ok("六个数两台一样", r.js === r.c, JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  ok("负数的 floor 往下取，int 朝零截", r.c.includes("-3 -2"), JSON.stringify(r.c));
+  ok("min 与 max 收得了三个参数", r.c.trim().endsWith("2 9"), JSON.stringify(r.c.trim().slice(-24)));
+  ok("小数字面量也编得过", r.c.trim().startsWith("7 2"), JSON.stringify(r.c.trim().slice(0, 20)));
 }
 
 fs.rmSync(临, { recursive: true, force: true });

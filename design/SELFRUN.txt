@@ -105,8 +105,14 @@ HMYR 全面自举：运行时、宿主依赖与启动
 
   还差什么，按代价排（数字都是当场数的）：
 
-    一、世界面还差 28 个内置。宿主求值器登记 54 个，C 那台有 26 个（语言核心那 26 个全齐）。
-       缺的按组：算术 5（abs floor int max min）、文本 2（split console_codepage）、
+    一、世界面还差 23 个内置。宿主求值器登记 54 个，C 那台有 31 个
+       （语言核心那 26 个加上算术那一组五个，全齐）。已经搬完的：
+       算术 5（abs floor int min max）—— 它们顺便补了两处：字节码内置表与
+       自举编译器的内置表都不认它们，于是同一段程序在宿主上跑得动、编成字节码就报
+       「没有这个内置」。搬这一组时还撞出一个更深的洞：自举编译器把数字字面量
+       一律交给 to_int，于是 2.7 一进编译器就报「不是整数字面量」，
+       而同一条源码走解释那条路跑得动。现在编译器有自己的一份小数与指数解析。
+       缺的按组：文本 2（split console_codepage）、
        路径与环境 8（cwd chdir home_dir temp_path repo_path python_path locale_env locale_set）、
        时间 2（now_ms sleep_ms）、键盘 3（key_*）、终端 3（term_*）、
        进程与线程 5（run_program、thr_*）。

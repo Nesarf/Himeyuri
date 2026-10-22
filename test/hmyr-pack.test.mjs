@@ -122,6 +122,10 @@ console.log("四、自举的固定点：HMYR 编出来的编译器，重编自�
   // 而「自己重编自己不变」是自举真正需要的那一条 —— 有了它，种子之后就不再需要 src/。
   if (!有gcc) {
     console.log("  跳过  这台机器上没有 gcc");
+  } else if (!process.env.HMYR_HEAVY) {
+    // 这一节要把 self/ 六份编两遍，也就撞上编译器那处平方级的指令累积
+    // （见 design/COMPILER.txt）：一跑就是几吉字节。默认不跑。
+    console.log("  跳过  这一节要编 self/ 六份两遍，几吉字节：设 HMYR_HEAVY=1 才跑");
   } else {
     const exe = path.join(临, "vm2.exe");
     const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
