@@ -440,6 +440,162 @@ console.log("十、大小写：表搬过来了，两台机器逐单元一样");
   ok("增补面这批两种走法也一样", 补.js === 补.c, JSON.stringify(补.js) + " 对 " + JSON.stringify(补.c));
 }
 
+console.log("十一、归一化：分解、排序、组合，这台机器也做");
+{
+  // 样本从三张表里长出来，不从「想到哪儿试到哪儿」来：
+  //   一、每个有规范分解的码点（表里全部）
+  //   二、每个组合对，写成「前一个 + 后一个」两字
+  //   三、一段等距抽样，拿 conformance/unicode-nfc.txt 当另一侧的答案
+  //   四、组合类的次序：同一个起头后面跟两个记号，两种先后该给同一个结果
+  //   五、韩文：三个字母拼一个音节，那条是算法不是表
+  const 头 = fs.readFileSync(path.join(ROOT, "vm/ucd-nfc.h"), "utf8");
+  const 分解码 = [...头.split("ucd_decomp[] = {")[1].split("};")[0].matchAll(/\{0x([0-9A-F]+)u, \d+u, \{/g)]
+    .map((m) => parseInt(m[1], 16));
+  const 组合对 = [...头.split("ucd_comp[] = {")[1].split("};")[0]
+    .matchAll(/\{0x([0-9A-F]+)u, 0x([0-9A-F]+)u, 0x([0-9A-F]+)u\}/g)]
+    .map((m) => [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)]);
+  const 组合类们 = [...头.split("ucd_ccc[] = {")[1].split("};")[0].matchAll(/\{0x([0-9A-F]+)u, (\d+)u\}/g)]
+    .map((m) => [parseInt(m[1], 16), Number(m[2])]);
+
+  const 单码 = new Set(分解码);
+  for (let cp = 0; cp <= 0x10ffff; cp += 97) {
+    if (cp >= 0xd800 && cp <= 0xdfff) continue;
+    if (cp < 0x20 || (cp >= 0x7f && cp < 0xa0)) continue;   // 这些进不了按行读的文件
+    单码.add(cp);
+  }
+  const 语料 = new Map();
+  for (const 行 of fs.readFileSync(path.join(ROOT, "conformance/unicode-nfc.txt"), "utf8").split("\n")) {
+    if (!行) continue;
+    const 段 = 行.split(";");
+    if (段.length < 2) continue;
+    const cp = parseInt(段[0].slice(2), 16);
+    if (!单码.has(cp)) continue;
+    // 右边可能是一个码点，也可能是一串：组合被排除的那几个归一之后就是要分开的。
+    const 到 = 段[1].trim().split(/\s+/).map((h) => parseInt(h.slice(2), 16)).filter((v) => !Number.isNaN(v));
+    if (到.length) 语料.set(cp, 到);
+  }
+
+  const 行们 = [];
+  for (const cp of [...单码].sort((a, b) => a - b)) 行们.push({ 种: "单", 文: String.fromCodePoint(cp), cp });
+  for (const [a, b, c] of 组合对) 行们.push({ 种: "对", 文: String.fromCodePoint(a) + String.fromCodePoint(b), 到: c });
+  // 组合类的次序：拿两个类不同的记号，和同一个起头按两种先后排，两行该给同一个结果。
+  // 类相同的两个不换位，所以挑的时候要挑不同的类 —— 这一点本身也是那条规则的边界。
+  const 各类代表 = new Map();
+  for (const [cp, c] of 组合类们) {
+    if (c === 0 || cp >= 0x10000) continue;
+    if (!各类代表.has(c)) 各类代表.set(c, cp);
+  }
+  const 代表们 = [...各类代表.entries()].sort((a, b) => a[0] - b[0]).map(([, cp]) => cp);
+  for (let k = 0; k + 1 < 代表们.length; k += 1) {
+    const 前 = String.fromCodePoint(0x41, 代表们[k], 代表们[k + 1]);
+    const 后 = String.fromCodePoint(0x41, 代表们[k + 1], 代表们[k]);
+    行们.push({ 种: "序", 文: 前, 伴: 后 });
+    行们.push({ 种: "序", 文: 后, 伴: 前 });
+  }
+  // 韩文：初声 + 中声，再加一个终声。
+  for (let L = 0x1100; L < 0x1100 + 19; L += 3) {
+    for (let V = 0x1161; V < 0x1161 + 21; V += 4) {
+      行们.push({ 种: "韩", 文: String.fromCodePoint(L) + String.fromCodePoint(V), 长: 1 });
+      行们.push({ 种: "韩", 文: String.fromCodePoint(L) + String.fromCodePoint(V) + String.fromCodePoint(0x11A8), 长: 1 });
+    }
+  }
+
+  const 清单 = path.join(临, "nfc-sample.txt");
+  fs.writeFileSync(清单, 行们.map((r) => r.文).join("\n") + "\n", "utf8");
+  const 路径 = 清单.replace(/\\/g, "/");
+  const 源码 = [
+    "fn 单元们(s: String) -> String {",
+    "  var i = 0",
+    '  var 出 = ""',
+    "  while i < len(s) {",
+    '    if i > 0 { 出 = 出 + " " }',
+    "    出 = 出 + str(ord(slice(s, i, i + 1)))",
+    "    i = i + 1",
+    "  }",
+    "  return 出",
+    "}",
+    "fn main() -> Int effects(file) {",
+    '  var 行们 = read_lines("' + 路径 + '")',
+    "  var i = 0",
+    "  while i < len(行们) {",
+    '    print(单元们(nfc(行们[i])) + "\\n")',
+    "    i = i + 1",
+    "  }",
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "nfc-fold");
+  const 甲 = String(r.js || "").split("\n");
+  const 乙 = String(r.c || "").split("\n");
+  const 单元串 = (cp) => {
+    if (cp <= 0xffff) return String(cp);
+    const 码 = cp - 0x10000;
+    return (0xd800 + (码 >> 10)) + " " + (0xdc00 + (码 & 0x3ff));
+  };
+
+  const 机器错 = [];
+  const 语料错 = [];
+  const 对错 = [];
+  const 序错 = [];
+  const 韩错 = [];
+  const 位置 = new Map();
+  for (let i = 0; i < 行们.length; i++) 位置.set(行们[i].文, i);
+  for (let i = 0; i < 行们.length; i++) {
+    const 甲行 = String(甲[i] || "").trim();
+    const 乙行 = String(乙[i] || "").trim();
+    if (甲行 !== 乙行) 机器错.push(i);
+    const 行 = 行们[i];
+    if (行.种 === "单" && 语料.has(行.cp)) {
+      const 期 = 语料.get(行.cp).map((cp) => 单元串(cp)).join(" ");
+      if (乙行 !== 期) 语料错.push(i);
+    }
+    if (行.种 === "对" && 乙行 !== 单元串(行.到)) 对错.push(i);
+    if (行.种 === "序" && 乙行 !== String(乙[位置.get(行.伴)] || "").trim()) 序错.push(i);
+    if (行.种 === "韩") {
+      const 长 = 乙行 ? 乙行.split(" ").length : 0;
+      if (长 !== 行.长) 韩错.push(i);
+    }
+  }
+  const 说 = (i) => "第 " + i + " 行（" + 行们[i].种 + "），甲 " + JSON.stringify(甲[i]) + " 乙 " + JSON.stringify(乙[i]);
+  ok("两台机器对整批样本一样", 机器错.length === 0, 机器错.length ? 说(机器错[0]) : "");
+  ok("每个码点归一之后该是什么，与语料一字不差（" + 语料.size + " 个）",
+     语料错.length === 0, 语料错.length ? 说(语料错[0]) : "");
+  ok("组合对：前一个加后一个拼成第三个（" + 组合对.length + " 对）", 对错.length === 0, 对错.length ? 说(对错[0]) : "");
+  ok("组合类的次序：两种先后给同一个结果", 序错.length === 0, 序错.length ? 说(序错[0]) : "");
+  ok("韩文字母拼成音节（" + 行们.filter((q) => q.种 === "韩").length + " 组）",
+     韩错.length === 0, 韩错.length ? 说(韩错[0]) : "");
+  ok("组合对那一批确实跑了", 组合对.length > 900 && 乙.length > 5000, 组合对.length + " 对 / " + 乙.length + " 行");
+}
+
+console.log("十二、堆账：这台机器分配了不回收，而那个数读得出来");
+{
+  // 「没有 GC」是一条设计选择，而设计选择要有数字跟着，否则它既不能被验收，
+  // 也不能被发现变坏。这台机器每次分配都记账，HMYR_MEM 一开就在退出时打一行。
+  const 码路 = path.join(临, "self.hmyrb");
+  if (fs.existsSync(码路)) {
+    const 重 = spawnSync(exe, [码路, path.join(ROOT, "conformance/lib-strings.hmyr")], {
+      encoding: "utf8", timeout: 180000,
+      env: { ...process.env, HMYR_MEM: "1", HMYR_STEPS: "200000000" },
+    });
+    const m = /peak (\d+) bytes/.exec(String(重.stderr));
+    const 峰 = m ? Number(m[1]) : -1;
+    const 兆 = Math.round((峰 / 1048576) * 10) / 10;
+    ok("最重的那一份工作能报出峰值", 峰 > 0, String(重.stderr).slice(0, 160));
+    ok("峰值是真的量出来的，不是零", 峰 > 1048576, String(峰));
+    ok("峰值在这条界线以内（" + 兆 + " 兆，界线 256）", 峰 > 0 && 峰 < 256 * 1048576, String(峰));
+    ok("而且那一份工作还是跑对了", String(重.stdout).trim() === "0", JSON.stringify(String(重.stdout).trim().slice(0, 40)));
+  } else {
+    ok("最重的那一份工作能报出峰值", false, "没有自举层字节码");
+  }
+  // 不问就不出声：平常跑程序的人不该看见这一行。
+  const 小 = spawnSync(exe, [path.join(临, "astral.hmyrb")], { encoding: "utf8" });
+  if (fs.existsSync(path.join(临, "astral.hmyrb"))) {
+    ok("不问的时候不出这一行", !String(小.stderr).includes("heap"), String(小.stderr).slice(0, 120));
+  } else {
+    ok("不问的时候不出这一行", false, "没有那一份字节码");
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

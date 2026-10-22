@@ -66,8 +66,75 @@ static FILE *开文件(const char *utf8, const char *模式) {
 #include "ucd-mark.h"
 
 /* Unicode 的大小写表，由 tools/ucd-case.mjs 按全码点生成 —— 不是抽样，
- * 于是这张表不会漏掉任何一个字符。 */
+ * 于是这张表不会漏掉任何一个字符。归一化那三张表也是同一个来历，
+ * 见 tools/ucd-nfc.mjs。 */
 #include "ucd-case.h"
+#include "ucd-nfc.h"
+
+/* ---- 堆记账：这台机器分配了不回收 ------------------------------------
+ *
+ * 「没有 GC」这句话需要一个数字跟着，否则它既不能被验收，也不能被发现变坏。
+ * 做法是每次分配多要八个字节，把那块有多大记在自己头上；于是「此刻活着多少」
+ * 与「峰到多少」都是实测的，不是估的。代价是八个字节与一次加减法。
+ *
+ * 打开 HMYR_MEM 就在退出时打印一行。默认不出声：平常跑程序的人不需要看它。
+ * 名字带前缀是因为 free 进来的指针要往回收那八个字节，四个都换掉了。
+ */
+static size_t g_mem_live = 0;
+static size_t g_mem_peak = 0;
+
+static void *(*const 原malloc)(size_t) = malloc;
+static void *(*const 原realloc)(void *, size_t) = realloc;
+static void (*const 原free)(void *) = free;
+
+static void 记一笔(size_t n) {
+  g_mem_live += n;
+  if (g_mem_live > g_mem_peak) g_mem_peak = g_mem_live;
+}
+
+static void *hm_malloc(size_t n) {
+  unsigned char *p = (unsigned char *)原malloc(n + sizeof(size_t));
+  if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  *(size_t *)p = n;
+  记一笔(n);
+  return p + sizeof(size_t);
+}
+
+static void *hm_calloc(size_t a, size_t b) {
+  size_t n = a * b;
+  void *p = hm_malloc(n);
+  memset(p, 0, n);
+  return p;
+}
+
+static void *hm_realloc(void *q, size_t n) {
+  if (!q) return hm_malloc(n);
+  unsigned char *真 = (unsigned char *)q - sizeof(size_t);
+  size_t 旧 = *(size_t *)真;
+  真 = (unsigned char *)原realloc(真, n + sizeof(size_t));
+  if (!真) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  *(size_t *)真 = n;
+  g_mem_live -= 旧;
+  记一笔(n);
+  return 真 + sizeof(size_t);
+}
+
+static void hm_free(void *q) {
+  if (!q) return;
+  unsigned char *真 = (unsigned char *)q - sizeof(size_t);
+  g_mem_live -= *(size_t *)真;
+  原free(真);
+}
+
+static void 堆账报一下(void) {
+  fprintf(stderr, "hmyr: heap live %llu bytes, peak %llu bytes, nothing reclaimed\n",
+          (unsigned long long)g_mem_live, (unsigned long long)g_mem_peak);
+}
+
+#define malloc(n) hm_malloc(n)
+#define calloc(a, b) hm_calloc(a, b)
+#define realloc(p, n) hm_realloc(p, n)
+#define free(p) hm_free(p)
 
 static int in_ranges(const uint32_t *r, size_t count, uint32_t cp) {
   size_t lo = 0, hi = count;
@@ -145,6 +212,145 @@ static int final_sigma(const uint16_t *s, uint32_t n, uint32_t at) {
   return 1;
 }
 
+/* ---- 归一化 ---------------------------------------------------------- */
+
+/* 韩文音节是一段算法，不是一张表：初、中、终三个字母拼一个音节。
+ * 那一万一千多项若摊进表里，全是同一条算术，所以只写这一条。 */
+#define CP_HANGUL_S_BASE 0xAC00u
+#define CP_HANGUL_L_BASE 0x1100u
+#define CP_HANGUL_V_BASE 0x1161u
+#define CP_HANGUL_T_BASE 0x11A7u
+#define HANGUL_L_COUNT 19u
+#define HANGUL_V_COUNT 21u
+#define HANGUL_T_COUNT 28u
+#define HANGUL_N_COUNT (HANGUL_V_COUNT * HANGUL_T_COUNT)
+#define HANGUL_S_COUNT (HANGUL_L_COUNT * HANGUL_N_COUNT)
+
+static const HmyrDecompEntry *decomp_find(uint32_t cp) {
+  size_t lo = 0, hi = ucd_decomp_count;
+  while (lo < hi) {
+    size_t mid = lo + (hi - lo) / 2;
+    if (cp < ucd_decomp[mid].cp) hi = mid;
+    else if (cp > ucd_decomp[mid].cp) lo = mid + 1;
+    else return &ucd_decomp[mid];
+  }
+  return NULL;
+}
+
+static uint8_t ccc_of(uint32_t cp) {
+  size_t lo = 0, hi = ucd_ccc_count;
+  while (lo < hi) {
+    size_t mid = lo + (hi - lo) / 2;
+    if (cp < ucd_ccc[mid].cp) hi = mid;
+    else if (cp > ucd_ccc[mid].cp) lo = mid + 1;
+    else return ucd_ccc[mid].ccc;
+  }
+  return 0;
+}
+
+static int comp_find(uint32_t a, uint32_t b, uint32_t *out) {
+  size_t lo = 0, hi = ucd_comp_count;
+  while (lo < hi) {
+    size_t mid = lo + (hi - lo) / 2;
+    const HmyrCompEntry *e = &ucd_comp[mid];
+    if (a < e->a || (a == e->a && b < e->b)) hi = mid;
+    else if (a > e->a || (a == e->a && b > e->b)) lo = mid + 1;
+    else { *out = e->cp; return 1; }
+  }
+  return 0;
+}
+
+/* 一串码点，会长的。分解、排序、组合三步接力用它。 */
+typedef struct { uint32_t *p; size_t n, cap; } CpBuf;
+
+static void cp_push(CpBuf *b, uint32_t cp) {
+  if (b->n == b->cap) {
+    b->cap = b->cap ? b->cap * 2 : 64;
+    b->p = (uint32_t *)realloc(b->p, b->cap * sizeof(uint32_t));
+    if (!b->p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  }
+  b->p[b->n++] = cp;
+}
+
+/* 分解到底：表里存的已经是全分解，所以这里只查一次；韩文音节按算法摊开。 */
+static void decomp_into(CpBuf *out, uint32_t cp) {
+  if (cp >= CP_HANGUL_S_BASE && cp < CP_HANGUL_S_BASE + HANGUL_S_COUNT) {
+    uint32_t s = cp - CP_HANGUL_S_BASE;
+    cp_push(out, CP_HANGUL_L_BASE + s / HANGUL_N_COUNT);
+    cp_push(out, CP_HANGUL_V_BASE + (s % HANGUL_N_COUNT) / HANGUL_T_COUNT);
+    if (s % HANGUL_T_COUNT) cp_push(out, CP_HANGUL_T_BASE + (s % HANGUL_T_COUNT));
+    return;
+  }
+  const HmyrDecompEntry *e = decomp_find(cp);
+  if (e) {
+    for (uint16_t k = 0; k < e->n; k++) cp_push(out, e->u[k]);
+    return;
+  }
+  cp_push(out, cp);
+}
+
+/* 规范次序：组合类大的记号往前拱，遇到起头（类为零）就停。
+ * 稳定 —— 类相同的两个不换位，于是同一串输入总有同一个输出。 */
+static void canon_order(CpBuf *b) {
+  for (size_t i = 1; i < b->n; i++) {
+    uint8_t c = ccc_of(b->p[i]);
+    if (c == 0) continue;
+    size_t j = i;
+    while (j > 0) {
+      uint8_t prev = ccc_of(b->p[j - 1]);
+      if (prev <= c) break;      /* 零也是「不大于」，于是起头处自然停住 */
+      uint32_t t = b->p[j - 1];
+      b->p[j - 1] = b->p[j];
+      b->p[j] = t;
+      j--;
+    }
+  }
+}
+
+/* 韩文的组合也是算法：初声加中声成一个音节，那个音节再加终声成一个带收音的音节。
+ * 表里没有这些对，因为它们不是数据 —— 一条算术生成一万多个音节。 */
+static int hangul_compose(uint32_t a, uint32_t b, uint32_t *out) {
+  if (a >= CP_HANGUL_L_BASE && a < CP_HANGUL_L_BASE + HANGUL_L_COUNT
+      && b >= CP_HANGUL_V_BASE && b < CP_HANGUL_V_BASE + HANGUL_V_COUNT) {
+    *out = CP_HANGUL_S_BASE
+      + ((a - CP_HANGUL_L_BASE) * HANGUL_V_COUNT + (b - CP_HANGUL_V_BASE)) * HANGUL_T_COUNT;
+    return 1;
+  }
+  if (a >= CP_HANGUL_S_BASE && a < CP_HANGUL_S_BASE + HANGUL_S_COUNT
+      && (a - CP_HANGUL_S_BASE) % HANGUL_T_COUNT == 0
+      && b > CP_HANGUL_T_BASE && b < CP_HANGUL_T_BASE + HANGUL_T_COUNT) {
+    *out = a + (b - CP_HANGUL_T_BASE);
+    return 1;
+  }
+  return 0;
+}
+
+/* 组合：拿最后一个起头去试，中间隔着类不小于它的记号就不试（阻塞）。
+ * 合成成功之后那个记号就没了，于是「中间什么都没有」这件事要重新成立 ——
+ * 这正是 last_cc 归零的意思，也是三个韩文字母能一路拼成一个音节的原因。 */
+static void compose_all(CpBuf *b) {
+  if (b->n == 0) return;
+  size_t starter = 0;
+  int 有起头 = ccc_of(b->p[0]) == 0;
+  uint8_t last_cc = 有起头 ? 0 : ccc_of(b->p[0]);
+  size_t i = 1;
+  while (i < b->n) {
+    uint8_t cc = ccc_of(b->p[i]);
+    uint32_t 合成 = 0;
+    if (有起头 && (last_cc == 0 || last_cc < cc)
+        && (hangul_compose(b->p[starter], b->p[i], &合成) || comp_find(b->p[starter], b->p[i], &合成))) {
+      b->p[starter] = 合成;
+      if (i + 1 < b->n) memmove(&b->p[i], &b->p[i + 1], (b->n - i - 1) * sizeof(uint32_t));
+      b->n--;
+      last_cc = 0;
+      continue;
+    }
+    if (cc == 0) { starter = i; 有起头 = 1; }
+    last_cc = cc;
+    i++;
+  }
+}
+
 /* ---- values ---------------------------------------------------------- */
 
 typedef enum { T_NULL, T_NUM, T_STR, T_BOOL, T_TUPLE, T_RECORD } Tag;
@@ -206,6 +412,39 @@ static Value case_fold(Value s, int up) {
     }
     i += (uint32_t)用;
   }
+  return v_str(p, out);
+}
+
+/* 归一化：分解到底、按组合类排好、再尽量组合回去 —— NFC 就这三步。
+ * 三张表都在 vm/ucd-nfc.h 里，来路是 data/ucd 的语料，于是这台机器
+ * 不再借宿主的 normalize，也不再把文本原样交回了。 */
+static Value normalize_nfc(Value s) {
+  CpBuf b = {0, 0, 0};
+  const uint16_t *src = s.s;
+  uint32_t n = s.slen, i = 0;
+  while (i < n) {
+    uint32_t cp = 0;
+    int 用 = cp_at(src, n, i, &cp);
+    decomp_into(&b, cp);
+    i += (uint32_t)用;
+  }
+  canon_order(&b);
+  compose_all(&b);
+  /* 码点回到单元。一个码点最多摊成两个单元，按两倍算够用。 */
+  uint16_t *p = (uint16_t *)malloc((size_t)(b.n ? b.n * 2 : 1) * sizeof(uint16_t));
+  if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  uint32_t out = 0;
+  for (size_t k = 0; k < b.n; k++) {
+    uint32_t cp = b.p[k];
+    if (cp <= 0xFFFF) {
+      p[out++] = (uint16_t)cp;
+    } else {
+      uint32_t 码 = cp - 0x10000;
+      p[out++] = (uint16_t)(0xD800 + (码 >> 10));
+      p[out++] = (uint16_t)(0xDC00 + (码 & 0x3FF));
+    }
+  }
+  free(b.p);
   return v_str(p, out);
 }
 
@@ -980,14 +1219,13 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     else *out = v_bool(in_ranges(ucd_mark_ranges, ucd_mark_count, cp));
     return 1;
   }
-  /* Normalisation is not done here, and saying so is better than doing it
-   * half way: the real table is 17 MB of corpus data. This machine hands the
-   * text back unchanged, which is the identity function and therefore right
-   * for any text that was already normalised. */
+  /* 归一化：以前这里是「把文本原样交回」，理由是真表是十七兆语料。
+   * 那说的是测试语料；生成一张表只要分解、组合类、组合对三样小东西，
+   * 而三样都在仓库里 —— 于是这台机器也真的归一化了。 */
   if (name_is(name_idx, "nfc")) {
     if (nargs != 1) { fail("HMYR-R0101", "nfc wants one argument"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "nfc wants a string"); return 1; }
-    *out = args[0];
+    *out = normalize_nfc(args[0]);
     return 1;
   }
   if (name_is(name_idx, "to_upper") || name_is(name_idx, "to_lower")) {
@@ -1653,6 +1891,7 @@ int main(int argc, char **argv) {
     }
   }
   for (int i = 0; i < TRACE_N; i++) g_trace[i].op = 255;
+  if (getenv("HMYR_MEM")) atexit(堆账报一下);
 
   /* argv: the .hmyrb path first, then whatever else was typed. The bootstrap's
    * 命令行入口 reads element 1 as the target .hmyr, so the first slot has to
