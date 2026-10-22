@@ -679,6 +679,24 @@ static int64_t find_func_index(int64_t name_idx) {
   return -1;
 }
 
+/* 一个函数声明过某个效果没有。效果名按 UTF-16 码元比。 */
+static int has_effect(Func *f, const uint16_t *名, uint32_t 长) {
+  for (uint32_t i = 0; i < f->neffects; i++) {
+    if (f->effect_lens[i] != 长) continue;
+    uint32_t same = 1;
+    for (uint32_t k = 0; k < 长; k++) if (f->effects[i][k] != 名[k]) { same = 0; break; }
+    if (same) return 1;
+  }
+  return 0;
+}
+
+/* 效果检查：被调者声明的，调用者得先声明。
+ *
+ * 这一条以前只写在 design/C-VM.txt 里当「这台机器不查效果」。
+ * 现在查了，而它不需要任何额外数据 —— 函数表里本来就带着每个函数的效果名，
+ * 只是以前读进来没人用。 */
+static int g_effects_on = 1;
+
 static Value run_func(Func *f, Value *args, int nargs);
 
 /* Builtins. Each returns 1 on success and stores into *out; 0 means "not a
@@ -1176,6 +1194,25 @@ static Value run_func(Func *f, Value *args, int nargs) {
           g_calls_n++;
         }
         uint32_t n = (uint32_t)in->b;
+        /* 效果往下核：被调者声明了什么，调用者就得先声明什么。
+         * 这一条在语言规范里，而这里以前不查 —— 数据本来就在函数表里。 */
+        if (g_effects_on) {
+          for (uint32_t e = 0; e < callee->neffects; e++) {
+            if (has_effect(f, callee->effects[e], callee->effect_lens[e])) continue;
+            char 效[32];
+            uint32_t el = callee->effect_lens[e] < 31 ? callee->effect_lens[e] : 31;
+            for (uint32_t k = 0; k < el; k++) 效[k] = (callee->effects[e][k] < 128) ? (char)callee->effects[e][k] : '?';
+            效[el] = 0;
+            char 名[64];
+            uint32_t fl2 = callee->name_len < 63 ? callee->name_len : 63;
+            for (uint32_t k = 0; k < fl2; k++) 名[k] = (callee->name[k] < 128) ? (char)callee->name[k] : '?';
+            名[fl2] = 0;
+            char m[200];
+            snprintf(m, sizeof m, "%s uses effect '%s', which the caller did not declare", 名, 效);
+            fail("HMYR-R0201", m);
+            return v_null();
+          }
+        }
         if (g_stack_n < base || g_stack_n - base < n) {
           char fname[64];
           uint32_t fl = callee->name_len < 63 ? callee->name_len : 63;

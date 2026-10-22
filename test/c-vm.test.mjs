@@ -228,6 +228,35 @@ console.log("八、数字写成字，两台机器一字不差");
   ok("三分之一是最短的那一串", r.c.includes("0.3333333333333333"), JSON.stringify(r.c));
 }
 
+console.log("九、效果声明在 C 上也管用");
+{
+  // 函数表里本来就带着每个函数声明的效果名，只是一直没人用。
+  // 现在调用时往下核：被调者声明了什么，调用者就得先声明什么。
+  const 临时 = path.join(临, "fx");
+  fs.mkdirSync(临时, { recursive: true });
+  const 路 = path.join(临时, "写.txt");
+  const 源码 = [
+    "fn 写(p: String) -> Int effects(file) {",
+    '  return write_text(p, "x")',
+    "}",
+    "fn main() -> Int {",
+    '  写("' + 路.replace(/\\/g, "/") + '")',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const 源路 = path.join(临时, "fx.hmyr");
+  fs.writeFileSync(源路, 源码, "utf8");
+  const 码路 = path.join(临时, "fx.hmyrb");
+  const emit = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), 源路, 码路], { encoding: "utf8" });
+  ok("这个程序编得出来", emit.status === 0, String(emit.stderr).slice(0, 120));
+  if (fs.existsSync(码路)) {
+    const r = spawnSync(exe, [码路], { encoding: "utf8", timeout: 60000 });
+    ok("没声明 file 的 main 调要 file 的函数被拒（R0201）", r.status !== 0 && String(r.stderr).includes("HMYR-R0201"),
+      String(r.status) + " " + String(r.stderr).slice(0, 100));
+    ok("而被拒的时候文件没有写出来", !fs.existsSync(路));
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
