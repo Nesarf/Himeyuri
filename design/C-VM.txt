@@ -151,6 +151,29 @@ C 版虚拟机：那台不是 JS 的机器
   下一步该做的是二分：把 lib/strings.hmyr 与 conformance/lib-strings.hmyr 各删一半函数，
   直到某一次删掉之后错消失 —— 那一段就是复现。
 
+  二分做完了，复现缩到四行（2026-10-26）：
+
+    fn id(n: Int) -> Int { return n }
+    fn main() -> Int {
+      if id(1) == 1 { print("eq") }
+      return 0
+    }
+
+  这一份在 C 机器上报「不认识的运算符：一个带 value 的记录」。对照三条：
+
+    let x = id(1)  然后 x == 1        通过
+    1 == id(1)                        通过
+    id(1) == 1                        出错
+
+  所以触发条件是「一个调用的结果当二元运算的左操作数」。
+  二分是这么走到的：conformance/lib-strings.hmyr 的第一个断言块就复现，
+  再剥掉 import 与中文标识符，只剩上面四行。
+
+  下一格从这条出发看 self/chain.hmyr 的 compare 与 add 对
+  「左操作数是调用」这件事的处理 —— 那是自举 parser 的一条路径，
+  与 C 的字节码执行无关（同一份目标代码在 JS 那台上也走同一条自举 parser，
+  只是 JS 那台跑不到那么深就先撞调用深度了）。
+
   下一步该查 FIELD 的名字匹配，以及 RECORD 指令里字段名与值的对应顺序 ——
   这两处都在「名字与值的配对」上，而错位的表现正是「取到了另一个字段的值」。
 
