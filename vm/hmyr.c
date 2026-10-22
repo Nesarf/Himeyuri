@@ -477,8 +477,15 @@ static void push(Value v) {
   g_stack[g_stack_n++] = v;
 }
 
+/* 当前帧的栈基线。弹栈不许越过它 —— 这是全篇最要紧的一处语义对齐。
+ *
+ * JS 那台的栈是每帧一条数组，弹空只是拿到 undefined，帧外的东西碰不到。
+ * C 这台所有帧共用一条栈，若 pop 不认基线，帧内弹空就会吃掉调用者的值：
+ * 少一个值，后面所有实参整体错位一格。查了两轮的「实参错位」就是它。 */
+static uint32_t g_base = 0;
+
 static Value pop(void) {
-  if (g_stack_n == 0) return v_null();
+  if (g_stack_n <= g_base) return v_null();
   return g_stack[--g_stack_n];
 }
 
@@ -868,6 +875,10 @@ static Value run_func(Func *f, Value *args, int nargs) {
   Value *slots = alloc_values(f->nslots);
   for (int i = 0; i < nargs && i < (int)f->nslots; i++) slots[i] = args[i];
   uint32_t base = g_stack_n;
+  /* 进帧时把基线交给 pop：从那以后弹栈不会越过它。
+   * 退出时要还原 —— 否则回到调用者之后，它自己也弹不动自己压的东西了。 */
+  uint32_t 外base = g_base;
+  g_base = base;
   int32_t pc = 0;
   for (;;) {
     if (g_failed) return v_null();
@@ -1057,7 +1068,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
           fprintf(stderr, "EV %ld CALLB %s n=%u\n", g_ev++, bn, (unsigned)n);
           g_calls_n++;
         }
-        if (g_stack_n < n) {
+        if (g_stack_n < base || g_stack_n - base < n) {
           char m[160];
           snprintf(m, sizeof m, "a builtin call wants %u argument(s), the frame has %u",
                    (unsigned)n, (unsigned)(g_stack_n - base));
@@ -1087,18 +1098,23 @@ static Value run_func(Func *f, Value *args, int nargs) {
             if (g_last_field >= 0) { for (uint32_t k = 0; k < pool_len[g_last_field] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)pool_p[g_last_field][k]); }
             fprintf(stderr, "\n");
           }
-          fprintf(stderr, "EV %ld CALL %lld\n", g_ev++, (long long)位);
+          /* 栈深要减掉本帧基线：C 这边所有帧共用一条栈，而 JS 那边每帧一条。
+           * 不减的话两个数字根本不是一回事 —— 这一点白比过一轮。 */
+          fprintf(stderr, "EV %ld CALL %lld sn=%u n=%u tags=", g_ev++, (long long)位,
+                  (unsigned)(g_stack_n - base), (unsigned)in->b);
+          for (uint32_t i = 0; i < (uint32_t)in->b; i++) fprintf(stderr, " %d", (int)g_stack[g_stack_n - (uint32_t)in->b + i].tag);
+          fprintf(stderr, "\n");
           g_calls_n++;
         }
         uint32_t n = (uint32_t)in->b;
-        if (g_stack_n < n) {
+        if (g_stack_n < base || g_stack_n - base < n) {
           char fname[64];
           uint32_t fl = callee->name_len < 63 ? callee->name_len : 63;
           for (uint32_t k = 0; k < fl; k++) fname[k] = (callee->name[k] < 128) ? (char)callee->name[k] : '?';
           fname[fl] = 0;
           char m[260];
-          snprintf(m, sizeof m, "calling %s wants %u argument(s), the frame has %u (pc=%u)",
-                   fname, (unsigned)n, (unsigned)(g_stack_n - base), (unsigned)pc);
+          snprintf(m, sizeof m, "calling %s (#%lld) wants %u argument(s), the frame has %u (pc=%u)",
+                   fname, (long long)位, (unsigned)n, (unsigned)(g_stack_n - base), (unsigned)pc);
           fail("HMYR-R0110", m);
           return v_null();
         }
@@ -1110,7 +1126,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         if (g_failed) return v_null();
         push(r); pc++; break;
       }
-      case OP_RET: { Value v = pop(); g_stack_n = base; return v; }
+      case OP_RET: { Value v = pop(); g_stack_n = base; g_base = 外base; return v; }
       default: {
         char msg[160];
         uint32_t k = in->op;

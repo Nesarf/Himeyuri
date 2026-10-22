@@ -112,26 +112,6 @@ export class 虚拟机 {
     if (this.停机) return { ok: false, ...this.停机 };
     const 函 = this.程序.函数们.get(名);
     if (!函) { this.坏("HMYR-R0104", "there is no name '" + 名 + "' in scope"); return { ok: false, ...this.停机 }; }
-    if (叫要 && 叫数 < 叫上限) {
-      // 顶层那一次（main 或 命令行入口）不记：C 那边从 main 里面才开始记。
-      if (叫数 > 0) {
-        // 与 C 那台同一件事：对 79 号（求二元）顺手打出实参的种类。
-        if (this.名序.get(名) === 79) {
-          let 类们 = "";
-          for (const a of 实参) {
-            if (a && a.tag === "tuple") 类们 += " 4";
-            else if (a && a.tag === "record") 类们 += " 5";
-            else if (数.是数(a)) 类们 += " 1";
-            else if (this.文.是串(a)) 类们 += " 2";
-            else if (a === true || a === false) 类们 += " 3";
-            else 类们 += " 0";
-          }
-          process.stderr.write("ARGS79" + 类们 + "\n");
-        }
-        process.stderr.write("EV " + 事件号() + " CALL " + this.名序.get(名) + "\n");
-      }
-      叫数++;
-    }
     if (++this.深 > this.深限) {
       this.坏("HMYR-R0108", "call depth exceeded (" + this.深限 + ")");
       return { ok: false, ...this.停机 };
@@ -289,6 +269,22 @@ export class 虚拟机 {
         }
         case "CALLF": {
           const n = 指令.b;
+          if (叫要 && 叫数 < 叫上限) {
+            // 与 C 那台同一行：事件号、被调者位置、调用前的栈深、实参数。
+            // 栈深是这一轮最要紧的一列 —— 它两边第一次不同，就说明那一步多压了东西。
+            let 类们 = "";
+            for (let q = 栈.length - n; q < 栈.length; q++) {
+              const a = 栈[q];
+              if (a && a.tag === "tuple") 类们 += " 4";
+              else if (a && a.tag === "record") 类们 += " 5";
+              else if (数.是数(a)) 类们 += " 1";
+              else if (this.文.是串(a)) 类们 += " 2";
+              else if (a === true || a === false) 类们 += " 3";
+              else 类们 += " 0";
+            }
+            process.stderr.write("EV " + 事件号() + " CALL " + this.名序.get(指令.a) + " sn=" + 栈.length + " n=" + n + " tags=" + 类们 + "\n");
+            叫数++;
+          }
           const 实参 = 栈.splice(栈.length - n, n);
           const r = this.调用(指令.a, 实参, 帧.效果);
           if (!r.ok) return null;

@@ -177,6 +177,26 @@ console.log("六、用这台机器跑一个 .hmyr 文件");
   }
 }
 
+console.log("七、真库跑在 C 机器上");
+{
+  // 这几条是「同一个 bug 追了三轮」的收尾：自举层替目标程序执行时，
+  // C 那台的弹栈会越过帧基线，于是实参整体错位一格。
+  // 修好之后，五个标准库的验收程序都能在 C 上跑出零。
+  const 码路 = path.join(临, "self.hmyrb");
+  const 库们 = [
+    ["字符串库", "conformance/lib-strings.hmyr"],
+    ["元组库", "conformance/lib-tuples.hmyr"],
+    ["JSON 库", "conformance/lib-json.hmyr"],
+    ["帧库", "conformance/lib-protocol.hmyr"],
+  ];
+  for (const [标, 路] of 库们) {
+    if (!fs.existsSync(码路)) { ok(标 + "在 C 机器上全过", false, "没有自举层字节码"); continue; }
+    const r = spawnSync(exe, [码路, path.join(ROOT, 路)], { encoding: "utf8", timeout: 120000, env: { ...process.env, HMYR_STEPS: "200000000" } });
+    ok(标 + "在 C 机器上全过", r.status === 0 && String(r.stdout).trim() === "0",
+      String(r.status) + " " + JSON.stringify(String(r.stdout).trim().slice(0, 40)) + " " + String(r.stderr).slice(0, 80));
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
