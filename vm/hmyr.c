@@ -31,7 +31,8 @@
 #include <io.h>
 #include <fcntl.h>
 #include <process.h>
-#else
+#elif !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+/* 裸机的 C 库没有 unistd.h —— ARM 那一边 pid 也没有意义（见 临时路径）。 */
 #include <unistd.h>
 #endif
 
@@ -1990,13 +1991,18 @@ static int 文件在(const char *path) {
   return 1;
 }
 
-/* 临时字节码放哪儿：系统的临时目录。名字带 pid，两次同时跑也不会撞。 */
+/* 临时字节码放哪儿：系统的临时目录。名字带 pid，两次同时跑也不会撞。
+ * 裸机上没有 pid 也没有并发，名字就是固定的那个。 */
 static void 临时路径(char *buf, size_t cap) {
 #ifdef _WIN32
   const char *dir = getenv("TEMP");
   if (!dir || !*dir) dir = getenv("TMP");
   if (!dir || !*dir) dir = ".";
   snprintf(buf, cap, "%s\\hmyr-%ld.hmyrb", dir, (long)_getpid());
+#elif defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+  const char *dir = getenv("TMPDIR");
+  if (!dir || !*dir) dir = "/tmp";
+  snprintf(buf, cap, "%s/hmyr.hmyrb", dir);
 #else
   const char *dir = getenv("TMPDIR");
   if (!dir || !*dir) dir = "/tmp";
