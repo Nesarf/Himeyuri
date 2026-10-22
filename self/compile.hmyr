@@ -1,0 +1,199 @@
+// HMYR 自己的编译器：AST → 字节码指令。
+//
+// 为什么要有这一份：src/bytecode.mjs 是 JS 写的编译器，而那正是「HMYR 不依赖宿主」
+// 最后一块借来的东西。这一份把它逐步搬进语言自己里。
+//
+// 输入是**自举 parser 交出来的 AST**（形状与 self/eval.hmyr 的 求值 认的那些一致）。
+// 输出是**指令记录**的元组，形状与 src/code-file.mjs 写文件时吃的一样。
+//
+// 这一版能编什么，说清楚：算术与比较、字符串与数字字面量、按名字取值与调用、
+// return、let 与 var（按出现顺序分槽）、if 的两支（跳转位置事后回填）。
+// 还不编：while、记录、元组、字段、下标、逻辑短路、内置调用。
+// 那些照旧交给 JS 那一份 —— 一条腿一条腿换过来，比一次换整条腿稳。
+//
+// 三条老规矩照旧：没有复合条件、没有 break、没有整数除法。
+
+// 切词与声明解析来自自举层自己那两份 —— 编译器吃的正是它们交出来的 AST。
+import "./lex.hmyr"
+import "./body.hmyr"
+
+// 编译状态是三件：已发出的指令、下一个空槽号、名字到槽号的对照表。
+// 名字表也要跟着状态走 —— 否则 let 之后的分支就看不见那个名字了。
+fn 状态(指令们: Int, 下个槽: Int, 名表: Int) -> Int {
+  return {码: 指令们, 槽: 下个槽, 名表: 名表}
+}
+
+fn 发(状态: Int, 指令: Int) -> Int {
+  return 状态(状态.码 + (指令,), 状态.槽, 状态.名表)
+}
+
+fn 找槽从(名表: Int, 名: String, i: Int) -> Int {
+  if i >= len(名表) { return 0 - 1 }
+  if 名表[i][0] == 名 { return 名表[i][1] }
+  return 找槽从(名表, 名, i + 1)
+}
+
+fn 二元码(op: String) -> String {
+  if op == "+" { return "ADD" }
+  if op == "-" { return "SUB" }
+  if op == "*" { return "MUL" }
+  if op == "/" { return "DIV" }
+  if op == "%" { return "MOD" }
+  if op == "==" { return "EQ" }
+  if op == "!=" { return "NE" }
+  if op == "<" { return "LT" }
+  if op == "<=" { return "LE" }
+  if op == ">" { return "GT" }
+  if op == ">=" { return "GE" }
+  return ""
+}
+
+// 一个表达式：交回 {ok, 状态}。
+fn 表达(节点: Int, 状态: Int) -> Int {
+  let 种 = 节点.kind
+  if 种 == "num" {
+    return {ok: true, 状态: 发(状态, {op: "CONST", a: to_int(节点.text)})}
+  }
+  if 种 == "str" {
+    return {ok: true, 状态: 发(状态, {op: "CONST", a: 节点.text})}
+  }
+  if 种 == "name" {
+    let 号 = 找槽从(状态.名表, 节点.text, 0)
+    if 号 < 0 { return {ok: false, 错: "没有这个槽：" + 节点.text} }
+    return {ok: true, 状态: 发(状态, {op: "LOAD", a: 号})}
+  }
+  if 种 == "bin" {
+    let l = 表达(节点.left, 状态)
+    if l.ok == false { return l }
+    let r = 表达(节点.right, l.状态)
+    if r.ok == false { return r }
+    let 码 = 二元码(节点.op)
+    if 码 == "" { return {ok: false, 错: "不认的二元运算：" + 节点.op} }
+    return {ok: true, 状态: 发(r.状态, {op: 码})}
+  }
+  if 种 == "unary" {
+    let o = 表达(节点.operand, 状态)
+    if o.ok == false { return o }
+    if 节点.op == "-" { return {ok: true, 状态: 发(o.状态, {op: "NEG"})} }
+    return {ok: false, 错: "不认的一元运算：" + 节点.op}
+  }
+  if 种 == "call" {
+    let 参 = 编实参(节点.args, 状态, 0)
+    if 参.ok == false { return 参 }
+    return {ok: true, 状态: 发(参.状态, {op: "CALLF", a: 节点.callee.text, b: len(节点.args)})}
+  }
+  return {ok: false, 错: "这一版还编不了这种表达式：" + 种}
+}
+
+fn 编实参(们: Int, 状态: Int, i: Int) -> Int {
+  if i >= len(们) { return {ok: true, 状态: 状态} }
+  let r = 表达(们[i], 状态)
+  if r.ok == false { return r }
+  return 编实参(们, r.状态, i + 1)
+}
+
+// 一条语句。交回 {ok, 状态, 结束}；结束表示这一支已经 return 过，后面的不该再编。
+fn 语句(节点: Int, 状态: Int) -> Int {
+  let 种 = 节点.kind
+  if 种 == "return" {
+    let v = 表达(节点.value, 状态)
+    if v.ok == false { return v }
+    return {ok: true, 状态: 发(v.状态, {op: "RET"}), 结束: true}
+  }
+  if 种 == "let" || 种 == "var" {
+    let v = 表达(节点.value, 状态)
+    if v.ok == false { return v }
+    let 号 = v.状态.槽
+    let 记过 = 状态(v.状态.码, 号 + 1, v.状态.名表 + ((节点.name, 号),))
+    return {ok: true, 状态: 发(记过, {op: "STORE", a: 号, b: 种 == "var"}), 结束: false}
+  }
+  if 种 == "assign" {
+    let 号 = 找槽从(状态.名表, 节点.name, 0)
+    if 号 < 0 { return {ok: false, 错: "赋给一个不在作用域里的名字：" + 节点.name} }
+    let v = 表达(节点.value, 状态)
+    if v.ok == false { return v }
+    return {ok: true, 状态: 发(v.状态, {op: "ASSIGN", a: 号}), 结束: false}
+  }
+  if 种 == "if" {
+    return 编如果(节点, 状态)
+  }
+  return {ok: false, 错: "这一版还编不了这种语句：" + 种}
+}
+
+// 在某个位置上把指令换掉。元组不可变，所以是重建。
+fn 换从(码: Int, 位: Int, 新: Int, i: Int, acc: Int) -> Int {
+  if i >= len(码) { return acc }
+  if i == 位 { return 换从(码, 位, 新, i + 1, acc + (新,)) }
+  return 换从(码, 位, 新, i + 1, acc + (码[i],))
+}
+
+fn 换(码: Int, 位: Int, 新: Int) -> Int {
+  return 换从(码, 位, 新, 0, ())
+}
+
+// if：条件 → JMPF 占位 → 真支 → JMP 占位 → 假支，最后按位置把两处跳转补上。
+fn 编如果(节点: Int, 状态: Int) -> Int {
+  let c = 表达(节点.cond, 状态)
+  if c.ok == false { return c }
+  let 位跳假 = len(c.状态.码)
+  let s1 = 发(c.状态, {op: "JMPF", a: 0 - 1})
+  let 真 = 编块(节点.then, s1, 0)
+  if 真.ok == false { return 真 }
+  let 位跳尾 = len(真.状态.码)
+  let s2 = 发(真.状态, {op: "JMP", a: 0 - 1})
+  let 假起 = len(s2.码)
+  let 假 = 编块(节点.otherwise, s2, 0)
+  if 假.ok == false { return 假 }
+  let 末 = len(假.状态.码)
+  let 修1 = 换(假.状态.码, 位跳假, {op: "JMPF", a: 假起})
+  let 修2 = 换(修1, 位跳尾, {op: "JMP", a: 末})
+  return {ok: true, 状态: 状态(修2, 假.状态.槽, 假.状态.名表), 结束: false}
+}
+
+fn 编块(语句们: Int, 状态: Int, i: Int) -> Int {
+  if i >= len(语句们) { return {ok: true, 状态: 状态, 结束: false} }
+  let r = 语句(语句们[i], 状态)
+  if r.ok == false { return r }
+  if r.结束 { return {ok: true, 状态: r.状态, 结束: true} }
+  return 编块(语句们, r.状态, i + 1)
+}
+
+// 一个函数：参数按顺序占前几个槽，然后编体，末尾补「交回空」。
+fn 编函数(函数: Int) -> Int {
+  let 名 = 函数[0]
+  let 参名们 = 函数[1]
+  let 体 = 函数[2]
+  var 名表 = ()
+  var i = 0
+  while i < len(参名们) {
+    名表 = 名表 + ((参名们[i], i),)
+    i = i + 1
+  }
+  let r = 编块(体, 状态((), len(参名们), 名表), 0)
+  if r.ok == false { return {ok: false, 错: 名 + "：" + r.错} }
+  let 码 = r.状态.码 + ({op: "CONST", a: ()}, {op: "RET"})
+  return {ok: true, 函数: {名: 名, 参数量: len(参名们), 槽数: r.状态.槽, 效果: (), 码: 码}}
+}
+
+fn 编函数们(函数们: Int, i: Int, acc: Int) -> Int {
+  if i >= len(函数们) { return {ok: true, 函数们: acc} }
+  let r = 编函数(函数们[i])
+  if r.ok == false { return r }
+  return 编函数们(函数们, i + 1, acc + (r.函数,))
+}
+
+// 入口：源码 → 函数表。
+fn 编源码(源码: String) -> Int {
+  let 声明们 = parse_decls(scan_lines(源码))
+  return 编函数们(声明们.fns, 0, ())
+}
+
+fn main() -> Int {
+  let r = 编源码("fn 加(a: Int, b: Int) -> Int {" + chr(10) + "  return a + b" + chr(10) + "}" + chr(10))
+  if r.ok == false {
+    print("错：" + r.错)
+    return 1
+  }
+  print(str(len(r.函数们)) + " 个函数，" + str(len(r.函数们[0].码)) + " 条指令，槽 " + str(r.函数们[0].槽数))
+  return 0
+}

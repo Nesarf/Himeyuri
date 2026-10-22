@@ -38,12 +38,21 @@ fn collect(tokens: Int, i: Int, depth: Int, acc: Int) -> Int {
 }
 
 // 一条条读下去，直到体的收尾。空行跳过。
+// 逐行切语句。
+//
+// 这里有一处曾经吃过亏：遇到收尾的 } 时，collect 会交回 end 与「还没编的那一行」。
+// 多行的写法里那行是空的（上一轮已经按 newline 编过了），所以直接返回没问题；
+// 而单行写法 fn f() { return 7 } 里，那一行就是全部内容 —— 早先直接返回，
+// 于是函数体被读成空的：编译出来只有「交回空」，跑什么都不对。
 fn each(tokens: Int, i: Int, acc: Int) -> Int {
   let got = collect(tokens, i, 0, ())
-  if got.end { return {list: acc, next: got.next} }
-  if len(got.line) == 0 { return each(tokens, got.next, acc) }
-  let st = parse_statement(got.line)
-  return each(tokens, got.next, acc + (st.node,))
+  var 收 = acc
+  if len(got.line) > 0 {
+    let st = parse_statement(got.line)
+    收 = 收 + (st.node,)
+  }
+  if got.end { return {list: 收, next: got.next} }
+  return each(tokens, got.next, 收)
 }
 
 // 宿主入口：拿整份函数声明的 token 流，读出它的体。
