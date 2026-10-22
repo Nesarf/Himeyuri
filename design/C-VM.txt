@@ -107,5 +107,30 @@ C 版虚拟机：那台不是 JS 的机器
 
   那一条很重要：带 value 的记录正是求值器自己的返回值形状 {ok: true, value: …}。
   所以 求二元 收到的第一个实参不是一个运算符，而是一次求值的结果 ——
-  也就是「实参在栈上错位」这一类错。下一步该查 CALLF 的参数量与压栈数是否对得上，
-  而不是继续在解析器里找。
+  也就是「实参在栈上错位」这一类错。
+
+  又走了一步（同一天）：给 C 加了三道守卫与一条轨迹。
+
+    槽越界    LOAD / STORE / ASSIGN 若下标超出这个函数的槽数，报 R0110
+    调用不足  CALLF / CALLB 若要的实参比本帧压着的值多，报 R0110
+    轨迹      HMYR_TRACE=1 时留最近四十条指令（pc、操作码、当时的栈深）
+
+  第一道没响，第二道响了一次，而那次是误报。
+
+    calling arg_list wants 3 argument(s), the frame has 2 (pc=62)
+
+  那句话后来证明是守卫自己的错：C 这一侧的栈是所有帧共用的一条，
+  拿 base 去比「本帧压了几个」在跨帧时会误判。收窄成「栈深不足」之后，
+  examples/twice.hmyr 立刻恢复正常（hi 42 琥珀音），所以那一次报的是假的。
+
+  lib-strings.hmyr 的错因此仍然在，而且不是栈深不足 —— 否则会报 R0110。
+  现在能确定的是：求二元 收到的第一个实参是一个带 value 的字段值，
+  所以在 节点.op 这条字段读取上，取到的不是 op。
+
+  下一步该查 FIELD 的名字匹配，以及 RECORD 指令里字段名与值的对应顺序 ——
+  这两处都在「名字与值的配对」上，而错位的表现正是「取到了另一个字段的值」。
+
+  怎么复现（省下一次重走）：
+    gcc -std=c11 -O2 '-Wl,--stack,67108864' -o hmyr-vm.exe vm/hmyr.c
+    node tools/emit-code.mjs self/run.hmyr self.hmyrb
+    HMYR_TRACE=1 ./hmyr-vm.exe self.hmyrb conformance/lib-strings.hmyr

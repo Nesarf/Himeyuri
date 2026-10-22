@@ -437,6 +437,27 @@ static long steps = 0;
 static Value *g_stack;
 static uint32_t g_stack_n, g_stack_cap;
 
+/* A short ring of what the machine was doing. When a run ends badly, the last
+ * few instructions are the only thing that says where "badly" started - the
+ * programme's own error message is about a value, not about a place.
+ * Enabled by HMYR_TRACE=1 so the normal run pays nothing. */
+#define TRACE_N 40
+typedef struct { uint32_t pc; uint8_t op; uint32_t n; } Trace;
+static Trace g_trace[TRACE_N];
+static int g_trace_at = 0;
+static int g_trace_on = 0;
+
+static void trace_dump(void) {
+  fprintf(stderr, "--- the last %d instructions (n = stack depth when it ran) ---\n", TRACE_N);
+  for (int k = 0; k < TRACE_N; k++) {
+    int i = (g_trace_at + k) % TRACE_N;
+    Trace *t = &g_trace[i];
+    if (t->op == 255) continue;
+    const char *nm = (t->op < sizeof op_names / sizeof *op_names) ? op_names[t->op] : "?";
+    fprintf(stderr, "  pc=%-5u n=%-4u %s\n", (unsigned)t->pc, (unsigned)t->n, nm);
+  }
+}
+
 static void push(Value v) {
   if (g_stack_n == g_stack_cap) {
     g_stack_cap = g_stack_cap ? g_stack_cap * 2 : 256;
@@ -826,11 +847,39 @@ static Value run_func(Func *f, Value *args, int nargs) {
     if (++steps > step_limit) { fail("HMYR-R0102", "the program ran for too long"); return v_null(); }
     if ((uint32_t)pc >= f->ncode) { fail("HMYR-R0110", "the instruction stream ran off its end"); return v_null(); }
     Ins *in = &f->code[pc];
+    if (g_trace_on) {
+      Trace *t = &g_trace[g_trace_at];
+      t->pc = pc;
+      t->op = in->op;
+      t->n = g_stack_n;
+      g_trace_at = (g_trace_at + 1) % TRACE_N;
+    }
     switch (in->op) {
       case OP_CONST: push(in->val); pc++; break;
-      case OP_LOAD: push(slots[in->a]); pc++; break;
-      case OP_STORE: slots[in->a] = pop(); pc++; break;
-      case OP_ASSIGN: slots[in->a] = pop(); pc++; break;
+      case OP_LOAD:
+        if (in->a < 0 || (uint32_t)in->a >= f->nslots) {
+          char m[160];
+          snprintf(m, sizeof m, "load from slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
+          fail("HMYR-R0110", m);
+          return v_null();
+        }
+        push(slots[in->a]); pc++; break;
+      case OP_STORE:
+        if (in->a < 0 || (uint32_t)in->a >= f->nslots) {
+          char m[160];
+          snprintf(m, sizeof m, "store to slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
+          fail("HMYR-R0110", m);
+          return v_null();
+        }
+        slots[in->a] = pop(); pc++; break;
+      case OP_ASSIGN:
+        if (in->a < 0 || (uint32_t)in->a >= f->nslots) {
+          char m[160];
+          snprintf(m, sizeof m, "assign to slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
+          fail("HMYR-R0110", m);
+          return v_null();
+        }
+        slots[in->a] = pop(); pc++; break;
       case OP_POP: pop(); pc++; break;
       case OP_GLOBAL: { fail("HMYR-R0104", "globals are not in this machine yet"); return v_null(); }
       case OP_BOOL: { Value v = pop(); push(v_bool(truthy(v))); pc++; break; }
@@ -954,6 +1003,13 @@ static Value run_func(Func *f, Value *args, int nargs) {
       }
       case OP_CALLB: {
         uint32_t n = (uint32_t)in->b;
+        if (g_stack_n < n) {
+          char m[160];
+          snprintf(m, sizeof m, "a builtin call wants %u argument(s), the frame has %u",
+                   (unsigned)n, (unsigned)(g_stack_n - base));
+          fail("HMYR-R0110", m);
+          return v_null();
+        }
         Value *args = (Value *)malloc((size_t)(n ? n : 1) * sizeof(Value));
         for (uint32_t i = 0; i < n; i++) args[i] = g_stack[g_stack_n - n + i];
         g_stack_n -= n;
@@ -967,6 +1023,17 @@ static Value run_func(Func *f, Value *args, int nargs) {
         Func *callee = find_func(in->a);
         if (!callee) { fail("HMYR-R0104", "there is no such function"); return v_null(); }
         uint32_t n = (uint32_t)in->b;
+        if (g_stack_n < n) {
+          char fname[64];
+          uint32_t fl = callee->name_len < 63 ? callee->name_len : 63;
+          for (uint32_t k = 0; k < fl; k++) fname[k] = (callee->name[k] < 128) ? (char)callee->name[k] : '?';
+          fname[fl] = 0;
+          char m[260];
+          snprintf(m, sizeof m, "calling %s wants %u argument(s), the frame has %u (pc=%u)",
+                   fname, (unsigned)n, (unsigned)(g_stack_n - base), (unsigned)pc);
+          fail("HMYR-R0110", m);
+          return v_null();
+        }
         Value *args = (Value *)malloc((size_t)(n ? n : 1) * sizeof(Value));
         for (uint32_t i = 0; i < n; i++) args[i] = g_stack[g_stack_n - n + i];
         g_stack_n -= n;
@@ -1010,6 +1077,8 @@ int main(int argc, char **argv) {
   size_t len = 0;
   uint8_t *bytes = read_file(argv[1], &len);
   load_program(bytes, len);
+  g_trace_on = getenv("HMYR_TRACE") != NULL;
+  for (int i = 0; i < TRACE_N; i++) g_trace[i].op = 255;
 
   /* argv: the .hmyrb path first, then whatever else was typed. The bootstrap's
    * 命令行入口 reads element 1 as the target .hmyr, so the first slot has to
@@ -1050,6 +1119,7 @@ int main(int argc, char **argv) {
   if (!entry) { fprintf(stderr, "hmyr: no main\n"); return 1; }
 
   Value r = run_func(entry, NULL, 0);
+  if (g_trace_on) trace_dump();
   if (g_failed) {
     fprintf(stderr, "%s\n", g_fail_msg);
     return 1;
