@@ -23,7 +23,20 @@ if (!入口 || !输出) {
 const 根 = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "..");
 const rt = runUnit(loadUnit(path.join(根, "self/compile.hmyr")), { stage0: true, stepLimit: 300000000 });
 const 编源码 = rt.functions.get("编源码");
-const 源码 = fs.readFileSync(path.resolve(入口), "utf8");
+
+// 源码要按 import 链拼起来再交给编译器：它只认「一份源码」，
+// 而一份程序常常是几份文件。顺序照 loader 交出来的依赖顺序 —— 被依赖的在前，
+// 于是函数表里先到的那一份赢，与 JS 那边 合并程序 的规矩一致。
+const 入口路 = path.resolve(入口);
+const unit = loadUnit(入口路);
+let 源码 = "";
+if (unit.ok) {
+  for (const 文件 of unit.order) 源码 += fs.readFileSync(文件, "utf8") + "\n";
+} else {
+  // 加载失败也照样试一次单文件：有些程序没有 import，而 loadUnit 对它们
+  // 仍可能因为别的原因报诊断。
+  源码 = fs.readFileSync(入口路, "utf8");
+}
 const r = rt.callFunction(编源码, [源码], null);
 if (!r || r.ok === false) {
   console.error("HMYR 编译器： " + (r ? r.错 : "没有交回值"));

@@ -96,6 +96,11 @@ console.log("一、两位编译者对同一个程序交回同样的答案");
     ["内置 len", 'fn main() -> Int {\n  let t = (1, 2, 3)\n  return len(t)\n}\n', 3],
     ["内置 str 与 to_int", 'fn main() -> Int {\n  return to_int(str(7))\n}\n', 7],
     ["表达式语句与 print", 'fn main() -> Int {\n  print("hi")\n  return 0\n}\n', 0],
+    ["与：两边都真", "fn main() -> Int {\n  if 1 == 1 && 2 == 2 {\n    return 1\n  }\n  return 0\n}\n", 1],
+    ["与：一边假", "fn main() -> Int {\n  if 1 == 1 && 2 == 3 {\n    return 1\n  }\n  return 0\n}\n", 0],
+    ["或：一边真", "fn main() -> Int {\n  if 1 == 2 || 3 == 3 {\n    return 1\n  }\n  return 0\n}\n", 1],
+    ["或：两边都假", "fn main() -> Int {\n  if 1 == 2 || 3 == 4 {\n    return 1\n  }\n  return 0\n}\n", 0],
+    ["三元短路也算得对", "fn main() -> Int {\n  let x = 1 == 2 && 3 == 3\n  if x {\n    return 1\n  }\n  return 0\n}\n", 0],
   ];  for (const [标, 源码, 期望] of 例们) {
     const a = 编(源码);
     const b = 编JS(源码);
@@ -144,8 +149,8 @@ console.log("二、HMYR 编译器编出来的字节码也能由 C 那台机器�
 
 console.log("三、超出子集时明说，而不是悄悄编错");
 {
-  const b = 编("fn main() -> Int {\n  return 1 && 0\n}\n");
-  ok("短路运算还编不了，并且说出来", Boolean(b.错) && String(b.错).includes("还编不了"), JSON.stringify(b.错 || "").slice(0, 90));
+  const b = 编("fn main() -> Int {\n  let r = {a: 1}\n  return r.a\n}\n");
+  ok("记录已经能编了", !b.错, b.错 || "");
 }
 
 fs.rmSync(临, { recursive: true, force: true });

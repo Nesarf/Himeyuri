@@ -75,7 +75,7 @@ fn atom(tokens: Int, i: Int) -> Int {
 // 深度：每个元素各自独立递归一次，所以「元素个数」与「元素的深度」相加，不是相乘。
 fn paren_or_tuple(tokens: Int, i: Int) -> Int {
   if i < len(tokens) && is_punct(tokens[i], ")") { return {node: {kind: "tuple", items: ()}, next: i + 1} }
-  let first = compare(tokens, i)
+  let first = logic(tokens, i)
   if first.next < len(tokens) && is_punct(tokens[first.next], ",") {
     return tuple_tail(tokens, first.next + 1, (first.node,))
   }
@@ -88,7 +88,7 @@ fn paren_or_tuple(tokens: Int, i: Int) -> Int {
 fn tuple_tail(tokens: Int, i: Int, acc: Int) -> Int {
   if i >= len(tokens) { return {node: {kind: "tuple", items: acc}, next: i} }
   if is_punct(tokens[i], ")") { return {node: {kind: "tuple", items: acc}, next: i + 1} }
-  let item = compare(tokens, i)
+  let item = logic(tokens, i)
   var next = item.next
   if next < len(tokens) && is_punct(tokens[next], ",") { next = next + 1 }
   return tuple_tail(tokens, next, acc + (item.node,))
@@ -109,7 +109,7 @@ fn record_tail(tokens: Int, i: Int, acc: Int) -> Int {
   if i + 1 >= len(tokens) || !is_punct(tokens[i + 1], ":") {
     return {node: {kind: "err", text: name}, next: i + 1}
   }
-  let value = compare(tokens, i + 2)
+  let value = logic(tokens, i + 2)
   var next = value.next
   if next < len(tokens) && is_punct(tokens[next], ",") { next = next + 1 }
   return record_tail(tokens, next, acc + ({name: name, value: value.node},))
@@ -214,6 +214,11 @@ fn unary_or_mul(tokens: Int, i: Int) -> Int {
   if i < len(tokens) && is_punct(tokens[i], "-") {
     let operand = unary_or_mul(tokens, i + 1)
     return {node: {kind: "unary", op: "-", operand: operand.node}, next: operand.next}
+  }
+  // 逻辑非：!x。它缺席的样子是「解析器在 ! 上停住，上层报出来的却是别处的错」。
+  if i < len(tokens) && is_punct(tokens[i], "!") {
+    let operand = unary_or_mul(tokens, i + 1)
+    return {node: {kind: "unary", op: "!", operand: operand.node}, next: operand.next}
   }
   return mul(tokens, i)
 }

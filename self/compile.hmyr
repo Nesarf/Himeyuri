@@ -86,15 +86,21 @@ fn 表达(节点: Int, 状态: Int) -> Int {
     return {ok: true, 状态: 发(状态, {op: "CONST", a: 节点.text})}
   }
   if 种 == "name" {
+    // true 与 false 到这一步是「一个名字」：自举的切词器把关键字一律当成标识符
+    // （见 lex.hmyr 开头那段）。求值器里有这个特判，编译器也要有 ——
+    // 少了它的症状是「没有这个槽：true」，而那句话会让你去查作用域。
+    if 节点.text == "true" { return {ok: true, 状态: 发(状态, {op: "CONST", a: true})} }
+    if 节点.text == "false" { return {ok: true, 状态: 发(状态, {op: "CONST", a: false})} }
     let 号 = 找槽从(状态.名表, 节点.text, 0)
     if 号 < 0 { return {ok: false, 错: "没有这个槽：" + 节点.text} }
     return {ok: true, 状态: 发(状态, {op: "LOAD", a: 号})}
   }
   if 种 == "bin" {
-    // 短路那两个不是一条指令的事：&& 与 || 在有分支的地方要保留栈顶再跳。
-    // 这一版不做，而说法要具体 —— 「不认的二元运算」会让人以为词法出了问题。
-    if 节点.op == "&&" { return {ok: false, 错: "这一版还编不了短路运算：&&"} }
-    if 节点.op == "||" { return {ok: false, 错: "这一版还编不了短路运算：||"} }
+    // 短路那两个不是一条指令的事：左操作数算出之后留在栈上，
+    // 由 JMP*_KEEP 决定「跳过右边」还是「弹掉它继续算」。
+    // 两条路的最后都要把留下的那个值转成布尔 —— 那是 BOOL 的活。
+    if 节点.op == "&&" { return 编短路(节点, 状态, "JMPF_KEEP") }
+    if 节点.op == "||" { return 编短路(节点, 状态, "JMPT_KEEP") }
     let l = 表达(节点.left, 状态)
     if l.ok == false { return l }
     let r = 表达(节点.right, l.状态)
@@ -107,6 +113,7 @@ fn 表达(节点: Int, 状态: Int) -> Int {
     let o = 表达(节点.operand, 状态)
     if o.ok == false { return o }
     if 节点.op == "-" { return {ok: true, 状态: 发(o.状态, {op: "NEG"})} }
+    if 节点.op == "!" { return {ok: true, 状态: 发(o.状态, {op: "NOT"})} }
     return {ok: false, 错: "不认的一元运算：" + 节点.op}
   }
   if 种 == "call" {
@@ -153,8 +160,37 @@ fn 发记录(状态: Int, 字段们: Int, i: Int, 名们: Int) -> Int {
   return 发记录(状态, 字段们, i + 1, 名们 + (字段们[i].name,))
 }
 
-fn 编实参(们: Int, 状态: Int, i: Int) -> Int {
-  if i >= len(们) { return {ok: true, 状态: 状态} }
+// 短路：左操作数留在栈上，JMP*_KEEP 按它的真假决定跳不跳。
+//
+//   左
+//   JMPF_KEEP 到 补      （&& ：左假就跳过右边，左值留着）
+//   右
+//   BOOL
+//   JMP 到 过
+// 补:
+//   BOOL                 （把留下的那个左值转成布尔）
+// 过:
+//
+// `Keep` 那两条指令的语义是：跳走时不动栈顶，不跳时弹掉它。
+fn 编短路(节点: Int, 状态: Int, 码: String) -> Int {
+  let l = 表达(节点.left, 状态)
+  if l.ok == false { return l }
+  let 位短 = len(l.状态.码)
+  let s1 = 发(l.状态, {op: 码, a: 0 - 1})
+  let r = 表达(节点.right, s1)
+  if r.ok == false { return r }
+  let s2 = 发(r.状态, {op: "BOOL"})
+  let 位过 = len(s2.码)
+  let s3 = 发(s2, {op: "JMP", a: 0 - 1})
+  let 补 = len(s3.码)
+  let s4 = 发(s3, {op: "BOOL"})
+  let 过 = len(s4.码)
+  let 修1 = 换(s4.码, 位短, {op: 码, a: 补})
+  let 修2 = 换(修1, 位过, {op: "JMP", a: 过})
+  return {ok: true, 状态: 状态(修2, s4.槽, s4.名表), 结束: false}
+}
+
+fn 编实参(们: Int, 状态: Int, i: Int) -> Int {  if i >= len(们) { return {ok: true, 状态: 状态} }
   let r = 表达(们[i], 状态)
   if r.ok == false { return r }
   return 编实参(们, r.状态, i + 1)
