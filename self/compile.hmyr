@@ -231,11 +231,11 @@ fn 语句(节点: Int, 状态: Int) -> Int {
     return {ok: true, 状态: 发(v.状态, {op: "ASSIGN", a: 号}), 结束: false}
   }
   if 种 == "expr" {
-    // 表达式语句：算出来就丢掉。丢掉要显式发一条 POP —— 否则那个值会留在栈上，
-    // 而栈上的东西在下一处调用时会变成实参的一部分。
+    // 表达式语句：只编表达式，丢不丢值由 编块 决定 —— 它知道这是不是最后一条。
+    // 早先在这里无条件发 POP，于是 if 的真支里多出一条，字节流与 JS 那侧对不上。
     let v = 表达(节点.value, 状态)
     if v.ok == false { return v }
-    return {ok: true, 状态: 发(v.状态, {op: "POP"}), 结束: false}
+    return {ok: true, 状态: v.状态, 结束: false}
   }
   if 种 == "if" {
     return 编如果(节点, 状态)
@@ -248,12 +248,15 @@ fn 语句(节点: Int, 状态: Int) -> Int {
     if c.ok == false { return c }
     let 位跳尾 = len(c.状态.码)
     let s1 = 发(c.状态, {op: "JMPF", a: 0 - 1})
-    let 体 = 编块(节点.body, s1, 0)
+    let 体 = 编块不留值(节点.body, s1, 0)
     if 体.ok == false { return 体 }
     let s2 = 发(体.状态, {op: "JMP", a: 起})
+    // while 整个算出一个值（空），与 JS 那一份一致；而 JS 那边它是「表达式语句」，
+    // 所以值还要丢掉 —— 两条合起来才是对的字节。
     let 尾 = len(s2.码)
-    let 修 = 换(s2.码, 位跳尾, {op: "JMPF", a: 尾})
-    return {ok: true, 状态: 状态(修, s2.槽, s2.名表), 结束: false}
+    let s3 = 发(发(s2, {op: "CONST", a: ()}), {op: "POP"})
+    let 修 = 换(s3.码, 位跳尾, {op: "JMPF", a: 尾})
+    return {ok: true, 状态: 状态(修, s3.槽, s3.名表), 结束: false}
   }
   return {ok: false, 错: "这一版还编不了这种语句：" + 种}
 }
@@ -299,12 +302,37 @@ fn 编如果(节点: Int, 状态: Int) -> Int {
   return {ok: true, 状态: 状态(修2, s3.槽, s3.名表), 结束: false}
 }
 
+// 逐条编语句，**一条都不留值**。
+//
+// while 的体用这一份：循环体里每条表达式语句的值都要丢掉，包括最后一条 ——
+// 留一个值在栈上，下一轮循环就会把它当成新压进来的东西。
+fn 编块不留值(语句们: Int, 状态: Int, i: Int) -> Int {
+  if i >= len(语句们) { return {ok: true, 状态: 状态, 结束: false} }
+  let r = 语句(语句们[i], 状态)
+  if r.ok == false { return r }
+  if r.结束 { return {ok: true, 状态: r.状态, 结束: true} }
+  var 下 = r.状态
+  if 语句们[i].kind == "expr" {
+    下 = 发(下, {op: "POP"})
+  }
+  return 编块不留值(语句们, 下, i + 1)
+}
+
+// 逐条编语句。
+//
+// 一条语句「不是最后一条」时，它算出来的值要丢掉 —— 而最后一条的值留着，
+// 由调用它的人决定怎么处理（if 的收尾 POP、函数的 RET、块的末尾）。
+// 这是 JS 那一份的规矩，而这一层要的是两位打包者交出同样的字节。
 fn 编块(语句们: Int, 状态: Int, i: Int) -> Int {
   if i >= len(语句们) { return {ok: true, 状态: 状态, 结束: false} }
   let r = 语句(语句们[i], 状态)
   if r.ok == false { return r }
   if r.结束 { return {ok: true, 状态: r.状态, 结束: true} }
-  return 编块(语句们, r.状态, i + 1)
+  var 下 = r.状态
+  if i + 1 < len(语句们) && 语句们[i].kind == "expr" {
+    下 = 发(下, {op: "POP"})
+  }
+  return 编块(语句们, 下, i + 1)
 }
 
 // 一个函数：参数按顺序占前几个槽，然后编体，末尾补「交回空」。

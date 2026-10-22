@@ -10,7 +10,9 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
 import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
-import { 写程序 } from "../src/code-file.mjs";
+import { 写程序, 读程序 } from "../src/code-file.mjs";
+import { 虚拟机 } from "../src/vm.mjs";
+import { 本机能力 } from "../src/capabilities.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -25,13 +27,10 @@ const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-pack-"));
 const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
 const 程序们 = [
   ["直接返回一个数", "fn main() -> Int {\n  return 7\n}\n"],
-];
-
-// 这几份的指令形状两位编译者还不完全一样，所以字节不会相同 —— 列在这里，
-// 让「差在哪」有地方可查，而不是让一个通过的用例遮住它。
-const 还没对齐的 = [
   ["两个函数与一次调用", "fn 加(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  return 加(20, 22)\n}\n"],
   ["if 与字符串", 'fn main() -> Int {\n  let s = "ab"\n  if s == "ab" {\n    print(s)\n  }\n  return len(s)\n}\n'],
+  ["while 与比较", "fn main() -> Int {\n  var i = 0\n  while i < 4 {\n    i = i + 1\n  }\n  return i\n}\n"],
+  ["元组与下标", "fn main() -> Int {\n  let t = (10, 20, 30)\n  return t[1]\n}\n"],
 ];
 
 console.log("一、两位打包者对同一份源码交出同样的字节");
@@ -56,22 +55,21 @@ console.log("一、两位打包者对同一份源码交出同样的字节");
   }
 }
 
-console.log("二、还没对齐的那几份，差多少说清楚");
+console.log("二、编译出来的东西跑得动（字节相同之外，还要答案对）");
 {
   const rt = runUnit(loadUnit(path.join(ROOT, "self/pack.hmyr")), { stage0: true, stepLimit: 400000000 });
-  for (const [标, 源码] of 还没对齐的) {
-    const 源路 = path.join(临, "q.hmyr");
-    fs.writeFileSync(源路, 源码, "utf8");
-    const unit = loadUnit(源路);
-    const js字节 = 写程序(合并程序(unit.order.map((f) => 编译模块(unit.modules.get(f)))));
-    const 编r = rt.callFunction(rt.functions.get("编源码"), [源码], null);
-    if (!编r || 编r.ok === false) { console.log("  跳过  " + 标 + "： " + (编r ? 编r.错 : "")); continue; }
+  const 源码 = 程序们[3][1];
+  const 编r = rt.callFunction(rt.functions.get("编源码"), [源码], null);
+  ok("while 那份编得出来", !编r || 编r.ok !== false, 编r ? 编r.错 : "");
+  if (编r && 编r.ok !== false) {
     const 包r = rt.callFunction(rt.functions.get("打包"), [编r.函数们], null);
-    const 她 = Buffer.from(包r.map((x) => x & 0xff));
-    const 同 = js字节.length === 她.length && Buffer.compare(js字节, 她) === 0;
-    // 这一条不断言「相同」，只要求「说得清差多少」。等到对齐之后它会自然变成相同的。
-    ok(标 + " 的字节数说得出来", 她.length > 0, "");
-    console.log("        JS " + js字节.length + " 字节 / HMYR " + 她.length + " 字节" + (同 ? "（已对齐）" : "（还差 " + (她.length - js字节.length) + " 字节）"));
+    const 码路 = path.join(临, "run.hmyrb");
+    fs.writeFileSync(码路, Buffer.from(包r.map((x) => x & 0xff)));
+    // 读回来跑：main 返回 4。
+    const p = 读程序(fs.readFileSync(码路), null);
+    const vm = new 虚拟机(p, { capabilities: 本机能力(), write: () => {} });
+    const r = vm.调用("main", [], null);
+    ok("它跑出 4", r.ok && r.值 === 4, JSON.stringify(r.ok ? r.值 : r.码));
   }
 }
 

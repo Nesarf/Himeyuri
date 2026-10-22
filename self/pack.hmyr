@@ -112,14 +112,18 @@ fn 放指令(状态: Int, 码: Int) -> Int {
     return 放(放u16(收, 码.a), 0)
   }
   if 码.op == "ASSIGN" { return 放u16(收, 码.a) }
-  if 码.op == "GLOBAL" { return 放u16(收, 码.a) }
-  if 码.op == "JMP" { return 放u16(收, 码.a) }
-  if 码.op == "JMPF" { return 放u16(收, 码.a) }
-  if 码.op == "JMPT" { return 放u16(收, 码.a) }
-  if 码.op == "JMPF_KEEP" { return 放u16(收, 码.a) }
-  if 码.op == "JMPT_KEEP" { return 放u16(收, 码.a) }
-  if 码.op == "CALLF" { return 放串(放u16(收, 码.b), 码.a) }
-  if 码.op == "CALLB" { return 放串(放u16(收, 码.b), 码.a) }
+  // GLOBAL 的立即数是一个名字串（别的都按编号），而跳转目标是 u32 ——
+  // 与 src/code-file.mjs 的 立即数形状 一致。宽度记错的样子是「整段错位」。
+  if 码.op == "GLOBAL" { return 放串(收, 码.a) }
+  if 码.op == "JMP" { return 放u32(收, 码.a) }
+  if 码.op == "JMPF" { return 放u32(收, 码.a) }
+  if 码.op == "JMPT" { return 放u32(收, 码.a) }
+  if 码.op == "JMPF_KEEP" { return 放u32(收, 码.a) }
+  if 码.op == "JMPT_KEEP" { return 放u32(收, 码.a) }
+  // 调用：名字串在前，实参数在后 —— 顺序与 src/code-file.mjs 的写者一致。
+  // 反过来的症状不是「读不出来」，而是读出来一个两码元的名字，然后整段错位。
+  if 码.op == "CALLF" { return 放u16(放串(收, 码.a), 码.b) }
+  if 码.op == "CALLB" { return 放u16(放串(收, 码.a), 码.b) }
   if 码.op == "FIELD" { return 放串(收, 码.a) }
   if 码.op == "TUPLE" { return 放u16(收, 码.a) }
   if 码.op == "RECORD" {
