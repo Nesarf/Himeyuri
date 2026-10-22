@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <math.h>
 
 /* Two range tables generated from the Unicode corpus by tools/ucd-c.mjs.
  * They live in the repository as C arrays so this machine can answer "is this
@@ -427,17 +428,66 @@ static uint16_t *utf8_to_utf16(const char *s, size_t len, uint32_t *out_len) {
 
 /* ---- number to text -------------------------------------------------- */
 
-/* Shortest form that round-trips, the way the JavaScript side does it for the
- * values this machine has printed so far. Not the exact formatter in
- * src/decimal.mjs -- see the header note. */
-static uint32_t num_to_text(double n, uint16_t *buf, uint32_t cap) {
-  char tmp[64];
-  if (n == (double)(long long)n && n > -1e15 && n < 1e15) snprintf(tmp, sizeof tmp, "%.0f", n);
-  else snprintf(tmp, sizeof tmp, "%.15g", n);
-  uint32_t len = (uint32_t)strlen(tmp);
-  if (len > cap) len = cap;
-  for (uint32_t i = 0; i < len; i++) buf[i] = (uint16_t)(unsigned char)tmp[i];
-  return len;
+/* 双精度 → 最短的、还能读回来的一串。
+ *
+ * 算法与 src/decimal.mjs 同一条：从一位有效数字试到十七位，第一个能读回原值的就留下。
+ * 排版也照 ECMAScript 那一套（定点与指数形式的分界是它定的），
+ * 因为「数写成字」这件事在两台机器上必须一字不差，否则同一个程序跑出两种输出。
+ *
+ * 早先这里用 %.15g，整数与短小数看着没问题，而一碰到 0.1 那一类就露馅 ——
+ * 那件事记在 design/C-VM.txt 的第一条差异里，现在这条差异没有了。 */
+static void 数字成文(double x, char *out, size_t cap) {
+  if (isnan(x)) { snprintf(out, cap, "NaN"); return; }
+  if (isinf(x)) { snprintf(out, cap, x < 0 ? "-Infinity" : "Infinity"); return; }
+  if (x == 0) { snprintf(out, cap, "0"); return; }   /* 负零也打成零，与 JS 一致 */
+  int 负 = x < 0;
+  double a = 负 ? -x : x;
+  char buf[64];
+  int prec;
+  for (prec = 1; prec <= 17; prec++) {
+    snprintf(buf, sizeof buf, "%.*e", prec - 1, a);
+    if (strtod(buf, NULL) == a) break;
+  }
+  /* 从 d.ddde±xx 里取出有效数字与指数 */
+  char 数[40];
+  int 位 = 0, e = 0;
+  for (char *p = buf; *p && *p != 'e' && *p != 'E'; p++) {
+    if (*p >= '0' && *p <= '9' && 位 < 39) 数[位++] = *p;
+  }
+  for (char *p = buf; *p; p++) if (*p == 'e' || *p == 'E') { e = atoi(p + 1); break; }
+  /* 去掉尾零，指数跟着加 */
+  while (位 > 1 && 数[位 - 1] == '0') { 位--; e++; }
+  int k = 位;
+  int n = e + 1;   /* 值 = 0.数 × 10 的 n 次方 */
+
+  char 体[160];
+  int o = 0;
+  if (k <= n && n <= 21) {
+    for (int i = 0; i < k; i++) 体[o++] = 数[i];
+    for (int i = 0; i < n - k; i++) 体[o++] = '0';
+  } else if (0 < n && n <= 21) {
+    for (int i = 0; i < n; i++) 体[o++] = 数[i];
+    体[o++] = '.';
+    for (int i = n; i < k; i++) 体[o++] = 数[i];
+  } else if (-6 < n && n <= 0) {
+    体[o++] = '0'; 体[o++] = '.';
+    for (int i = 0; i < -n; i++) 体[o++] = '0';
+    for (int i = 0; i < k; i++) 体[o++] = 数[i];
+  } else {
+    int ee = n - 1;
+    体[o++] = 数[0];
+    if (k > 1) {
+      体[o++] = '.';
+      for (int i = 1; i < k; i++) 体[o++] = 数[i];
+    }
+    体[o++] = 'e';
+    体[o++] = (ee >= 0) ? '+' : '-';
+    char 指[16];
+    snprintf(指, sizeof 指, "%d", ee >= 0 ? ee : -ee);
+    for (char *p = 指; *p; p++) 体[o++] = *p;
+  }
+  体[o] = 0;
+  snprintf(out, cap, "%s%s", 负 ? "-" : "", 体);
 }
 
 /* ---- the machine ----------------------------------------------------- */
@@ -540,10 +590,11 @@ static Value value_to_text(Value v, Value *out);
 static Value value_to_text(Value v, Value *out) {
   if (v.tag == T_STR) { *out = v; return v; }
   if (v.tag == T_NUM) {
-    uint16_t buf[64];
-    uint32_t n = num_to_text(v.num, buf, 64);
-    uint16_t *p = (uint16_t *)malloc((size_t)n * sizeof(uint16_t));
-    memcpy(p, buf, n * sizeof(uint16_t));
+    char 文[64];
+    数字成文(v.num, 文, sizeof 文);
+    uint32_t n = (uint32_t)strlen(文);
+    uint16_t *p = (uint16_t *)malloc((size_t)(n ? n : 1) * sizeof(uint16_t));
+    for (uint32_t i = 0; i < n; i++) p[i] = (uint16_t)(unsigned char)文[i];
     *out = v_str(p, n);
     return *out;
   }

@@ -41,7 +41,7 @@ if (!有编译器) {
 // 二、把它编起来
 const exe = path.join(临, "hmyr-vm.exe");
 {
-  const r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c")], { encoding: "utf8" });
+  const r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("vm/hmyr.c 编得出来", r.status === 0, String(r.stderr).slice(0, 200));
   ok("而且没有警告", String(r.stderr).trim() === "", String(r.stderr).slice(0, 200));
 }
@@ -196,6 +196,36 @@ console.log("七、真库跑在 C 机器上");
     ok(标 + "在 C 机器上全过", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim().slice(0, 40)) + " " + String(r.stderr).slice(0, 80));
   }
+}
+
+console.log("八、数字写成字，两台机器一字不差");
+{
+  // 这条以前是两台机器之间唯一被写下来的差异：C 用 %.15g，于是 0.1 写成
+  // 0.100000000000000006。现在两边都走「最短往返 + ECMAScript 排版」。
+  const 源码 = [
+    "fn main() -> Int {",
+    "  print(str(0))",
+    '  print(" ")',
+    "  print(str(1.5))",
+    '  print(" ")',
+    "  print(str(0.1))",
+    '  print(" ")',
+    "  print(str(0 - 2.25))",
+    '  print(" ")',
+    "  print(str(1000000))",
+    '  print(" ")',
+    "  print(str(0.000001))",
+    '  print(" ")',
+    "  print(str(123456789012345678))",
+    '  print(" ")',
+    "  print(str(1 / 3))",
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "numbers-text");
+  ok("八个数两台写出来一样", r.js === r.c, JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  ok("0.1 不是那一长串", r.c.includes("0.1") && !r.c.includes("0.100000000000000006"), JSON.stringify(r.c));
+  ok("三分之一是最短的那一串", r.c.includes("0.3333333333333333"), JSON.stringify(r.c));
 }
 
 fs.rmSync(临, { recursive: true, force: true });
