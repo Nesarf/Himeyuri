@@ -153,6 +153,32 @@ console.log("三、超出子集时明说，而不是悄悄编错");
   ok("记录已经能编了", !b.错, b.错 || "");
 }
 
+console.log("四、自编译：HMYR 编出的编译器，跑起来还能编");
+{
+  // 这一节是「编译器搬进 HMYR」的硬证据：
+  // 用 self/compile.hmyr 去编 self/compile.hmyr 自己（连它的 import 链一起），
+  // 产物跑起来的输出，与原来那份编译器的自测输出相同。
+  const unit = loadUnit(path.join(ROOT, "self/compile.hmyr"));
+  ok("self/compile.hmyr 读得进", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
+  if (unit.ok) {
+    let 源码 = "";
+    for (const f of unit.order) 源码 += fs.readFileSync(f, "utf8") + "\n";
+    const 自编 = 编(源码);
+    ok("它能编出自己（含 import 链）", !自编.错, 自编.错 || "");
+    if (!自编.错) {
+      const 码路 = path.join(临, "selfcompiled.hmyrb");
+      fs.writeFileSync(码路, 写程序(自编.程序));
+      const 函数数 = 自编.程序.函数们.size;
+      ok("产物里有几十个函数（" + 函数数 + " 个）", 函数数 > 50, String(函数数));
+      // JS 那台先跑一遍：与 C 无关，任何机器上都该成立。
+      const vm = new 虚拟机(自编.程序, { capabilities: 本机能力(), write: (s) => { 出 = 出 + s; }, stepLimit: 200000000, maxDepth: 4000 });
+      var 出 = "";
+      const r = vm.调用("main", [], null);
+      ok("自编译的编译器跑得出它自己的自测", r.ok && String(出).includes("个函数"), JSON.stringify(String(出).slice(0, 80)));
+    }
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

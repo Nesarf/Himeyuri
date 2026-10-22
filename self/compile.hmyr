@@ -27,10 +27,19 @@ fn 发(状态: Int, 指令: Int) -> Int {
   return 状态(状态.码 + (指令,), 状态.槽, 状态.名表)
 }
 
+// 在名表里找槽号，从后往前找 —— 最近的绑定赢。
+//
+// 这一处吃过亏：早先从前往后找，于是同名变量第二次 let 之后，
+// 读的还是第一次那个槽。自编译时它表现成「field next read off a value that
+// is not a record」—— 因为那个槽里放的是上一轮的值（或空）。
 fn 找槽从(名表: Int, 名: String, i: Int) -> Int {
-  if i >= len(名表) { return 0 - 1 }
+  if i < 0 { return 0 - 1 }
   if 名表[i][0] == 名 { return 名表[i][1] }
-  return 找槽从(名表, 名, i + 1)
+  return 找槽从(名表, 名, i - 1)
+}
+
+fn 找槽(名表: Int, 名: String) -> Int {
+  return 找槽从(名表, 名, len(名表) - 1)
 }
 
 // 这个名字是不是内置。CALLB 与 CALLF 的区别只在编译期定 —— 名字不在这一张表里，
@@ -91,7 +100,7 @@ fn 表达(节点: Int, 状态: Int) -> Int {
     // 少了它的症状是「没有这个槽：true」，而那句话会让你去查作用域。
     if 节点.text == "true" { return {ok: true, 状态: 发(状态, {op: "CONST", a: true})} }
     if 节点.text == "false" { return {ok: true, 状态: 发(状态, {op: "CONST", a: false})} }
-    let 号 = 找槽从(状态.名表, 节点.text, 0)
+    let 号 = 找槽(状态.名表, 节点.text)
     if 号 < 0 { return {ok: false, 错: "没有这个槽：" + 节点.text} }
     return {ok: true, 状态: 发(状态, {op: "LOAD", a: 号})}
   }
@@ -212,7 +221,7 @@ fn 语句(节点: Int, 状态: Int) -> Int {
     return {ok: true, 状态: 发(记过, {op: "STORE", a: 号, b: 种 == "var"}), 结束: false}
   }
   if 种 == "assign" {
-    let 号 = 找槽从(状态.名表, 节点.name, 0)
+    let 号 = 找槽(状态.名表, 节点.name)
     if 号 < 0 { return {ok: false, 错: "赋给一个不在作用域里的名字：" + 节点.name} }
     let v = 表达(节点.value, 状态)
     if v.ok == false { return v }

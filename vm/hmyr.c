@@ -551,6 +551,10 @@ static int truthy(Value v) {
 static int g_failed = 0;
 static char g_fail_msg[512];
 
+/* 当前正在跑的函数。诊断用：一条指令的 pc 只在它自己的函数里有意义，
+ * 所以报错时要能说出「哪个函数、第几条」。 */
+static Func *g_cur = NULL;
+
 /* 调用序列：HMYR_CALLS=1 时，每次函数调用打一行「第几个」。
  * 两台机器跑同一份字节码时，第一条不一致的调用就是分歧的起点。 */
 static int g_calls_on = 0;
@@ -966,6 +970,8 @@ static Value run_func(Func *f, Value *args, int nargs) {
    * 退出时要还原 —— 否则回到调用者之后，它自己也弹不动自己压的东西了。 */
   uint32_t 外base = g_base;
   g_base = base;
+  Func *外函 = g_cur;
+  g_cur = f;
   int32_t pc = 0;
   for (;;) {
     if (g_failed) return v_null();
@@ -1098,7 +1104,23 @@ static Value run_func(Func *f, Value *args, int nargs) {
       }
       case OP_FIELD: {
         Value t = pop();
-        if (t.tag != T_RECORD) { fail("HMYR-R0106", "no field on that value"); return v_null(); }
+        if (t.tag != T_RECORD) {
+          /* 说清楚是哪个字段、哪条指令、拿到的是什么 —— 「no field on that value」
+           * 只说了一半，而查的时候要的是另一半。 */
+          char 名[64];
+          uint32_t nl = pool_len[in->a] < 63 ? pool_len[in->a] : 63;
+          for (uint32_t k = 0; k < nl; k++) 名[k] = (pool_p[in->a][k] < 128) ? (char)pool_p[in->a][k] : '?';
+          名[nl] = 0;
+          char m[220];
+          char 函名[48];
+          uint32_t fl3 = (g_cur && g_cur->name_len < 47) ? g_cur->name_len : 0;
+          for (uint32_t k = 0; k < fl3; k++) 函名[k] = (g_cur->name[k] < 128) ? (char)g_cur->name[k] : '?';
+          函名[fl3] = 0;
+          snprintf(m, sizeof m, "field '%s' read off a value that is not a record (tag=%d, %s pc=%u)",
+                   名, (int)t.tag, 函名, (unsigned)pc);
+          fail("HMYR-R0106", m);
+          return v_null();
+        }
         /* find the field by name */
         int found = 0;
         int 位 = -1;
@@ -1232,7 +1254,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         if (g_failed) return v_null();
         push(r); pc++; break;
       }
-      case OP_RET: { Value v = pop(); g_stack_n = base; g_base = 外base; return v; }
+      case OP_RET: { Value v = pop(); g_stack_n = base; g_base = 外base; g_cur = 外函; return v; }
       default: {
         char msg[160];
         uint32_t k = in->op;
