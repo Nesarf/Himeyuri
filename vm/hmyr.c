@@ -484,6 +484,11 @@ static int truthy(Value v) {
 static int g_failed = 0;
 static char g_fail_msg[512];
 
+/* 调用序列：HMYR_CALLS=1 时，每次函数调用打一行「第几个」。
+ * 两台机器跑同一份字节码时，第一条不一致的调用就是分歧的起点。 */
+static int g_calls_on = 0;
+static long g_calls_n = 0;
+
 /* The argv the programme sees. Built in main from the real command line:
  * the first element is where the bytecode came from, the rest are the
  * programme's own arguments - the same shape the JavaScript machine uses. */
@@ -582,16 +587,19 @@ static int values_equal(Value a, Value b) {
   return 0;
 }
 
-static Func *find_func(int64_t name_idx) {
+/* 按名字找函数，交回它在表里的位置；找不到交回 -1。
+ * 交回位置而不是指针，是因为调用序列要跨机器对齐，而函数名多是中文 ——
+ * 两台机器都打「第几个」，那个数字是共同的。 */
+static int64_t find_func_index(int64_t name_idx) {
   for (uint32_t i = 0; i < nfuncs; i++) {
     if (funcs[i].name_len != pool_len[name_idx]) continue;
     uint32_t same = 1;
     for (uint32_t k = 0; k < funcs[i].name_len; k++) {
       if (funcs[i].name[k] != pool_p[name_idx][k]) { same = 0; break; }
     }
-    if (same) return &funcs[i];
+    if (same) return (int64_t)i;
   }
-  return NULL;
+  return -1;
 }
 
 static Value run_func(Func *f, Value *args, int nargs);
@@ -1020,8 +1028,10 @@ static Value run_func(Func *f, Value *args, int nargs) {
         push(out); pc++; break;
       }
       case OP_CALLF: {
-        Func *callee = find_func(in->a);
+        int64_t 位 = find_func_index(in->a);
+        Func *callee = (位 >= 0) ? &funcs[位] : NULL;
         if (!callee) { fail("HMYR-R0104", "there is no such function"); return v_null(); }
+        if (g_calls_on && g_calls_n < 4000) { fprintf(stderr, "CALL %lld\n", (long long)位); g_calls_n++; }
         uint32_t n = (uint32_t)in->b;
         if (g_stack_n < n) {
           char fname[64];
@@ -1078,6 +1088,7 @@ int main(int argc, char **argv) {
   uint8_t *bytes = read_file(argv[1], &len);
   load_program(bytes, len);
   g_trace_on = getenv("HMYR_TRACE") != NULL;
+  g_calls_on = getenv("HMYR_CALLS") != NULL;
   /* The step limit is 5 million by default, which is right for a programme
    * doing its own work. Running an interpreter that runs another programme is
    * tens of times that, so the ceiling is adjustable. */

@@ -45,6 +45,10 @@ const 真 = (v, 层 = 文) => {
 export class 虚拟机 {
   constructor(程序, 选项 = {}) {
     this.程序 = 程序;
+    // 名字到「第几个」的对照：调用序列要靠它跨机器对齐，因为名字多是中文。
+    this.名序 = new Map();
+    let 位 = 0;
+    for (const 键 of 程序.函数们.keys()) this.名序.set(键, 位++);
     this.全局 = new Map();
     this.write = 选项.write || (() => {});
     this.writeErr = 选项.writeErr || null;
@@ -108,6 +112,11 @@ export class 虚拟机 {
     if (this.停机) return { ok: false, ...this.停机 };
     const 函 = this.程序.函数们.get(名);
     if (!函) { this.坏("HMYR-R0104", "there is no name '" + 名 + "' in scope"); return { ok: false, ...this.停机 }; }
+    if (叫要 && 叫数 < 叫上限) {
+      // 顶层那一次（main 或 命令行入口）不记：C 那边从 main 里面才开始记。
+      if (叫数 > 0) process.stderr.write("CALL " + this.名序.get(名) + "\n");
+      叫数++;
+    }
     if (++this.深 > this.深限) {
       this.坏("HMYR-R0108", "call depth exceeded (" + this.深限 + ")");
       return { ok: false, ...this.停机 };
@@ -145,6 +154,7 @@ export class 虚拟机 {
       if (++this.步 > this.步限) { this.坏("HMYR-R0102", "the program ran for too long without finishing"); return null; }
       const 指令 = 码[pc];
       if (!指令) { this.坏("HMYR-R0110", "the instruction stream ran off its end"); return null; }
+      if (迹要) { 迹.push({ pc, op: 指令.op, n: 栈.length }); if (迹.length > 迹长) 迹.shift(); }
       switch (指令.op) {
         // 字面量是编译期从宿主串来的，所以它进来时要落到选定的那种底上。
         case "CONST": 压(this.码元串 && typeof 指令.a === "string" ? 收进来(this.文, 指令.a) : 指令.a); pc++; break;
@@ -256,7 +266,28 @@ export class 虚拟机 {
   }
 }
 
-// 与 runUnit 同一件事：把加载器交出来的模块编译成一个程序，再交回一个虚拟机。
+// 一条轨迹：最近几十条指令的 pc、操作码与当时的栈深。
+//
+// 为什么要有它：C 那台机器有一份（vm/hmyr.c 的 HMYR_TRACE），而两台机器跑同一份
+// 字节码若得出不同结果，唯一能问的问题是「从哪一条指令开始不一样」。
+// 没有轨迹时，这个问题只能靠猜；有了它，两条 dump 一贴就能对齐。
+//
+// 默认关着：它每一步都要写一次，跑一个大程序会慢一倍。
+const 迹 = [];
+const 迹要 = process.env.HMYR_TRACE ? true : false;
+const 迹长 = 40;
+
+// 调用序列：每次 CALLF / CALLB 打印一个序号。两台机器跑同一份字节码时，
+// 第一条不一致的调用就是分歧的起点 —— 而函数名多是中文，C 那边打不好，
+// 所以两边都打「函数在表里的位置」，那个数字是共同的。
+const 叫要 = process.env.HMYR_CALLS ? true : false;
+let 叫数 = 0;
+const 叫上限 = 4000;
+
+export const 迹输出 = () => {
+  if (!迹要) return;
+  for (const t of 迹) console.log("  pc=" + String(t.pc).padEnd(6) + " n=" + String(t.n).padEnd(5) + " " + t.op);
+};
 //
 // 一个真实的差别：加载器交回的是「按依赖顺序排好的模块」，而这里把它们的函数表并起来。
 // 重名先到者赢（加载器那边已经为这件事报过 W0302）。
