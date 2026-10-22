@@ -74,6 +74,19 @@ export function loadUnit(entry, options = {}) {
         continue;
       }
       visit(target);
+      // 版本协商：调用方要第 M 版，模块提供到第 N 版，M <= N 就成 ——
+      // 模块向下兼容，所以「N 能提供 M」这一条是可判的。
+      //
+      // 这条规矩出自 design/RELAY.txt 那句中继站的 A2：取双方都支持的最高版本，
+      // 没有交集就拒绝。这门语言没有范围语法，所以「交集」就是 M <= N 这一个比较。
+      // 不写 rev 的那一边不提要求 —— 老代码一行都不用改，这一点是故意的。
+      const 目标 = modules.get(target);
+      if (目标 && 目标.rev !== null && 目标.rev !== undefined &&
+          imp.rev !== null && imp.rev !== undefined && imp.rev > 目标.rev) {
+        diagnostics.error("HMYR-E0303",
+          "module '" + imp.path + "' offers revision " + 目标.rev + ", but the import asks for " + imp.rev +
+          "; there is no version both sides support", imp.line || 0, imp.column || 0);
+      }
     }
 
     loading.delete(abs);

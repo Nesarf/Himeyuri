@@ -84,6 +84,16 @@ export function parse(tokens, options = {}) {
   function parseModule() {
     const imports = [], decls = [];
     skipNewlines();
+    // rev N 写在模块顶上：这个模块提供的接口是第 N 版。
+    // 它只影响协商（见 loader 里那段），不影响这个模块自己能做什么。
+    let rev = null;
+    if (at("ident", "rev")) {
+      advance();
+      const n = (at("int") ? advance() : expect("int", "a revision number"));
+      rev = n ? Number(n.value) : null;
+      endStatement();
+      skipNewlines();
+    }
     while (at("keyword", "import")) imports.push(parseImport());
     skipNewlines();
     while (!at("eof")) {
@@ -94,7 +104,7 @@ export function parse(tokens, options = {}) {
       if (i === before) { error("HMYR-E0103", "cannot start a declaration with " + describe(peek())); recover(); }
       skipNewlines();
     }
-    return { kind: "Module", imports, decls };
+    return { kind: "Module", imports, decls, rev };
   }
 
   function parseImport() {
@@ -102,8 +112,16 @@ export function parse(tokens, options = {}) {
     const pathToken = expect("string", "a module path");
     let alias = null;
     if (at("keyword", "as")) { advance(); alias = expect("ident", "an alias"); }
+    // rev N：调用方要这个模块的第 N 版接口。
+    // 不写就是不提要求 —— 老代码一行都不用改，这一点是故意的。
+    let rev = null;
+    if (at("ident", "rev")) {
+      advance();
+      const n = (at("int") ? advance() : expect("int", "a revision number"));
+      rev = n ? Number(n.value) : null;
+    }
     endStatement();
-    return { kind: "Import", path: pathToken ? pathToken.value : "", alias: alias ? alias.value : null, line: kw.line, column: kw.column };
+    return { kind: "Import", path: pathToken ? pathToken.value : "", alias: alias ? alias.value : null, rev, line: kw.line, column: kw.column };
   }
 
   function parseDecl() {

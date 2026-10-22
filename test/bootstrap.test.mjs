@@ -35,7 +35,7 @@ console.log("一、Stage 0 是五份：loader、子集那两层、诊断，与�
   }
   const 合 = 合行数(五份);
   console.log("    （合计 " + 合 + " 行）");
-  ok("五份加起来在一千到一千三百之间", 合 > 1000 && 合 < 1300, String(合));
+  ok("五份加起来在一千到一千四百之间", 合 > 1000 && 合 < 1400, String(合));
   // 宿主那三份（读的两层 + 求值器）不在 Stage 0 里了，而它们仍在仓库里——对照与工具要用。
   const 宿主 = ["src/lexer.mjs", "src/parser.mjs", "src/eval.mjs"];
   for (const 文 of 宿主) ok(文 + " 仍然在（对照与工具路线）", 行数(文) > 20, String(行数(文)));

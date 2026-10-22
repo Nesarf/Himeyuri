@@ -117,6 +117,16 @@ export const 子集解 = (tokens, options = {}) => {
   function 解析模块() {
     const imports = [], decls = [];
     过空行();
+    // rev N 写在模块顶上：这个模块提供的接口是第 N 版。
+    // 它只影响协商，不影响这个模块自己能做什么 —— 与 src/parser.mjs 同一条规矩。
+    let rev = null;
+    if (是("ident", "rev")) {
+      进();
+      const n = 要版本号();
+      rev = n ? Number(n.value) : null;
+      收句();
+      过空行();
+    }
     while (是("keyword", "import")) imports.push(解析导入());
     过空行();
     while (!是("eof")) {
@@ -127,7 +137,13 @@ export const 子集解 = (tokens, options = {}) => {
       if (i === 先) 恢复();
       过空行();
     }
-    return { kind: "Module", imports, decls };
+    return { kind: "Module", imports, decls, rev };
+  }
+
+  // 版本号只认整数：int 就是它。写成 2.5 之类的不该被当成一个版本。
+  function 要版本号() {
+    if (是("int")) return 进();
+    return 要("int", "版本号");
   }
 
   function 解析导入() {
@@ -135,8 +151,15 @@ export const 子集解 = (tokens, options = {}) => {
     const 路 = 要("string", "模块路径");
     let alias = null;
     if (是("keyword", "as")) { 进(); alias = 要("ident", "别名"); }
+    // rev N：调用方要这个模块的第 N 版接口。不写就是不提要求。
+    let rev = null;
+    if (是("ident", "rev")) {
+      进();
+      const n = 要版本号();
+      rev = n ? Number(n.value) : null;
+    }
     收句();
-    return { kind: "Import", path: 路 ? 路.value : "", alias: alias ? alias.value : null, line: kw.line, column: kw.column };
+    return { kind: "Import", path: 路 ? 路.value : "", alias: alias ? alias.value : null, rev, line: kw.line, column: kw.column };
   }
 
   function 解析声明() {

@@ -68,6 +68,7 @@ export const CODES = [
 
   { code: "HMYR-E0301", stage: "link", checkedBy: "test/module.test.mjs", meaning: "a circular import: the file is already being loaded" },
   { code: "HMYR-E0302", stage: "link", checkedBy: "test/module.test.mjs", meaning: "an imported file does not exist" },
+  { code: "HMYR-E0303", stage: "link", checkedBy: "test/module-rev.test.mjs", meaning: "the import asks for a revision the module does not offer: no version both sides support, so the link is refused rather than guessed" },
   { code: "HMYR-W0301", stage: "link", checkedBy: "test/module.test.mjs", meaning: "an import that is not a path; the package manager owns that" },
   { code: "HMYR-W0302", stage: "link", checkedBy: "test/module.test.mjs", meaning: "two modules declare the same name, and the flat table means the later one wins" },
   // Planned: registered so the identifier is reserved and searchable, exempt from the "every registered
