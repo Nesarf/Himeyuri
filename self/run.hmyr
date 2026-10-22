@@ -97,9 +97,26 @@ fn 选函数(们: Int, 名: String) -> Int {
 //
 // 合并的规矩是「后到者覆盖先到者」——与 let 的重定义一致。
 // 读文件不在这里：那是启动器（能力内核）的事，于是自举不必背上 file 效果。
+// 去掉 import 行：那些行只用来找路径，解析器不认它们。
+//
+// 为什么需要它：带 import 的目标程序在自举层跑时，import 那一行会被当成语句解析，
+// 于是报「不认识的运算符：...」—— 报出来的东西是引号里的路径，
+// 看着像是在别处出的错。引号里 只在「这一行是 import」时才交回路径，
+// 所以用它判断既准又省一个函数。
+fn 去导入从(行们: Int, i: Int, acc: String) -> String {
+  if i >= len(行们) { return acc }
+  let 路 = 引号里(行们[i])
+  if 路 == "" { return 去导入从(行们, i + 1, acc + 行们[i] + chr(10)) }
+  return 去导入从(行们, i + 1, acc)
+}
+
+fn 去导入(源码: String) -> String {
+  return 去导入从(拆行(源码), 0, "")
+}
+
 fn 合并从(已收: Int, 源码们: Int, i: Int) -> Int {
   if i >= len(源码们) { return 已收 }
-  let tokens = scan_lines(源码们[i])
+  let tokens = scan_lines(去导入(源码们[i]))
   let 全部 = parse_decls(tokens)
   return 合并从(已收 + 全部.fns, 源码们, i + 1)
 }
