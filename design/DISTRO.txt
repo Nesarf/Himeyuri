@@ -109,7 +109,7 @@
 
   三个数（test/size-audit.test.mjs 每次跑都会重新算）：
 
-    仓库内容（被 git 跟踪）   334 个文件，155.5 MB
+    仓库内容（被 git 跟踪）   三百四十个文件上下，一百五十六兆上下（精确数以那套的输出为准）
       最大的是 runtime/ucd/codepoints.txt（42.69 MB）、conformance/unihan.txt（29.87 MB）、
       conformance/unicode-nfc.txt（17 MB）—— 语料是这个项目的一部分，不是误收。
     能再生成的                dist 16.87 MB（一份归档）、.git 33.67 MB

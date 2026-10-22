@@ -50,6 +50,11 @@ const 数值类型名 = new Set(["Int", "Num", "Float", "Double", "Number", "UIn
 const 类型形状 = (t) => {
   if (!t) return null;
   if (t.kind === "TupleType") return { k: "tuple", items: (t.items || []).map(类型形状) };
+  // 记录类型：字段名与每个字段的形状。字段按名字对，不按顺序对 ——
+  // 一个记录的意思不取决于字段写在前还是在后。
+  if (t.kind === "RecordType") {
+    return { k: "record", fields: (t.fields || []).map((f) => [f.name, 类型形状(f.type)]) };
+  }
   if (t.kind === "FnType") return { k: "fn" };
   if (t.kind === "TypeRef") {
     if (数值类型名.has(t.name)) return { k: "num" };
@@ -73,7 +78,8 @@ const 表达式形状 = (n) => {
       if (n.value === null) return { k: "unit" };
       return { k: "?" };
     case "Tuple": return { k: "tuple", items: (n.items || []).map(表达式形状) };
-    case "Record": return { k: "record" };
+    // 记录字面量：字段名与每个字段的形状。有了它，返回类型写成 {…} 时才能真的核对。
+    case "Record": return { k: "record", fields: (n.fields || []).map((f) => [f.name, 表达式形状(f.value)]) };
     case "Binary": {
       const op = n.op;
       if (["==", "!=", "<", "<=", ">", ">=", "&&", "||"].includes(op)) return { k: "bool" };
@@ -99,6 +105,7 @@ const 表达式形状 = (n) => {
 const 形状名 = (s) => {
   if (!s) return "?";
   if (s.k === "tuple") return "(" + (s.items || []).map(形状名).join(", ") + ")";
+  if (s.k === "record") return "{" + (s.fields || []).map(([n, t]) => n + ": " + 形状名(t)).join(", ") + "}";
   if (s.k === "num") return "Int";
   if (s.k === "str") return "String";
   if (s.k === "bool") return "Bool";
@@ -122,6 +129,18 @@ const 核对 = (类型, 形, 深度 = 0) => {
     for (let i = 0; i < 甲.length; i++) {
       const 内 = 核对(甲[i], 乙[i], 深度 + 1);
       if (内) return "第 " + (i + 1) + " 个元素：" + 内;
+    }
+  }
+  if (类型.k === "record") {
+    // 记录按字段名对：声明里有、交回的没有，或者反过来，都要说；
+    // 名字都对上之后再看每个字段的形状。
+    const 声 = new Map(类型.fields || []);
+    const 交 = new Map(形.fields || []);
+    for (const [名] of 声) if (!交.has(名)) return "交回的记录里没有字段 " + 名;
+    for (const [名] of 交) if (!声.has(名)) return "交回的记录多出字段 " + 名;
+    for (const [名, 子] of 声) {
+      const 内 = 核对(子, 交.get(名), 深度 + 1);
+      if (内) return "字段 " + 名 + "：" + 内;
     }
   }
   return null;

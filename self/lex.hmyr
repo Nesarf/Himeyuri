@@ -86,7 +86,7 @@ fn starts_with(s: String, from: Int, p: String, k: Int) -> Bool {
 }
 
 // 读一个标识符。返回 {next, text}。
-fn read_ident(s: String, i: Int, acc: String) {
+fn read_ident(s: String, i: Int, acc: String) -> {next: Int, text: String} {
   if i >= len(s) { return {next: i, text: acc} }
   if is_ident_char(s[i]) { return read_ident(s, i + 1, acc + s[i]) }
   return {next: i, text: acc}
@@ -97,7 +97,7 @@ fn is_hex_char(c: String) -> Bool {
 }
 
 // 进制字面量：0x / 0b / 0o 之后一律按十六进制字符集读下去。
-fn read_based(s: String, i: Int, acc: String) {
+fn read_based(s: String, i: Int, acc: String) -> {next: Int, text: String} {
   if i >= len(s) { return {next: i, text: acc} }
   if is_hex_char(s[i]) { return read_based(s, i + 1, acc + s[i]) }
   return {next: i, text: acc}
@@ -108,7 +108,7 @@ fn read_based(s: String, i: Int, acc: String) {
 // 指数也算进字面量：e 或 E，后面可带一个符号，再跟数字。不认它的话
 // 1e3 会被读成「1」加一个标识符 e3 —— 那是个安静的错误：后面某一层会算出一个
 // 看起来像个数的东西。这一条与宿主 lexer.mjs 的规矩一致。
-fn read_number(s: String, i: Int, acc: String) {
+fn read_number(s: String, i: Int, acc: String) -> {next: Int, text: String} {
   if i >= len(s) { return {next: i, text: acc} }
   if is_digit(s[i]) || s[i] == "_" { return read_number(s, i + 1, acc + s[i]) }
   // 小数点后面紧跟数字时，它属于这个字面量；否则句点是标点
@@ -136,7 +136,7 @@ fn read_string(s: String, i: Int, acc: String) {
   return read_string(s, i + 1, acc + s[i])
 }
 
-fn read_escape(s: String, i: Int, acc: String) {
+fn read_escape(s: String, i: Int, acc: String) -> {next: Int, text: String} {
   if i + 1 >= len(s) { return {next: i + 1, text: acc + "\\"} }
   let c = s[i + 1]
   if c == "n" { return read_string(s, i + 2, acc + "\n") }
@@ -148,13 +148,13 @@ fn read_escape(s: String, i: Int, acc: String) {
 }
 
 // 读一个标点：先看两字符的组合，再看单字符。
-fn read_punct(s: String, i: Int) {
+fn read_punct(s: String, i: Int) -> {next: Int, text: String} {
   let two = "-> => == != <= >= && ||"
   let k = 0
   return read_punct_two(s, i, two, k)
 }
 
-fn read_punct_two(s: String, i: Int, two: String, k: Int) {
+fn read_punct_two(s: String, i: Int, two: String, k: Int) -> {next: Int, text: String} {
   if k + 1 >= len(two) { return {next: i + 1, text: s[i] + ""} }
   let candidate = two[k] + two[k + 1]
   if two[k] == " " { return read_punct_two(s, i, two, k + 1) }

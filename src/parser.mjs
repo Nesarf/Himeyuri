@@ -209,6 +209,19 @@ export function parse(tokens, options = {}) {
 
   function parseType() {
     const t = peek();
+    if (atPunct("{")) {                       // a record type: {a: Int, b: String}
+      advance();
+      const fields = [];
+      while (!atPunct("}") && !at("eof")) {
+        const 名 = expect("ident", "a field name");
+        expectPunct(":", "after a field name");
+        fields.push({ name: 名 ? 名.value : "<error>", type: parseType() });
+        skipNewlines();
+        if (atPunct(",")) { advance(); skipNewlines(); } else break;
+      }
+      expectPunct("}");
+      return { kind: "RecordType", fields, line: t.line, column: t.column };
+    }
     if (atPunct("(")) {                       // tuple or grouped
       advance();
       const items = [];

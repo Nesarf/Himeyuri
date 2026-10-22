@@ -1,0 +1,7 @@
+fn 造() -> {next: Int, text: String} {
+  return {next: "x", text: "a"}
+}
+
+fn main() -> Int {
+  return 0
+}

@@ -224,6 +224,21 @@ export const 子集解 = (tokens, options = {}) => {
   // 一个元素的括号仍是分组，不是一元组 —— 与 chain.hmyr 那条一样的规矩。
   function 解析类型() {
     const t = 看();
+    // 记录类型：{字段: 类型, …}。有了它，那些「返回一个记录」的函数才写得下返回类型 ——
+    // 而这件事正是 design/LIB.txt 记的「变长元组与类型检查」两条的共同缺口。
+    if (是标("{")) {
+      进();
+      const fields = [];
+      while (!是标("}") && !是("eof")) {
+        const 名 = 要("ident", "字段名");
+        要标(":", "字段名之后");
+        fields.push({ name: 名 ? 名.value : "<error>", type: 解析类型() });
+        过空行();
+        if (是标(",")) { 进(); 过空行(); } else break;
+      }
+      要标("}", "关记录类型");
+      return { kind: "RecordType", fields, line: t.line, column: t.column };
+    }
     if (是标("(")) {
       进();
       const items = [];

@@ -12,11 +12,55 @@ fn is_punct(t: Int, ch: String) -> Bool {
   return t.kind == "punct" && t.text == ch
 }
 
-// 体的起点：第一个左花括号。
-fn find_open(tokens: Int, i: Int) -> Int {
-  if i >= len(tokens) { return -1 }
-  if is_punct(tokens[i], "{") { return i }
-  return find_open(tokens, i + 1)
+// 跳过一个配对的组：( … )、{ … }、< … >。
+// 交回配对的右括号之后那一个位置；不配对就一路到底。
+fn skip_group(tokens: Int, i: Int, 开: String, 闭: String) -> Int {
+  if i >= len(tokens) { return i }
+  if !is_punct(tokens[i], 开) { return i }
+  var 深 = 0
+  var k = i
+  while k < len(tokens) {
+    if is_punct(tokens[k], 开) { 深 = 深 + 1 }
+    if is_punct(tokens[k], 闭) {
+      深 = 深 - 1
+      if 深 == 0 { return k + 1 }
+    }
+    k = k + 1
+  }
+  return k
+}
+
+// 跳过一个类型：标识符、元组、记录、泛型参数、可空问号。
+// 记录类型那种花括号是这一条存在的理由 —— 把它当成函数体的开括号，
+// 函数体就会变成「next: Int, text: String」那么一串。
+fn skip_type(tokens: Int, i: Int) -> Int {
+  if i >= len(tokens) { return i }
+  let t = tokens[i]
+  if is_punct(t, "{") { return skip_type(tokens, skip_group(tokens, i, "{", "}")) }
+  if is_punct(t, "(") { return skip_type(tokens, skip_group(tokens, i, "(", ")")) }
+  if is_punct(t, "<") { return skip_type(tokens, skip_group(tokens, i, "<", ">")) }
+  if t.kind != "ident" { return i }
+  var k = i + 1
+  if k < len(tokens) && is_punct(tokens[k], "<") { k = skip_group(tokens, k, "<", ">") }
+  if k < len(tokens) && is_punct(tokens[k], "?") { k = k + 1 }
+  return k
+}
+
+// 体的起点：不是「第一个左花括号」，而是「跳过参数、返回类型、效果之后的那一个」。
+//
+// 早先这里是「第一个 {」—— 于是 fn read_ident(...) -> {next: Int, text: String} { … }
+// 的体被读成了 next: Int, text: String，而报出来的是「没有这个槽：next」。
+// 一句话的距离，两轮的工夫。
+fn find_body(tokens: Int, i: Int) -> Int {
+  var k = i
+  while k < len(tokens) {
+    let t = tokens[k]
+    if is_punct(t, "{") { return k }
+    if is_punct(t, "(") { k = skip_group(tokens, k, "(", ")") }
+    else if is_punct(t, "->") { k = skip_type(tokens, k + 1) }
+    else { k = k + 1 }
+  }
+  return 0 - 1
 }
 
 // 收集一条语句的 token。
@@ -57,7 +101,7 @@ fn each(tokens: Int, i: Int, acc: Int) {
 
 // 宿主入口：拿整份函数声明的 token 流，读出它的体。
 fn parse_body(tokens: Int) {
-  let at = find_open(tokens, 0)
+  let at = find_body(tokens, 0)
   if at < 0 { return {list: (), next: len(tokens), found: false} }
   let got = each(tokens, at + 1, ())
   return {list: got.list, next: got.next, found: true}
@@ -155,7 +199,7 @@ fn decls_from(tokens: Int, i: Int, acc: Int) {
   let at = next_fn(tokens, i)
   if at < 0 { return {fns: acc, next: len(tokens)} }
   let 名 = 名字在(tokens, at)
-  let open = find_open(tokens, at + 1)
+  let open = find_body(tokens, at + 1)
   if open < 0 { return {fns: acc, next: len(tokens)} }
   let got = each(tokens, open + 1, ())
   // 四件：名字、参数名们、语句们、效果名们。后两件都从 fn 之后扫到 { 之前。

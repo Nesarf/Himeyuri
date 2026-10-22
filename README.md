@@ -1,6 +1,11 @@
 # Himeyuri（HMYR）
 
+<img src="assets/himeyuri.png" width="160" alt="Himeyuri：一朵山丹">
+
 一门通用语言的工作实现：把既有语言的长处收进来，做成一套自己说得清、验得动的形状。
+
+图标是一朵山丹（サンタンカ）—— 名字里的「姫百合」也是百合科的花。原图在
+`assets/himeyuri.png`，1254×1254。
 
 ## 现在有什么
 
