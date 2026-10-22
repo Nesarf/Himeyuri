@@ -68,6 +68,61 @@ export const 本机能力 = (options = {}) => ({
     // 求值器如果自己调 Buffer，宿主依赖那一张表就多一项（test/host-deps.test.mjs 会红）。
     // 而「字怎么变成字节」正是世界那一侧的事 —— 编码表随宿主来。
     writeText: (p, s) => fs.writeFileSync(p, String(s), "utf8"),
+    // 写一串字节。字节在语言里是「0 到 255 的整数元组」，因为这门语言没有字节类型。
+    // 这一条是 .hmyrb 落盘要用的：把语言算出来的字节交出去，由世界这一侧落成文件。
+    writeBytes: (p, 字节) => fs.writeFileSync(p, Buffer.from(Array.from(字节, (x) => x & 0xff))),
+    // 把双精度拆成 8 个字节（小端）。这一条属于世界那一侧，理由与 writeText 一样：
+    // 浮点数的位怎么排是宿主的事，语言里手搓只会搓出另一种错法。
+    f64Bytes: (x) => {
+      const b = Buffer.alloc(8);
+      b.writeDoubleLE(Number(x), 0);
+      return [...b];
+    },
+    // 把一个语言值编成 .hmyrb 里那一段字节。
+    //
+    // 这一条也在世界那一侧，理由比上一条更硬：语言里没有 typeof，
+    // 也没有 try，所以「这个值是数还是串还是记录」在语言内部判不出来。
+    // 试过用 == () 与 len() 去猜，猜不准 —— 猜不准的编码器比没有更危险。
+    packValue: (v) => {
+      const 段 = [];
+      const u16 = (n) => { 段.push(n & 0xff, (n >> 8) & 0xff); };
+      const u32 = (n) => { u16(n & 0xffff); u16((n >> 16) & 0xffff); };
+      const 串 = (s) => { u16(s.length); for (let i = 0; i < s.length; i++) u16(s.charCodeAt(i)); };
+      const 值 = (x) => {
+        if (x === null || x === undefined) { 段.push(0); return; }
+        // 两种值表示都要认：VM 那一侧是带 tag 的对象，而 stage 0 那一侧
+        // 数组就是元组、普通对象就是记录（见 src/eval.mjs 的 STAGE0_EXPR）。
+        // 只认一种的话，同一个 pack_value 在两台机器上会在某个值上停住。
+        const 是元组 = (x && x.tag === "tuple") || Array.isArray(x);
+        const 元组项 = Array.isArray(x) ? x : (x && x.tag === "tuple" ? x.items : null);
+        if (是元组 && 元组项 && 元组项.length === 0) { 段.push(0); return; }
+        if (是元组 && 元组项) { 段.push(4); u16(元组项.length); for (const it of 元组项) 值(it); return; }
+        const 是记录 = x && x.tag === "record" ? x.fields : (x && typeof x === "object" && !Array.isArray(x) ? x : null);
+        if (是记录) {
+          段.push(5);
+          const 名们 = 是记录 instanceof Map ? [...是记录.keys()] : Object.keys(是记录);
+          u16(名们.length);
+          for (const k of 名们) 串(k);
+          for (const k of 名们) 值(是记录 instanceof Map ? 是记录.get(k) : 是记录[k]);
+          return;
+        }
+        if (x === true || x === false) { 段.push(3); 段.push(x ? 1 : 0); return; }
+        if (x && x.tag === "string") { 段.push(2); 串(x.value); return; }
+        if (typeof x === "string") { 段.push(2); 串(x); return; }
+        if (typeof x === "number") {
+          段.push(1);
+          const b = Buffer.alloc(8);
+          b.writeDoubleLE(x, 0);
+          for (const q of b) 段.push(q);
+          return;
+        }
+        // 到这里说明是这一层不认的值形状 —— 明说，不要悄悄写半截。
+        throw new Error("packValue: cannot encode this value");
+      };
+      值(v);
+      void u32;
+      return 段;
+    },
     // 建目录不让它失败：已经在就算了。这一条与「写」分开，因为「准备一个地方」
     // 与「往里写东西」是两件事，而契约里只有后者要求 file 效果。
     ensureDir: (p) => { try { fs.mkdirSync(p, { recursive: true }); } catch (err) { /* 已经在就算了 */ } },
@@ -218,7 +273,7 @@ export const 空能力 = (记下) => {
     // 一份什么都不做的能力，声明是空的：报告会说它一类都不会。
     // 这正是「拒绝优于过宣称」的那一条 —— 它不假装自己会做什么。
     声明: [],
-    file: 组("file", ["read", "exists", "write", "writeText", "stream", "ensureDir", "remove"]),
+    file: 组("file", ["read", "exists", "write", "writeText", "writeBytes", "f64Bytes", "packValue", "stream", "ensureDir", "remove"]),
     process: 组("process", ["argv", "exec", "chdir", "cwd"]),
     time: 组("time", ["now", "sleep"]),
     env: 组("env", ["home", "temp", "get", "platform"]),

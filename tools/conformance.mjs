@@ -272,4 +272,12 @@ const PRODUCTION_CASES = new Map([
 const bad = failed || xpassed || unregistered.length || dead.length || duplicated.length || unexplained.length ||
   (globalThis.__unexercised || []).length || (globalThis.__outside || []).length || (globalThis.__odd || []).length ||
   (globalThis.__grammar || 0);
+if (bad && process.env.HMYR_DEBUG_BAD) {
+  console.log("  [debug] failed=" + failed + " xpassed=" + xpassed + " unregistered=" + unregistered.length +
+    " dead=" + dead.length + " duplicated=" + duplicated.length + " unexplained=" + unexplained.length +
+    " unexercised=" + (globalThis.__unexercised || []).length + " outside=" + (globalThis.__outside || []).length +
+    " odd=" + (globalThis.__odd || []).length + " grammar=" + (globalThis.__grammar || 0));
+  console.log("  [debug] dead: " + JSON.stringify(dead.slice(0, 6)) + " unexplained: " + JSON.stringify(unexplained.slice(0, 6)));
+  console.log("  [debug] outside: " + JSON.stringify((globalThis.__outside || []).slice(0, 8)));
+}
 process.exit(bad ? 1 : 0);

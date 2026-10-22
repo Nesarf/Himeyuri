@@ -68,6 +68,9 @@ fn 是内置(名: String) -> Bool {
   if 名 == "to_lower" { return true }
   if 名 == "to_upper" { return true }
   if 名 == "write_text" { return true }
+  if 名 == "write_bytes" { return true }
+  if 名 == "f64_bytes" { return true }
+  if 名 == "pack_value" { return true }
   return false
 }
 
@@ -266,7 +269,11 @@ fn 换(码: Int, 位: Int, 新: Int) -> Int {
   return 换从(码, 位, 新, 0, ())
 }
 
-// if：条件 → JMPF 占位 → 真支 → JMP 占位 → 假支，最后按位置把两处跳转补上。
+// if：条件 → JMPF 占位 → 真支 → JMP 占位 → 假支 → POP。
+//
+// 末尾那条 POP 与「没有 else 时补一个交回空」是照 JS 那一份的写法：
+// if 是语句，它的值要丢掉。少了这两条的字节流与 JS 不一样 —— 而这一层要的是
+// 「两位打包者交出同样的字节」，所以连「怎么写」都要对齐，不只是「算出什么」。
 fn 编如果(节点: Int, 状态: Int) -> Int {
   let c = 表达(节点.cond, 状态)
   if c.ok == false { return c }
@@ -277,12 +284,19 @@ fn 编如果(节点: Int, 状态: Int) -> Int {
   let 位跳尾 = len(真.状态.码)
   let s2 = 发(真.状态, {op: "JMP", a: 0 - 1})
   let 假起 = len(s2.码)
-  let 假 = 编块(节点.otherwise, s2, 0)
-  if 假.ok == false { return 假 }
-  let 末 = len(假.状态.码)
-  let 修1 = 换(假.状态.码, 位跳假, {op: "JMPF", a: 假起})
-  let 修2 = 换(修1, 位跳尾, {op: "JMP", a: 末})
-  return {ok: true, 状态: 状态(修2, 假.状态.槽, 假.状态.名表), 结束: false}
+  var 假 = s2
+  if len(节点.otherwise) > 0 {
+    let r = 编块(节点.otherwise, s2, 0)
+    if r.ok == false { return r }
+    假 = r.状态
+  } else {
+    假 = 发(s2, {op: "CONST", a: ()})
+  }
+  let 位尾 = len(假.码)
+  let s3 = 发(假, {op: "POP"})
+  let 修1 = 换(s3.码, 位跳假, {op: "JMPF", a: 假起})
+  let 修2 = 换(修1, 位跳尾, {op: "JMP", a: 位尾})
+  return {ok: true, 状态: 状态(修2, s3.槽, s3.名表), 结束: false}
 }
 
 fn 编块(语句们: Int, 状态: Int, i: Int) -> Int {

@@ -155,6 +155,31 @@ const 内置 = {
     }
     return 文.length;
   },
+  // 写一串字节。字节在语言里是「0 到 255 的整数元组」—— 这门语言没有字节类型，
+  // 而 .hmyrb 的落盘需要一个能交出字节的出口。落文件那一步交给能力层。
+  write_bytes: (rt, a) => {
+    const 路径 = rt.成串(a[0]);
+    const 元组 = a[1];
+    if (!元组 || !元组.items) return rt.坏("HMYR-R0130", "write_bytes wants a tuple of bytes");
+    const 字节 = [];
+    for (const x of 元组.items) 字节.push(Math.trunc(rt.成数(x)));
+    try { rt.cap.file.writeBytes(路径, 字节); }
+    catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      return rt.坏("HMYR-R0212", "cannot write '" + 藏路径(路径) + "'" + 原因);
+    }
+    return 字节.length;
+  },
+  // 把一个值编成 .hmyrb 里那一段字节。编码属于世界那一侧。
+  // 这一层里元组就是普通数组（见开头那段值表示），所以直接交回数组。
+  pack_value: (rt, a) => {
+    try {
+      return rt.cap.file.packValue(a[0]);
+    } catch (err) {
+      rt.坏("HMYR-R0214", "cannot encode this value: " + String(err && err.message ? err.message : err));
+      return null;
+    }
+  },
   print: (rt, a) => { rt.write(a.map((x) => rt.成串(x)).join("")); return null; },
   print_err: (rt, a) => {
     const 文 = a.map((x) => rt.成串(x)).join("");
@@ -199,7 +224,7 @@ const 内置 = {
 };
 
 // 只有这四样碰世界。读文件与问文件在不在属 file，另两个通道属 process。
-const 内置效果 = { read_text: "file", write_text: "file", file_exists: "file", argv: "process", print_err: "process" };
+const 内置效果 = { read_text: "file", write_text: "file", write_bytes: "file", file_exists: "file", argv: "process", print_err: "process" };
 
 class 尾调用 {
   constructor(decl, args, fromEffects) { this.decl = decl; this.args = args; this.fromEffects = fromEffects; }

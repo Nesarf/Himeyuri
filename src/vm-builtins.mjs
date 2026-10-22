@@ -107,6 +107,34 @@ export const 内置表 = {
     }
     return 文.length;
   } },
+  // 写一串字节。字节在语言里是「0 到 255 的整数元组」—— 这门语言没有字节类型。
+  // 出口交给能力层，于是「字节怎么落成文件」不在求值器这一侧。
+  write_bytes: { 效果: "file", 做: (vm, a) => {
+    const 路径 = vm.成串(a[0]);
+    const 元组 = a[1];
+    if (!元组 || 元组.tag !== "tuple") return vm.坏("HMYR-R0130", "write_bytes wants a tuple of bytes");
+    // 取整走 number 那一层，不在这里写 Math —— test/numbers.test.mjs 盯着这件事。
+    const 字节 = [];
+    for (const x of 元组.items) 字节.push(数.下整(vm.成数(x)));
+    try { vm.cap.file.writeBytes(路径, 字节); }
+    catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      return vm.坏("HMYR-R0212", "cannot write '" + 藏路径(路径) + "'" + 原因);
+    }
+    return 字节.length;
+  } },
+  // 双精度拆成 8 个字节（小端）。与 write_bytes 配套：语言里没有字节类型，
+  // 所以「数怎么变成 8 个字节」由世界那一侧回答。
+  f64_bytes: { 做: (vm, a) => {
+    const 字节 = vm.cap.file.f64Bytes(vm.成数(a[0]));
+    return new 类元组(字节.map((x) => x));
+  } },
+  // 把一个语言值编成 .hmyrb 里那一段字节。编码属于世界那一侧，
+  // 因为语言里没有 typeof，也没有 try —— 判不出类型的编码器只会猜错。
+  pack_value: { 做: (vm, a) => {
+    try { return new 类元组(vm.cap.file.packValue(a[0])); }
+    catch (err) { vm.坏("HMYR-R0214", "cannot encode this value: " + String(err && err.message ? err.message : err)); return null; }
+  } },
   print: { 做: (vm, a) => { vm.write(a.map((x) => vm.成串(x)).join("")); return null; } },
   print_err: { 效果: "process", 做: (vm, a) => {
     const 文 = a.map((x) => vm.成串(x)).join("");

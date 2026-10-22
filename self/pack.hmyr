@@ -1,0 +1,198 @@
+// HMYR 自己把程序打成 .hmyrb。
+//
+// 为什么要有这一份：src/code-file.mjs 的「写」那一半，是编译器搬进 HMYR 之后
+// 最后一块还借在 JS 那边的东西。这一份按格式一格格写字节，落文件由 write_bytes 负责。
+//
+// 格式照 src/code-file.mjs：
+//   "HMYRB" + 版本 u16（现在是 1）
+//   u16 函数数，每个函数：名字串、参数量 u16、槽数 u16、效果数 u16、效果串们、
+//     指令数 u16、指令们（op u16 + 按形状的立即数）
+//   u16 全局名数，每个全局名一个串
+// 串 = u16 长度 + 每个 UTF-16 码元一个 u16（小端）。
+//
+// 两条边界写在这里，因为它们是这一份的存在理由：
+//   一、值怎么编码不由这一份决定 —— 那是 pack_value 的事。语言里没有 typeof，
+//      也没有 try，所以在语言内部判不出「这个值是数还是串还是记录」。
+//      试过用 == () 与 len() 去猜，猜不准，而猜不准的编码器比没有更危险。
+//   二、双精度的位同理，交给 f64_bytes。
+import "./compile.hmyr"
+
+// ---- 字节累加：语言里没有可变引用，所以每一步交回新的元组 ----
+fn 空() -> Int {
+  return {b: ()}
+}
+
+fn 放(状态: Int, x: Int) -> Int {
+  return {b: 状态.b + (x,)}
+}
+
+fn 放u16(状态: Int, v: Int) -> Int {
+  let 低 = v % 256
+  let 高 = (v - 低) / 256
+  return 放(放(状态, 低), ((高 % 256) + 256) % 256)
+}
+
+fn 放u32(状态: Int, v: Int) -> Int {
+  let 低 = v % 65536
+  let 高 = (v - 低) / 65536
+  return 放u16(放u16(状态, 低), ((高 % 65536) + 65536) % 65536)
+}
+
+fn 放串(状态: Int, s: String) -> Int {
+  var 收 = 放u16(状态, len(s))
+  var i = 0
+  while i < len(s) {
+    收 = 放u16(收, ord(s[i]))
+    i = i + 1
+  }
+  return 收
+}
+
+fn 放字节们(状态: Int, 们: Int) -> Int {
+  var 收 = 状态
+  var i = 0
+  while i < len(们) {
+    收 = 放(收, to_int(们[i]))
+    i = i + 1
+  }
+  return 收
+}
+
+fn 放值(状态: Int, v: Int) -> Int {
+  return 放字节们(状态, pack_value(v))
+}
+
+// ---- 指令 ----
+fn 操作码(op: String) -> Int {
+  if op == "ADD" { return 0 }
+  if op == "ASSIGN" { return 1 }
+  if op == "BOOL" { return 2 }
+  if op == "CALLB" { return 3 }
+  if op == "CALLF" { return 4 }
+  if op == "CONST" { return 5 }
+  if op == "DIV" { return 6 }
+  if op == "EQ" { return 7 }
+  if op == "FIELD" { return 8 }
+  if op == "GE" { return 9 }
+  if op == "GLOBAL" { return 10 }
+  if op == "GT" { return 11 }
+  if op == "INDEX" { return 12 }
+  if op == "JMP" { return 13 }
+  if op == "JMPF" { return 14 }
+  if op == "JMPF_KEEP" { return 15 }
+  if op == "JMPT" { return 16 }
+  if op == "JMPT_KEEP" { return 17 }
+  if op == "LE" { return 18 }
+  if op == "LOAD" { return 19 }
+  if op == "LT" { return 20 }
+  if op == "MOD" { return 21 }
+  if op == "MUL" { return 22 }
+  if op == "NE" { return 23 }
+  if op == "NEG" { return 24 }
+  if op == "NOT" { return 25 }
+  if op == "POP" { return 26 }
+  if op == "RECORD" { return 27 }
+  if op == "RET" { return 28 }
+  if op == "STORE" { return 29 }
+  if op == "SUB" { return 30 }
+  if op == "TUPLE" { return 31 }
+  return 0 - 1
+}
+
+// 一条指令。立即数的形状看 opcode —— 与 src/code-file.mjs 的 立即数形状 一致。
+//
+// 两个字节宽度容易记错，写在这里：opcode 是 u8，而「指令数」是 u32。
+// 记错时的症状是「不认的操作码」—— 因为后面的字节被整体错位读了。
+fn 放指令(状态: Int, 码: Int) -> Int {
+  var 收 = 放(状态, 操作码(码.op))
+  if 码.op == "CONST" { return 放值(收, 码.a) }
+  if 码.op == "LOAD" { return 放u16(收, 码.a) }
+  if 码.op == "STORE" {
+    if 码.b { return 放(放u16(收, 码.a), 1) }
+    return 放(放u16(收, 码.a), 0)
+  }
+  if 码.op == "ASSIGN" { return 放u16(收, 码.a) }
+  if 码.op == "GLOBAL" { return 放u16(收, 码.a) }
+  if 码.op == "JMP" { return 放u16(收, 码.a) }
+  if 码.op == "JMPF" { return 放u16(收, 码.a) }
+  if 码.op == "JMPT" { return 放u16(收, 码.a) }
+  if 码.op == "JMPF_KEEP" { return 放u16(收, 码.a) }
+  if 码.op == "JMPT_KEEP" { return 放u16(收, 码.a) }
+  if 码.op == "CALLF" { return 放串(放u16(收, 码.b), 码.a) }
+  if 码.op == "CALLB" { return 放串(放u16(收, 码.b), 码.a) }
+  if 码.op == "FIELD" { return 放串(收, 码.a) }
+  if 码.op == "TUPLE" { return 放u16(收, 码.a) }
+  if 码.op == "RECORD" {
+    var 收2 = 放u16(收, len(码.a))
+    var i = 0
+    while i < len(码.a) {
+      收2 = 放串(收2, 码.a[i])
+      i = i + 1
+    }
+    return 收2
+  }
+  return 收
+}
+
+fn 放函数(状态: Int, 函: Int) -> Int {
+  var 收 = 放串(状态, 函.名)
+  收 = 放u16(收, 函.参数量)
+  收 = 放u16(收, 函.槽数)
+  收 = 放u16(收, len(函.效果))
+  var i = 0
+  while i < len(函.效果) {
+    收 = 放串(收, 函.效果[i])
+    i = i + 1
+  }
+  收 = 放u32(收, len(函.码))
+  var j = 0
+  while j < len(函.码) {
+    收 = 放指令(收, 函.码[j])
+    j = j + 1
+  }
+  return 收
+}
+
+// 打包：函数表 → 字节元组。
+fn 打包(函数们: Int) -> Int {
+  var 收 = 放(空(), 72)
+  收 = 放(收, 77)
+  收 = 放(收, 89)
+  收 = 放(收, 82)
+  收 = 放(收, 66)
+  收 = 放u16(收, 1)
+  收 = 放u16(收, len(函数们))
+  var i = 0
+  while i < len(函数们) {
+    收 = 放函数(收, 函数们[i])
+    i = i + 1
+  }
+  收 = 放u16(收, 0)
+  return 收.b
+}
+
+fn main() -> Int {
+  // argv()[0] 是这份脚本自己的路径。之后：[目标 .hmyrb] 与可选的 [源 .hmyr]。
+  // 没有源就编一个写死的小程序 —— 那是最省事的一条自测。
+  var 源 = "fn main() -> Int {" + chr(10) + "  return 7" + chr(10) + "}" + chr(10)
+  if len(argv()) > 2 {
+    if file_exists(argv()[2]) == false {
+      print("没有这个文件：" + argv()[2])
+      return 1
+    }
+    源 = read_text(argv()[2])
+  }
+  let r = 编源码(源)
+  if r.ok == false {
+    print("编译失败：" + r.错)
+    return 1
+  }
+  let 字节 = 打包(r.函数们)
+  if len(argv()) < 2 {
+    print(str(len(字节)) + " 个字节")
+    return 0
+  }
+  write_bytes(argv()[1], 字节)
+  print(str(len(字节)) + " 个字节 → " + argv()[1])
+  return 0
+}

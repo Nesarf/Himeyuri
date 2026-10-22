@@ -684,6 +684,57 @@ static int64_t find_func_index(int64_t name_idx) {
 }
 
 /* 一个函数声明过某个效果没有。效果名按 UTF-16 码元比。 */
+/* 把一个语言值编成 .hmyrb 里那一段字节。
+ * 语言里没有 typeof，也没有 try，所以编码留在这一份 —— 这一份本来就懂每个标签。
+ * 段的增长用一个手写的线性表，够用（一条指令的立即数不会很长）。 */
+static void 段推(uint8_t **段, size_t *长, size_t *容, uint8_t x) {
+  if (*长 + 1 > *容) {
+    *容 = *容 ? *容 * 2 : 64;
+    *段 = (uint8_t *)realloc(*段, *容);
+  }
+  (*段)[(*长)++] = x;
+}
+
+static void 段u16(uint8_t **段, size_t *长, size_t *容, uint32_t v) {
+  段推(段, 长, 容, (uint8_t)(v & 0xff));
+  段推(段, 长, 容, (uint8_t)((v >> 8) & 0xff));
+}
+
+static void 段串(uint8_t **段, size_t *长, size_t *容, const uint16_t *s, uint32_t n) {
+  段u16(段, 长, 容, n);
+  for (uint32_t i = 0; i < n; i++) 段u16(段, 长, 容, s[i]);
+}
+
+static int pack_value(Value v, uint8_t **段, size_t *长, size_t *容) {
+  if (v.tag == T_NULL) { 段推(段, 长, 容, 0); return 1; }
+  if (v.tag == T_NUM) {
+    段推(段, 长, 容, 1);
+    uint64_t u = 0;
+    memcpy(&u, &v.num, 8);
+    for (int i = 0; i < 8; i++) 段推(段, 长, 容, (uint8_t)((u >> (8 * i)) & 0xff));
+    return 1;
+  }
+  if (v.tag == T_STR) { 段推(段, 长, 容, 2); 段串(段, 长, 容, v.s, v.slen); return 1; }
+  if (v.tag == T_BOOL) { 段推(段, 长, 容, 3); 段推(段, 长, 容, v.boolean ? 1 : 0); return 1; }
+  if (v.tag == T_TUPLE) {
+    /* 空元组编成 null：这门语言没有 null，「空元组就是它」，
+     * 所以一个空元组在运行时的意思就是「没有值」。与 JS 那侧同一个规矩。 */
+    if (v.ilen == 0) { 段推(段, 长, 容, 0); return 1; }
+    段推(段, 长, 容, 4);
+    段u16(段, 长, 容, v.ilen);
+    for (uint32_t i = 0; i < v.ilen; i++) if (!pack_value(v.items[i], 段, 长, 容)) return 0;
+    return 1;
+  }
+  if (v.tag == T_RECORD) {
+    段推(段, 长, 容, 5);
+    段u16(段, 长, 容, v.rec.n);
+    for (uint32_t i = 0; i < v.rec.n; i++) 段串(段, 长, 容, v.rec.names[i], v.rec.name_lens[i]);
+    for (uint32_t i = 0; i < v.rec.n; i++) if (!pack_value(v.rec.vals[i], 段, 长, 容)) return 0;
+    return 1;
+  }
+  return 0;
+}
+
 static int has_effect(Func *f, const uint16_t *名, uint32_t 长) {
   for (uint32_t i = 0; i < f->neffects; i++) {
     if (f->effect_lens[i] != 长) continue;
@@ -932,6 +983,61 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     free(p);
     free(t);
     *out = v_num((double)(wrote == tl ? args[1].slen : 0));
+    return 1;
+  }
+  /* 写一串字节。字节在语言里是「0 到 255 的整数元组」——
+   * 这门语言没有字节类型，而 .hmyrb 的落盘需要一个能交出字节的出口。 */
+  if (name_is(name_idx, "write_bytes")) {
+    if (nargs != 2) { fail("HMYR-R0101", "write_bytes wants two arguments"); return 1; }
+    if (args[0].tag != T_STR) { fail("HMYR-R0130", "write_bytes wants a path string"); return 1; }
+    if (args[1].tag != T_TUPLE) { fail("HMYR-R0130", "write_bytes wants a tuple of bytes"); return 1; }
+    char *p = utf16_to_utf8(args[0].s, args[0].slen);
+    FILE *f = fopen(p, "wb");
+    free(p);
+    if (!f) { fail("HMYR-R0212", "cannot write that file"); return 1; }
+    for (uint32_t i = 0; i < args[1].ilen; i++) {
+      int ok = 0;
+      double d = as_num(args[1].items[i], &ok);
+      if (!ok) { fclose(f); fail("HMYR-R0130", "every byte must be a number"); return 1; }
+      unsigned char b = (unsigned char)(((long long)d) & 0xff);
+      fwrite(&b, 1, 1, f);
+    }
+    fclose(f);
+    *out = v_num((double)args[1].ilen);
+    return 1;
+  }
+  /* 把一个值编成 .hmyrb 里那一段字节。
+   *
+   * 这一条本该在语言里写，但语言里没有 typeof，也没有 try ——
+   * 判不出类型的编码器只会猜错。所以编码留在这里：这一份本来就懂每个标签。 */
+  if (name_is(name_idx, "pack_value")) {
+    if (nargs != 1) { fail("HMYR-R0101", "pack_value wants one argument"); return 1; }
+    uint8_t *段 = NULL;
+    size_t 长 = 0, 容 = 0;
+    int 好 = pack_value(args[0], &段, &长, &容);
+    if (!好) { free(段); fail("HMYR-R0214", "cannot encode this value"); return 1; }
+    Value v = v_null();
+    v.tag = T_TUPLE;
+    v.ilen = (uint32_t)长;
+    v.items = alloc_values((uint32_t)长);
+    for (uint32_t i = 0; i < (uint32_t)长; i++) v.items[i] = v_num((double)段[i]);
+    free(段);
+    *out = v;
+    return 1;
+  }
+  if (name_is(name_idx, "f64_bytes")) {
+    if (nargs != 1) { fail("HMYR-R0101", "f64_bytes wants one argument"); return 1; }
+    int ok0 = 0;
+    double d = as_num(args[0], &ok0);
+    if (!ok0) { fail("HMYR-R0130", "f64_bytes wants a number"); return 1; }
+    uint64_t u = 0;
+    memcpy(&u, &d, 8);
+    Value v = v_null();
+    v.tag = T_TUPLE;
+    v.ilen = 8;
+    v.items = alloc_values(8);
+    for (int i = 0; i < 8; i++) v.items[i] = v_num((double)((u >> (8 * i)) & 0xff));
+    *out = v;
     return 1;
   }
   if (name_is(name_idx, "argv")) {

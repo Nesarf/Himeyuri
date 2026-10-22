@@ -54,7 +54,7 @@ const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
 // 跑 self/ 那六份真正需要的内置。stage0 模式下只放这几个过去。
 // field_names 不在这一张里：自举层现在还不用它，而这张表的意思是「已经量过的必须项」，
 // 多写一个就把闸门放宽了一格。
-const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "is_letter", "is_mark", "len", "nfc", "print", "print_err", "read_text", "record_new", "slice", "str", "to_int"]);
+const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "f64_bytes", "is_letter", "is_mark", "len", "nfc", "ord", "pack_value", "print", "print_err", "read_text", "record_new", "slice", "str", "to_int", "write_bytes"]);
 
 export class Runtime {
   constructor(options = {}) {
@@ -684,6 +684,22 @@ const BUILTINS = {
   file_exists: (rt, args) => {
     const 路径 = String(args[0]);
     try { return rt.cap.file.exists(路径); } catch (err) { return false; }
+  },
+  // 写一串字节、把双精度拆成字节、把一个值编成 .hmyrb 的一段 ——
+  // 这三条是「打包搬进 HMYR」用的，出口都在能力层。
+  // 这一层里元组就是普通数组（见 STAGE0_EXPR 的 Tuple），所以直接交回数组。
+  write_bytes: (rt, args) => {
+    const 路径 = String(args[0]);
+    const 元组 = args[1];
+    if (!Array.isArray(元组)) throw new Error("write_bytes wants a tuple of bytes");
+    writeBytes(rt, 路径, Buffer.from(元组.map((x) => rt.asNumber(x) & 0xff)));
+    return 元组.length;
+  },
+  f64_bytes: (rt, args) => {
+    return rt.cap.file.f64Bytes(rt.asNumber(args[0]));
+  },
+  pack_value: (rt, args) => {
+    return rt.cap.file.packValue(args[0]);
   },
   write_text: (rt, args) => {
     const file = String(args[0]);
