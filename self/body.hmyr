@@ -33,17 +33,21 @@ fn skip_group(tokens: Int, i: Int, 开: String, 闭: String) -> Int {
 // 跳过一个类型：标识符、元组、记录、泛型参数、可空问号。
 // 记录类型那种花括号是这一条存在的理由 —— 把它当成函数体的开括号，
 // 函数体就会变成「next: Int, text: String」那么一串。
+fn 顺带问号(tokens: Int, k: Int) -> Int {
+  if k < len(tokens) && is_punct(tokens[k], "?") { return k + 1 }
+  return k
+}
+
 fn skip_type(tokens: Int, i: Int) -> Int {
   if i >= len(tokens) { return i }
   let t = tokens[i]
-  if is_punct(t, "{") { return skip_type(tokens, skip_group(tokens, i, "{", "}")) }
-  if is_punct(t, "(") { return skip_type(tokens, skip_group(tokens, i, "(", ")")) }
-  if is_punct(t, "<") { return skip_type(tokens, skip_group(tokens, i, "<", ">")) }
+  if is_punct(t, "{") { return 顺带问号(tokens, skip_group(tokens, i, "{", "}")) }
+  if is_punct(t, "(") { return 顺带问号(tokens, skip_group(tokens, i, "(", ")")) }
+  if is_punct(t, "<") { return 顺带问号(tokens, skip_group(tokens, i, "<", ">")) }
   if t.kind != "ident" { return i }
   var k = i + 1
   if k < len(tokens) && is_punct(tokens[k], "<") { k = skip_group(tokens, k, "<", ">") }
-  if k < len(tokens) && is_punct(tokens[k], "?") { k = k + 1 }
-  return k
+  return 顺带问号(tokens, k)
 }
 
 // 体的起点：不是「第一个左花括号」，而是「跳过参数、返回类型、效果之后的那一个」。
@@ -56,9 +60,15 @@ fn find_body(tokens: Int, i: Int) -> Int {
   while k < len(tokens) {
     let t = tokens[k]
     if is_punct(t, "{") { return k }
-    if is_punct(t, "(") { k = skip_group(tokens, k, "(", ")") }
-    else if is_punct(t, "->") { k = skip_type(tokens, k + 1) }
-    else { k = k + 1 }
+    if is_punct(t, "(") {
+      k = skip_group(tokens, k, "(", ")")
+    } else {
+      if is_punct(t, "->") {
+        k = skip_type(tokens, k + 1)
+      } else {
+        k = k + 1
+      }
+    }
   }
   return 0 - 1
 }

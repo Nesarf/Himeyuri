@@ -89,6 +89,8 @@ let commit = "";
 const 清单 = {
   name: "himeyuri",
   language: "HMYR",
+  // 图标：包体上要看得见它是什么。路径相对包根 —— 而 tools/package.mjs 会把它真的收进 zip。
+  icon: "assets/himeyuri.png",
   commit: commit,
   generatedAt: new Date().toISOString().slice(0, 10),
   kernel: {

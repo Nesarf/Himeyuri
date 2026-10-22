@@ -26,7 +26,7 @@ const 清 = spawnSync(process.execPath, [path.join(ROOT, "tools/manifest.mjs"), 
 if (清.status !== 0) { console.error("  清单出不来：" + String(清.stderr).slice(0, 120)); process.exit(2); }
 const 清单 = JSON.parse(fs.readFileSync(path.join(ROOT, "dist/manifest.json"), "utf8"));
 
-// 二、要收进去的：清单、源码、标准库、套件、工具、设计文档
+// 二、要收进去的：清单、源码、标准库、套件、工具、设计文档，以及图标
 const 收 = [path.join(ROOT, "dist/manifest.json")];
 const 走 = (dir) => {
   const 全 = path.join(ROOT, dir);
@@ -34,10 +34,13 @@ const 走 = (dir) => {
   for (const e of fs.readdirSync(全, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     const p = path.join(全, e.name);
     if (e.isDirectory()) 走(path.join(dir, e.name));
+    // 图标也收：包体上要看得见它是什么。PNG 只从 assets/ 收 ——
+    // 别处的图片是素材，不是发布物，而「哪一种东西算发布物」正是这一层要回答的。
     else if (/\.(mjs|hmyr|txt|md)$/.test(e.name)) 收.push(p);
+    else if (dir === "assets" && /\.png$/.test(e.name)) 收.push(p);
   }
 };
-for (const d of ["src", "self", "bin", "runtime", "tools", "test", "design", "conformance", "examples"]) 走(d);
+for (const d of ["src", "self", "bin", "runtime", "tools", "test", "design", "conformance", "examples", "assets"]) 走(d);
 for (const f of ["SPEC.txt", "README.md", "LICENSE", "MASCOT.txt", ".gitignore"]) {
   const p = path.join(ROOT, f);
   if (fs.existsSync(p)) 收.push(p);
