@@ -51,7 +51,9 @@ const 编 = (() => {
         效果: Array.from(f.效果 || []),
         码: Array.from(f.码 || []).map((i) => {
           const 指令 = { op: i.op };
-          if (i.a !== undefined) 指令.a = 转值(i.a);
+          // RECORD 的立即数是字符串数组，不是语言值 —— 与 tools/compile-hmyr.mjs 同一处理。
+          if (i.op === "RECORD") 指令.a = Array.from(i.a || []);
+          else if (i.a !== undefined) 指令.a = 转值(i.a);
           if (i.b !== undefined) 指令.b = i.b;
           return 指令;
         }),
@@ -88,6 +90,12 @@ console.log("一、两位编译者对同一个程序交回同样的答案");
     ["if 的假支", "fn main() -> Int {\n  if 1 == 2 {\n    return 1\n  }\n  return 5\n}\n", 5],
     ["减法", "fn main() -> Int {\n  return 0 - 3\n}\n", -3],
     ["字符串比较", 'fn main() -> Int {\n  if "ab" == "ab" {\n    return 1\n  }\n  return 0\n}\n', 1],
+    ["while 累加", "fn main() -> Int {\n  var i = 0\n  var 和 = 0\n  while i < 4 {\n    和 = 和 + i\n    i = i + 1\n  }\n  return 和\n}\n", 6],
+    ["元组与下标", "fn main() -> Int {\n  let t = (10, 20, 30)\n  return t[1]\n}\n", 20],
+    ["记录与字段", "fn main() -> Int {\n  let r = {a: 3, b: 4}\n  return r.a + r.b\n}\n", 7],
+    ["内置 len", 'fn main() -> Int {\n  let t = (1, 2, 3)\n  return len(t)\n}\n', 3],
+    ["内置 str 与 to_int", 'fn main() -> Int {\n  return to_int(str(7))\n}\n', 7],
+    ["表达式语句与 print", 'fn main() -> Int {\n  print("hi")\n  return 0\n}\n', 0],
   ];  for (const [标, 源码, 期望] of 例们) {
     const a = 编(源码);
     const b = 编JS(源码);
@@ -104,6 +112,9 @@ console.log("二、HMYR 编译器编出来的字节码也能由 C 那台机器�
   const 源码 = "fn 加(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  if 加(20, 22) == 42 {\n    return 1\n  }\n  return 0\n}\n";
   const a = 编(源码);
   ok("子集里的程序编得出来", !a.错, a.错 || "");
+  // 真实一点的那个：examples/twice.hmyr 有两个函数、print、字符串拼接与中文。
+  const 真 = 编(fs.readFileSync(path.join(ROOT, "examples/twice.hmyr"), "utf8"));
+  ok("examples/twice.hmyr 也编得出来", !真.错, 真.错 || "");
   if (!a.错) {
     const 码路 = path.join(临, "by-hmyr.hmyrb");
     fs.writeFileSync(码路, 写程序(a.程序));
@@ -118,6 +129,14 @@ console.log("二、HMYR 编译器编出来的字节码也能由 C 那台机器�
       if (c.status === 0) {
         const r = spawnSync(exe, [码路], { encoding: "utf8", timeout: 60000 });
         ok("C 那台跑出同一个答案（退出码 1）", r.status === 1, String(r.status) + " " + String(r.stderr).slice(0, 100));
+        // 真实那个例子：HMYR 编译、C 执行，输出要与 JS 编译、JS 执行的一模一样。
+        if (!真.错) {
+          const 真码 = path.join(临, "twice-hmyr.hmyrb");
+          fs.writeFileSync(真码, 写程序(真.程序));
+          const r2 = spawnSync(exe, [真码], { encoding: "utf8", timeout: 60000 });
+          ok("真实例子在 C 上跑出 hi 42 琥珀音", String(r2.stdout || "").includes("hi 42 琥珀音"),
+            String(r2.status) + " " + JSON.stringify(String(r2.stdout || "").slice(0, 60)));
+        }
       }
     }
   }
@@ -125,8 +144,8 @@ console.log("二、HMYR 编译器编出来的字节码也能由 C 那台机器�
 
 console.log("三、超出子集时明说，而不是悄悄编错");
 {
-  const a = 编("fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n");
-  ok("while 还编不了，并且说出来", Boolean(a.错) && String(a.错).includes("还编不了"), JSON.stringify(a.错 || "").slice(0, 90));
+  const b = 编("fn main() -> Int {\n  return 1 && 0\n}\n");
+  ok("短路运算还编不了，并且说出来", Boolean(b.错) && String(b.错).includes("还编不了"), JSON.stringify(b.错 || "").slice(0, 90));
 }
 
 fs.rmSync(临, { recursive: true, force: true });

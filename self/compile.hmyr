@@ -33,8 +33,36 @@ fn 找槽从(名表: Int, 名: String, i: Int) -> Int {
   return 找槽从(名表, 名, i + 1)
 }
 
-fn 二元码(op: String) -> String {
-  if op == "+" { return "ADD" }
+// 这个名字是不是内置。CALLB 与 CALLF 的区别只在编译期定 —— 名字不在这一张表里，
+// 就按用户函数发 CALLF，运行时查不到会报 R0104，与 JS 那一份一致。
+//
+// 这张表要与 src/bytecode.mjs 的 内置名、src/vm-builtins.mjs 与 vm/hmyr.c 里那一套对齐。
+fn 是内置(名: String) -> Bool {
+  if 名 == "argv" { return true }
+  if 名 == "chr" { return true }
+  if 名 == "field_get" { return true }
+  if 名 == "field_has" { return true }
+  if 名 == "field_names" { return true }
+  if 名 == "file_exists" { return true }
+  if 名 == "is_letter" { return true }
+  if 名 == "is_mark" { return true }
+  if 名 == "len" { return true }
+  if 名 == "nfc" { return true }
+  if 名 == "ord" { return true }
+  if 名 == "print" { return true }
+  if 名 == "print_err" { return true }
+  if 名 == "read_text" { return true }
+  if 名 == "record_new" { return true }
+  if 名 == "slice" { return true }
+  if 名 == "str" { return true }
+  if 名 == "to_int" { return true }
+  if 名 == "to_lower" { return true }
+  if 名 == "to_upper" { return true }
+  if 名 == "write_text" { return true }
+  return false
+}
+
+fn 二元码(op: String) -> String {  if op == "+" { return "ADD" }
   if op == "-" { return "SUB" }
   if op == "*" { return "MUL" }
   if op == "/" { return "DIV" }
@@ -63,6 +91,10 @@ fn 表达(节点: Int, 状态: Int) -> Int {
     return {ok: true, 状态: 发(状态, {op: "LOAD", a: 号})}
   }
   if 种 == "bin" {
+    // 短路那两个不是一条指令的事：&& 与 || 在有分支的地方要保留栈顶再跳。
+    // 这一版不做，而说法要具体 —— 「不认的二元运算」会让人以为词法出了问题。
+    if 节点.op == "&&" { return {ok: false, 错: "这一版还编不了短路运算：&&"} }
+    if 节点.op == "||" { return {ok: false, 错: "这一版还编不了短路运算：||"} }
     let l = 表达(节点.left, 状态)
     if l.ok == false { return l }
     let r = 表达(节点.right, l.状态)
@@ -80,9 +112,45 @@ fn 表达(节点: Int, 状态: Int) -> Int {
   if 种 == "call" {
     let 参 = 编实参(节点.args, 状态, 0)
     if 参.ok == false { return 参 }
+    if 是内置(节点.callee.text) {
+      return {ok: true, 状态: 发(参.状态, {op: "CALLB", a: 节点.callee.text, b: len(节点.args)})}
+    }
     return {ok: true, 状态: 发(参.状态, {op: "CALLF", a: 节点.callee.text, b: len(节点.args)})}
   }
+  if 种 == "tuple" {
+    let 项 = 编实参(节点.items, 状态, 0)
+    if 项.ok == false { return 项 }
+    return {ok: true, 状态: 发(项.状态, {op: "TUPLE", a: len(节点.items)})}
+  }
+  if 种 == "record" {
+    return 编记录(节点.fields, 状态, 0)
+  }
+  if 种 == "field" {
+    let t = 表达(节点.target, 状态)
+    if t.ok == false { return t }
+    return {ok: true, 状态: 发(t.状态, {op: "FIELD", a: 节点.name})}
+  }
+  if 种 == "index" {
+    let t = 表达(节点.target, 状态)
+    if t.ok == false { return t }
+    let i = 表达(节点.index, t.状态)
+    if i.ok == false { return i }
+    return {ok: true, 状态: 发(i.状态, {op: "INDEX"})}
+  }
   return {ok: false, 错: "这一版还编不了这种表达式：" + 种}
+}
+
+// 记录：先把每个字段的值编出来（按顺序压栈），再发一条 RECORD 带名字表。
+fn 编记录(字段们: Int, 状态: Int, i: Int) -> Int {
+  if i >= len(字段们) { return 发记录(状态, 字段们, 0, ()) }
+  let r = 表达(字段们[i].value, 状态)
+  if r.ok == false { return r }
+  return 编记录(字段们, r.状态, i + 1)
+}
+
+fn 发记录(状态: Int, 字段们: Int, i: Int, 名们: Int) -> Int {
+  if i >= len(字段们) { return {ok: true, 状态: 发(状态, {op: "RECORD", a: 名们})} }
+  return 发记录(状态, 字段们, i + 1, 名们 + (字段们[i].name,))
 }
 
 fn 编实参(们: Int, 状态: Int, i: Int) -> Int {
@@ -114,8 +182,30 @@ fn 语句(节点: Int, 状态: Int) -> Int {
     if v.ok == false { return v }
     return {ok: true, 状态: 发(v.状态, {op: "ASSIGN", a: 号}), 结束: false}
   }
+  if 种 == "expr" {
+    // 表达式语句：算出来就丢掉。丢掉要显式发一条 POP —— 否则那个值会留在栈上，
+    // 而栈上的东西在下一处调用时会变成实参的一部分。
+    let v = 表达(节点.value, 状态)
+    if v.ok == false { return v }
+    return {ok: true, 状态: 发(v.状态, {op: "POP"}), 结束: false}
+  }
   if 种 == "if" {
     return 编如果(节点, 状态)
+  }
+  if 种 == "while" {
+    // while：条件 → JMPF 到尾 → 体 → JMP 回条件 → 尾。
+    // 起点的位置要记下来，而目标要回填 —— 与 if 同一个做法。
+    let 起 = len(状态.码)
+    let c = 表达(节点.cond, 状态)
+    if c.ok == false { return c }
+    let 位跳尾 = len(c.状态.码)
+    let s1 = 发(c.状态, {op: "JMPF", a: 0 - 1})
+    let 体 = 编块(节点.body, s1, 0)
+    if 体.ok == false { return 体 }
+    let s2 = 发(体.状态, {op: "JMP", a: 起})
+    let 尾 = len(s2.码)
+    let 修 = 换(s2.码, 位跳尾, {op: "JMPF", a: 尾})
+    return {ok: true, 状态: 状态(修, s2.槽, s2.名表), 结束: false}
   }
   return {ok: false, 错: "这一版还编不了这种语句：" + 种}
 }
