@@ -1,0 +1,33 @@
+/* Cortex-M4 的分散加载（scatter）文件：Flash 与 RAM 怎么摆。
+ *
+ * 这一份不是某一颗芯片的，而是一份「典型的小板子」：512 KB Flash、128 KB RAM。
+ * 换芯片时改的只有两个地址与两个大小，以及下面栈与堆各占多少。
+ *
+ * 布局：
+ *   Flash 0x08000000  512 KB   向量表在最先，然后只读段（四张 Unicode 表在这里）
+ *   RAM   0x20000000  128 KB   .data 与 .bss
+ *   栈：   从 0x2001C000 向下 8 KB
+ *   堆：   0x20010000 起 32 KB
+ *
+ * 三处名字不是随便起的：ARM_LIB_STACK 与 ARM_LIB_HEAP 是 Arm 的 C 库认的两个区域，
+ * 它靠这两个算出 __initial_sp 与 malloc 的边界；InRoot$$Sections 是启动例程住的地方。
+ * 少了任何一处，链接会过而运行时第一步就错 —— 那种错很难从现象看出是链接的事。
+ */
+LR_IROM1 0x08000000 0x00080000  {
+  ER_IROM1 0x08000000 0x00080000  {
+    /* 向量表在 startup_cm4.s 里，段名是 GNU 那一种（.isr_vector）；
+     * Keil 自己的启动文件叫 RESET。选哪一个都行，只要两边对得上 ——
+     * 对不上的时候 armlink 报的是「没有段匹配这个挑选器」，
+     * 那句话看起来像链接脚本坏了，其实是段名不一致。 */
+    *.o (.isr_vector, +First)
+    *(InRoot$$Sections)
+    .ANY (+RO)
+  }
+
+  RW_IRAM1 0x20000000 0x0001C000  {
+    .ANY (+RW +ZI)
+  }
+
+  ARM_LIB_STACK 0x2001C000 EMPTY -0x00002000 { }
+  ARM_LIB_HEAP  0x20010000 EMPTY  0x00008000 { }
+}

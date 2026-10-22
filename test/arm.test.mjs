@@ -95,6 +95,21 @@ console.log("四、尺寸：Flash 与 RAM 各要多少");
   ok("RAM 常住在八千字节以内（含示例那四 KB 出口缓冲）", Ram > 0 && Ram < 8192, String(Ram));
 }
 
+console.log("五、真的链出一张映像（启动文件 + 链接脚本）");
+{
+  // 「编得过」与「链得过」之间隔着启动例程、链接脚本、以及 C 库的入口。
+  // 这一节链的是 port/startup_cm4.s + port/link.sct + 这台机器 + 移植骨架。
+  const r = spawnSync(process.execPath, [path.join(ROOT, "tools/arm-size.mjs")], { encoding: "utf8", timeout: 300000 });
+  const 文 = String(r.stdout || "") + String(r.stderr || "");
+  ok("链接那一步跑得通（工具里没有报错）", r.status === 0 && !/链接没过/.test(文), String(r.stderr).slice(0, 200));
+  const rom = /ROM (\d+) 字节/.exec(文);
+  const ram = /rw (\d+) \+ zi (\d+)/.exec(文);
+  const 甲 = rom ? Number(rom[1]) : -1;
+  const 乙 = ram ? Number(ram[1]) + Number(ram[2]) : -1;
+  ok("映像的 ROM 在一百七十千字节上下", 甲 > 140 * 1024 && 甲 < 220 * 1024, String(甲));
+  ok("映像的 RAM 在四十五千字节上下（含堆与出口缓冲）", 乙 > 30 * 1024 && 乙 < 64 * 1024, String(乙));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

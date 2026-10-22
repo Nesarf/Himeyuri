@@ -52,3 +52,23 @@ void 板子装上(const uint8_t *字节码, size_t 长) {
 /* 给测试与调试用：已经收到的字节数，以及清空。 */
 size_t 板子出口长(void) { return g_出口长; }
 void 板子清出口(void) { g_出口长 = 0; }
+
+/* ---- 板子那一侧的 C 库适配 ------------------------------------------
+ *
+ * 链接时撞到的三个符号，都是「桌面有、裸机没有」的那一类：
+ *
+ *   __initial_sp  启动文件与链接脚本共用的栈顶（现在由 startup_cm4.s 给出）
+ *   atexit        只有 HMYR_MEM 那条诊断路径会调它；裸机上没有，也就不记
+ *   exit          这一台用它表示「不行了」。板子上它能做的只有停下来 ——
+ *                 要么死循环，要么复位。死循环是更诚实的那一个：复位会让人
+ *                 以为是别处的毛病，而停在那里至少能接调试器看栈。
+ *
+ * getenv 也一样：microlib 没有它。给一个「什么都没有」的版本，
+ * 于是所有靠环境变量打开的诊断开关在这块板子上就是关着的 —— 这正是想要的。
+ */
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+char *getenv(const char *名) { (void)名; return 0; }
+int atexit(void (*函数)(void)) { (void)函数; return 0; }
+void exit(int 码) { (void)码; for (;;) { } }
+#endif
+
