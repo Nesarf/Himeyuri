@@ -174,6 +174,25 @@ C 版虚拟机：那台不是 JS 的机器
   与 C 的字节码执行无关（同一份目标代码在 JS 那台上也走同一条自举 parser，
   只是 JS 那台跑不到那么深就先撞调用深度了）。
 
+  又缩了一层（2026-10-26）：写了一个探针，import self/lex.hmyr 与 self/body.hmyr，
+  然后让自举层去解析 self/chain.hmyr，数它认出几个函数。探针报的是
+  「语法层报的错：if」—— 而那探针自己一行 if 都没有。
+
+  所以真正的方向变了：错不在「调用当左操作数」，而在
+  自举 parser 解析 self/ 自己的某几份文件时会产生 err 节点。
+  那些 err 节点平时不显形（合并时跳过、求值时撞上才报），
+  而 lib-strings 的错就是它们撞上之后的连锁反应。
+
+  探针本身要放大步数才跑得动：import 两份自举文件之后，
+  五百万步不够。于是 C 增加一个环境变量 HMYR_STEPS，默认仍是五百万。
+
+  下一格该做的是把 body.hmyr 切半，找出被解析成 err 的那一段 ——
+  那一段里的构造，就是自举 parser 缺的那一样。
+  怎么复现：
+    gcc -std=c11 -O2 '-Wl,--stack,67108864' -o hmyr-vm.exe vm/hmyr.c
+    node tools/emit-code.mjs self/run.hmyr self.hmyrb
+    HMYR_STEPS=800000000 ./hmyr-vm.exe self.hmyrb 探针.hmyr
+
   下一步该查 FIELD 的名字匹配，以及 RECORD 指令里字段名与值的对应顺序 ——
   这两处都在「名字与值的配对」上，而错位的表现正是「取到了另一个字段的值」。
 

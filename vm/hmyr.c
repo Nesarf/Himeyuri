@@ -1078,6 +1078,16 @@ int main(int argc, char **argv) {
   uint8_t *bytes = read_file(argv[1], &len);
   load_program(bytes, len);
   g_trace_on = getenv("HMYR_TRACE") != NULL;
+  /* The step limit is 5 million by default, which is right for a programme
+   * doing its own work. Running an interpreter that runs another programme is
+   * tens of times that, so the ceiling is adjustable. */
+  {
+    const char *sl = getenv("HMYR_STEPS");
+    if (sl) {
+      long v = atol(sl);
+      if (v > 0) step_limit = (int)(v > 2000000000L ? 2000000000L : v);
+    }
+  }
   for (int i = 0; i < TRACE_N; i++) g_trace[i].op = 255;
 
   /* argv: the .hmyrb path first, then whatever else was typed. The bootstrap's
