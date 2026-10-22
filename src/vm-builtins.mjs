@@ -114,8 +114,12 @@ export const 内置表 = {
     const 元组 = a[1];
     if (!元组 || 元组.tag !== "tuple") return vm.坏("HMYR-R0130", "write_bytes wants a tuple of bytes");
     // 取整走 number 那一层，不在这里写 Math —— test/numbers.test.mjs 盯着这件事。
+    // 元素可以是字节，也可以是一块字节（语言那边按块累积）。
     const 字节 = [];
-    for (const x of 元组.items) 字节.push(数.下整(vm.成数(x)));
+    for (const x of 元组.items) {
+      if (x && x.tag === "tuple") { for (const y of x.items) 字节.push(数.下整(vm.成数(y))); }
+      else 字节.push(数.下整(vm.成数(x)));
+    }
     try { vm.cap.file.writeBytes(路径, 字节); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);

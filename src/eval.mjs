@@ -692,8 +692,14 @@ const BUILTINS = {
     const 路径 = String(args[0]);
     const 元组 = args[1];
     if (!Array.isArray(元组)) throw new Error("write_bytes wants a tuple of bytes");
-    writeBytes(rt, 路径, Buffer.from(元组.map((x) => rt.asNumber(x) & 0xff)));
-    return 元组.length;
+    // 元素可以是字节，也可以是一块字节（语言那边按块累积，省掉平方复制）。
+    const 平 = [];
+    for (const x of 元组) {
+      if (Array.isArray(x)) { for (const y of x) 平.push(rt.asNumber(y) & 0xff); }
+      else 平.push(rt.asNumber(x) & 0xff);
+    }
+    writeBytes(rt, 路径, Buffer.from(平));
+    return 平.length;
   },
   f64_bytes: (rt, args) => {
     return rt.cap.file.f64Bytes(rt.asNumber(args[0]));

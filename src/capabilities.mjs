@@ -70,7 +70,17 @@ export const 本机能力 = (options = {}) => ({
     writeText: (p, s) => fs.writeFileSync(p, String(s), "utf8"),
     // 写一串字节。字节在语言里是「0 到 255 的整数元组」，因为这门语言没有字节类型。
     // 这一条是 .hmyrb 落盘要用的：把语言算出来的字节交出去，由世界这一侧落成文件。
-    writeBytes: (p, 字节) => fs.writeFileSync(p, Buffer.from(Array.from(字节, (x) => x & 0xff))),
+    //
+    // 也接受「块们的元组」（二维）：在语言里按块累积再拍平是线性的，
+    // 一次性拍平在这里做，比让语言那边每放一个字节都复制一次累积便宜得多。
+    writeBytes: (p, 字节) => {
+      const 平 = [];
+      for (const x of 字节) {
+        if (Array.isArray(x)) { for (const y of x) 平.push(y & 0xff); }
+        else 平.push(x & 0xff);
+      }
+      fs.writeFileSync(p, Buffer.from(平));
+    },
     // 把双精度拆成 8 个字节（小端）。这一条属于世界那一侧，理由与 writeText 一样：
     // 浮点数的位怎么排是宿主的事，语言里手搓只会搓出另一种错法。
     f64Bytes: (x) => {

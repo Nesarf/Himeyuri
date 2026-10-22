@@ -18,12 +18,31 @@
 import "./compile.hmyr"
 
 // ---- 字节累加：语言里没有可变引用，所以每一步交回新的元组 ----
+//
+// 而「每一步都复制一次已累积的全部内容」是平方级的：几万字节就撑不住（第十四轮撞到的那次
+// out of memory 就是它）。所以按块收：攒够 512 个字节就封成一块，块们再拼成一个元组。
+// 块的数量只有总量的五百一十二分之一，于是复制量从平方掉到接近线性。
+//
+// 交给 write_bytes 的是「块们的元组」（二维），由世界那一侧一次拍平写出 ——
+// 拍平在那边是一次线性扫描，不在这边一次次复制。
+fn 块长() -> Int {
+  return 512
+}
+
 fn 空() -> Int {
-  return {b: ()}
+  return {块: (), 小: ()}
 }
 
 fn 放(状态: Int, x: Int) -> Int {
-  return {b: 状态.b + (x,)}
+  let 小 = 状态.小 + (x,)
+  if len(小) >= 块长() { return {块: 状态.块 + (小,), 小: ()} }
+  return {块: 状态.块, 小: 小}
+}
+
+// 收尾：还在手上的那些字节也封成一块，交回块们。
+fn 收尾(状态: Int) -> Int {
+  if len(状态.小) == 0 { return 状态.块 }
+  return 状态.块 + (状态.小,)
 }
 
 fn 放u16(状态: Int, v: Int) -> Int {
@@ -172,11 +191,60 @@ fn 打包(函数们: Int) -> Int {
     i = i + 1
   }
   收 = 放u16(收, 0)
-  return 收.b
+  return 收尾(收)
 }
 
+// ---- 去 import ----
+//
+// 拼接多份源码时，每份里的 import 行要先拿掉：那几行是「文件之间的接线」，
+// 而拼起来之后接线已经由顺序表达过了。留着它们，编译器会把它们当成不认识的语句。
+// 这一套与 self/run.hmyr 的 去导入 同形（那里也是逐行看、只认行首的 import 与词界）。
+fn 去首(行: String) -> String {
+  if len(行) == 0 { return 行 }
+  if 行[0] == " " || 行[0] == chr(9) { return 去首(slice(行, 1, len(行))) }
+  return 行
+}
+
+fn 找引号(文本: String, 起: Int) -> Int {
+  if 起 >= len(文本) { return 0 - 1 }
+  if 文本[起] == chr(34) { return 起 }
+  return 找引号(文本, 起 + 1)
+}
+
+fn 是导入行(行: String) -> Bool {
+  let 去 = 去首(行)
+  if len(去) < 9 { return false }
+  if slice(去, 0, 6) != "import" { return false }
+  if len(去) > 6 && 去[6] != " " && 去[6] != chr(9) && 去[6] != chr(34) { return false }
+  if 找引号(去, 6) < 0 { return false }
+  return true
+}
+
+fn 拆行从(文本: String, i: Int, 起: Int, acc: Int) -> Int {
+  if i >= len(文本) { return acc + (slice(文本, 起, len(文本)),) }
+  if 文本[i] == chr(10) {
+    return 拆行从(文本, i + 1, i + 1, acc + (slice(文本, 起, i),))
+  }
+  return 拆行从(文本, i + 1, 起, acc)
+}
+
+fn 拆行(文本: String) -> Int {
+  if 文本 == "" { return () }
+  return 拆行从(文本, 0, 0, ())
+}
+
+fn 去导入从(行们: Int, i: Int, acc: String) -> String {
+  if i >= len(行们) { return acc }
+  if 是导入行(行们[i]) { return 去导入从(行们, i + 1, acc) }
+  return 去导入从(行们, i + 1, acc + 行们[i] + chr(10))
+}
+
+fn 去导入(源码: String) -> String {
+  return 去导入从(拆行(源码), 0, "")
+}
+
+// 入口：把给的源文件拼起来（每份先去掉 import 行），编成函数表，打包，写出去。
 fn main() -> Int {
-  // argv()[0] 是这份脚本自己的路径。之后：[目标 .hmyrb]，然后是若干份源文件。
   // 多份源码按给的顺序拼起来再编 —— 自举时要把 import 链整条交进来。
   var 源 = "fn main() -> Int {" + chr(10) + "  return 7" + chr(10) + "}" + chr(10)
   if len(argv()) > 2 {
@@ -187,7 +255,7 @@ fn main() -> Int {
         print("没有这个文件：" + argv()[i])
         return 1
       }
-      全 = 全 + read_text(argv()[i]) + chr(10)
+      全 = 全 + 去导入(read_text(argv()[i])) + chr(10)
       i = i + 1
     }
     源 = 全

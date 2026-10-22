@@ -995,15 +995,30 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     FILE *f = fopen(p, "wb");
     free(p);
     if (!f) { fail("HMYR-R0212", "cannot write that file"); return 1; }
+    /* 元素可以是字节，也可以是一块字节（语言那边按块累积，省掉平方复制）。 */
+    double 写 = 0;
     for (uint32_t i = 0; i < args[1].ilen; i++) {
-      int ok = 0;
-      double d = as_num(args[1].items[i], &ok);
-      if (!ok) { fclose(f); fail("HMYR-R0130", "every byte must be a number"); return 1; }
-      unsigned char b = (unsigned char)(((long long)d) & 0xff);
-      fwrite(&b, 1, 1, f);
+      Value 项 = args[1].items[i];
+      if (项.tag == T_TUPLE) {
+        for (uint32_t k = 0; k < 项.ilen; k++) {
+          int ok = 0;
+          double d = as_num(项.items[k], &ok);
+          if (!ok) { fclose(f); fail("HMYR-R0130", "every byte must be a number"); return 1; }
+          unsigned char b = (unsigned char)(((long long)d) & 0xff);
+          fwrite(&b, 1, 1, f);
+          写 += 1;
+        }
+      } else {
+        int ok = 0;
+        double d = as_num(项, &ok);
+        if (!ok) { fclose(f); fail("HMYR-R0130", "every byte must be a number"); return 1; }
+        unsigned char b = (unsigned char)(((long long)d) & 0xff);
+        fwrite(&b, 1, 1, f);
+        写 += 1;
+      }
     }
     fclose(f);
-    *out = v_num((double)args[1].ilen);
+    *out = v_num(写);
     return 1;
   }
   /* 把一个值编成 .hmyrb 里那一段字节。

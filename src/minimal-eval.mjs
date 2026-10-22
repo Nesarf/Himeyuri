@@ -161,8 +161,12 @@ const 内置 = {
     const 路径 = rt.成串(a[0]);
     const 元组 = a[1];
     if (!元组 || !元组.items) return rt.坏("HMYR-R0130", "write_bytes wants a tuple of bytes");
+    // 元素可以是字节，也可以是一块字节（语言那边按块累积，省掉平方复制）。
     const 字节 = [];
-    for (const x of 元组.items) 字节.push(Math.trunc(rt.成数(x)));
+    for (const x of 元组.items) {
+      if (Array.isArray(x)) { for (const y of x) 字节.push(Math.trunc(rt.成数(y))); }
+      else 字节.push(Math.trunc(rt.成数(x)));
+    }
     try { rt.cap.file.writeBytes(路径, 字节); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
