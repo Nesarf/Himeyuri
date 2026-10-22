@@ -24,4 +24,9 @@ typedef struct {
 /* 装上一次。传 NULL 表示退回桌面那两份实现。 */
 void hmyr_装平台(const Hmyr平台 *p);
 
+/* 跑一份字节码。这是给「没有 argv、也没有文件系统」的地方准备的入口 ——
+ * 板子上开机会调它一次。路径是平台口「读」的钥匙：板子上那个读忽略它，
+ * 桌面上那个读拿它去 fopen。交回退出码。 */
+int hmyr_运行(const char *路径, int 参数量, char **参数);
+
 #endif

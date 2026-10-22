@@ -2268,6 +2268,18 @@ static char **切宽命令行(int *argc_out) {
 }
 #endif
 
+/* 库入口：给没有 argv、也没有文件系统的地方用 —— 板子、别的语言的 FFI、
+ * 以及任何「字节码已经在内存里」的宿主。
+ *
+ * 路径照样要传：它是平台口「读」的钥匙。板子上那个读是忽略路径的
+ * （见 port/arm-port.c），桌面上那个读就是 fopen。于是同一个入口两边都成立。
+ */
+int hmyr_运行(const char *路径, int 参数量, char **参数) {
+  int nrest = 参数量 > 0 ? 参数量 - 1 : 0;
+  return run_bytecode(路径, 路径, nrest, 参数, 步限从环境());
+}
+
+#ifndef HMYR_LIB
 int main(int argc, char **argv) {
 #ifdef _WIN32
   /* 先换成宽命令行切出来的那一份：main 给的那份已经把中文路径弄坏了。 */
@@ -2311,3 +2323,4 @@ int main(int argc, char **argv) {
   }
   return run_bytecode(argv[1], argv[1], argc - 2, argv + 2, 步限从环境());
 }
+#endif  /* HMYR_LIB：库那一侧不要 main，要的是 hmyr_运行 */

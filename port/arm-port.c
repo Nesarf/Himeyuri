@@ -51,6 +51,7 @@ void 板子装上(const uint8_t *字节码, size_t 长) {
 
 /* 给测试与调试用：已经收到的字节数，以及清空。 */
 size_t 板子出口长(void) { return g_出口长; }
+const uint8_t *板子出口(void) { return (const uint8_t *)g_出口; }
 void 板子清出口(void) { g_出口长 = 0; }
 
 /* ---- 板子那一侧的 C 库适配 ------------------------------------------
