@@ -186,6 +186,7 @@ console.log("七、真库跑在 C 机器上");
   const 库们 = [
     ["字符串库", "conformance/lib-strings.hmyr"],
     ["元组库", "conformance/lib-tuples.hmyr"],
+    ["表库", "conformance/lib-tables.hmyr"],
     ["JSON 库", "conformance/lib-json.hmyr"],
     ["帧库", "conformance/lib-protocol.hmyr"],
   ];

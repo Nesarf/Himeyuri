@@ -274,6 +274,19 @@ C 版虚拟机：那台不是 JS 的机器
   也就是说：追了三轮的那条「实参错位」，是两台机器的栈语义差了一点点。
   而它只在「自举层替目标程序执行」这种深嵌套下才显形，所以小例子一直跑得对。
 
+  同一轮里还有第二处，是 lib-tables 的第 16 条：合并两条同名字段的记录，
+  件数算出四个而不是两个。差在 record_new —— C 那版按顺序塞，同名键不覆盖；
+  而 JS 那侧记录是 Map 或普通对象，两者都是「后者赢」。改成覆盖之后五个库全通。
+
+  于是现在的对账表是：
+    examples/twice.hmyr                  hi 42 琥珀音
+    conformance/lib-strings.hmyr         0
+    conformance/lib-tuples.hmyr          0
+    conformance/lib-tables.hmyr          0
+    conformance/lib-json.hmyr            0
+    conformance/lib-protocol.hmyr        0
+  六条都在 test/c-vm.test.mjs 的第六、七节里，编不出 C 那台时明说跳过。
+
   事件流这个形式的代价要说一句：它每步写一行 stderr，跑一次几万行。
   所以三个开关都默认关着，只在对着查的时候开。
 

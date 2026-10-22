@@ -743,20 +743,38 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     uint32_t n = args[0].ilen;
     Value v = v_null();
     v.tag = T_RECORD;
-    v.rec.n = n;
     v.rec.vals = alloc_values(n);
     v.rec.names = (const uint16_t **)calloc(n ? n : 1, sizeof(uint16_t *));
     v.rec.name_lens = (uint32_t *)calloc(n ? n : 1, sizeof(uint32_t));
+    /* 同名键覆盖，后者赢 —— 记录在 JS 那侧是 Map 或普通对象，两者都是这个规矩。
+     * 这里若只按顺序塞，合并两条同名字段的记录会得到四个字段而不是两个，
+     * 而那种结果看起来只是「多了一项」，不像一条错误。 */
+    uint32_t 收 = 0;
     for (uint32_t i = 0; i < n; i++) {
       Value pair = args[0].items[i];
       if (pair.tag != T_TUPLE || pair.ilen != 2 || pair.items[0].tag != T_STR) {
         fail("HMYR-R0214", "every item must be a (name, value) pair with a string name");
         return 1;
       }
-      v.rec.names[i] = pair.items[0].s;
-      v.rec.name_lens[i] = pair.items[0].slen;
-      v.rec.vals[i] = pair.items[1];
+      const uint16_t *名 = pair.items[0].s;
+      uint32_t 名长 = pair.items[0].slen;
+      int 已有 = -1;
+      for (uint32_t k = 0; k < 收; k++) {
+        if (v.rec.name_lens[k] != 名长) continue;
+        uint32_t same = 1;
+        for (uint32_t q = 0; q < 名长; q++) if (v.rec.names[k][q] != 名[q]) { same = 0; break; }
+        if (same) { 已有 = (int)k; break; }
+      }
+      if (已有 >= 0) {
+        v.rec.vals[已有] = pair.items[1];
+      } else {
+        v.rec.names[收] = 名;
+        v.rec.name_lens[收] = 名长;
+        v.rec.vals[收] = pair.items[1];
+        收++;
+      }
     }
+    v.rec.n = 收;
     *out = v;
     return 1;
   }
