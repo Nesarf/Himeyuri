@@ -29,11 +29,11 @@ fn 块长() -> Int {
   return 512
 }
 
-fn 空() -> Int {
+fn 空() {
   return {块: (), 小: ()}
 }
 
-fn 放(状态: Int, x: Int) -> Int {
+fn 放(状态: Int, x: Int) {
   let 小 = 状态.小 + (x,)
   if len(小) >= 块长() { return {块: 状态.块 + (小,), 小: ()} }
   return {块: 状态.块, 小: 小}
@@ -228,7 +228,7 @@ fn 拆行从(文本: String, i: Int, 起: Int, acc: Int) -> Int {
   return 拆行从(文本, i + 1, 起, acc)
 }
 
-fn 拆行(文本: String) -> Int {
+fn 拆行(文本: String) {
   if 文本 == "" { return () }
   return 拆行从(文本, 0, 0, ())
 }

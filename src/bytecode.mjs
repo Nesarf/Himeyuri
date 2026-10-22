@@ -32,6 +32,148 @@ const 二元运算 = {
 
 export class 编译错 extends Error {}
 
+// ---- 返回类型：编译期核对 ----
+//
+// 为什么做在编译期而不是运行期：运行期要在每一帧的 RET 上多比一次，
+// 而字节码里根本没有「返回类型」这个字段（函数表只记名字、参数量、槽数、效果、指令）。
+// 把类型塞进文件格式是一次格式变更，而编译期检查不需要它 —— 声明就在 AST 上，
+// 交回的值也在 AST 上，两边都是现成的。
+//
+// 能查的与查不了的，说清楚：
+//   查得了   字面量、元组字面量、记录字面量、调用（查被调者的声明）、
+//            算术与比较的结果、一元运算、正文字量
+//   查不了   变量（let 推不出类型，而参数也没写进 AST 的形状里）、下标、字段
+// 查不了的地方一律放过 —— 静态检查的价值在于「说了就一定对」，而不是「猜得多」。
+const 数值类型名 = new Set(["Int", "Num", "Float", "Double", "Number", "UInt", "I64", "F64"]);
+
+// 把类型节点化成一个好比较的形状。
+const 类型形状 = (t) => {
+  if (!t) return null;
+  if (t.kind === "TupleType") return { k: "tuple", items: (t.items || []).map(类型形状) };
+  if (t.kind === "FnType") return { k: "fn" };
+  if (t.kind === "TypeRef") {
+    if (数值类型名.has(t.name)) return { k: "num" };
+    if (t.name === "String" || t.name === "Str") return { k: "str" };
+    if (t.name === "Bool" || t.name === "Boolean") return { k: "bool" };
+    if (t.name === "Unit" || t.name === "Void") return { k: "unit" };
+    // 不认识的类型名：可能是一条 type 别名。不猜，放过。
+    return { k: "?" };
+  }
+  return { k: "?" };
+};
+
+// 表达式的静态形状。查不了就是 { k: "?" }。
+const 表达式形状 = (n) => {
+  if (!n) return { k: "?" };
+  switch (n.kind) {
+    case "Literal":
+      if (typeof n.value === "number") return { k: "num" };
+      if (typeof n.value === "string") return { k: "str" };
+      if (typeof n.value === "boolean") return { k: "bool" };
+      if (n.value === null) return { k: "unit" };
+      return { k: "?" };
+    case "Tuple": return { k: "tuple", items: (n.items || []).map(表达式形状) };
+    case "Record": return { k: "record" };
+    case "Binary": {
+      const op = n.op;
+      if (["==", "!=", "<", "<=", ">", ">=", "&&", "||"].includes(op)) return { k: "bool" };
+      if (op === "+") {
+        // 两边都是串才是串拼接；否则按数算。一边说不清就说不清。
+        const l = 表达式形状(n.left), r = 表达式形状(n.right);
+        if (l.k === "str" && r.k === "str") return { k: "str" };
+        if (l.k === "num" && r.k === "num") return { k: "num" };
+        return { k: "?" };
+      }
+      if (["-", "*", "/", "%"].includes(op)) return { k: "num" };
+      return { k: "?" };
+    }
+    case "Unary": return n.op === "!" ? { k: "bool" } : { k: "num" };
+    // 调用：形状由「被调者的声明」回答，而回答它的是外面的 形状带调用。
+    // 这里交回「说不清」而不是 null —— null 会在 + 的两边当成值用，然后炸在那个地方，
+    // 而一个好的检查器不该因为自己不认识的节点而炸。
+    case "Call": return { k: "?" };
+    default: return { k: "?" };
+  }
+};
+
+const 形状名 = (s) => {
+  if (!s) return "?";
+  if (s.k === "tuple") return "(" + (s.items || []).map(形状名).join(", ") + ")";
+  if (s.k === "num") return "Int";
+  if (s.k === "str") return "String";
+  if (s.k === "bool") return "Bool";
+  if (s.k === "unit") return "Unit";
+  if (s.k === "record") return "记录";
+  if (s.k === "fn") return "fn";
+  return "?";
+};
+
+// 一个形状合不合一个类型。交回 null 表示合，否则交回一句「不合在哪」。
+const 核对 = (类型, 形, 深度 = 0) => {
+  if (!类型 || !形 || 形.k === "?" || 类型.k === "?") return null;   // 说不清就放过
+  if (类型.k !== 形.k) {
+    return "交回的是 " + 形状名(形);
+  }
+  if (类型.k === "tuple") {
+    const 甲 = 类型.items || [], 乙 = 形.items || [];
+    if (甲.length !== 乙.length) {
+      return "交回 " + 乙.length + " 个元素，声明的是 " + 甲.length + " 个";
+    }
+    for (let i = 0; i < 甲.length; i++) {
+      const 内 = 核对(甲[i], 乙[i], 深度 + 1);
+      if (内) return "第 " + (i + 1) + " 个元素：" + 内;
+    }
+  }
+  return null;
+};
+
+// 在函数体里找所有 return 语句（不进嵌套的函数声明 —— 这门语言也没有）。
+const 收集返回 = (node, acc) => {
+  if (!node || typeof node !== "object") return acc;
+  if (Array.isArray(node)) { for (const x of node) 收集返回(x, acc); return acc; }
+  if (node.kind === "Return") acc.push(node);
+  for (const k of Object.keys(node)) {
+    if (k === "line" || k === "column") continue;
+    const v = node[k];
+    if (v && typeof v === "object") 收集返回(v, acc);
+  }
+  return acc;
+};
+
+// 对一份声明表核对每个函数的返回类型。
+// 交回问题列表（空的表示都对）。
+export const 核对返回类型 = (声明们) => {
+  const 声明表 = new Map();
+  for (const d of 声明们) if (d.kind === "Fn") 声明表.set(d.name, d);
+  const 问题们 = [];
+  const 查调用形状 = (n) => {
+    const 被 = 声明表.get(n.callee && n.callee.name);
+    if (!被) return { k: "?" };
+    return 类型形状(被.returns);
+  };
+  const 形状带调用 = (n) => {
+    if (n && n.kind === "Call") return 查调用形状(n);
+    // 表达式里套着调用时，只对最外层判断 —— 深一层不去追，免得把「说不清」说成「不合」。
+    return 表达式形状(n);
+  };
+  for (const d of 声明们) {
+    if (d.kind !== "Fn" || !d.returns || !d.body) continue;
+    const 类型 = 类型形状(d.returns);
+    if (!类型 || 类型.k === "?") continue;
+    for (const 返 of 收集返回(d.body, [])) {
+      const 形 = 形状带调用(返.value);
+      const 不合 = 核对(类型, 形);
+      if (不合) {
+        问题们.push({
+          名: d.name,
+          行: 返.line,
+          话: "函数 " + d.name + " 声明返回 " + 形状名(类型) + "，" + 不合,
+        });      }
+    }
+  }
+  return 问题们;
+};
+
 // 一个函数编译出来的东西：指令、槽数、名字、参数个数、声明效果。
 const 编译函数 = (decl) => {
   const 码 = [];

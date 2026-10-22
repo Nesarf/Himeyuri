@@ -66,7 +66,7 @@ fn split_each(s: String, at: Int, acc: Int) -> Int {
 }
 
 // 一行的声明：记录 {keyword, name, indent}，不是声明就返回 keyword 为空串的记录。
-fn what_is(line: String, line_number: Int) -> Int {
+fn what_is(line: String, line_number: Int) {
   let i = skip_space(line, 0)
   if starts_with(line, i, "pub ", 0) { i = skip_space(line, i + 4) }
   if starts_with(line, i, "fn ", 0) {

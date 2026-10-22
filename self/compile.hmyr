@@ -19,7 +19,7 @@ import "./body.hmyr"
 
 // 编译状态是三件：已发出的指令、下一个空槽号、名字到槽号的对照表。
 // 名字表也要跟着状态走 —— 否则 let 之后的分支就看不见那个名字了。
-fn 状态(指令们: Int, 下个槽: Int, 名表: Int) -> Int {
+fn 状态(指令们: Int, 下个槽: Int, 名表: Int) {
   return {码: 指令们, 槽: 下个槽, 名表: 名表}
 }
 
@@ -89,7 +89,7 @@ fn 二元码(op: String) -> String {  if op == "+" { return "ADD" }
 }
 
 // 一个表达式：交回 {ok, 状态}。
-fn 表达(节点: Int, 状态: Int) -> Int {
+fn 表达(节点: Int, 状态: Int) {
   let 种 = 节点.kind
   if 种 == "num" {
     return {ok: true, 状态: 发(状态, {op: "CONST", a: to_int(节点.text)})}
@@ -167,7 +167,7 @@ fn 编记录(字段们: Int, 状态: Int, i: Int) -> Int {
   return 编记录(字段们, r.状态, i + 1)
 }
 
-fn 发记录(状态: Int, 字段们: Int, i: Int, 名们: Int) -> Int {
+fn 发记录(状态: Int, 字段们: Int, i: Int, 名们: Int) {
   if i >= len(字段们) { return {ok: true, 状态: 发(状态, {op: "RECORD", a: 名们})} }
   return 发记录(状态, 字段们, i + 1, 名们 + (字段们[i].name,))
 }
@@ -184,7 +184,7 @@ fn 发记录(状态: Int, 字段们: Int, i: Int, 名们: Int) -> Int {
 // 过:
 //
 // `Keep` 那两条指令的语义是：跳走时不动栈顶，不跳时弹掉它。
-fn 编短路(节点: Int, 状态: Int, 码: String) -> Int {
+fn 编短路(节点: Int, 状态: Int, 码: String) {
   let l = 表达(节点.left, 状态)
   if l.ok == false { return l }
   let 位短 = len(l.状态.码)
@@ -202,14 +202,14 @@ fn 编短路(节点: Int, 状态: Int, 码: String) -> Int {
   return {ok: true, 状态: 状态(修2, s4.槽, s4.名表), 结束: false}
 }
 
-fn 编实参(们: Int, 状态: Int, i: Int) -> Int {  if i >= len(们) { return {ok: true, 状态: 状态} }
+fn 编实参(们: Int, 状态: Int, i: Int) {  if i >= len(们) { return {ok: true, 状态: 状态} }
   let r = 表达(们[i], 状态)
   if r.ok == false { return r }
   return 编实参(们, r.状态, i + 1)
 }
 
 // 一条语句。交回 {ok, 状态, 结束}；结束表示这一支已经 return 过，后面的不该再编。
-fn 语句(节点: Int, 状态: Int) -> Int {
+fn 语句(节点: Int, 状态: Int) {
   let 种 = 节点.kind
   if 种 == "return" {
     let v = 表达(节点.value, 状态)
@@ -277,7 +277,7 @@ fn 换(码: Int, 位: Int, 新: Int) -> Int {
 // 末尾那条 POP 与「没有 else 时补一个交回空」是照 JS 那一份的写法：
 // if 是语句，它的值要丢掉。少了这两条的字节流与 JS 不一样 —— 而这一层要的是
 // 「两位打包者交出同样的字节」，所以连「怎么写」都要对齐，不只是「算出什么」。
-fn 编如果(节点: Int, 状态: Int) -> Int {
+fn 编如果(节点: Int, 状态: Int) {
   let c = 表达(节点.cond, 状态)
   if c.ok == false { return c }
   let 位跳假 = len(c.状态.码)
@@ -306,7 +306,7 @@ fn 编如果(节点: Int, 状态: Int) -> Int {
 //
 // while 的体用这一份：循环体里每条表达式语句的值都要丢掉，包括最后一条 ——
 // 留一个值在栈上，下一轮循环就会把它当成新压进来的东西。
-fn 编块不留值(语句们: Int, 状态: Int, i: Int) -> Int {
+fn 编块不留值(语句们: Int, 状态: Int, i: Int) {
   if i >= len(语句们) { return {ok: true, 状态: 状态, 结束: false} }
   let r = 语句(语句们[i], 状态)
   if r.ok == false { return r }
@@ -323,7 +323,7 @@ fn 编块不留值(语句们: Int, 状态: Int, i: Int) -> Int {
 // 一条语句「不是最后一条」时，它算出来的值要丢掉 —— 而最后一条的值留着，
 // 由调用它的人决定怎么处理（if 的收尾 POP、函数的 RET、块的末尾）。
 // 这是 JS 那一份的规矩，而这一层要的是两位打包者交出同样的字节。
-fn 编块(语句们: Int, 状态: Int, i: Int) -> Int {
+fn 编块(语句们: Int, 状态: Int, i: Int) {
   if i >= len(语句们) { return {ok: true, 状态: 状态, 结束: false} }
   let r = 语句(语句们[i], 状态)
   if r.ok == false { return r }
@@ -336,7 +336,7 @@ fn 编块(语句们: Int, 状态: Int, i: Int) -> Int {
 }
 
 // 一个函数：参数按顺序占前几个槽，然后编体，末尾补「交回空」。
-fn 编函数(函数: Int) -> Int {
+fn 编函数(函数: Int) {
   let 名 = 函数[0]
   let 参名们 = 函数[1]
   let 体 = 函数[2]
@@ -352,7 +352,7 @@ fn 编函数(函数: Int) -> Int {
   return {ok: true, 函数: {名: 名, 参数量: len(参名们), 槽数: r.状态.槽, 效果: (), 码: 码}}
 }
 
-fn 编函数们(函数们: Int, i: Int, acc: Int) -> Int {
+fn 编函数们(函数们: Int, i: Int, acc: Int) {
   if i >= len(函数们) { return {ok: true, 函数们: acc} }
   let r = 编函数(函数们[i])
   if r.ok == false { return r }

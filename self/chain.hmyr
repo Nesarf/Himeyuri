@@ -28,7 +28,7 @@ fn postfix(tokens: Int, i: Int) -> Int {
   return postfix_tail(tokens, base.next, base.node)
 }
 
-fn postfix_tail(tokens: Int, i: Int, target: Int) -> Int {
+fn postfix_tail(tokens: Int, i: Int, target: Int) {
   if i >= len(tokens) { return {node: target, next: i} }
   if is_punct(tokens[i], "(") {
     let got = arg_list(tokens, i + 1, ())
@@ -51,7 +51,7 @@ fn postfix_tail(tokens: Int, i: Int, target: Int) -> Int {
 }
 
 // 实参表：每个实参各自独立递归一次，所以层数是「实参个数」与「实参深度」相加。
-fn arg_list(tokens: Int, i: Int, acc: Int) -> Int {
+fn arg_list(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {list: acc, next: i} }
   if is_punct(tokens[i], ")") { return {list: acc, next: i + 1} }
   let one = compare(tokens, i)
@@ -60,7 +60,7 @@ fn arg_list(tokens: Int, i: Int, acc: Int) -> Int {
   return arg_list(tokens, next, acc + (one.node,))
 }
 
-fn atom(tokens: Int, i: Int) -> Int {
+fn atom(tokens: Int, i: Int) {
   if i >= len(tokens) { return {node: {kind: "err", text: ""}, next: i} }
   let t = tokens[i]
   if t.kind == "int" { return {node: {kind: "num", text: t.text}, next: i + 1} }
@@ -73,7 +73,7 @@ fn atom(tokens: Int, i: Int) -> Int {
 
 // (x) 是分组，(x, …) 是元组——含尾逗号的一元组也算元组。
 // 深度：每个元素各自独立递归一次，所以「元素个数」与「元素的深度」相加，不是相乘。
-fn paren_or_tuple(tokens: Int, i: Int) -> Int {
+fn paren_or_tuple(tokens: Int, i: Int) {
   if i < len(tokens) && is_punct(tokens[i], ")") { return {node: {kind: "tuple", items: ()}, next: i + 1} }
   let first = logic(tokens, i)
   if first.next < len(tokens) && is_punct(tokens[first.next], ",") {
@@ -85,7 +85,7 @@ fn paren_or_tuple(tokens: Int, i: Int) -> Int {
   return {node: first.node, next: first.next}
 }
 
-fn tuple_tail(tokens: Int, i: Int, acc: Int) -> Int {
+fn tuple_tail(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {node: {kind: "tuple", items: acc}, next: i} }
   if is_punct(tokens[i], ")") { return {node: {kind: "tuple", items: acc}, next: i + 1} }
   let item = logic(tokens, i)
@@ -100,7 +100,7 @@ fn record_of(tokens: Int, i: Int) -> Int {
   return record_tail(tokens, i, ())
 }
 
-fn record_tail(tokens: Int, i: Int, acc: Int) -> Int {
+fn record_tail(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {node: {kind: "record", fields: acc}, next: i} }
   let t = tokens[i]
   if is_punct(t, "}") { return {node: {kind: "record", fields: acc}, next: i + 1} }
@@ -115,7 +115,7 @@ fn record_tail(tokens: Int, i: Int, acc: Int) -> Int {
   return record_tail(tokens, next, acc + ({name: name, value: value.node},))
 }
 
-fn mul_tail(tokens: Int, i: Int, left: Int) -> Int {
+fn mul_tail(tokens: Int, i: Int, left: Int) {
   if i >= len(tokens) { return {node: left, next: i} }
   let t = tokens[i]
   if t.kind == "punct" && (t.text == "*" || t.text == "/" || t.text == "%") {
@@ -130,7 +130,7 @@ fn mul(tokens: Int, i: Int) -> Int {
   return mul_tail(tokens, left.next, left.node)
 }
 
-fn add_tail(tokens: Int, i: Int, left: Int) -> Int {
+fn add_tail(tokens: Int, i: Int, left: Int) {
   if i >= len(tokens) { return {node: left, next: i} }
   let t = tokens[i]
   if t.kind == "punct" && (t.text == "+" || t.text == "-") {
@@ -164,7 +164,7 @@ fn logic(tokens: Int, i: Int) -> Int {
   return logic_tail(tokens, left.next, left.node)
 }
 
-fn logic_tail(tokens: Int, i: Int, acc: Int) -> Int {
+fn logic_tail(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {node: acc, next: i} }
   let op = or_op(tokens[i])
   if op == "" { return {node: acc, next: i} }
@@ -177,7 +177,7 @@ fn and_level(tokens: Int, i: Int) -> Int {
   return and_tail(tokens, left.next, left.node)
 }
 
-fn and_tail(tokens: Int, i: Int, acc: Int) -> Int {
+fn and_tail(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {node: acc, next: i} }
   let op = and_op(tokens[i])
   if op == "" { return {node: acc, next: i} }
@@ -199,7 +199,7 @@ fn compare(tokens: Int, i: Int) -> Int {
   return compare_tail(tokens, left.next, left.node)
 }
 
-fn compare_tail(tokens: Int, i: Int, acc: Int) -> Int {
+fn compare_tail(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {node: acc, next: i} }
   let op = cmp_op(tokens[i])
   if op == "" { return {node: acc, next: i} }
@@ -210,7 +210,7 @@ fn compare_tail(tokens: Int, i: Int, acc: Int) -> Int {
 // 一元负号只作用在一个乘除项上，然后这个结果回到加减的尾部继续走——
 // 于是 -5 + 3 读作 (-5) + 3，而不是只解析到 -5 就收工。
 // 一元负号自己也要递归一层，好认得出 --5。
-fn unary_or_mul(tokens: Int, i: Int) -> Int {
+fn unary_or_mul(tokens: Int, i: Int) {
   if i < len(tokens) && is_punct(tokens[i], "-") {
     let operand = unary_or_mul(tokens, i + 1)
     return {node: {kind: "unary", op: "-", operand: operand.node}, next: operand.next}

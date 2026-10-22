@@ -81,7 +81,7 @@ fn 跑程序文字(源码: String) -> String {
 }
 
 // 按名字挑一个函数；没有就叫第一个（调试单个函数时方便）。
-fn 选函数从(们: Int, 名: String, i: Int) -> Int {
+fn 选函数从(们: Int, 名: String, i: Int) {
   if i >= len(们) { return () }
   if 们[i][0] == 名 { return 们[i] }
   return 选函数从(们, 名, i + 1)
@@ -139,7 +139,7 @@ fn 拆行从(文本: String, i: Int, 起: Int, acc: Int) -> Int {
   return 拆行从(文本, i + 1, 起, acc)
 }
 
-fn 拆行(文本: String) -> Int {
+fn 拆行(文本: String) {
   if 文本 == "" { return () }
   return 拆行从(文本, 0, 0, ())
 }
@@ -228,7 +228,7 @@ fn 含路(已读: Int, 路: String, i: Int) -> Bool {
 // 环引用不会无限转：已读里有的就跳过。那与宿主那版的 Set 等价。
 // 效果要一层一层传：这一件调了 读一棵（要 file），于是它自己也得要。
 // 那条规矩不许在调用链中间偷偷断掉——不然「谁动世界」就说不清了。
-fn 读多从(目录: String, 路们: Int, i: Int, 已读: Int, 源码们: Int) -> Int effects(file) {
+fn 读多从(目录: String, 路们: Int, i: Int, 已读: Int, 源码们: Int) effects(file) {
   if i >= len(路们) { return {已读: 已读, 源码们: 源码们} }
   let r = 读一棵(目录, 路们[i], 已读, 源码们)
   return 读多从(目录, 路们, i + 1, r.已读, r.源码们)
@@ -244,7 +244,7 @@ fn 目录部分(路: String) -> String {
   return slice(路, 0, i)
 }
 
-fn 读一棵(目录: String, 相对: String, 已读: Int, 源码们: Int) -> Int effects(file) {
+fn 读一棵(目录: String, 相对: String, 已读: Int, 源码们: Int) effects(file) {
   let 路 = 拼路径(目录, 相对)
   if 含路(已读, 路, 0) { return {已读: 已读, 源码们: 源码们} }
   // 不在就跳过：引一个可选文件不该让整个程序死。那与以前启动器的行为一致——
@@ -277,7 +277,7 @@ fn 目标程序参数(参们: Int, 起: Int, 出: Int) -> Int {
   return 目标程序参数从(参们, 起, 出)
 }
 
-fn 跑文件入口(目录: String, 目标: String, 参们: Int) -> Int effects(file) {
+fn 跑文件入口(目录: String, 目标: String, 参们: Int) effects(file) {
   let 路 = 拼路径(目录, 目标)
   if file_exists(路) == false {
     return {ok: false, 文字: "HMYR-R0211 cannot read '" + 路 + "': no such file"}

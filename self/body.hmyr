@@ -22,7 +22,7 @@ fn find_open(tokens: Int, i: Int) -> Int {
 // 收集一条语句的 token。
 //   depth 用来照顾语句内部的嵌套花括号（例如记录字面量）；
 //   顶层的换行表示这一条到此为止；顶层的右花括号表示整个体到此为止。
-fn collect(tokens: Int, i: Int, depth: Int, acc: Int) -> Int {
+fn collect(tokens: Int, i: Int, depth: Int, acc: Int) {
   if i >= len(tokens) { return {line: acc, next: i, end: true} }
   let t = tokens[i]
   if is_punct(t, "{") { return collect(tokens, i + 1, depth + 1, acc + (t,)) }
@@ -44,7 +44,7 @@ fn collect(tokens: Int, i: Int, depth: Int, acc: Int) -> Int {
 // 多行的写法里那行是空的（上一轮已经按 newline 编过了），所以直接返回没问题；
 // 而单行写法 fn f() { return 7 } 里，那一行就是全部内容 —— 早先直接返回，
 // 于是函数体被读成空的：编译出来只有「交回空」，跑什么都不对。
-fn each(tokens: Int, i: Int, acc: Int) -> Int {
+fn each(tokens: Int, i: Int, acc: Int) {
   let got = collect(tokens, i, 0, ())
   var 收 = acc
   if len(got.line) > 0 {
@@ -56,7 +56,7 @@ fn each(tokens: Int, i: Int, acc: Int) -> Int {
 }
 
 // 宿主入口：拿整份函数声明的 token 流，读出它的体。
-fn parse_body(tokens: Int) -> Int {
+fn parse_body(tokens: Int) {
   let at = find_open(tokens, 0)
   if at < 0 { return {list: (), next: len(tokens), found: false} }
   let got = each(tokens, at + 1, ())
@@ -121,7 +121,7 @@ fn 收名从(tokens: Int, i: Int, 末: Int, 等下个: Bool, 深: Int, acc: Int)
   return 收名从(tokens, i + 1, 末, 等下个, 深, acc)
 }
 
-fn 参数名们(tokens: Int, 起: Int, 末: Int) -> Int {
+fn 参数名们(tokens: Int, 起: Int, 末: Int) {
   let 开 = 括号位(tokens, 起, 末)
   if 开 < 0 { return () }
   let 闭 = 反括号位(tokens, 开 + 1, 末, 0)
@@ -141,7 +141,7 @@ fn 找词(tokens: Int, i: Int, 末: Int, w: String) -> Int {
 // 为什么需要它：函数表以前只收（名字, 参数名, 语句们），于是「声明了 effects(file)」
 // 这件事在自举那一层根本不存在 —— 结果是凡声明效果的程序一调要效果的函数就撞 R0201，
 // 只能退回最小求值器跑。收进来之后，那一层才谈得上核对。
-fn 效果们(tokens: Int, 起: Int, 末: Int) -> Int {
+fn 效果们(tokens: Int, 起: Int, 末: Int) {
   let at = 找词(tokens, 起, 末, "effects")
   if at < 0 { return () }
   let 开 = 括号位(tokens, at + 1, 末)
@@ -151,7 +151,7 @@ fn 效果们(tokens: Int, 起: Int, 末: Int) -> Int {
   return 收名从(tokens, 开 + 1, 闭, true, 0, ())
 }
 
-fn decls_from(tokens: Int, i: Int, acc: Int) -> Int {
+fn decls_from(tokens: Int, i: Int, acc: Int) {
   let at = next_fn(tokens, i)
   if at < 0 { return {fns: acc, next: len(tokens)} }
   let 名 = 名字在(tokens, at)

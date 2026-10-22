@@ -67,7 +67,7 @@ fn literals(tokens: Int, n: Int, acc: Int) -> Int {
 }
 
 // 把两条路合到一起：一段源码，交给词法与语法各走一遍。
-fn check(source: String) -> Int {
+fn check(source: String) {
   let expr = expression_of(source)
   let tokens = scan(expr)
   let tree = parse(expr)

@@ -70,7 +70,7 @@ fn skip_default(tokens: Int, i: Int) -> Int {
 }
 
 // 参数列表：从 ( 之后开始。
-fn params(tokens: Int, i: Int, acc: Int) -> Int {
+fn params(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {list: acc, next: i, closed: false} }
   let t = tokens[i]
   if is_punct(t, ")") { return {list: acc, next: i + 1, closed: true} }
@@ -94,7 +94,7 @@ fn params(tokens: Int, i: Int, acc: Int) -> Int {
 }
 
 // 效果列表：effects( 之后。函数名不能叫 effects——它是关键字，所以这里叫 effect_list。
-fn effect_list(tokens: Int, i: Int, acc: Int) -> Int {
+fn effect_list(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {list: acc, next: i} }
   let t = tokens[i]
   if is_punct(t, ")") { return {list: acc, next: i + 1} }
@@ -115,7 +115,7 @@ fn read_signature(tokens: Int) -> Int {
   return signature(tokens, 0, false)
 }
 
-fn signature(tokens: Int, i: Int, is_pub: Bool) -> Int {
+fn signature(tokens: Int, i: Int, is_pub: Bool) {
   if i >= len(tokens) { return {kind: "err", text: ""} }
   let t = tokens[i]
   if is_word(t, "pub") { return signature(tokens, i + 1, true) }

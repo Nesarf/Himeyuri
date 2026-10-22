@@ -23,16 +23,16 @@
 // 结果统一包成 {ok: true, value} 或 {ok: false, text}——这样错误一路往上走，
 // 不会被当成一个值参与计算。这一点比「返回特殊值」可靠。
 
-fn 好(v: Int) -> Int {
+fn 好(v: Int) {
   return {ok: true, value: v}
 }
 
-fn 坏(t: String) -> Int {
+fn 坏(t: String) {
   return {ok: false, text: t}
 }
 
 // 查环境从后往前：后定义要覆盖先定义。正着找会拿到旧值，那是个安静的错。
-fn 查找到(环境: Int, 名: String, i: Int) -> Int {
+fn 查找到(环境: Int, 名: String, i: Int) {
   if i < 0 { return {found: false, value: ()} }
   if 环境[i][0] == 名 { return {found: true, value: 环境[i][1]} }
   return 查找到(环境, 名, i - 1)
@@ -140,7 +140,7 @@ fn 缺效果(要的: Int, 有的: Int) -> String {
 
 // 当前函数有哪些效果：环境里那个 "效果" 键，由调用的那一层放进来。
 // 没有就是空 —— 顶层没写 effects(...) 就是不要任何效果。
-fn 我的效果(环境: Int) -> Int {
+fn 我的效果(环境: Int) {
   let r = 查找(环境, "效果")
   if r.found { return r.value }
   return ()
@@ -438,11 +438,11 @@ fn 更新(环境: Int, 名: String, 值: Int) -> Int {
   return 环境 + ((名, 值),)
 }
 
-fn 好执行(环境: Int, 完成: Bool, 值: Int) -> Int {
+fn 好执行(环境: Int, 完成: Bool, 值: Int) {
   return {ok: true, env: 环境, done: 完成, value: 值}
 }
 
-fn 坏执行(原因: String) -> Int {
+fn 坏执行(原因: String) {
   return {ok: false, env: (), done: true, text: 原因}
 }
 

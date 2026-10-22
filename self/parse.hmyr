@@ -45,20 +45,20 @@ fn skip_sp(s: String, i: Int) -> Int {
   return i
 }
 
-fn read_num(s: String, i: Int, acc: String) -> Int {
+fn read_num(s: String, i: Int, acc: String) {
   if i >= len(s) { return {next: i, text: acc} }
   if is_digit_c(s[i]) { return read_num(s, i + 1, acc + s[i]) }
   return {next: i, text: acc}
 }
 
-fn read_name(s: String, i: Int, acc: String) -> Int {
+fn read_name(s: String, i: Int, acc: String) {
   if i >= len(s) { return {next: i, text: acc} }
   if is_ident_c(s[i]) { return read_name(s, i + 1, acc + s[i]) }
   return {next: i, text: acc}
 }
 
 // 原子：括号、整数、标识符。括号里的解析回到最低优先级那一层。
-fn parse_atom(s: String, i: Int) -> Int {
+fn parse_atom(s: String, i: Int) {
   let j = skip_sp(s, i)
   if j >= len(s) { return {node: {kind: "err", text: ""}, next: j} }
   let c = s[j]
@@ -80,7 +80,7 @@ fn parse_atom(s: String, i: Int) -> Int {
 }
 
 // 乘除一层：左结合，靠尾递归累积，层数不随运算个数增长。
-fn mul_tail(s: String, i: Int, left: Int) -> Int {
+fn mul_tail(s: String, i: Int, left: Int) {
   let j = skip_sp(s, i)
   if j >= len(s) { return {node: left, next: j} }
   let c = s[j]
@@ -97,7 +97,7 @@ fn parse_mul(s: String, i: Int) -> Int {
 }
 
 // 加减一层：同样左结合。
-fn add_tail(s: String, i: Int, left: Int) -> Int {
+fn add_tail(s: String, i: Int, left: Int) {
   let j = skip_sp(s, i)
   if j >= len(s) { return {node: left, next: j} }
   let c = s[j]
