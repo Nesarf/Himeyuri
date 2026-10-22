@@ -69,6 +69,17 @@ console.log("二、桌面专属的那几处都在条件编译里");
   ok("临时路径对 ARM 有另外一条分支", 源.includes("defined(__ARM_ARCH)"));
 }
 
+console.log("三、读与写是显式的平台口，板子装得进");
+{
+  const 源 = fs.readFileSync(path.join(ROOT, "vm/hmyr.c"), "utf8");
+  // 「读一个文件」「写一段字节」是这台机器上唯一两件每块板子都不一样的事。
+  // 它们成了两个函数指针，桌面那份是默认值 —— 于是板子只要装一次。
+  ok("有一个装平台口的入口", /^void hmyr_装平台\(/m.test(源));
+  ok("读走的是平台口", 源.includes("g_平台.读"));
+  ok("写走的是平台口", 源.includes("g_平台.写"));
+  ok("桌面那两份实现还在（不装时行为不变）", 源.includes("桌面读文件"));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

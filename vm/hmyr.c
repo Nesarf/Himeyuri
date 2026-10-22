@@ -770,6 +770,37 @@ static void put_utf8(uint32_t cp) {
   putchar((int)(0x80 | (cp & 0x3F)));
 }
 
+/* ---- 平台口：读一个文件的字节、写一段字节 ----------------------------
+ *
+ * 这一台机器要在四种东西上跑：Windows、POSIX、ARM 裸机、以及以后任何一块板子。
+ * 与语言无关、而每台机器都不一样的事只有两件：怎么把一个文件的字节读进来，
+ * 怎么把一段 UTF-8 写出去。所以它们成了两个函数指针。
+ *
+ * 默认是空的两个 —— 空的时候走下面那两份桌面实现，于是桌面上的行为一个字节没变。
+ * 板子那边开机时调一次 hmyr_装平台，把「从串口收字节」「往串口发字节」装进去；
+ * 语言侧不用改，它只认「读」与「写」这两个动作。
+ */
+typedef struct {
+  int  (*读)(const char *路径, uint8_t **出, size_t *长);  /* 成功 1，失败 0 */
+  void (*写)(const uint8_t *p, size_t n);                  /* 标准出口 */
+} Hmyr平台;
+
+static Hmyr平台 g_平台 = { NULL, NULL };
+
+void hmyr_装平台(const Hmyr平台 *p) {
+  if (p) g_平台 = *p;
+}
+
+/* 一个码点编成 UTF-8，交回用掉了几个字节。 */
+static int 编码点(unsigned char b[4], uint32_t cp) {
+  int n = 0;
+  if (cp < 0x80) { b[n++] = (unsigned char)cp; }
+  else if (cp < 0x800) { b[n++] = (unsigned char)(0xC0 | (cp >> 6)); b[n++] = (unsigned char)(0x80 | (cp & 0x3F)); }
+  else if (cp < 0x10000) { b[n++] = (unsigned char)(0xE0 | (cp >> 12)); b[n++] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F)); b[n++] = (unsigned char)(0x80 | (cp & 0x3F)); }
+  else { b[n++] = (unsigned char)(0xF0 | (cp >> 18)); b[n++] = (unsigned char)(0x80 | ((cp >> 12) & 0x3F)); b[n++] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F)); b[n++] = (unsigned char)(0x80 | (cp & 0x3F)); }
+  return n;
+}
+
 static void write_utf8(const uint16_t *s, uint32_t len, FILE *out) {
   for (uint32_t i = 0; i < len; i++) {
     uint32_t cp = s[i];
@@ -780,14 +811,18 @@ static void write_utf8(const uint16_t *s, uint32_t len, FILE *out) {
         i++;
       }
     }
-    if (out == stdout) put_utf8(cp);
-    else {
-      /* encode into a small buffer so print_err can share the code */
-      unsigned char b[4]; int n = 0;
-      if (cp < 0x80) { b[n++] = (unsigned char)cp; }
-      else if (cp < 0x800) { b[n++] = (unsigned char)(0xC0 | (cp >> 6)); b[n++] = (unsigned char)(0x80 | (cp & 0x3F)); }
-      else if (cp < 0x10000) { b[n++] = (unsigned char)(0xE0 | (cp >> 12)); b[n++] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F)); b[n++] = (unsigned char)(0x80 | (cp & 0x3F)); }
-      else { b[n++] = (unsigned char)(0xF0 | (cp >> 18)); b[n++] = (unsigned char)(0x80 | ((cp >> 12) & 0x3F)); b[n++] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F)); b[n++] = (unsigned char)(0x80 | (cp & 0x3F)); }
+    if (out == stdout) {
+      if (g_平台.写) {
+        /* 板子那边要的是字节，不是 FILE*：编成一个码点的字节就交出去。 */
+        unsigned char b[4];
+        int n = 编码点(b, cp);
+        g_平台.写(b, (size_t)n);
+      } else {
+        put_utf8(cp);
+      }
+    } else {
+      unsigned char b[4];
+      int n = 编码点(b, cp);
       fwrite(b, 1, (size_t)n, out);
     }
   }
@@ -1939,7 +1974,9 @@ static Value run_func(Func *f, Value *args, int nargs) {
   }
 }
 
-static uint8_t *read_file(const char *path, size_t *out_len) {
+/* 桌面那一份：文件系统 + 标准输出。板子不装平台口时也会走到这里，
+ * 而板子上它读不到文件 —— 那不是错误，那是「还没装」。 */
+static uint8_t *桌面读文件(const char *path, size_t *out_len) {
   FILE *f = 开文件(path, "rb");
   if (!f) { fprintf(stderr, "hmyr: cannot open %s\n", path); exit(1); }
   fseek(f, 0, SEEK_END);
@@ -1951,6 +1988,20 @@ static uint8_t *read_file(const char *path, size_t *out_len) {
   fclose(f);
   *out_len = got;
   return buf;
+}
+
+static uint8_t *read_file(const char *path, size_t *out_len) {
+  if (g_平台.读) {
+    uint8_t *p = NULL;
+    size_t n = 0;
+    if (!g_平台.读(path, &p, &n)) {
+      fprintf(stderr, "hmyr: the platform could not read %s\n", path);
+      exit(1);
+    }
+    *out_len = n;
+    return p;
+  }
+  return 桌面读文件(path, out_len);
 }
 
 /* ---- 一个可执行文件，两个入口 ----------------------------------------
