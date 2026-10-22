@@ -42,6 +42,18 @@ fn 查找(环境: Int, 名: String) -> Int {
   return 查找到(环境, 名, len(环境) - 1)
 }
 
+// 一条记录的字段名拼成一行，用在诊断里。
+fn 名字们(t: Int) -> String {
+  let 列 = field_names(t)
+  var 出 = ""
+  var i = 0
+  while i < len(列) {
+    出 = 出 + 列[i] + ","
+    i = i + 1
+  }
+  return 出
+}
+
 fn 求二元(op: String, a: Int, b: Int) -> Int {
   if a.ok == false { return a }
   if b.ok == false { return b }
@@ -78,7 +90,7 @@ fn 求二元(op: String, a: Int, b: Int) -> Int {
   if field_has(op, "kind") { return 坏("不认识的运算符：一个 " + op.kind + " 节点") }
   if field_has(op, "op") { return 坏("不认识的运算符：一个自己带 op 的记录，它的 op 是 " + op.op) }
   if field_has(op, "name") { return 坏("不认识的运算符：一个带 name 的记录，名字是 " + op.name) }
-  if field_has(op, "value") { return 坏("不认识的运算符：一个带 value 的记录") }
+  if field_has(op, "value") { return 坏("不认识的运算符：一个带 value 的记录，字段是 " + 名字们(op)) }
   return 坏("不认识的运算符：" + op)
 }
 
