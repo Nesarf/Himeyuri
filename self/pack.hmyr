@@ -176,15 +176,21 @@ fn 打包(函数们: Int) -> Int {
 }
 
 fn main() -> Int {
-  // argv()[0] 是这份脚本自己的路径。之后：[目标 .hmyrb] 与可选的 [源 .hmyr]。
-  // 没有源就编一个写死的小程序 —— 那是最省事的一条自测。
+  // argv()[0] 是这份脚本自己的路径。之后：[目标 .hmyrb]，然后是若干份源文件。
+  // 多份源码按给的顺序拼起来再编 —— 自举时要把 import 链整条交进来。
   var 源 = "fn main() -> Int {" + chr(10) + "  return 7" + chr(10) + "}" + chr(10)
   if len(argv()) > 2 {
-    if file_exists(argv()[2]) == false {
-      print("没有这个文件：" + argv()[2])
-      return 1
+    var i = 2
+    var 全 = ""
+    while i < len(argv()) {
+      if file_exists(argv()[i]) == false {
+        print("没有这个文件：" + argv()[i])
+        return 1
+      }
+      全 = 全 + read_text(argv()[i]) + chr(10)
+      i = i + 1
     }
-    源 = read_text(argv()[2])
+    源 = 全
   }
   let r = 编源码(源)
   if r.ok == false {
