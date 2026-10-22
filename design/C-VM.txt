@@ -127,6 +127,19 @@ C 版虚拟机：那台不是 JS 的机器
   现在能确定的是：求二元 收到的第一个实参是一个带 value 的字段值，
   所以在 节点.op 这条字段读取上，取到的不是 op。
 
+  追它的时候抓到了一件真事（2026-10-26）：自举的表达式解析里没有逻辑那两级。
+
+    症状   目标程序里写 if a && b { 时，条件解析停在 &&，于是 parse_if 看到的下一个
+           记号不是花括号，报「语法层报的错：if」—— 错的文字是 if，与 && 毫无关系。
+    修法   self/chain.hmyr 加 or_op、and_op、logic、logic_tail、and_level、and_tail 六件，
+           并把 stmt.hmyr 的 from_here 从 compare 改成 logic。
+    顺带   self/eval.hmyr 的 求二元 也要认 && 与 ||（不短路，这一点写在注释里）。
+
+  修完之后 if a == 1 && b == 2 与 if a == 9 || b == 2 在 C 机器上都算对了，
+  test/c-vm.test.mjs 第二节加了这两条。
+
+  但 lib-strings.hmyr 的错没变。所以它是第三件事，不是这一个。
+
   下一步该查 FIELD 的名字匹配，以及 RECORD 指令里字段名与值的对应顺序 ——
   这两处都在「名字与值的配对」上，而错位的表现正是「取到了另一个字段的值」。
 

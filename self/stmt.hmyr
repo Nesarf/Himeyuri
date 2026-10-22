@@ -19,9 +19,11 @@ fn is_word(t: Int, w: String) -> Bool {
   return t.kind == "ident" && t.text == w
 }
 
-// 从第 i 个 token 起，交给链的加减那一层继续读。
+// 从第 i 个 token 起，交给链的最外层继续读。
+// 最外层是逻辑那两级（|| 与 &&）—— 用 compare 会漏掉它们，
+// 而漏掉的样子是「语法层报的错：if」。
 fn from_here(tokens: Int, i: Int) -> Int {
-  return compare(tokens, i)
+  return logic(tokens, i)
 }
 
 fn binding(tokens: Int, i: Int, keyword: String) -> Int {

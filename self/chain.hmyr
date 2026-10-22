@@ -140,7 +140,52 @@ fn add_tail(tokens: Int, i: Int, left: Int) -> Int {
   return {node: left, next: i}
 }
 
-// 比较层（第 2 级：低于加减的第 3 级，高于尚未实现的两个逻辑层）。
+// 逻辑层（最低一级）：or 与 and。
+//
+// 这一层是补上的，而它缺席的样子很难认：源里写 if a && b { 时，条件解析停在 &&，
+// 于是 parse_if 看到的下一个记号不是花括号，报「语法层报的错：if」——
+// 错的文字是 if，与 && 一点关系都看不出来。
+//
+// 优先级：|| 低于 &&，两者都低于比较。左右结合按语言自己的表（src/parser.mjs）。
+fn or_op(t: Int) -> String {
+  if t.kind != "punct" { return "" }
+  if t.text == "||" { return "||" }
+  return ""
+}
+
+fn and_op(t: Int) -> String {
+  if t.kind != "punct" { return "" }
+  if t.text == "&&" { return "&&" }
+  return ""
+}
+
+fn logic(tokens: Int, i: Int) -> Int {
+  let left = and_level(tokens, i)
+  return logic_tail(tokens, left.next, left.node)
+}
+
+fn logic_tail(tokens: Int, i: Int, acc: Int) -> Int {
+  if i >= len(tokens) { return {node: acc, next: i} }
+  let op = or_op(tokens[i])
+  if op == "" { return {node: acc, next: i} }
+  let right = and_level(tokens, i + 1)
+  return logic_tail(tokens, right.next, {kind: "bin", op: op, left: acc, right: right.node})
+}
+
+fn and_level(tokens: Int, i: Int) -> Int {
+  let left = compare(tokens, i)
+  return and_tail(tokens, left.next, left.node)
+}
+
+fn and_tail(tokens: Int, i: Int, acc: Int) -> Int {
+  if i >= len(tokens) { return {node: acc, next: i} }
+  let op = and_op(tokens[i])
+  if op == "" { return {node: acc, next: i} }
+  let right = compare(tokens, i + 1)
+  return and_tail(tokens, right.next, {kind: "bin", op: op, left: acc, right: right.node})
+}
+
+// 比较层（低于加减，高于逻辑）。
 // 优先级取自语言自己的表（src/parser.mjs 的 PRECEDENCE），不是凭手感排的。
 fn cmp_op(t: Int) -> String {
   if t.kind != "punct" { return "" }

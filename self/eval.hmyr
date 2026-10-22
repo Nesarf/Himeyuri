@@ -58,6 +58,20 @@ fn 求二元(op: String, a: Int, b: Int) -> Int {
   if op == "<=" { return 好(x <= y) }
   if op == ">" { return 好(x > y) }
   if op == ">=" { return 好(x >= y) }
+  // 逻辑两级。这里不短路：两个操作数在调进来之前都求过了。
+  // 那与语言别处的语义有一处差别（a && f() 里的 f 会不会被调），
+  // 写成注释而不是装作没有 —— 要短路得在 求值 的 bin 分支里特殊处理。
+  if op == "&&" {
+    if x == false { return 好(false) }
+    if y == false { return 好(false) }
+    return 好(true)
+  }
+  if op == "||" {
+    if x == false {
+      if y == false { return 好(false) }
+    }
+    return 好(true)
+  }
   // 走到这里说明链那一层交来的 op 不是它写的那些字符串之一。
   // 若它是一个节点记录，把它的 kind 说出来 —— 「[object Object]」什么都不告诉人，
   // 而 kind 至少能指认「原来这里是个调用 / 一个数 / 一个名字」。

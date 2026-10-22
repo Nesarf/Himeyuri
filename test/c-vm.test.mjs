@@ -86,7 +86,7 @@ console.log("一、算数、递归、字符串、元组、记录");
   ok("递归也算对了", r.c.includes("120"), JSON.stringify(r.c));
 }
 
-console.log("二、比较与分支");
+console.log("二、比较、分支与逻辑");
 {
   const 源码 = [
     "fn 分(n: Int) -> String {",
@@ -98,11 +98,17 @@ console.log("二、比较与分支");
     "  print(分(0 - 3))",
     "  print(分(0))",
     "  print(分(5))",
+    "  let a = 1",
+    "  let b = 2",
+    '  if a == 1 && b == 2 { print(" 与") }',
+    '  if a == 9 || b == 2 { print(" 或") }',
     "  return 0",
     "}",
   ].join("\n");
   const r = 两侧跑(源码, "branch");
-  ok("三分支都说对了", r.js === r.c && r.c === "负零正", JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  ok("三分支都说对了", r.js === r.c && r.c.startsWith("负零正"), JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  // 与 / 或 以前在自举层根本解析不了：条件解析停在 && 上，报「语法层报的错：if」。
+  ok("与和或都算得出来", r.c.includes(" 与 或"), JSON.stringify(r.c));
 }
 
 console.log("三、字符串上的东西");
