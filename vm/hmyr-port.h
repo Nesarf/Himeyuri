@@ -1,0 +1,27 @@
+/* 这台机器与「它跑在哪」之间只有两个约定：怎么读一个文件的字节，
+ * 怎么把一段字节写出去。其余与语言有关的东西全在 hmyr.c 里。
+ *
+ * 桌面上的两份实现在 hmyr.c 里，是默认值 —— 不装也能跑。
+ * 板子上要装：开机时调一次 hmyr_装平台，把从串口、SD 卡、或者
+ * 烧在 Flash 里的那一段字节读出来，再写回串口。
+ *
+ * 这一份是给移植者看的：它故意只有这么点内容，因为除此之外没有别的约定。 */
+#ifndef HMYR_PORT_H
+#define HMYR_PORT_H
+
+#include <stddef.h>
+#include <stdint.h>
+
+typedef struct {
+  /* 读一个文件的字节：成功交回 1 并把指针与长度填好，失败交回 0。
+   * 这块内存在这台机器的生命周期里只读，它不会去改。 */
+  int (*读)(const char *路径, uint8_t **出, size_t *长);
+
+  /* 写一段字节到标准出口。板子上一般就是串口或 SWO。 */
+  void (*写)(const uint8_t *p, size_t n);
+} Hmyr平台;
+
+/* 装上一次。传 NULL 表示退回桌面那两份实现。 */
+void hmyr_装平台(const Hmyr平台 *p);
+
+#endif

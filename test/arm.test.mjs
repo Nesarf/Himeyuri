@@ -80,6 +80,21 @@ console.log("三、读与写是显式的平台口，板子装得进");
   ok("桌面那两份实现还在（不装时行为不变）", 源.includes("桌面读文件"));
 }
 
+console.log("四、尺寸：Flash 与 RAM 各要多少");
+{
+  // 「编得过」不等于「装得下」。这一节把那个数拿出来，并钉住数量级 ——
+  // 数字变了它就会红，而红的时候先看 design/C-VM.txt 里记的那一版的量法。
+  const r = spawnSync(process.execPath, [path.join(ROOT, "tools/arm-size.mjs")], { encoding: "utf8", timeout: 300000 });
+  ok("arm-size 跑得通", r.status === 0, String(r.stderr).slice(0, 200));
+  const 文 = String(r.stdout || "");
+  const f = /Flash 常住[^：]*：(\d+) 字节/.exec(文);
+  const m = /RAM 常住[^：]*：(\d+) 字节/.exec(文);
+  const Flash = f ? Number(f[1]) : -1;
+  const Ram = m ? Number(m[1]) : -1;
+  ok("Flash 约一百六十千字节（含四张 Unicode 表）", Flash > 100 * 1024 && Flash < 220 * 1024, String(Flash));
+  ok("RAM 常住在八千字节以内（含示例那四 KB 出口缓冲）", Ram > 0 && Ram < 8192, String(Ram));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

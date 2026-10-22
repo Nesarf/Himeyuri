@@ -774,16 +774,13 @@ static void put_utf8(uint32_t cp) {
  *
  * 这一台机器要在四种东西上跑：Windows、POSIX、ARM 裸机、以及以后任何一块板子。
  * 与语言无关、而每台机器都不一样的事只有两件：怎么把一个文件的字节读进来，
- * 怎么把一段 UTF-8 写出去。所以它们成了两个函数指针。
+ * 怎么把一段 UTF-8 写出去。所以它们成了两个函数指针（见 vm/hmyr-port.h）。
  *
  * 默认是空的两个 —— 空的时候走下面那两份桌面实现，于是桌面上的行为一个字节没变。
  * 板子那边开机时调一次 hmyr_装平台，把「从串口收字节」「往串口发字节」装进去；
  * 语言侧不用改，它只认「读」与「写」这两个动作。
  */
-typedef struct {
-  int  (*读)(const char *路径, uint8_t **出, size_t *长);  /* 成功 1，失败 0 */
-  void (*写)(const uint8_t *p, size_t n);                  /* 标准出口 */
-} Hmyr平台;
+#include "hmyr-port.h"
 
 static Hmyr平台 g_平台 = { NULL, NULL };
 
