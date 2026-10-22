@@ -28,6 +28,8 @@
 #include <math.h>
 #ifdef _WIN32
 #include <windows.h>
+#include <io.h>
+#include <fcntl.h>
 #endif
 
 /* 按 UTF-8 的路径开文件。
@@ -63,6 +65,10 @@ static FILE *开文件(const char *utf8, const char *模式) {
 #include "ucd-letter.h"
 #include "ucd-mark.h"
 
+/* Unicode 的大小写表，由 tools/ucd-case.mjs 按全码点生成 —— 不是抽样，
+ * 于是这张表不会漏掉任何一个字符。 */
+#include "ucd-case.h"
+
 static int in_ranges(const uint32_t *r, size_t count, uint32_t cp) {
   size_t lo = 0, hi = count;
   while (lo < hi) {
@@ -72,6 +78,71 @@ static int in_ranges(const uint32_t *r, size_t count, uint32_t cp) {
     else return 1;
   }
   return 0;
+}
+
+/* ---- 码点与大小写 ---------------------------------------------------- */
+
+/* 词尾的那个大写 sigma 与它作为词尾时的形状。这两个码点各只有一个，
+ * 所以 Final_Sigma 的规则可以直接写在这一层，不必再造一张表。 */
+#define CP_CAPITAL_SIGMA 0x03A3u
+#define CP_FINAL_SIGMA   0x03C2u
+
+static const HmyrCaseEntry *case_find(const HmyrCaseEntry *tab, size_t count, uint32_t cp) {
+  size_t lo = 0, hi = count;
+  while (lo < hi) {
+    size_t mid = lo + (hi - lo) / 2;
+    if (cp < tab[mid].cp) hi = mid;
+    else if (cp > tab[mid].cp) lo = mid + 1;
+    else return &tab[mid];
+  }
+  return NULL;
+}
+
+/* 从第 i 个单元读一个码点，交回用掉了几个单元（一或二）。
+ * 落单的代理单元按它自己算 —— 那不是一个字符，但也不该让整串断掉。 */
+static int cp_at(const uint16_t *s, uint32_t n, uint32_t i, uint32_t *out) {
+  if (i >= n) { *out = 0; return 0; }
+  uint16_t u = s[i];
+  if (u >= 0xD800u && u <= 0xDBFFu && i + 1 < n && s[i + 1] >= 0xDC00u && s[i + 1] <= 0xDFFFu) {
+    *out = 0x10000u + (((uint32_t)u - 0xD800u) << 10) + ((uint32_t)s[i + 1] - 0xDC00u);
+    return 2;
+  }
+  *out = u;
+  return 1;
+}
+
+/* 往回退一个码点：i 是某个码点的起点，交回它前面那个码点的起点。 */
+static uint32_t cp_before(const uint16_t *s, uint32_t i) {
+  if (i == 0) return 0;
+  if (i >= 2 && s[i - 1] >= 0xDC00u && s[i - 1] <= 0xDFFFu
+      && s[i - 2] >= 0xD800u && s[i - 2] <= 0xDBFFu) return i - 2;
+  return i - 1;
+}
+
+/* Final_Sigma：这个词尾的 sigma 前面要有「有大小写的」字符，后面不许有。
+ * 两边都允许隔着若干「大小写可忽略」的东西 —— 组合记号、修饰符那一类。
+ * 少了这一条，小写只在词中间那一半是对的，而两半在屏幕上一样像。 */
+static int final_sigma(const uint16_t *s, uint32_t n, uint32_t at) {
+  uint32_t i = at;
+  int 前面有 = 0;
+  while (i > 0) {
+    i = cp_before(s, i);
+    uint32_t cp = 0;
+    cp_at(s, n, i, &cp);
+    if (in_ranges(ucd_case_ignorable_ranges, ucd_case_ignorable_ranges_count, cp)) continue;
+    if (in_ranges(ucd_cased_ranges, ucd_cased_ranges_count, cp)) 前面有 = 1;
+    break;
+  }
+  if (!前面有) return 0;
+  uint32_t j = at + 1;
+  while (j < n) {
+    uint32_t cp = 0;
+    int 用 = cp_at(s, n, j, &cp);
+    if (in_ranges(ucd_case_ignorable_ranges, ucd_case_ignorable_ranges_count, cp)) { j += (uint32_t)用; continue; }
+    if (in_ranges(ucd_cased_ranges, ucd_cased_ranges_count, cp)) return 0;
+    break;
+  }
+  return 1;
 }
 
 /* ---- values ---------------------------------------------------------- */
@@ -109,6 +180,33 @@ static Value *alloc_values(uint32_t n) {
   Value *p = (Value *)calloc(n ? n : 1, sizeof(Value));
   if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
   return p;
+}
+
+/* 大小写：逐码点查表。上界是「每个单元都摊成三份」，因为表里最长的一条是三个单元。 */
+static Value case_fold(Value s, int up) {
+  const HmyrCaseEntry *tab = up ? ucd_upper_map : ucd_lower_map;
+  size_t count = up ? ucd_upper_map_count : ucd_lower_map_count;
+  const uint16_t *src = s.s;
+  uint32_t n = s.slen;
+  uint16_t *p = (uint16_t *)malloc((size_t)((size_t)n * 3 + 1) * sizeof(uint16_t));
+  if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  uint32_t i = 0, out = 0;
+  while (i < n) {
+    uint32_t cp = 0;
+    int 用 = cp_at(src, n, i, &cp);
+    if (!up && cp == CP_CAPITAL_SIGMA && final_sigma(src, n, i)) {
+      p[out++] = (uint16_t)CP_FINAL_SIGMA;
+    } else {
+      const HmyrCaseEntry *e = case_find(tab, count, cp);
+      if (e) {
+        for (uint16_t k = 0; k < e->n; k++) p[out++] = e->u[k];
+      } else {
+        for (int k = 0; k < 用; k++) p[out++] = src[i + (uint32_t)k];
+      }
+    }
+    i += (uint32_t)用;
+  }
+  return v_str(p, out);
 }
 
 /* ---- reading the file ------------------------------------------------ */
@@ -813,15 +911,34 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     if (nargs != 1) { fail("HMYR-R0101", "chr wants one argument"); return 1; }
     int ok = 0; double cp = as_num(args[0], &ok);
     if (!ok) { fail("HMYR-R0130", "chr wants a number"); return 1; }
-    uint16_t *p = (uint16_t *)malloc(sizeof(uint16_t));
-    p[0] = (uint16_t)(long long)cp;
-    *out = v_str(p, 1);
+    long long 码 = (long long)floor(cp);
+    if (码 < 0 || 码 > 0x10FFFF) { fail("HMYR-R0207", "not a code point"); return 1; }
+    /* 基本平面之外的码点在串里占两个单元。以前这里一刀截成一个单元，
+     * 于是同一段 chr(cp) 在 C 上得到的是那个码点的高位代理 ——
+     * 一个看起来只是「字不对」的结果，其实整串都错了一格。 */
+    uint16_t 单元[2];
+    uint32_t 长 = 1;
+    if (码 > 0xFFFF) {
+      码 -= 0x10000;
+      单元[0] = (uint16_t)(0xD800 + (码 >> 10));
+      单元[1] = (uint16_t)(0xDC00 + (码 & 0x3FF));
+      长 = 2;
+    } else {
+      单元[0] = (uint16_t)码;
+    }
+    uint16_t *p = (uint16_t *)malloc((size_t)长 * sizeof(uint16_t));
+    memcpy(p, 单元, (size_t)长 * sizeof(uint16_t));
+    *out = v_str(p, 长);
     return 1;
   }
   if (name_is(name_idx, "ord")) {
     if (nargs != 1) { fail("HMYR-R0101", "ord wants one argument"); return 1; }
     if (args[0].tag != T_STR || args[0].slen == 0) { fail("HMYR-R0206", "ord of an empty string"); return 1; }
-    *out = v_num((double)args[0].s[0]);
+    /* 一个「字符」是一个码点，不是一个单元：基本平面之外的字符要连着它后面
+     * 那个低位代理一起读。JS 那三台用的都是 codePointAt(0)，这里跟上它。 */
+    uint32_t cp = 0;
+    cp_at(args[0].s, args[0].slen, 0, &cp);
+    *out = v_num((double)cp);
     return 1;
   }
   if (name_is(name_idx, "to_int")) {
@@ -873,21 +990,10 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = args[0];
     return 1;
   }
-  /* ASCII case folding. The full table is again corpus data; a letter outside
-   * ASCII comes back unchanged, which is what most callers want anyway. */
   if (name_is(name_idx, "to_upper") || name_is(name_idx, "to_lower")) {
     if (nargs != 1) { fail("HMYR-R0101", "that builtin wants one argument"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "that builtin wants a string"); return 1; }
-    uint32_t n = args[0].slen;
-    uint16_t *p = (uint16_t *)malloc((size_t)(n ? n : 1) * sizeof(uint16_t));
-    int up = name_is(name_idx, "to_upper");
-    for (uint32_t i = 0; i < n; i++) {
-      uint16_t ch = args[0].s[i];
-      if (up && ch >= 'a' && ch <= 'z') ch = (uint16_t)(ch - 32);
-      if (!up && ch >= 'A' && ch <= 'Z') ch = (uint16_t)(ch + 32);
-      p[i] = ch;
-    }
-    *out = v_str(p, n);
+    *out = case_fold(args[0], name_is(name_idx, "to_upper"));
     return 1;
   }
   /* ---- records ---- */
@@ -1523,6 +1629,13 @@ int main(int argc, char **argv) {
     fprintf(stderr, "usage: hmyr-vm program.hmyrb\n");
     return 2;
   }
+#ifdef _WIN32
+  /* 输出按字节写。Windows 的文本模式会把每个换行翻成两个字节，于是
+   * 同一个程序在这台机器上多出一样东西 —— 而「两台机器同一个答案」
+   * 这句话里，答案指的是交出去的那串字节。 */
+  _setmode(_fileno(stdout), _O_BINARY);
+  _setmode(_fileno(stderr), _O_BINARY);
+#endif
   size_t len = 0;
   uint8_t *bytes = read_file(argv[1], &len);
   load_program(bytes, len);

@@ -257,6 +257,189 @@ console.log("九、效果声明在 C 上也管用");
   }
 }
 
+console.log("十、大小写：表搬过来了，两台机器逐单元一样");
+{
+  // 两台机器对同一串文字该交出同一串单元。取样两批：一批是所有「映射之后会变」
+  // 的码点（全码点扫过来，不是抽），一批是等距抽样（看「不该变的地方确实没变」）。
+  // 每一行问五个问题：大写、小写、前面加一个带大小写的字母之后小写、
+  // 后面加一个之后小写、以及大写。中间那三个问的是词尾那一条规则。
+  const 会变 = [];
+  for (let cp = 0; cp <= 0x10ffff; cp++) {
+    if (cp >= 0xd800 && cp <= 0xdfff) continue;
+    const 字 = String.fromCodePoint(cp);
+    if (字.toUpperCase() !== 字 || 字.toLowerCase() !== 字) 会变.push(cp);
+  }
+  const 不变 = [];
+  for (let cp = 0; cp <= 0x10ffff; cp += 311) {
+    if (cp >= 0xd800 && cp <= 0xdfff) continue;
+    不变.push(cp);
+  }
+  // 表里列出来的码点也要进样本：这样「表里有而宿主不认」的反方向也有机会现形。
+  const 头文 = fs.readFileSync(path.join(ROOT, "vm/ucd-case.h"), "utf8");
+  for (const m of 头文.matchAll(/\{0x([0-9A-F]+)u, \d+u, \{/g)) {
+    const cp = parseInt(m[1], 16);
+    if (!会变.includes(cp)) 会变.push(cp);
+  }
+  const 样本 = [...new Set([...会变, ...不变])];
+  // 语料那一侧：直接从 data/ucd 读「每个码点换成什么」。这就是 C 那台该给的答案，
+  // 而且是独立于生成器再读一遍 —— 生成器读错了字段，这里就会吵。
+  const 转单元 = (cps) => {
+    const 单 = [];
+    for (const c of cps) {
+      if (c <= 0xffff) 单.push(c);
+      else { 单.push(0xd800 + ((c - 0x10000) >> 10)); 单.push(0xdc00 + ((c - 0x10000) & 0x3ff)); }
+    }
+    return 单;
+  };
+  const 语料上 = new Map();
+  const 语料下 = new Map();
+  for (const 行 of fs.readFileSync(path.join(ROOT, "data/ucd/UnicodeData.txt"), "utf8").split("\n")) {
+    if (!行) continue;
+    const 段 = 行.split(";");
+    if (段.length < 15) continue;
+    if (段[1].startsWith("<") && 段[1].includes(",")) continue;
+    const cp = parseInt(段[0], 16);
+    if (Number.isNaN(cp)) continue;
+    const 拆 = (文) => 转单元(文.split(/\s+/).map((h) => parseInt(h, 16)));
+    if (段[12].trim()) 语料上.set(cp, 拆(段[12].trim()));
+    if (段[13].trim()) 语料下.set(cp, 拆(段[13].trim()));
+  }
+  for (const 行 of fs.readFileSync(path.join(ROOT, "data/ucd/SpecialCasing.txt"), "utf8").split("\n")) {
+    const 净 = 行.split("#")[0].trim();
+    if (!净) continue;
+    const 段 = 净.split(";").map((s) => s.trim());
+    if (段.length < 5 || 段[4] !== "") continue;      // 带条件的是地区规则，这门语言没有地区
+    const cp = parseInt(段[0], 16);
+    if (Number.isNaN(cp)) continue;
+    const 拆 = (文) => (文 ? 转单元(文.split(/\s+/).map((h) => parseInt(h, 16))) : null);
+    const 下 = 拆(段[1]);
+    const 上 = 拆(段[3]);
+    if (上) 语料上.set(cp, 上);
+    if (下) 语料下.set(cp, 下);
+  }
+  const 清单 = path.join(临, "case-sample.txt");
+  fs.writeFileSync(清单, 样本.join("\n") + "\n", "utf8");
+  const 路径 = 清单.replace(/\\/g, "/");
+  const 源码 = [
+    "fn 单元们(s: String) -> String {",
+    "  var i = 0",
+    '  var 出 = ""',
+    "  while i < len(s) {",
+    '    if i > 0 { 出 = 出 + " " }',
+    "    出 = 出 + str(ord(slice(s, i, i + 1)))",
+    "    i = i + 1",
+    "  }",
+    "  return 出",
+    "}",
+    "fn main() -> Int effects(file) {",
+    '  var 行们 = read_lines("' + 路径 + '")',
+    "  var i = 0",
+    "  while i < len(行们) {",
+    "    var 字 = chr(to_int(行们[i]))",
+    '    print(单元们(to_upper(字)) + " | " + 单元们(to_lower(字)) + " | " + 单元们(to_lower(chr(913) + 字)) + " | " + 单元们(to_lower(字 + chr(913))) + " | " + 单元们(to_upper(chr(913) + 字)) + "\\n")',
+    "    i = i + 1",
+    "  }",
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "case-fold");
+  const 甲 = String(r.js || "").split("\n");
+  const 乙 = String(r.c || "").split("\n");
+  // 失败信息里只说第几行、哪个码点、哪一列 —— 不把字形印出来。
+  const 哪列 = ["大写", "小写", "前有字母时小写", "后有字母时小写", "前面有字母时大写"];
+  const 说一处 = (i) => {
+    const 列甲 = String(甲[i] || "").split(" | ");
+    const 列乙 = String(乙[i] || "").split(" | ");
+    let 第 = -1;
+    for (let k = 0; k < Math.max(列甲.length, 列乙.length); k++) if (列甲[k] !== 列乙[k]) { 第 = k; break; }
+    return "第 " + i + " 行，码点 " + 样本[i] + "，" + (哪列[第] || 第 + " 列")
+      + "；甲 " + JSON.stringify(列甲[第]) + " 乙 " + JSON.stringify(列乙[第]);
+  };
+  const 不同 = [];
+  for (let i = 0; i < Math.max(甲.length, 乙.length); i++) if (甲[i] !== 乙[i]) 不同.push(i);
+  // 单位串：拿码点直接算出串里的单元，用来写「什么都不该变」的期望。
+  const 单元串 = (单元) => 单元.join(" ");
+  const 未动 = (cp) => {
+    const 甲一 = 单元串(转单元([cp]));
+    return [甲一, 甲一, "945 " + 甲一, 甲一 + " 945", "913 " + 甲一].join(" | ");
+  };
+  const 语料错 = [];
+  const 机器错 = [];
+  const 缝 = [];
+  const 缝错 = [];
+  for (let i = 0; i < 样本.length; i++) {
+    const cp = 样本[i];
+    const 列乙 = String(乙[i] || "").split(" | ");
+    const 语上 = 语料上.get(cp);
+    const 语下 = 语料下.get(cp);
+    if (语上 || 语下) {
+      // 语料说的就是答案：大写、小写两列要一字不差地照它来。
+      const 期上 = 语上 ? 单元串(语上) : 单元串(转单元([cp]));
+      const 期下 = 语下 ? 单元串(语下) : 单元串(转单元([cp]));
+      if (列乙[0] !== 期上 || 列乙[1] !== 期下) 语料错.push(i);
+      if (甲[i] !== 乙[i]) 机器错.push(i);
+    } else if (甲[i] !== 乙[i]) {
+      // 语料没给它映射，而宿主认得（宿主是 Unicode 17.0，语料是 16.0）：
+      // C 那台该一个字也不动。这条缝不藏，但要小到能量出来。
+      缝.push(i);
+      if (String(乙[i] || "").trim() !== 未动(cp)) 缝错.push(i);
+    }
+  }
+  ok("语料里有映射的码点，C 那台照语料换", 语料错.length === 0, 语料错.length ? 说一处(语料错[0]) : "");
+  ok("语料覆盖到的那些，连上下文那三列两台机器也一样", 机器错.length === 0, 机器错.length ? 说一处(机器错[0]) : "");
+  ok("宿主比语料多认得的那些，C 一个字也不动（" + 缝.length + " 个）",
+     缝错.length === 0, 缝错.length ? 说一处(缝错[0]) : "");
+  ok("样本不是空跑", 乙.length > 5000, String(乙.length));
+
+  // 词尾那一条规则单独钉住：同一个字母，位置不同形状就不同。
+  const 单元们 = [
+    "fn 单元们(s: String) -> String {",
+    "  var i = 0",
+    '  var 出 = ""',
+    "  while i < len(s) {",
+    '    if i > 0 { 出 = 出 + " " }',
+    "    出 = 出 + str(ord(slice(s, i, i + 1)))",
+    "    i = i + 1",
+    "  }",
+    "  return 出",
+    "}",
+  ];
+  const 词尾 = [...单元们,
+    "fn main() -> Int {",
+    '  print(单元们(to_lower(chr(931))) + "\\n")',
+    '  print(单元们(to_lower(chr(913) + chr(931))) + "\\n")',
+    '  print(单元们(to_lower(chr(913) + chr(931) + chr(913))) + "\\n")',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const 词 = 两侧跑(词尾, "case-final");
+  const 行 = String(词.c || "").trim().split("\n");
+  ok("单独一个 sigma 换成词中间那个形状", 行[0] === "963", JSON.stringify(行[0]));
+  ok("前面有字母、后面没有，换成词尾那个形状", 行[1] === "945 962", JSON.stringify(行[1]));
+  ok("前后都有字母，回到词中间那个形状", 行[2] === "945 963 945", JSON.stringify(行[2]));
+  ok("词尾那三条两种走法都一样", 词.js === 词.c, JSON.stringify(词.js) + " 对 " + JSON.stringify(词.c));
+
+  // 基本平面之外的字符：chr 该给出两个单元，ord 该读回整个码点。
+  // 这两条以前在 C 上都是错的 —— chr 截成一个单元，ord 只读那一个单元。
+  const 增补 = [
+    "fn main() -> Int {",
+    "  var 字 = chr(66560)",
+    '  print(str(len(字)) + "\\n")',
+    '  print(str(ord(字)) + "\\n")',
+    '  print(str(ord(to_upper(字))) + "\\n")',
+    '  print(str(ord(to_lower(字))) + "\\n")',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const 补 = 两侧跑(增补, "astral");
+  const 补行 = String(补.c || "").trim().split("\n");
+  ok("增补面的字符占两个单元", 补行[0] === "2", JSON.stringify(补行[0]));
+  ok("ord 读回整个码点", 补行[1] === "66560", JSON.stringify(补行[1]));
+  ok("大写之后还是它自己", 补行[2] === "66560", JSON.stringify(补行[2]));
+  ok("小写之后是另一枚增补面的字符", 补行[3] === "66600", JSON.stringify(补行[3]));
+  ok("增补面这批两种走法也一样", 补.js === 补.c, JSON.stringify(补.js) + " 对 " + JSON.stringify(补.c));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
