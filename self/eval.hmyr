@@ -58,6 +58,13 @@ fn 求二元(op: String, a: Int, b: Int) -> Int {
   if op == "<=" { return 好(x <= y) }
   if op == ">" { return 好(x > y) }
   if op == ">=" { return 好(x >= y) }
+  // 走到这里说明链那一层交来的 op 不是它写的那些字符串之一。
+  // 若它是一个节点记录，把它的 kind 说出来 —— 「[object Object]」什么都不告诉人，
+  // 而 kind 至少能指认「原来这里是个调用 / 一个数 / 一个名字」。
+  if field_has(op, "kind") { return 坏("不认识的运算符：一个 " + op.kind + " 节点") }
+  if field_has(op, "op") { return 坏("不认识的运算符：一个自己带 op 的记录，它的 op 是 " + op.op) }
+  if field_has(op, "name") { return 坏("不认识的运算符：一个带 name 的记录，名字是 " + op.name) }
+  if field_has(op, "value") { return 坏("不认识的运算符：一个带 value 的记录") }
   return 坏("不认识的运算符：" + op)
 }
 
