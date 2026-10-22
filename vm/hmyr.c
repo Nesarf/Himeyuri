@@ -30,6 +30,9 @@
 #include <windows.h>
 #include <io.h>
 #include <fcntl.h>
+#include <process.h>
+#else
+#include <unistd.h>
 #endif
 
 /* 按 UTF-8 的路径开文件。
@@ -1119,13 +1122,18 @@ static int has_effect(Func *f, const uint16_t *名, uint32_t 长) {
  * 只是以前读进来没人用。 */
 static int g_effects_on = 1;
 
+/* 编译那一段的 print 改道到标准错误 —— 理由写在 print 那个内置那里。 */
+static int g_compile_quiet = 0;
+
 static Value run_func(Func *f, Value *args, int nargs);
 
 /* Builtins. Each returns 1 on success and stores into *out; 0 means "not a
  * builtin I know", and the failure is already recorded. */
 static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   if (name_is(name_idx, "print") || name_is(name_idx, "print_err")) {
-    FILE *to = name_is(name_idx, "print") ? stdout : stderr;
+    /* 编译那一段的 print 改道到标准错误：启动器编源码时种子会打印「N 个字节」，
+     * 那不该落在用户程序的输出里。改道而不是丢弃 —— 编译失败时那几行就是诊断。 */
+    FILE *to = (name_is(name_idx, "print") && !g_compile_quiet) ? stdout : stderr;
     for (int i = 0; i < nargs; i++) {
       Value t;
       value_to_text(args[i], &t);
@@ -1862,54 +1870,128 @@ static uint8_t *read_file(const char *path, size_t *out_len) {
   return buf;
 }
 
-int main(int argc, char **argv) {
-  if (argc < 2) {
-    fprintf(stderr, "usage: hmyr-vm program.hmyrb\n");
-    return 2;
-  }
-#ifdef _WIN32
-  /* 输出按字节写。Windows 的文本模式会把每个换行翻成两个字节，于是
-   * 同一个程序在这台机器上多出一样东西 —— 而「两台机器同一个答案」
-   * 这句话里，答案指的是交出去的那串字节。 */
-  _setmode(_fileno(stdout), _O_BINARY);
-  _setmode(_fileno(stderr), _O_BINARY);
-#endif
-  size_t len = 0;
-  uint8_t *bytes = read_file(argv[1], &len);
-  load_program(bytes, len);
-  g_trace_on = getenv("HMYR_TRACE") != NULL;
-  g_calls_on = getenv("HMYR_CALLS") != NULL;
-  g_fields_on = getenv("HMYR_FIELDS") != NULL;
-  /* The step limit is 5 million by default, which is right for a programme
-   * doing its own work. Running an interpreter that runs another programme is
-   * tens of times that, so the ceiling is adjustable. */
-  {
-    const char *sl = getenv("HMYR_STEPS");
-    if (sl) {
-      long v = atol(sl);
-      if (v > 0) step_limit = (int)(v > 2000000000L ? 2000000000L : v);
-    }
-  }
-  for (int i = 0; i < TRACE_N; i++) g_trace[i].op = 255;
-  if (getenv("HMYR_MEM")) atexit(堆账报一下);
+/* ---- 一个可执行文件，两个入口 ----------------------------------------
+ *
+ *   hmyr 程序.hmyrb [参数]   装载就绪的字节码，直接跑。
+ *   hmyr 程序.hmyr  [参数]   先让种子把它编成字节码，再跑那一份。
+ *
+ * 第二种就是这个文件作为「启动器」的那一面。它做到的是一件具体的事：
+ * 从源码到运行，路上没有 JavaScript —— 种子是自己编出来的字节码，
+ * 编出来的那一份也由这台机器跑。
+ */
 
-  /* argv: the .hmyrb path first, then whatever else was typed. The bootstrap's
-   * 命令行入口 reads element 1 as the target .hmyr, so the first slot has to
-   * stay where the script name would be. */
+/* 编译那一段的 print 改道到标准错误 —— 理由写在 print 那个内置旁边。 */
+
+/* 把装载过的那一份放下，好装下一份。不清的话第二份的槽位与名字池会接在第一份
+ * 后面，症状是「程序跑起来了，但用的是别人的常数」—— 那种错比崩溃难查。 */
+static void unload_program(void) {
+  funcs = NULL;
+  nfuncs = 0;
+  pool_p = NULL;
+  pool_len = NULL;
+  pool_n = 0;
+  pool_cap = 0;
+  g_stack_n = 0;
+  g_base = 0;
+  g_cur = NULL;
+  g_failed = 0;
+  g_last_field = -1;
+  g_trace_at = 0;
+  steps = 0;
+  g_argv = v_null();
+}
+
+static int 文件在(const char *path) {
+  FILE *f = 开文件(path, "rb");
+  if (!f) return 0;
+  fclose(f);
+  return 1;
+}
+
+/* 临时字节码放哪儿：系统的临时目录。名字带 pid，两次同时跑也不会撞。 */
+static void 临时路径(char *buf, size_t cap) {
+#ifdef _WIN32
+  const char *dir = getenv("TEMP");
+  if (!dir || !*dir) dir = getenv("TMP");
+  if (!dir || !*dir) dir = ".";
+  snprintf(buf, cap, "%s\\hmyr-%ld.hmyrb", dir, (long)_getpid());
+#else
+  const char *dir = getenv("TMPDIR");
+  if (!dir || !*dir) dir = "/tmp";
+  snprintf(buf, cap, "%s/hmyr-%ld.hmyrb", dir, (long)getpid());
+#endif
+}
+
+/* 种子在哪。三种找法，按「离用户近」排：环境变量、可执行文件旁边、
+ * 当前目录。找不到就明说，别让人等一个「没有这个文件」的通用消息。 */
+static int 找种子(char *buf, size_t cap, const char *argv0) {
+  const char *env = getenv("HMYR_SEED");
+  if (env && *env) {
+    snprintf(buf, cap, "%s", env);
+    if (文件在(buf)) return 1;
+  }
+  /* 可执行文件所在目录：砍掉最后一段路径。 */
+  char 目录[900];
+  snprintf(目录, sizeof 目录, "%s", argv0);
+  char *切 = NULL;
+  for (char *p = 目录; *p; p++) if (*p == '/' || *p == '\\') 切 = p;
+  if (切) {
+    *切 = 0;
+    snprintf(buf, cap, "%s%cbootstrap%cpack.hmyrb", 目录, '\\', '\\');
+    if (文件在(buf)) return 1;
+    snprintf(buf, cap, "%s%c..%cbootstrap%cpack.hmyrb", 目录, '\\', '\\', '\\');
+    if (文件在(buf)) return 1;
+  }
+  snprintf(buf, cap, "bootstrap%cpack.hmyrb", '\\');
+  if (文件在(buf)) return 1;
+  return 0;
+}
+
+/* 步限：默认五百万步。跑解释器替程序执行要几十倍，所以从环境变量放宽 ——
+ * 编译那一段则直接按放宽的那个数算，因为「编一份源码」本来就不是小活。 */
+static int 步限从环境(void) {
+  const char *sl = getenv("HMYR_STEPS");
+  if (sl) {
+    long v = atol(sl);
+    if (v > 0) return (int)(v > 2000000000L ? 2000000000L : v);
+  }
+  return 5000000;
+}
+
+/* 装一份字节码、按命令行给它 argv、跑，交回退出码。
+ *
+ * 装载路径与 argv[0] 分开给：装载用临时文件，而程序看到的第一个参数
+ * 应该是用户敲的那个源文件 —— 它读 argv() 时不该看见一个临时名字。 */
+static int run_bytecode(const char *path, const char *argv0, int nrest, char **rest, int 限) {
+  size_t len = 0;
+  uint8_t *bytes = read_file(path, &len);
+  if (!bytes) {
+    fprintf(stderr, "HMYR-E0009 cannot read that bytecode file: %s\n", path);
+    return 1;
+  }
+  load_program(bytes, len);
+  step_limit = 限;
+  steps = 0;
+  g_failed = 0;
+
+  /* 第一个槽位是脚本自己，之后才是参数 —— 与启动器那一层的约定一致。 */
   g_argv = v_null();
   g_argv.tag = T_TUPLE;
-  g_argv.ilen = (uint32_t)(argc - 1);
+  g_argv.ilen = (uint32_t)(nrest + 1);
   g_argv.items = alloc_values(g_argv.ilen);
-  for (int i = 1; i < argc; i++) {
+  {
     uint32_t n16 = 0;
-    uint16_t *u = utf8_to_utf16(argv[i], strlen(argv[i]), &n16);
-    g_argv.items[i - 1] = v_str(u, n16);
+    uint16_t *u = utf8_to_utf16(argv0, strlen(argv0), &n16);
+    g_argv.items[0] = v_str(u, n16);
+  }
+  for (int i = 0; i < nrest; i++) {
+    uint32_t n16 = 0;
+    uint16_t *u = utf8_to_utf16(rest[i], strlen(rest[i]), &n16);
+    g_argv.items[i + 1] = v_str(u, n16);
   }
 
-  /* Which function runs: 命令行入口 if the bytecode has one, otherwise main.
-   * The bootstrap has both - its own four-line self-test is main, and the real
-   * command line entry is 命令行入口. Picking main there ran the self-test and
-   * ignored the argument, which looks like "the file I asked for was not run". */
+  /* 入口：带参数时用 命令行入口，否则用 main。自举层两个都有 ——
+   * main 是它自己的四行自测，命令行入口 是真的那个。 */
   Func *entry = NULL;
   Func *cli = NULL;
   {
@@ -1924,12 +2006,8 @@ int main(int argc, char **argv) {
       }
     }
   }
-  /* With arguments, 命令行入口 runs; without, main. The bootstrap has both: main
-   * is its own four-line self-test, 命令行入口 is the real command line. That is
-   * also the shape a user sees - type a file and it runs, type nothing and you
-   * get the self-test. */
-  if (cli && argc > 2) entry = cli;
-  if (!entry) { fprintf(stderr, "hmyr: no main\n"); return 1; }
+  if (cli && nrest > 0) entry = cli;
+  if (!entry) { fprintf(stderr, "HMYR-E0009 no main in %s\n", path); return 1; }
 
   Value r = run_func(entry, NULL, 0);
   if (g_trace_on) trace_dump();
@@ -1937,8 +2015,155 @@ int main(int argc, char **argv) {
     fprintf(stderr, "%s\n", g_fail_msg);
     return 1;
   }
-  /* The return value is the exit code, not output. The bootstrap prints it
-   * because its conformance programmes report a failing number that way; a
-   * machine does not owe anybody that. */
+  /* 返回值就是退出码，不是输出。自举层自己会打印它那份验收的编号，
+   * 而一台机器不欠谁这一行。 */
   return (r.tag == T_NUM) ? (int)r.num : 0;
+}
+
+/* 启动器的正文：两趟。第一趟种子编，第二趟跑编出来的那一份。 */
+static int cli_main(int argc, char **argv) {
+  char 种子[1024];
+  if (!找种子(种子, sizeof 种子, argv[0])) {
+    fprintf(stderr, "HMYR-E0009 no seed: put bootstrap/pack.hmyrb beside this program, "
+                    "or say where it is with HMYR_SEED\n");
+    return 2;
+  }
+  char 临时[1024];
+  临时路径(临时, sizeof 临时);
+  remove(临时);
+
+  {
+    /* 种子要两样：输出路径，以及源文件。它的 argv 约定是
+     * argv()[1] 是输出、argv()[2..] 是源 —— 所以这两个是「其余参数」。 */
+    char *参[2];
+    参[0] = 临时;
+    参[1] = argv[1];
+    g_compile_quiet = 1;
+    int 码 = run_bytecode(种子, 种子, 2, 参, 200000000);
+    g_compile_quiet = 0;
+    if (码 != 0) {
+      remove(临时);
+      fprintf(stderr, "HMYR-E0009 the seed could not compile %s\n", argv[1]);
+      return 码 == 0 ? 1 : 码;
+    }
+  }
+  if (!文件在(临时)) {
+    remove(临时);
+    fprintf(stderr, "HMYR-E0009 the seed said it wrote %s, and it is not there\n", 临时);
+    return 1;
+  }
+
+  unload_program();
+  {
+    int nrest = argc - 2;
+    char **参 = (char **)malloc(sizeof(char *) * (size_t)(nrest > 0 ? nrest : 1));
+    if (!参) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    for (int i = 0; i < nrest; i++) 参[i] = argv[i + 2];
+    int 码 = run_bytecode(临时, argv[1], nrest, 参, 步限从环境());
+    /* HMYR_KEEP 留着那份字节码：查「编错了还是跑错了」的时候，
+     * 手上有那份文件与没有，是完全两件事。 */
+    if (!getenv("HMYR_KEEP")) {
+      remove(临时);
+    } else {
+      fprintf(stderr, "HMYR_KEEP kept %s\n", 临时);
+    }
+    return 码;
+  }
+}
+
+/* ---- 命令行参数：Windows 上要自己再切一次 -----------------------------
+ *
+ * main 拿到的 argv 是按系统代码页解出来的。中文路径在那一步就已经坏了，
+ * 而这一层要用那份路径去开文件 —— 于是「文件明明在，它说没有」。
+ * 原始命令行还以宽字符留着，所以自己再切一次，按 UTF-8 交出去。
+ *
+ * 切法照 Windows 的规矩：空白分隔；双引号括起来的算一个；
+ * 引号里的两个双引号表示一个引号；反斜槓在引号前成对时保留一半。
+ * 这是 MSVCRT 的那一套，Windows 上所有程序看到的参数都是按它切的。
+ */
+#ifdef _WIN32
+static char **切宽命令行(int *argc_out) {
+  const wchar_t *p = GetCommandLineW();
+  if (!p) return NULL;
+  size_t cap = 8, n = 0;
+  char **出 = (char **)malloc(cap * sizeof(char *));
+  if (!出) return NULL;
+  while (*p) {
+    while (*p == L' ' || *p == L'\t') p++;
+    if (!*p) break;
+    wchar_t 缓[4096];
+    size_t 长 = 0;
+    int 引号 = 0;
+    while (*p) {
+      wchar_t c = *p;
+      if (!引号 && (c == L' ' || c == L'\t')) break;
+      if (c == L'\\') {
+        size_t 数 = 0;
+        while (*p == L'\\') { 数++; p++; }
+        if (*p == L'"') {
+          /* 成对的反斜槓留一半，落单的那个转义引号。 */
+          for (size_t k = 数 / 2; k > 0; k--) { if (长 < 4095) 缓[长++] = L'\\'; }
+          if (数 % 2) { if (长 < 4095) 缓[长++] = L'"'; p++; }
+        } else {
+          for (size_t k = 数; k > 0; k--) { if (长 < 4095) 缓[长++] = L'\\'; }
+        }
+        continue;
+      }
+      if (c == L'"') {
+        if (引号 && p[1] == L'"') { if (长 < 4095) 缓[长++] = L'"'; p += 2; continue; }
+        引号 = !引号;
+        p++;
+        continue;
+      }
+      if (长 < 4095) 缓[长++] = c;
+      p++;
+    }
+    缓[长] = 0;
+    if (n == cap) {
+      cap *= 2;
+      char **再 = (char **)realloc(出, cap * sizeof(char *));
+      if (!再) return 出;
+      出 = 再;
+    }
+    出[n++] = utf16_to_utf8((const uint16_t *)缓, (uint32_t)长);
+  }
+  *argc_out = (int)n;
+  return 出;
+}
+#endif
+
+int main(int argc, char **argv) {
+#ifdef _WIN32
+  /* 先换成宽命令行切出来的那一份：main 给的那份已经把中文路径弄坏了。 */
+  {
+    int 宽数 = 0;
+    char **宽参 = 切宽命令行(&宽数);
+    if (宽参 && 宽数 > 0) { argc = 宽数; argv = 宽参; }
+  }
+#endif
+  if (argc < 2) {
+    fprintf(stderr, "usage: hmyr program.hmyr [arguments]\n"
+                    "   or: hmyr program.hmyrb [arguments]\n");
+    return 2;
+  }
+#ifdef _WIN32
+  /* 输出按字节写。Windows 的文本模式会把每个换行翻成两个字节，于是
+   * 同一个程序在这台机器上多出一样东西 —— 而「两台机器同一个答案」
+   * 这句话里，答案指的是交出去的那串字节。 */
+  _setmode(_fileno(stdout), _O_BINARY);
+  _setmode(_fileno(stderr), _O_BINARY);
+#endif
+  g_trace_on = getenv("HMYR_TRACE") != NULL;
+  g_calls_on = getenv("HMYR_CALLS") != NULL;
+  g_fields_on = getenv("HMYR_FIELDS") != NULL;
+  for (int i = 0; i < TRACE_N; i++) g_trace[i].op = 255;
+  if (getenv("HMYR_MEM")) atexit(堆账报一下);
+
+  /* 两个入口：给一份源码时先编再跑（启动器那一面），给一份字节码时直接跑。
+   * 判据是后缀 —— 别看文件内容去猜，猜错的时候症状比报错难查得多。 */
+  {
+    size_t 名长 = strlen(argv[1]);
+    if (名长 > 5 && strcmp(argv[1] + 名长 - 5, ".hmyr") == 0) return cli_main(argc, argv);
+  }
+  return run_bytecode(argv[1], argv[1], argc - 2, argv + 2, 步限从环境());
 }
