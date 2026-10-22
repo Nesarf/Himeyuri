@@ -500,6 +500,14 @@ static int g_calls_on = 0;
 static long g_calls_n = 0;
 static int g_fields_on = 0;
 
+/* 事件编号：字段读取与每一次调用共用一条递增的序号。
+ * 两台机器对着 diff 时，序号相同就说明「到这里为止发生的事情一样」，
+ * 而第一处内容不同的地方，就是那个值出错的位置。 */
+static long g_ev = 0;
+/* 最近一次字段读取用的是哪个名字（池索引）。诊断用：
+ * 某个调用的实参不对时，先问「上一个读的字段是哪个」。 */
+static int64_t g_last_field = -1;
+
 /* The argv the programme sees. Built in main from the real command line:
  * the first element is where the bytecode came from, the rest are the
  * programme's own arguments - the same shape the JavaScript machine uses. */
@@ -1006,7 +1014,9 @@ static Value run_func(Func *f, Value *args, int nargs) {
         }
         /* 影子输出：这条读到的字段在这个记录里排第几。两台机器对着 diff，
          * 就能看出是「记录造错了」还是「找错了」。 */
+        g_last_field = in->a;
         if (g_fields_on) {
+          fprintf(stderr, "EV %ld ", g_ev++);
           fprintf(stderr, "FIELD pc=%u n=%u i=%d name=", (unsigned)pc, (unsigned)t.rec.n, 位);
           for (uint32_t k = 0; k < pool_len[in->a] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)pool_p[in->a][k]);
           if (位 >= 0) {
@@ -1044,7 +1054,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
           uint32_t bl = pool_len[in->a] < 63 ? pool_len[in->a] : 63;
           for (uint32_t k = 0; k < bl; k++) bn[k] = (pool_p[in->a][k] < 128) ? (char)pool_p[in->a][k] : '?';
           bn[bl] = 0;
-          fprintf(stderr, "CALLB %s n=%u\n", bn, (unsigned)n);
+          fprintf(stderr, "EV %ld CALLB %s n=%u\n", g_ev++, bn, (unsigned)n);
           g_calls_n++;
         }
         if (g_stack_n < n) {
@@ -1067,7 +1077,19 @@ static Value run_func(Func *f, Value *args, int nargs) {
         int64_t 位 = find_func_index(in->a);
         Func *callee = (位 >= 0) ? &funcs[位] : NULL;
         if (!callee) { fail("HMYR-R0104", "there is no such function"); return v_null(); }
-        if (g_calls_on && g_calls_n < 200000) { fprintf(stderr, "CALL %lld\n", (long long)位); g_calls_n++; }
+        if (g_calls_on && g_calls_n < 200000) {
+          /* 对某一个函数，顺手把实参的种类打出来：调用序列只说明「调了它」，
+           * 说不清「给了它什么」。求二元 就是被盯的那个（79 号）。 */
+          if (位 == 79) {
+            fprintf(stderr, "ARGS79 base=%u stackn=%u n=%u tags=", (unsigned)base, (unsigned)g_stack_n, (unsigned)in->b);
+            for (uint32_t i = 0; i < (uint32_t)in->b; i++) fprintf(stderr, " %d", (int)g_stack[g_stack_n - (uint32_t)in->b + i].tag);
+            fprintf(stderr, " lastfield=");
+            if (g_last_field >= 0) { for (uint32_t k = 0; k < pool_len[g_last_field] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)pool_p[g_last_field][k]); }
+            fprintf(stderr, "\n");
+          }
+          fprintf(stderr, "EV %ld CALL %lld\n", g_ev++, (long long)位);
+          g_calls_n++;
+        }
         uint32_t n = (uint32_t)in->b;
         if (g_stack_n < n) {
           char fname[64];

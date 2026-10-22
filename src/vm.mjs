@@ -114,7 +114,22 @@ export class 虚拟机 {
     if (!函) { this.坏("HMYR-R0104", "there is no name '" + 名 + "' in scope"); return { ok: false, ...this.停机 }; }
     if (叫要 && 叫数 < 叫上限) {
       // 顶层那一次（main 或 命令行入口）不记：C 那边从 main 里面才开始记。
-      if (叫数 > 0) process.stderr.write("CALL " + this.名序.get(名) + "\n");
+      if (叫数 > 0) {
+        // 与 C 那台同一件事：对 79 号（求二元）顺手打出实参的种类。
+        if (this.名序.get(名) === 79) {
+          let 类们 = "";
+          for (const a of 实参) {
+            if (a && a.tag === "tuple") 类们 += " 4";
+            else if (a && a.tag === "record") 类们 += " 5";
+            else if (数.是数(a)) 类们 += " 1";
+            else if (this.文.是串(a)) 类们 += " 2";
+            else if (a === true || a === false) 类们 += " 3";
+            else 类们 += " 0";
+          }
+          process.stderr.write("ARGS79" + 类们 + "\n");
+        }
+        process.stderr.write("EV " + 事件号() + " CALL " + this.名序.get(名) + "\n");
+      }
       叫数++;
     }
     if (++this.深 > this.深限) {
@@ -238,7 +253,7 @@ export class 虚拟机 {
               else if (v === true || v === false) 值类 = "bool:" + (v ? 1 : 0);
               else 值类 = "null";
             }
-            process.stderr.write("FIELD pc=" + pc + " n=" + t.fields.size + " i=" + 位 + " name=" + 码 + " val=" + 值类 + "\n");
+            process.stderr.write("EV " + 事件号() + " FIELD pc=" + pc + " n=" + t.fields.size + " i=" + 位 + " name=" + 码 + " val=" + 值类 + "\n");
           }
           压(t.fields.get(指令.a));
           pc++; break;
@@ -259,7 +274,7 @@ export class 虚拟机 {
         }
         case "CALLB": {
           const n = 指令.b;
-          if (叫要 && 叫数 < 叫上限) { process.stderr.write("CALLB " + 指令.a + " n=" + n + "\n"); 叫数++; }
+          if (叫要 && 叫数 < 叫上限) { process.stderr.write("EV " + 事件号() + " CALLB " + 指令.a + " n=" + n + "\n"); 叫数++; }
           const 实参 = 栈.splice(栈.length - n, n);
           const 内置项 = 内置表[指令.a];
           if (!内置项) { this.坏("HMYR-R0104", "there is no builtin '" + 指令.a + "'"); return null; }
@@ -306,6 +321,9 @@ const 叫要 = process.env.HMYR_CALLS ? true : false;
 const 域要 = process.env.HMYR_FIELDS ? true : false;
 let 叫数 = 0;
 const 叫上限 = 200000;
+// 事件号：字段读取与每一次调用共用一条递增序号，与 C 那台的 g_ev 对齐。
+let 事件计数 = 0;
+const 事件号 = () => 事件计数++;
 
 export const 迹输出 = () => {
   if (!迹要) return;
