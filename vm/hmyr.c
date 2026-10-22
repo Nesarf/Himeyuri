@@ -308,6 +308,16 @@ static void load_program(const uint8_t *bytes, size_t len) {
   }
   uint16_t nglob = rd_u16(&r);
   for (uint16_t i = 0; i < nglob; i++) { uint32_t n; rd_str(&r, &n); }
+
+  /* HMYR_POOL=1：把这个名字池按索引打出来。它与 JS 侧按同一顺序模拟出来的
+   * 池并排 diff，第一处不同就是文件读取（或池分配）出错的地方。 */
+  if (getenv("HMYR_POOL")) {
+    for (uint32_t i = 0; i < pool_n; i++) {
+      fprintf(stderr, "%u ", (unsigned)i);
+      for (uint32_t k = 0; k < pool_len[i] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)pool_p[i][k]);
+      fprintf(stderr, "\n");
+    }
+  }
 }
 
 /* ---- writing UTF-8 --------------------------------------------------- */
@@ -488,6 +498,7 @@ static char g_fail_msg[512];
  * 两台机器跑同一份字节码时，第一条不一致的调用就是分歧的起点。 */
 static int g_calls_on = 0;
 static long g_calls_n = 0;
+static int g_fields_on = 0;
 
 /* The argv the programme sees. Built in main from the real command line:
  * the first element is where the bytecode came from, the rest are the
@@ -984,13 +995,30 @@ static Value run_func(Func *f, Value *args, int nargs) {
         if (t.tag != T_RECORD) { fail("HMYR-R0106", "no field on that value"); return v_null(); }
         /* find the field by name */
         int found = 0;
+        int 位 = -1;
         for (uint32_t i = 0; i < t.rec.n; i++) {
           if (t.rec.name_lens[i] != pool_len[in->a]) continue;
           uint32_t same = 1;
           for (uint32_t k = 0; k < t.rec.name_lens[i]; k++) {
             if (t.rec.names[i][k] != pool_p[in->a][k]) { same = 0; break; }
           }
-          if (same) { push(t.rec.vals[i]); found = 1; break; }
+          if (same) { push(t.rec.vals[i]); found = 1; 位 = (int)i; break; }
+        }
+        /* 影子输出：这条读到的字段在这个记录里排第几。两台机器对着 diff，
+         * 就能看出是「记录造错了」还是「找错了」。 */
+        if (g_fields_on) {
+          fprintf(stderr, "FIELD pc=%u n=%u i=%d name=", (unsigned)pc, (unsigned)t.rec.n, 位);
+          for (uint32_t k = 0; k < pool_len[in->a] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)pool_p[in->a][k]);
+          if (位 >= 0) {
+            Value v = t.rec.vals[位];
+            if (v.tag == T_BOOL) fprintf(stderr, " val=bool:%d", v.boolean ? 1 : 0);
+            else if (v.tag == T_NUM) fprintf(stderr, " val=num");
+            else if (v.tag == T_STR) fprintf(stderr, " val=str");
+            else if (v.tag == T_TUPLE) fprintf(stderr, " val=tuple");
+            else if (v.tag == T_RECORD) fprintf(stderr, " val=record");
+            else fprintf(stderr, " val=null");
+          }
+          fprintf(stderr, "\n");
         }
         if (!found) { fail("HMYR-R0106", "no field with that name"); return v_null(); }
         pc++; break;
@@ -1011,6 +1039,14 @@ static Value run_func(Func *f, Value *args, int nargs) {
       }
       case OP_CALLB: {
         uint32_t n = (uint32_t)in->b;
+        if (g_calls_on && g_calls_n < 200000) {
+          char bn[64];
+          uint32_t bl = pool_len[in->a] < 63 ? pool_len[in->a] : 63;
+          for (uint32_t k = 0; k < bl; k++) bn[k] = (pool_p[in->a][k] < 128) ? (char)pool_p[in->a][k] : '?';
+          bn[bl] = 0;
+          fprintf(stderr, "CALLB %s n=%u\n", bn, (unsigned)n);
+          g_calls_n++;
+        }
         if (g_stack_n < n) {
           char m[160];
           snprintf(m, sizeof m, "a builtin call wants %u argument(s), the frame has %u",
@@ -1031,7 +1067,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         int64_t 位 = find_func_index(in->a);
         Func *callee = (位 >= 0) ? &funcs[位] : NULL;
         if (!callee) { fail("HMYR-R0104", "there is no such function"); return v_null(); }
-        if (g_calls_on && g_calls_n < 4000) { fprintf(stderr, "CALL %lld\n", (long long)位); g_calls_n++; }
+        if (g_calls_on && g_calls_n < 200000) { fprintf(stderr, "CALL %lld\n", (long long)位); g_calls_n++; }
         uint32_t n = (uint32_t)in->b;
         if (g_stack_n < n) {
           char fname[64];
@@ -1089,6 +1125,7 @@ int main(int argc, char **argv) {
   load_program(bytes, len);
   g_trace_on = getenv("HMYR_TRACE") != NULL;
   g_calls_on = getenv("HMYR_CALLS") != NULL;
+  g_fields_on = getenv("HMYR_FIELDS") != NULL;
   /* The step limit is 5 million by default, which is right for a programme
    * doing its own work. Running an interpreter that runs another programme is
    * tens of times that, so the ceiling is adjustable. */

@@ -220,6 +220,26 @@ export class 虚拟机 {
             this.坏("HMYR-R0106", "no field '" + 指令.a + "' on that value");
             return null;
           }
+          if (域要) {
+            // 与 C 那台同一行格式：pc、记录字段数、命中第几个、名字的码元，以及那个值的种类。
+            let 位 = -1, k = 0;
+            for (const 键 of t.fields.keys()) { if (键 === 指令.a) { 位 = k; break; } k++; }
+            let 码 = "";
+            for (let q = 0; q < 指令.a.length && q < 8; q++) 码 += 指令.a.charCodeAt(q).toString(16).padStart(4, "0");
+            let 值类 = "?";
+            if (位 >= 0) {
+              const v = [...t.fields.values()][位];
+              // 判类型要走这门语言自己的帮手，不在这里写 typeof ——
+              // test/numbers 与 test/text 两条都在盯这件事。
+              if (v && v.tag === "tuple") 值类 = "tuple";
+              else if (v && v.tag === "record") 值类 = "record";
+              else if (数.是数(v)) 值类 = "num";
+              else if (this.文.是串(v)) 值类 = "str";
+              else if (v === true || v === false) 值类 = "bool:" + (v ? 1 : 0);
+              else 值类 = "null";
+            }
+            process.stderr.write("FIELD pc=" + pc + " n=" + t.fields.size + " i=" + 位 + " name=" + 码 + " val=" + 值类 + "\n");
+          }
           压(t.fields.get(指令.a));
           pc++; break;
         }
@@ -239,6 +259,7 @@ export class 虚拟机 {
         }
         case "CALLB": {
           const n = 指令.b;
+          if (叫要 && 叫数 < 叫上限) { process.stderr.write("CALLB " + 指令.a + " n=" + n + "\n"); 叫数++; }
           const 实参 = 栈.splice(栈.length - n, n);
           const 内置项 = 内置表[指令.a];
           if (!内置项) { this.坏("HMYR-R0104", "there is no builtin '" + 指令.a + "'"); return null; }
@@ -281,8 +302,10 @@ const 迹长 = 40;
 // 第一条不一致的调用就是分歧的起点 —— 而函数名多是中文，C 那边打不好，
 // 所以两边都打「函数在表里的位置」，那个数字是共同的。
 const 叫要 = process.env.HMYR_CALLS ? true : false;
+// 字段读取的影子输出：与 C 那台的 HMYR_FIELDS 一行一条对齐。
+const 域要 = process.env.HMYR_FIELDS ? true : false;
 let 叫数 = 0;
-const 叫上限 = 4000;
+const 叫上限 = 200000;
 
 export const 迹输出 = () => {
   if (!迹要) return;
