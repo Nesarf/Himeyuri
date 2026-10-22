@@ -4,7 +4,7 @@
 //
 // It runs each suite as its own process, so a crash in one is reported as that suite failing rather
 // than as this script dying, and it prints the M2 status line the specification asks about.
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -142,29 +142,83 @@ const SUITES = [
 let failed = 0;
 console.log("Himeyuri checks");
 console.log("");
-for (const [name, script, what] of SUITES) {
-  let result = spawnSync(process.execPath, ["--max-old-space-size=768", path.join(ROOT, script)], {
-    cwd: ROOT, encoding: "utf8",
-  });
-  const tail = (result.stdout || "").trim().split("\n").filter(Boolean).pop() || "";
-  let ok = result.status === 0;
-  let retried = false;
-  // A suite that passes on its own but not here is a scheduling problem, not a code problem - and
-  // telling those two apart by hand wastes the one thing a check is for. Retry once, and say so.
-  if (!ok) {
-    retried = true;
-    result = spawnSync(process.execPath, ["--max-old-space-size=768", path.join(ROOT, script)], { cwd: ROOT, encoding: "utf8" });
-    ok = result.status === 0;
+
+/* ---- 调度：轻的并行四路，重的串行 -------------------------------------
+ *
+ * 之前是一路一路串行跑，四分钟。而这一台是多核的，那些套件里大多数
+ * 峰值只有几十兆 —— 四路并行不会把内存顶上去。
+ *
+ * 串行通道里放两类：
+ *
+ *   重的     量出来的峰值：ucd 263 MB、corpus 163 MB、cvm 142 MB，
+ *            加上编 C 的 cli、arm、board。并行起来峰值会叠加 ——
+ *            这一台已经吃过一次「叠起来把内存吃满」的亏。
+ *   互相踩的 manifest、package、distro、release 是一条发布链，共用 dist/。
+ *            并行跑会互相覆盖产物，症状是四套一起红、而单独跑都过。
+ *
+ * 输出顺序不变：结果先收进表里，最后按 SUITES 的顺序打印。并行只影响
+ * 「什么时候跑」，不影响「看起来是什么样」。
+ */
+const 串行 = new Set([
+  "cvm", "cli", "arm", "board", "corpus", "ucd",
+  "manifest", "package", "distro", "release",
+]);
+const 并行数 = 4;
+
+const 跑一套 = (script) => new Promise((resolve) => {
+  const 子 = spawn(process.execPath, ["--max-old-space-size=768", path.join(ROOT, script)], { cwd: ROOT });
+  let 出 = "", 错 = "";
+  子.stdout.setEncoding("utf8");
+  子.stderr.setEncoding("utf8");
+  子.stdout.on("data", (d) => { 出 += d; });
+  子.stderr.on("data", (d) => { 错 += d; });
+  子.on("close", (码) => resolve({ 码, 出, 错 }));
+});
+
+// 自己跑得过去、在这里跑不过去的，是调度的事，不是代码的事；
+// 这两类要能分开 —— 所以失败的重试一次，并在输出里说明。
+const 跑一套带重试 = async (script) => {
+  let r = await 跑一套(script);
+  let 重试过 = false;
+  if (r.码 !== 0) {
+    重试过 = true;
+    r = await 跑一套(script);
   }
+  return { ...r, 重试过 };
+};
+
+const 结果 = new Map();
+for (const [名, 脚本] of SUITES) {
+  if (!串行.has(名)) continue;
+  结果.set(名, await 跑一套带重试(脚本));
+}
+{
+  const 轻 = SUITES.filter(([名]) => !串行.has(名));
+  let 下一个 = 0;
+  const 工人 = async () => {
+    for (;;) {
+      const i = 下一个++;
+      if (i >= 轻.length) return;
+      const [名, 脚本] = 轻[i];
+      结果.set(名, await 跑一套带重试(脚本));
+    }
+  };
+  await Promise.all(Array.from({ length: 并行数 }, 工人));
+}
+
+for (const [name, script, what] of SUITES) {
+  const result = 结果.get(name);
+  const tail = String(result.出 || "").trim().split("\n").filter(Boolean).pop() || "";
+  const ok = result.码 === 0;
   if (!ok) failed++;
   console.log("  " + (ok ? "[通过] " : "[不通过] ") + name.padEnd(7) + tail);
   console.log("          " + what);
   if (!ok) {
-    console.log("          exit " + result.status + (result.signal ? " signal " + result.signal : "") + (retried ? ", after retrying once" : ""));
-    const err = (result.stderr || "").trim().split("\n").slice(0, 3).join(" | ");
+    console.log("          exit " + result.码 + (result.重试过 ? ", after retrying once" : ""));
+    const err = String(result.错 || "").trim().split("\n").slice(0, 3).join(" | ");
     if (err) console.log("          " + err);
     if (!tail) console.log("          and it produced no output at all");
-  } else if (retried) {
+  } else if (result.重试过) {
     console.log("          (passed on the second attempt: this suite is flaky under load)");
   }
 }
