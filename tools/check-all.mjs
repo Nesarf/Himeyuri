@@ -89,6 +89,7 @@ const SUITES = [
   ["readlines", "test/read-lines.test.mjs", "SPEC 4 - reading a file line by line, on both machines, with CRLF and LF agreeing"],
   ["returntypes", "test/return-types.test.mjs", "SPEC 2.3 - a declared return type is checked against what the function actually returns, with the boundary stated"],
   ["pipe", "test/pipe.test.mjs", "SPEC 6 - the third use of a replaceable outlet: print goes into a named pipe, and a missing pipe says so"],
+  ["socket", "test/socket.test.mjs", "SPEC 6 - the fourth use of a replaceable outlet: print goes into a socket, which is opened only when it is asked for"],
   ["modulerev", "test/module-rev.test.mjs", "SPEC 6 - module version negotiation: the highest revision both sides support, refused when there is no intersection"],
   ["size", "test/size-audit.test.mjs", "SPEC 7 - what the repository weighs, told apart from what can be regenerated, with a ceiling on the first"],
   ["seed", "test/bootstrap-seed.test.mjs", "SPEC M4 - gcc plus the committed seed rebuild the seed itself: after that, no JavaScript is needed to build this"],

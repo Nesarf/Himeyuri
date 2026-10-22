@@ -75,8 +75,12 @@ console.log("二、连不上时出声，而不是把输出丢掉");
     ? "\\\\.\\pipe\\hmyr-no-such-" + process.pid
     : path.join(临, "no-such.sock");
   const r = spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), 源路, "--pipe", 不存在], { encoding: "utf8", cwd: ROOT, timeout: 20000 });
-  ok("退出码不是 0", r.status !== 0, String(r.status));
-  ok("stderr 里说了管道打不开", String(r.stderr || "").includes("HMYR-E0002"), JSON.stringify(String(r.stderr || "").slice(0, 80)));
+  const 话 = String(r.stderr || "");
+  ok("退出码是 2（出口没有去处时的那个约定）", r.status === 2, String(r.status));
+  // 只看「含有编号」是不够的：Node 打 ReferenceError 的堆栈时会把那一行源码一起打出来，
+  // 编号就藏在源码文本里，于是断言会假通过。这里改成看第一行、并且明说不许有堆栈。
+  ok("stderr 的第一行就是那条消息", 话.split("\n")[0].includes("HMYR-E0002"), JSON.stringify(话.slice(0, 80)));
+  ok("而且没有堆栈混在里面", !话.includes("ReferenceError") && !话.includes("    at "), JSON.stringify(话.slice(0, 200)));
 }
 
 console.log("三、标准流那个出口没被弄坏");
