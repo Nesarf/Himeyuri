@@ -117,19 +117,27 @@ HMYR 全面自举：运行时、宿主依赖与启动
        于是同一段程序被编成「调用一个用户函数」，两台机器都报没有这个函数。
        这正是「加一个内置要动六处」的意思，而工具现在会指出漏在哪一处。
 
-       缺的按组（28 个）：
+       缺的按组（22 个）：
          环境 9    cwd home_dir temp_path repo_path python_path locale_current
                    locale_env locale_set console_codepage
          时间 2    now_ms sleep_ms
-         终端 6    term_size term_clear term_escape term_color term_hide term_show
          输入 4    key_push key_available key_read key_start
          进程 2    run_program chdir
          线程 4    thr_spawn thr_join thr_cancel thr_count
          内存 1    arena（这是宿主桩：MEMORY.txt 的三区模型还没实现，
                    所以它算在世界面里，但落点可能不在 C 机器上）
 
-       文本那一组现在齐了（split 补上之后）；下一格按上面这个顺序做，
-       先挑不依赖操作系统的（终端那 6 个只返回字符串），再挑要平台口的。
+       文本与终端两组现在齐了。
+
+       终端那六个（term_size term_clear term_escape term_color term_hide term_show）
+       只交回「该写什么」，不写出去 —— 所以它们是最便宜的一组，也正是
+       「板子没有终端也不怕」的那一组。验收在 test/c-vm.test.mjs 第十六节：
+       两台机器给出同一串 4 27 11 4 2 false 3;7H。
+       term_size 在桌面上问一次控制台，问不到就给 24 行 80 列，
+       与 JS 那侧 capability 的缺省值一致。
+
+       下一格挑要平台口的：时间（now_ms 与 sleep_ms）与路径环境那一组 ——
+       它们各自要在平台口上加一格，而不是加一个纯函数。
 
     二、工具链：LSP、格式化器、嵌入、打包发布、语料生成、测试框架都还是 JS。
        它们不在「跑程序」这条路上，可以一直是工具。

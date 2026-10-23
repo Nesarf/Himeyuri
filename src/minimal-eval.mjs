@@ -80,6 +80,18 @@ const 内置 = {
   // 切开一个字符串。切法照宿主那一份：空分隔按码元切（空串给空元组），
   // 其余按不重叠的子串切，连续或末尾的分隔留下空段。
   split: (rt, a) => rt.成串(a[0]).split(rt.成串(a[1])),
+  // ---- 终端：只交回字符串，一个字都不写出去 ----
+  term_size: (rt) => { const s = rt.cap.terminal.size(); return [s.rows, s.columns]; },
+  term_clear: () => "\u001b[2J",
+  term_hide: () => "\u001b[?25l",
+  term_show: () => "\u001b[?25h",
+  term_escape: (rt, a) => "\u001b[" + Math.max(1, Math.floor(rt.成数(a[0]))) + ";" + Math.max(1, Math.floor(rt.成数(a[1]))) + "H",
+  term_color: (rt, a) => {
+    const fg = Math.floor(rt.成数(a[0]));
+    if (fg < 0) return "\u001b[0m";
+    const bg = a[1] === undefined || a[1] === null ? -1 : Math.floor(rt.成数(a[1]));
+    return bg < 0 ? "\u001b[38;5;" + fg + "m" : "\u001b[38;5;" + fg + ";48;5;" + bg + "m";
+  },
   // 取第一个码元的码点。空串拒绝，而不是交回一个编出来的零 —— 那正是 R0206 的意思。
   // 宿主那一份（src/eval.mjs）早就有它，最小求值器一直没转发：标准库写大小写时
   // 才撞上这件事（没有它，大小写只能写成五十二行字符比较）。

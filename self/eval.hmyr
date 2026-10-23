@@ -177,6 +177,33 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 2 { return 坏("split 要两个参数") }
     return 好(split(值们[0], 值们[1]))
   }
+  // 终端那一组：只交回字符串，不写出去。照参数个数转发；
+  // term_color 收一个或两个 —— 语言的写法定不了可选参数，所以两条各自写出来。
+  if 名 == "term_size" {
+    if len(值们) != 0 { return 坏("term_size 不要参数") }
+    return 好(term_size())
+  }
+  if 名 == "term_clear" {
+    if len(值们) != 0 { return 坏("term_clear 不要参数") }
+    return 好(term_clear())
+  }
+  if 名 == "term_hide" {
+    if len(值们) != 0 { return 坏("term_hide 不要参数") }
+    return 好(term_hide())
+  }
+  if 名 == "term_show" {
+    if len(值们) != 0 { return 坏("term_show 不要参数") }
+    return 好(term_show())
+  }
+  if 名 == "term_escape" {
+    if len(值们) != 2 { return 坏("term_escape 要两个参数") }
+    return 好(term_escape(值们[0], 值们[1]))
+  }
+  if 名 == "term_color" {
+    if len(值们) == 1 { return 好(term_color(值们[0])) }
+    if len(值们) == 2 { return 好(term_color(值们[0], 值们[1])) }
+    return 坏("term_color 要一个或两个参数")
+  }
   // 大小写是规格第一圈里的内置。宿主那一份一直有，自举这一层补上转发就够了。
   if 名 == "to_upper" {
     if len(值们) != 1 { return 坏("to_upper 要一个参数") }

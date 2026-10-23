@@ -443,6 +443,16 @@ static Value v_str(const uint16_t *p, uint32_t len) {
   Value v = v_null(); v.tag = T_STR; v.s = p; v.slen = len; return v;
 }
 
+/* 一个 ASCII 串变成语言里的字符串。终端与诊断都拿它交回短序列：
+ * 那些序列里没有一个字节是中文，所以逐字节摊成码元就够。 */
+static Value ascii_text(const char *s) {
+  size_t n = strlen(s);
+  uint16_t *p = (uint16_t *)malloc((size_t)(n ? n : 1) * sizeof(uint16_t));
+  if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  for (size_t i = 0; i < n; i++) p[i] = (uint16_t)(unsigned char)s[i];
+  return v_str(p, (uint32_t)n);
+}
+
 static Value *alloc_values(uint32_t n) {
   Value *p = (Value *)calloc(n ? n : 1, sizeof(Value));
   if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
@@ -1732,6 +1742,81 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     free(文);
     v.ilen = 数;
     *out = v;
+    return 1;
+  }
+  /* ---- 终端：只交回字符串，一个字都不写出去 ----------------------------
+   * 副作用留给 print —— 这几条算出来的是「该写什么」，不是「写了什么」，
+   * 所以测试能断言它们，而板子没有终端也不会假装有。
+   * term_size 在桌面上问一次控制台；问不到就给 24 行 80 列，
+   * 与 JS 那一侧的默认一致（capabilities.terminal.size 的缺省值）。 */
+  if (name_is(name_idx, "term_size")) {
+    if (nargs != 0) { fail("HMYR-R0101", "term_size takes no arguments"); return 1; }
+    long 行 = 24, 列 = 80;
+#ifdef _WIN32
+    {
+      HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+      CONSOLE_SCREEN_BUFFER_INFO info;
+      if (h && h != INVALID_HANDLE_VALUE && GetConsoleScreenBufferInfo(h, &info)) {
+        行 = info.srWindow.Bottom - info.srWindow.Top + 1;
+        列 = info.srWindow.Right - info.srWindow.Left + 1;
+        if (行 < 1) 行 = 24;
+        if (列 < 1) 列 = 80;
+      }
+    }
+#endif
+    Value v = v_null(); v.tag = T_TUPLE; v.ilen = 2;
+    v.items = alloc_values(2);
+    v.items[0] = v_num((double)行);
+    v.items[1] = v_num((double)列);
+    *out = v;
+    return 1;
+  }
+  if (name_is(name_idx, "term_clear")) {
+    if (nargs != 0) { fail("HMYR-R0101", "term_clear takes no arguments"); return 1; }
+    *out = ascii_text("\x1b[2J");
+    return 1;
+  }
+  if (name_is(name_idx, "term_hide")) {
+    if (nargs != 0) { fail("HMYR-R0101", "term_hide takes no arguments"); return 1; }
+    *out = ascii_text("\x1b[?25l");
+    return 1;
+  }
+  if (name_is(name_idx, "term_show")) {
+    if (nargs != 0) { fail("HMYR-R0101", "term_show takes no arguments"); return 1; }
+    *out = ascii_text("\x1b[?25h");
+    return 1;
+  }
+  if (name_is(name_idx, "term_escape")) {
+    if (nargs != 2) { fail("HMYR-R0101", "term_escape wants two arguments"); return 1; }
+    int o1 = 0, o2 = 0;
+    double r = as_num(args[0], &o1), c = as_num(args[1], &o2);
+    if (!o1 || !o2) { fail("HMYR-R0130", "term_escape wants two numbers"); return 1; }
+    long rr = (long)floor(r), cc = (long)floor(c);
+    if (rr < 1) rr = 1;
+    if (cc < 1) cc = 1;
+    char buf[64];
+    snprintf(buf, sizeof buf, "\x1b[%ld;%ldH", rr, cc);
+    *out = ascii_text(buf);
+    return 1;
+  }
+  if (name_is(name_idx, "term_color")) {
+    if (nargs < 1 || nargs > 2) { fail("HMYR-R0101", "term_color wants one or two arguments"); return 1; }
+    int o1 = 0;
+    double fg = as_num(args[0], &o1);
+    if (!o1) { fail("HMYR-R0130", "term_color wants a number"); return 1; }
+    long f = (long)floor(fg);
+    if (f < 0) { *out = ascii_text("\x1b[0m"); return 1; }
+    long b = -1;
+    if (nargs == 2) {
+      int o2 = 0;
+      double bg = as_num(args[1], &o2);
+      if (!o2) { fail("HMYR-R0130", "term_color's second argument must be a number"); return 1; }
+      b = (long)floor(bg);
+    }
+    char buf[96];
+    if (b < 0) snprintf(buf, sizeof buf, "\x1b[38;5;%ldm", f);
+    else snprintf(buf, sizeof buf, "\x1b[38;5;%ld;48;5;%ldm", f, b);
+    *out = ascii_text(buf);
     return 1;
   }
   if (name_is(name_idx, "argv")) {

@@ -353,7 +353,8 @@ const 编译函数 = (decl) => {
 // 还有自举层 self/eval.hmyr 的调用分派。
 const 内置名 = new Set(["abs", "argv", "chr", "field_get", "field_has", "field_names", "file_exists", "floor",
   "int", "is_letter", "is_mark", "len", "max", "min", "nfc", "ord", "print", "print_err", "read_text",
-  "record_new", "slice", "split", "str", "to_int", "to_lower", "to_upper", "write_text", "write_bytes", "f64_bytes",
+  "record_new", "slice", "split", "str", "term_clear", "term_color", "term_escape", "term_hide", "term_show",
+  "term_size", "to_int", "to_lower", "to_upper", "write_text", "write_bytes", "f64_bytes",
   "pack_value", "read_line", "read_lines"]);
 
 // 模块 → 一个程序：函数表 + 全局常量表 + 顶层指令（用来登记常量）。

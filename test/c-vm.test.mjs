@@ -692,6 +692,28 @@ console.log("十五、调用深度：见底之前先说话");
      JSON.stringify(String(静.stderr).slice(0, 140)));
 }
 
+console.log("十六、终端那一组：只算不写");
+{
+  // 这些内置只交回「该写什么」，于是它们可以断言；真正的写出仍然只有 print。
+  // 板子没有终端也不会假装有 —— 它们照样算出那串字节。
+  const 源码 = [
+    "fn main() -> Int {",
+    '  print(str(len(term_clear())) + " ")',
+    '  print(str(ord(slice(term_escape(3, 7), 0, 1))) + " ")',
+    '  print(str(len(term_color(196))) + " ")',
+    '  print(str(len(term_color(0 - 1))) + " ")',
+    '  let 尺 = term_size()',
+    '  print(str(len(尺)) + " ")',
+    '  print(str(term_hide() == term_show()) + " ")',
+    '  print(slice(term_escape(3, 7), 2, len(term_escape(3, 7))))',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "term");
+  ok("六条终端序列两台一样", r.js === r.c, JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  ok("答案是 4 27 11 4 2 false 3;7H", r.c.trim() === "4 27 11 4 2 false 3;7H", JSON.stringify(r.c.trim()));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

@@ -49,6 +49,31 @@ export const 内置表 = {
     const d = String(vm.成串(a[1]));
     return new 类元组(s.split(d).map((x) => vm.文.由宿主(x)));
   } },
+  // ---- 终端：只交回字符串，一个字都不写出去 ----
+  // 副作用留给 print：这里算出来的是「该写什么」，于是测试能断言它们，
+  // 而板子没有终端也不会假装有。数的意思仍然只走 src/numbers.mjs。
+  term_size: { 做: (vm) => {
+    const s = vm.cap.terminal.size();
+    return new 类元组([数.造(s.rows), 数.造(s.columns)]);
+  } },
+  term_clear: { 做: (vm) => vm.文.由宿主("\u001b[2J") },
+  term_hide: { 做: (vm) => vm.文.由宿主("\u001b[?25l") },
+  term_show: { 做: (vm) => vm.文.由宿主("\u001b[?25h") },
+  term_escape: { 做: (vm, a) => {
+    const 取 = (x) => {
+      const n = 数.下整(vm.成数(x));
+      return 数.比(n, 1) < 0 ? 1 : n;
+    };
+    return vm.文.由宿主("\u001b[" + 数.成文(取(a[0])) + ";" + 数.成文(取(a[1])) + "H");
+  } },
+  term_color: { 做: (vm, a) => {
+    const fg = 数.下整(vm.成数(a[0]));
+    if (数.比(fg, 0) < 0) return vm.文.由宿主("\u001b[0m");
+    const bg = a[1] === undefined || a[1] === null ? -1 : 数.下整(vm.成数(a[1]));
+    return vm.文.由宿主(数.比(bg, 0) < 0
+      ? "\u001b[38;5;" + 数.成文(fg) + "m"
+      : "\u001b[38;5;" + 数.成文(fg) + ";48;5;" + 数.成文(bg) + "m");
+  } },
   // 取第一个码元的码点。空串拒绝（R0206），理由与最小求值器那一份相同。
   ord: { 做: (vm, a) => {
     const s = vm.成串(a[0]);
