@@ -919,6 +919,15 @@ static int64_t pool_add(const uint16_t *p, uint32_t len) {
   return (int64_t)pool_n++;
 }
 
+// 按 UTF-16 码元比名字。name_is 用的是 ASCII 字节，而中文名字（数组、设）
+// 在名字表里是码元 —— 拿字节去比永远不相等。
+static int name_is16(int64_t idx, const uint16_t *u, uint32_t n) {
+  if (idx < 0 || (uint32_t)idx >= pool_n) return 0;
+  if (pool_len[idx] != n) return 0;
+  for (uint32_t i = 0; i < n; i++) if (pool_p[idx][i] != u[i]) return 0;
+  return 1;
+}
+
 static int name_is(int64_t idx, const char *ascii) {
   if (idx < 0 || (uint32_t)idx >= pool_n) return 0;
   uint32_t n = pool_len[idx];
@@ -1787,7 +1796,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     value_to_text(args[0], out);
     return 1;
   }
-  if (name_is(name_idx, "数组")) {
+  if (name_is16(name_idx, (const uint16_t[]){0x6570, 0x7EC4}, 2)) {
     if (nargs != 1) { fail("HMYR-R0150", "数组 wants one argument"); return 1; }
     if (args[0].tag != T_TUPLE) { fail("HMYR-R0150", "数组 wants a tuple"); return 1; }
     Value v = v_null(); v.tag = T_ARRAY; v.ilen = args[0].ilen;
@@ -1796,7 +1805,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v;
     return 1;
   }
-  if (name_is(name_idx, "设")) {
+  if (name_is16(name_idx, (const uint16_t[]){0x8BBE}, 1)) {
     if (nargs != 3) { fail("HMYR-R0151", "设 wants three arguments"); return 1; }
     if (args[0].tag != T_ARRAY) { fail("HMYR-R0151", "设 wants an array built by 数组"); return 1; }
     int64_t i = (int64_t)args[1].num;

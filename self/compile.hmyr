@@ -121,6 +121,9 @@ fn 是内置(名: String) -> Bool {
   if 名 == "abs" { return true }
   if 名 == "argv" { return true }
   if 名 == "chr" { return true }
+  // 可变数组：编译期认这两个名字，运行时落到 vm/hmyr.c 的 name_is 上。
+  if 名 == "数组" { return true }
+  if 名 == "设" { return true }
   if 名 == "field_get" { return true }
   if 名 == "field_has" { return true }
   if 名 == "field_names" { return true }

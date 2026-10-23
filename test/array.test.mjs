@@ -77,6 +77,27 @@ console.log("三、设 拒绝元组");
   ok("报的是「要可变数组」", String(r.stderr).includes("可变数组") || String(r.stdout).includes("可变数组"), String(r.stderr).slice(0, 160));
 }
 
+console.log("四、C 那台也认：同一份程序给出同一个答案");
+{
+  const 有编译器 = (() => {
+    try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
+  })();
+  if (!有编译器) {
+    console.log("  跳过  这台机器上没有 gcc");
+  } else {
+    const exe = path.join(临, "hmyr-array.exe");
+    const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+    ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 200));
+    if (c.status === 0) {
+      const r = spawnSync(exe, [源], { encoding: "utf8", timeout: 300000 });
+      const 出 = String(r.stdout || "").trim().split("\n");
+      ok("C 那台跑得动", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 200));
+      ok("设 在 C 那台也生效", 出[0] === "10,2,30", 出[0] || "");
+      ok("原元组在 C 那台也没被改", 出[2] === "1,3", 出[2] || "");
+    }
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
