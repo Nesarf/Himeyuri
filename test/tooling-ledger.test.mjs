@@ -56,9 +56,11 @@ console.log("三、不搬的每一项都有理由，而且有可执行的证明"
 
 console.log("四、判为不搬的覆盖了剩下那几样");
 {
-  // 三样必须被某个「不搬」项点名：格式化器、打包发布、语料生成剩下的三支。
-  const 全证明 = 账本.filter((x) => x.状态 === "不搬").flatMap((x) => x.证明);
-  ok("格式化器被点名", 全证明.includes("src/format.mjs"), "");
+  // 三样必须出现在账本里：格式化器、打包发布、语料生成剩下的三支。
+  // 格式化器已经有第一版了，所以这里只要求「在账本里」，不要求它是「不搬」。
+  const 全证明 = 账本.flatMap((x) => [...(x.证明 || []), x.在哪 || ""]);
+  ok("格式化器在账本里", 账本.some((x) => x.名 === "格式化器"), "");
+  ok("整文件排版那一份被点名", 全证明.includes("src/format.mjs"), "");
   ok("打包发布被点名", 全证明.includes("tools/package.mjs"), "");
   ok("语料生成剩下的三支被点名", 全证明.includes("tools/ucd-case.mjs") && 全证明.includes("tools/ucd-nfc.mjs") && 全证明.includes("tools/ucd.mjs"), "");
 }

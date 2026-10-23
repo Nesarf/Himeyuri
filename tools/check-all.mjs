@@ -126,6 +126,7 @@ const SUITES = [
   ["ucdchmyr", "test/ucd-c-hmyr.test.mjs", "SPEC M7 - the table generator written in Himeyuri: two implementations, one sample, byte-for-byte identical tables"],
   ["stdinline", "test/stdin-line.test.mjs", "SPEC M7 - reading one line of standard input, and a cat that echoes what it was fed"],
   ["lsphmyr", "test/lsp-hmyr.test.mjs", "SPEC M7 - the language server written in Himeyuri: initialize, shutdown, exit, over Content-Length framing"],
+  ["fmthmyr", "test/fmt-hmyr.test.mjs", "SPEC M7 - the expression formatter written in Himeyuri: parentheses where they matter, and printing twice changes nothing"],
   ["manifest", "test/manifest.test.mjs", "SPEC M7 - the distribution manifest: everything it lists actually exists, and the minimal set is exactly fifteen"],
   ["helper", "test/helper.test.mjs", "SPEC M7 - the assistant: a code explains itself, a word searches the meanings, and a miss still hands back the list"],
   ["verify", "test/verify.test.mjs", "SPEC M7 - the manifest verifier: it says pass when it matches, and it really says fail when something was changed"],

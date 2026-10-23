@@ -118,9 +118,7 @@ fn parse(text: String) -> Int {
   return parse_add(text, 0)
 }
 
-fn main() -> Int {
-  let tree = parse("1 + 2 * 3")
-  print(tree.node.op)
-  print(tree.node.right.op)
-  return 0
-}
+// 这里原有一个演示用的 main（打印 1 + 2 * 3 的两个运算符）。
+// 删掉它是因为 self/fmt.hmyr 要 import 这一份 —— 两份 main 合在一起只有一个能活，
+// 而活着的是先到的那一个，于是格式化器会变成一段「打印 +*」的演示。
+// 演示由 test/self-parse.test.mjs 覆盖，它直接调 parse。

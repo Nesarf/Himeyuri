@@ -1,0 +1,51 @@
+// 格式化器的第一版：表达式。
+//
+// tools 里那份 src/format.mjs 是整文件排版，它要完整语句树；而自举侧现在有的
+// 是表达式解析器（self/parse.hmyr）。所以这一版只做表达式 —— 诚实的边界写在名字上：
+// 它是「第一版」，不是「格式化器的全部」。
+//
+// 两条性质要成立，与整文件那一份同样要求：
+//   round trip   解析、打印、再解析，得到同一棵树
+//   idempotence  打印两次与打印一次一样
+//
+// 括号的规矩：左结合运算符的右子表达式，优先级相同也要加括号 ——
+// a - (b - c) 里那一对括号不是多余的，去掉就换了意思。
+//
+// 用法：hmyr self/fmt.hmyr < 表达式.txt
+
+import "./parse.hmyr"
+
+fn 优先(op: String) -> Int {
+  if op == "+" { return 1 }
+  if op == "-" { return 1 }
+  if op == "*" { return 2 }
+  if op == "/" { return 2 }
+  if op == "%" { return 2 }
+  return 0
+}
+
+// 打印：比父级松就加括号；右侧同优先级也加（左结合）。
+fn 打印(e: Int, 父: Int, 是右: Bool) -> String {
+  if e.kind == "num" { return e.text }
+  if e.kind == "name" { return e.text }
+  let 本 = 优先(e.op)
+  let 左 = 打印(e.left, 本, false)
+  let 右 = 打印(e.right, 本, true)
+  let 文 = 左 + " " + e.op + " " + 右
+  if 本 < 父 { return "(" + 文 + ")" }
+  if 是右 && 本 == 父 { return "(" + 文 + ")" }
+  return 文
+}
+
+fn main() -> Int {
+  var 跑 = true
+  while 跑 {
+    let r = read_stdin_line()
+    if len(r.行) > 0 {
+      let t = parse(r.行)
+      print(打印(t.node, 0, false) + chr(10))
+    }
+    if r.结束 { 跑 = false }
+  }
+  return 0
+}
