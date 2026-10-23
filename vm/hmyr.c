@@ -443,6 +443,36 @@ struct Value {
 static Value v_null(void) { Value v; memset(&v, 0, sizeof v); v.tag = T_NULL; return v; }
 static Value v_num(double n) { Value v = v_null(); v.tag = T_NUM; v.num = n; return v; }
 static Value v_bool(int b) { Value v = v_null(); v.tag = T_BOOL; v.boolean = b ? 1 : 0; return v; }
+/* ---- 回收：开关与分配入口 ---------------------------------------------
+ *
+ * 这一台的分配一直不回收，于是「一份一份编」时前面几份的堆全留着 ——
+ * 自编译峰值 3.145 GB 就是这么来的。
+ *
+ * 收两样：Value 数组（元组的元素、记录的 vals、调用帧的槽）与字符串。
+ * 字符串能收的前提是「交给 Value 的每一段都从 串存 来」——
+ * slice 因此改成拷贝：子串指针落在块中间的话，地址表查不到它，
+ * 而查不到就等于「不是我的块」，那一段就会在父串被收掉之后悬空。
+ *
+ * 文件镜像里的字符串不在这条链上（它们指向装载缓冲区），
+ * 所以标记时查不到，也就永远不收 —— 那正是它们该有的待遇。
+ *
+ * 默认不开。HMYR_GC=1 打开，阈值默认 32 MB（HMYR_GC_BYTES 改）。
+ * 实现见 run_func 之前那一段：它要知道帧链与根在哪儿。
+ */
+static int g_gc开 = 0;
+static void *gc_分配(size_t 字节, int 种类);
+static uint16_t *gc_串分配(size_t 码元数);
+
+/* 一段 UTF-16 的存储：回收开着就交给回收，否则照旧走堆。 */
+static uint16_t *串存(size_t 码元数) {
+  if (g_gc开) return gc_串分配(码元数);
+  {
+    uint16_t *p = (uint16_t *)malloc((码元数 ? 码元数 : 1) * sizeof(uint16_t));
+    if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    return p;
+  }
+}
+
 static Value v_str(const uint16_t *p, uint32_t len) {
   Value v = v_null(); v.tag = T_STR; v.s = p; v.slen = len; return v;
 }
@@ -451,8 +481,7 @@ static Value v_str(const uint16_t *p, uint32_t len) {
  * 那些序列里没有一个字节是中文，所以逐字节摊成码元就够。 */
 static Value ascii_text(const char *s) {
   size_t n = strlen(s);
-  uint16_t *p = (uint16_t *)malloc((size_t)(n ? n : 1) * sizeof(uint16_t));
-  if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  uint16_t *p = 串存(n ? n : 1);
   for (size_t i = 0; i < n; i++) p[i] = (uint16_t)(unsigned char)s[i];
   return v_str(p, (uint32_t)n);
 }
@@ -618,12 +647,9 @@ static Value 解码输出(const 字节串 *b, const char *编码) {
   if (编码 && (strcmp(编码, "gbk") == 0 || strcmp(编码, "gb2312") == 0 || strcmp(编码, "cp936") == 0)) {
     int 长 = MultiByteToWideChar(936, 0, s, (int)n, NULL, 0);
     if (长 > 0) {
-      wchar_t *宽 = (wchar_t *)malloc((size_t)长 * sizeof(wchar_t));
-      if (宽) {
-        int 得 = MultiByteToWideChar(936, 0, s, (int)n, 宽, 长);
-        Value v = v_str((const uint16_t *)宽, (uint32_t)得);
-        return v;
-      }
+      uint16_t *p = 串存((size_t)长);
+      int 得 = MultiByteToWideChar(936, 0, s, (int)n, (wchar_t *)p, 长);
+      return v_str(p, (uint32_t)得);
     }
   }
 #endif
@@ -703,21 +729,6 @@ static int 拆码点(Value s, Value *out, int 上限) {
 }
 #endif
 
-/* ---- 回收：开关与分配入口 ---------------------------------------------
- *
- * 这一台的分配一直不回收，于是「一份一份编」时前面几份的堆全留着 ——
- * 自编译峰值 3.145 GB 就是这么来的。
- *
- * 收的是 Value 数组：元组的元素、记录的 vals、调用帧的槽。
- * 字符串这一轮不收（它们可能在文件镜像里，来源混杂），所以
- * 「字符串与数组」里只有后者被标扫。这一条边界写在 design/MEMORY.txt。
- *
- * 默认不开。HMYR_GC=1 打开，阈值默认 2 MB（HMYR_GC_BYTES 改）。
- * 实现见 run_func 之前那一段：它要知道帧链与根在哪儿。
- */
-static int g_gc开 = 0;
-static void *gc_分配(size_t 字节);
-
 static Value *alloc_values(uint32_t n) {
   size_t 字节 = (size_t)(n ? n : 1) * sizeof(Value);
   if (!g_gc开) {
@@ -725,7 +736,7 @@ static Value *alloc_values(uint32_t n) {
     return p;
   }
   {
-    Value *p = (Value *)gc_分配(字节);
+    Value *p = (Value *)gc_分配(字节, 0);
     memset(p, 0, 字节);
     return p;
   }
@@ -737,7 +748,7 @@ static Value case_fold(Value s, int up) {
   size_t count = up ? ucd_upper_map_count : ucd_lower_map_count;
   const uint16_t *src = s.s;
   uint32_t n = s.slen;
-  uint16_t *p = (uint16_t *)malloc((size_t)((size_t)n * 3 + 1) * sizeof(uint16_t));
+  uint16_t *p = 串存((size_t)((size_t)n * 3 + 1));
   if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
   uint32_t i = 0, out = 0;
   while (i < n) {
@@ -774,7 +785,7 @@ static Value normalize_nfc(Value s) {
   canon_order(&b);
   compose_all(&b);
   /* 码点回到单元。一个码点最多摊成两个单元，按两倍算够用。 */
-  uint16_t *p = (uint16_t *)malloc((size_t)(b.n ? b.n * 2 : 1) * sizeof(uint16_t));
+  uint16_t *p = 串存((size_t)(b.n ? b.n * 2 : 1));
   if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
   uint32_t out = 0;
   for (size_t k = 0; k < b.n; k++) {
@@ -1139,7 +1150,7 @@ static char *utf16_to_utf8(const uint16_t *s, uint32_t len) {
 /* UTF-8 to UTF-16. The file on disk is UTF-8; the language's strings are
  * UTF-16 code units, so every read goes through this. */
 static uint16_t *utf8_to_utf16(const char *s, size_t len, uint32_t *out_len) {
-  uint16_t *out = (uint16_t *)malloc((len + 1) * sizeof(uint16_t));
+  uint16_t *out = 串存(len + 1);
   if (!out) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
   size_t n = 0, i = 0;
   while (i < len) {
@@ -1382,7 +1393,8 @@ typedef struct 帧记录 {
 static 帧记录 *g_帧链 = NULL;
 
 #if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
-static void *gc_分配(size_t 字节) { (void)字节; return NULL; }
+static void *gc_分配(size_t 字节, int 种类) { (void)字节; (void)种类; return NULL; }
+static uint16_t *gc_串分配(size_t 码元数) { (void)码元数; return NULL; }
 #else
 /* 这三个只在桌面那一支里用：板子上不编回收，也就没有账可记。 */
 static size_t g_gc字节 = 0, g_gc数 = 0, g_gc阈值 = 32 * 1024 * 1024;
@@ -1391,6 +1403,7 @@ typedef struct Gc块 {
   struct Gc块 *下;
   size_t 载荷;
   uint32_t 标记;
+  uint8_t 种类;   /* 0 = Value 数组，1 = UTF-16 串（叶子，内容里没有 Value） */
 } Gc块;
 
 static Gc块 *g_gc链 = NULL;
@@ -1422,6 +1435,7 @@ static void gc_压标(Gc块 *b) {
 static void gc_标值(Value v) {
   if (v.tag == T_TUPLE && v.items) gc_压标(gc_查(v.items));
   else if (v.tag == T_RECORD && v.rec.vals) gc_压标(gc_查(v.rec.vals));
+  else if (v.tag == T_STR && v.s) gc_压标(gc_查((void *)v.s));
 }
 
 static void gc_建表(size_t 槽) {
@@ -1471,17 +1485,22 @@ static Gc块 *gc_查(void *p) {
   return NULL;
 }
 
-static void *gc_分配(size_t 字节) {
+static void *gc_分配(size_t 字节, int 种类) {
   Gc块 *b = (Gc块 *)hm_malloc(sizeof(Gc块) + 字节);
   void *载荷 = (void *)(b + 1);
   b->下 = g_gc链;
   b->载荷 = 字节;
   b->标记 = 0;
+  b->种类 = (uint8_t)种类;
   g_gc链 = b;
   g_gc字节 += 字节;
   g_gc数++;
   gc_插(载荷, b);
   return 载荷;
+}
+
+static uint16_t *gc_串分配(size_t 码元数) {
+  return (uint16_t *)gc_分配((码元数 ? 码元数 : 1) * sizeof(uint16_t), 1);
 }
 
 static size_t gc_收集(void) {
@@ -1501,12 +1520,16 @@ static size_t gc_收集(void) {
     Func *fn = &funcs[i];
     for (uint32_t j = 0; j < fn->ncode; j++) gc_标值(fn->code[j].val);
   }
-  /* 显式栈把标记走完：每弹一个块，把它里面的值再压进去。 */
+  /* 显式栈把标记走完：每弹一个块，把它里面的值再压进去。
+   * 字符串块是叶子 —— 它的载荷是码元，不是 Value，不能按 Value 去读。 */
   while (g_标数 > 0) {
     Gc块 *b = g_标栈[--g_标数];
-    Value *v = (Value *)(b + 1);
-    size_t n = b->载荷 / sizeof(Value);
-    for (size_t i = 0; i < n; i++) gc_标值(v[i]);
+    if (b->种类 == 1) continue;
+    {
+      Value *v = (Value *)(b + 1);
+      size_t n = b->载荷 / sizeof(Value);
+      for (size_t i = 0; i < n; i++) gc_标值(v[i]);
+    }
   }
   {
     Gc块 *存活 = NULL;
@@ -1539,10 +1562,11 @@ static size_t gc_收集(void) {
     gc_建表(新);
     for (Gc块 *b = g_gc链; b; b = b->下) gc_插((void *)(b + 1), b);
   }
-  /* 活数据不肯降到阈值以下时，把阈值抬上去：否则每一次函数调用都会收一次，
-   * 而收集本身要把整张图走一遍 —— 那会把程序拖成以收集为主。
-   * 自适应到「活数据的两倍 + 一兆」，与多数标记清扫的做法一致。 */
-  if (g_gc字节 * 10 > g_gc阈值 * 8) g_gc阈值 = g_gc字节 * 2 + (1u << 20);
+  /* 活数据不肯降到阈值以下时，把阈值抬到「活数据的一点二倍 + 一兆」。
+   * 两倍太松：自编译的活数据一百五十兆，两倍就是每增三百兆才收一次，
+   * 峰值会被那三百兆顶起来。一点二倍是「略高于活数据」，
+   * 于是收集变成「多出来的就收」，峰值贴着活数据走。 */
+  if (g_gc字节 * 10 > g_gc阈值 * 8) g_gc阈值 = g_gc字节 + g_gc字节 / 5 + (1u << 20);
   if (g_gc日志) fprintf(stderr, "gc: 结束 后 %llu 字节 %llu 块（放掉 %llu，新阈值 %llu）\n",
                         (unsigned long long)g_gc字节, (unsigned long long)g_gc数,
                         (unsigned long long)(前 - g_gc字节), (unsigned long long)g_gc阈值);
@@ -1573,26 +1597,28 @@ static Value value_to_text(Value v, Value *out) {
     char 文[64];
     数字成文(v.num, 文, sizeof 文);
     uint32_t n = (uint32_t)strlen(文);
-    uint16_t *p = (uint16_t *)malloc((size_t)(n ? n : 1) * sizeof(uint16_t));
+    uint16_t *p = 串存((size_t)(n ? n : 1));
     for (uint32_t i = 0; i < n; i++) p[i] = (uint16_t)(unsigned char)文[i];
     *out = v_str(p, n);
     return *out;
   }
   if (v.tag == T_BOOL) {
     const char *t = v.boolean ? "true" : "false";
-    uint16_t *p = (uint16_t *)malloc(strlen(t) * sizeof(uint16_t));
+    uint16_t *p = 串存(strlen(t));
     for (size_t i = 0; i < strlen(t); i++) p[i] = (uint16_t)(unsigned char)t[i];
     *out = v_str(p, (uint32_t)strlen(t));
     return *out;
   }
   if (v.tag == T_NULL) {
-    uint16_t *p = (uint16_t *)malloc(3 * sizeof(uint16_t));
+    uint16_t *p = 串存(3);
     p[0] = 'n'; p[1] = 'i'; p[2] = 'l';
     *out = v_str(p, 3);
     return *out;
   }
   if (v.tag == T_TUPLE) {
     /* "[" + each + ", " + "]" */
+    /* 这一支要 realloc，而回收块不能被 realloc（块头会丢）——
+     * 它只用在诊断文本上，量很小，走普通堆。 */
     uint32_t cap = 16, n = 0;
     uint16_t *buf = (uint16_t *)malloc(cap * sizeof(uint16_t));
     #define PUT(ch) do { if (n + 1 >= cap) { cap *= 2; buf = (uint16_t *)realloc(buf, cap * sizeof(uint16_t)); } buf[n++] = (uint16_t)(ch); } while (0)
@@ -1611,7 +1637,7 @@ static Value value_to_text(Value v, Value *out) {
   /* records: the JavaScript side uses String(obj), which is "[object Object]" */
   {
     const char *t = "[object Object]";
-    uint16_t *p = (uint16_t *)malloc(strlen(t) * sizeof(uint16_t));
+    uint16_t *p = 串存(strlen(t));
     for (size_t i = 0; i < strlen(t); i++) p[i] = (uint16_t)(unsigned char)t[i];
     *out = v_str(p, (uint32_t)strlen(t));
     return *out;
@@ -1779,7 +1805,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     } else {
       单元[0] = (uint16_t)码;
     }
-    uint16_t *p = (uint16_t *)malloc((size_t)长 * sizeof(uint16_t));
+    uint16_t *p = 串存((size_t)长);
     memcpy(p, 单元, (size_t)长 * sizeof(uint16_t));
     *out = v_str(p, 长);
     return 1;
@@ -1846,7 +1872,14 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     if (from < 0) from = 0;
     if (to > (long long)args[0].slen) to = (long long)args[0].slen;
     if (to < from) to = from;
-    *out = v_str(args[0].s + from, (uint32_t)(to - from));
+    /* 拷贝而不是交回子串指针：回收靠「块起点」认自己的块，
+     * 指到块中间的子串查不到，父串一被收掉它就悬空了。 */
+    {
+      uint32_t 长 = (uint32_t)(to - from);
+      uint16_t *p = 串存(长 ? 长 : 1);
+      if (长) memcpy(p, args[0].s + from, (size_t)长 * sizeof(uint16_t));
+      *out = v_str(p, 长);
+    }
     return 1;
   }
   /* 按分隔串切开。语义照 JavaScript 的 String.prototype.split：
@@ -1861,8 +1894,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
       Value v = v_null(); v.tag = T_TUPLE; v.ilen = s.slen;
       v.items = alloc_values(s.slen);
       for (uint32_t i = 0; i < s.slen; i++) {
-        uint16_t *p = (uint16_t *)malloc(sizeof(uint16_t));
-        if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+        uint16_t *p = 串存(1);
         p[0] = s.s[i];
         v.items[i] = v_str(p, 1);
       }
@@ -1880,8 +1912,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     for (uint32_t i = 0; i + d.slen <= s.slen; ) {
       if (memcmp(s.s + i, d.s, (size_t)d.slen * sizeof(uint16_t)) == 0) {
         uint32_t 长 = i - 起;
-        uint16_t *p = (uint16_t *)malloc((size_t)(长 ? 长 : 1) * sizeof(uint16_t));
-        if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+        uint16_t *p = 串存((size_t)(长 ? 长 : 1));
         if (长) memcpy(p, s.s + 起, (size_t)长 * sizeof(uint16_t));
         v.items[k++] = v_str(p, 长);
         起 = i + d.slen;
@@ -1890,8 +1921,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     }
     {
       uint32_t 长 = s.slen - 起;
-      uint16_t *p = (uint16_t *)malloc((size_t)(长 ? 长 : 1) * sizeof(uint16_t));
-      if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+      uint16_t *p = 串存((size_t)(长 ? 长 : 1));
       if (长) memcpy(p, s.s + 起, (size_t)长 * sizeof(uint16_t));
       v.items[k++] = v_str(p, 长);
     }
@@ -2439,8 +2469,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     Value s;
     value_to_text(args[0], &s);
     if (g_key数 < KEY_环) {
-      uint16_t *p = (uint16_t *)malloc((size_t)(s.slen ? s.slen : 1) * sizeof(uint16_t));
-      if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+      uint16_t *p = 串存((size_t)(s.slen ? s.slen : 1));
       if (s.slen) memcpy(p, s.s, (size_t)s.slen * sizeof(uint16_t));
       键入队(v_str(p, s.slen));
     }
@@ -2835,7 +2864,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
           push(v);
         } else if (a.tag == T_STR || b.tag == T_STR) {
           Value sa, sb; value_to_text(a, &sa); value_to_text(b, &sb);
-          uint16_t *p = (uint16_t *)malloc((size_t)(sa.slen + sb.slen) * sizeof(uint16_t));
+          uint16_t *p = 串存((size_t)(sa.slen + sb.slen));
           memcpy(p, sa.s, (size_t)sa.slen * sizeof(uint16_t));
           memcpy(p + sa.slen, sb.s, (size_t)sb.slen * sizeof(uint16_t));
           push(v_str(p, sa.slen + sb.slen));
