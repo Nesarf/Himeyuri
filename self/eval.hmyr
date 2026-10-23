@@ -215,6 +215,23 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 0 { return 坏("console_codepage 不要参数") }
     return 好(console_codepage())
   }
+  // 输入：一条键队列。这一层只转发 —— 队列与「有没有终端」在下面那一层。
+  if 名 == "key_push" {
+    if len(值们) != 1 { return 坏("key_push 要一个参数") }
+    return 好(key_push(值们[0]))
+  }
+  if 名 == "key_available" {
+    if len(值们) != 0 { return 坏("key_available 不要参数") }
+    return 好(key_available())
+  }
+  if 名 == "key_read" {
+    if len(值们) != 0 { return 坏("key_read 不要参数") }
+    return 好(key_read())
+  }
+  if 名 == "key_start" {
+    if len(值们) != 1 { return 坏("key_start 要一个参数") }
+    return 好(key_start(值们[0]))
+  }
   // 时间：读一次钟，或等一会儿。这一层只转发 ——
   // 「它们破坏可复现性」那条警告写在契约里，不写在每一次调用上。
   if 名 == "now_ms" {

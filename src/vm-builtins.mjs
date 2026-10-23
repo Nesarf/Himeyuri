@@ -25,6 +25,9 @@ import { 藏路径, 在用脱敏 } from "./redact.mjs";
 const locale名字们 = ["zh-CN.gbk", "zh-CN.utf8", "ja-JP.shift_jis", "en-US.utf8"];
 let 当前locale = "";
 
+// 键队列：套件塞键、真终端读键，共用这一条。无界（C 那台 64 项有界，写在契约里）。
+const 键队列 = [];
+
 export const 内置表 = {
   len: { 做: (vm, a) => {
     const v = a[0];
@@ -78,6 +81,24 @@ export const 内置表 = {
   } },
   locale_env: { 做: (vm) => vm.文.由宿主(vm.cap.env.localeGuess()) },
   console_codepage: { 做: (vm) => vm.文.由宿主(vm.cap.env.codepage()) },
+  // ---- 输入：一条键队列 ----
+  // 队列里有东西就交回队首；空而 stdin 是终端才同步读一次（读完把多余的推进队列）；
+  // 空而 stdin 不是终端就交回空串 —— 不阻塞，也没有键。
+  key_push: { 做: (vm, a) => { 键队列.push(vm.成串(a[0])); return 数.造(键队列.length); } },
+  key_available: { 做: () => 键队列.length > 0 },
+  key_read: { 做: (vm) => {
+    if (键队列.length) return vm.文.由宿主(键队列.shift());
+    if (!vm.cap.terminal.isTTY()) return vm.文.由宿主("");
+    try {
+      const buf = vm.cap.terminal.readSync(64);
+      if (buf && buf.length > 0) {
+        for (const ch of buf.toString("utf8")) 键队列.push(ch);
+        return vm.文.由宿主(键队列.length ? 键队列.shift() : "");
+      }
+    } catch { /* 读不到就是没有键 */ }
+    return vm.文.由宿主("");
+  } },
+  key_start: { 做: (vm, a) => !!vm.cap.terminal.setRaw(a[0] === true) },
   // ---- 时间：读一次钟，或等一会儿 ----
   // 它们破坏可复现性（CAPABILITIES.txt 第六组），所以测试只断言形状。
   now_ms: { 做: (vm) => 数.造(vm.cap.time.now()) },

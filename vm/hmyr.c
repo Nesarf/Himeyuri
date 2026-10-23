@@ -537,6 +537,52 @@ static const char *环境(const char *名) {
   return (v && *v) ? v : "";
 }
 
+/* ---- 一条键队列 ------------------------------------------------------
+ *
+ * 套件塞键、真终端读键，共用同一条队列。有界（64）：满了就不收，
+ * 交回当前长度 —— 这一条差异写在 CAPABILITIES.txt 里。 */
+#define KEY_环 16
+static Value g_keys[KEY_环];
+static int g_key头 = 0, g_key数 = 0;
+#ifdef _WIN32
+static DWORD g_原控制台模式 = 0;
+static int g_有原模式 = 0;
+#endif
+
+static void 键入队(Value v) {
+  if (g_key数 >= KEY_环) return;
+  g_keys[(g_key头 + g_key数) % KEY_环] = v;
+  g_key数++;
+}
+
+static Value 键出队(void) {
+  if (g_key数 == 0) return v_null();
+  Value v = g_keys[g_key头];
+  g_key头 = (g_key头 + 1) % KEY_环;
+  g_key数--;
+  return v;
+}
+
+/* 一条 UTF-16 串拆成「键」：每个是一到两个码元。
+ * 与 JS 那侧的 for...of 一致 —— 代理对算一个键，不拆成两个。
+ * 板子上没有 stdin，所以这一支只在桌面那两条路上编译。 */
+#if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+static int 拆码点(Value s, Value *out, int 上限) {
+  int n = 0;
+  uint32_t i = 0;
+  while (i < s.slen && n < 上限) {
+    uint32_t cp = s.s[i], 长 = 1;
+    if (cp >= 0xD800 && cp <= 0xDBFF && i + 1 < s.slen) {
+      uint32_t 低 = s.s[i + 1];
+      if (低 >= 0xDC00 && 低 <= 0xDFFF) 长 = 2;
+    }
+    out[n++] = v_str(s.s + i, 长);
+    i += 长;
+  }
+  return n;
+}
+#endif
+
 static Value *alloc_values(uint32_t n) {
   Value *p = (Value *)calloc(n ? n : 1, sizeof(Value));
   if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
@@ -2067,6 +2113,81 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     }
 #else
     *out = ascii_text("utf8");
+#endif
+    return 1;
+  }
+  /* ---- 输入：一条键队列 ----------------------------------------------
+   * 套件往队列里塞键，真终端从 stdin 读键，两边共用同一条队列 ——
+   * 于是「按一个键就停」这种程序可以在没有终端的地方被断言。
+   * 队列有界（64 项）：满了就不收，交回当前长度。JS 那一侧是无界的，
+   * 这一条差异写在契约里，而不是让板子在某个规模上悄悄变慢。 */
+  if (name_is(name_idx, "key_push")) {
+    if (nargs != 1) { fail("HMYR-R0101", "key_push wants one argument"); return 1; }
+    Value s;
+    value_to_text(args[0], &s);
+    if (g_key数 < KEY_环) {
+      uint16_t *p = (uint16_t *)malloc((size_t)(s.slen ? s.slen : 1) * sizeof(uint16_t));
+      if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+      if (s.slen) memcpy(p, s.s, (size_t)s.slen * sizeof(uint16_t));
+      键入队(v_str(p, s.slen));
+    }
+    *out = v_num((double)g_key数);
+    return 1;
+  }
+  if (name_is(name_idx, "key_available")) {
+    if (nargs != 0) { fail("HMYR-R0101", "key_available takes no arguments"); return 1; }
+    *out = v_bool(g_key数 > 0);
+    return 1;
+  }
+  if (name_is(name_idx, "key_read")) {
+    if (nargs != 0) { fail("HMYR-R0101", "key_read takes no arguments"); return 1; }
+    if (g_key数 > 0) { *out = 键出队(); return 1; }
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+    /* 板子上没有标准输入：没有键就是空串。 */
+    *out = ascii_text("");
+#else
+    if (!_isatty(_fileno(stdin))) {
+      /* 队列空而 stdin 不是终端：立即交回空串 —— 不阻塞，也没有键。 */
+      *out = ascii_text("");
+      return 1;
+    }
+    {
+      char buf[64];
+      size_t got = fread(buf, 1, sizeof buf, stdin);
+      if (got == 0) { *out = ascii_text(""); return 1; }
+      uint32_t 长 = 0;
+      uint16_t *s = utf8_to_utf16(buf, got, &长);
+      Value 们[64];
+      int n = 拆码点(v_str(s, 长), 们, 64);
+      for (int i = 1; i < n; i++) 键入队(们[i]);
+      *out = n > 0 ? 们[0] : ascii_text("");
+    }
+#endif
+    return 1;
+  }
+  if (name_is(name_idx, "key_start")) {
+    if (nargs != 1) { fail("HMYR-R0101", "key_start wants one argument"); return 1; }
+#ifdef _WIN32
+    int 开 = truthy(args[0]);
+    {
+      HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+      DWORD 模 = 0;
+      if (!h || h == INVALID_HANDLE_VALUE || !GetConsoleMode(h, &模)) {
+        *out = v_bool(0);   /* 没有真终端：如实返回假，不装作支持。 */
+        return 1;
+      }
+      if (开) {
+        if (!g_有原模式) { g_原控制台模式 = 模; g_有原模式 = 1; }
+        DWORD 新 = 模 & ~(DWORD)(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+        新 |= ENABLE_WINDOW_INPUT;
+        *out = v_bool(SetConsoleMode(h, 新) ? 1 : 0);
+      } else {
+        *out = v_bool(g_有原模式 && SetConsoleMode(h, g_原控制台模式) ? 1 : 0);
+        g_有原模式 = 0;
+      }
+    }
+#else
+    *out = v_bool(0);
 #endif
     return 1;
   }

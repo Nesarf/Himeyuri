@@ -771,6 +771,27 @@ console.log("十九、不认识的 locale 要说出来");
      String(r.status) + " " + JSON.stringify(String(r.stderr).slice(0, 140)));
 }
 
+console.log("二十、输入那一组：一条队列，没有终端也不阻塞");
+{
+  // 套件往队列里塞键，于是「按一个键就停」这种程序没有终端也能被断言。
+  // 队列空而 stdin 不是终端时 key_read 立即交回空串 —— 三条情形里最容易被忽略的那条。
+  const 源码 = [
+    "fn main() -> Int {",
+    '  print(str(key_push("a")) + " ")',
+    '  print(str(key_available()) + " ")',
+    '  print(key_read() + " ")',
+    '  print(str(key_available()) + " ")',
+    '  print(str(key_read() == "") + " ")',
+    '  print(str(key_start(false)))',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "keys");
+  ok("队列两端一致", r.js === r.c, JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  ok("推一个、取一个、空则空串、非终端的 raw 是假",
+     r.c.trim() === "1 true a false true false", JSON.stringify(r.c.trim()));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

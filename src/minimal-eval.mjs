@@ -61,6 +61,8 @@ export function 述(v) {
 // locale 的名字与当前选择：与字节码那一份同一组名字（design/LOCALES.txt）。
 const locale名字们 = ["zh-CN.gbk", "zh-CN.utf8", "ja-JP.shift_jis", "en-US.utf8"];
 let 当前locale = "";
+// 键队列：与字节码那一份同一件事。
+const 键队列 = [];
 
 const 内置 = {
   len: (rt, a) => {
@@ -108,6 +110,22 @@ const 内置 = {
   },
   locale_env: (rt) => rt.cap.env.localeGuess(),
   console_codepage: (rt) => rt.cap.env.codepage(),
+  // ---- 输入：一条键队列 ----
+  key_push: (rt, a) => { 键队列.push(rt.成串(a[0])); return 键队列.length; },
+  key_available: () => 键队列.length > 0,
+  key_read: (rt) => {
+    if (键队列.length) return 键队列.shift();
+    if (!rt.cap.terminal.isTTY()) return "";
+    try {
+      const buf = rt.cap.terminal.readSync(64);
+      if (buf && buf.length > 0) {
+        for (const ch of buf.toString("utf8")) 键队列.push(ch);
+        return 键队列.length ? 键队列.shift() : "";
+      }
+    } catch (err) { /* 读不到就是没有键 */ }
+    return "";
+  },
+  key_start: (rt, a) => !!rt.cap.terminal.setRaw(a[0] === true),
   // ---- 时间：读一次钟，或等一会儿 ----
   now_ms: (rt) => rt.cap.time.now(),
   sleep_ms: (rt, a) => {
