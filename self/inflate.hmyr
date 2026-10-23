@@ -392,6 +392,33 @@ fn 解存块(状: Int, 块们: Int, 出: Int) {
   return {状: {字节们: 字节们, 位置: at, 当前: 0, 已: 0}, 块们: 块, 出: 当前}
 }
 
+// 只看码长：读头、读计数、读码长表，打印前几个就停 —— 查码表层的事用它。
+fn 打码长(字节们: Int) {
+  var 状 = {字节们: 字节们, 位置: 0, 当前: 0, 已: 0}
+  let 头 = 读lsb(状, 3)
+  状 = 头.状
+  let 末 = 头.值 % 2
+  let 型 = (头.值 - 末) / 2 % 4
+  if 型 != 2 {
+    print("不是动态块（BTYPE=" + str(型) + "）" + chr(10))
+    return 0
+  }
+  let 计 = 读计数(状)
+  print("HLIT=" + str(计.字长数) + " HDIST=" + str(计.距长数) + " HCLEN=" + str(计.码长码数) + chr(10))
+  let 码长 = 读码长码(计.状, 计.码长码数)
+  print("码长码表：" + str(码长.长们) + chr(10))
+  let 读 = 读码长们(码长.状, 码长.长们, 计.字长数 + 计.距长数)
+  var i = 0
+  var 前 = ""
+  while i < len(读.长们) && i < 40 {
+    前 = 前 + str(to_int(读.长们[i])) + " "
+    i = i + 1
+  }
+  print("前四十个码长：" + 前 + chr(10))
+  return 0
+}
+
+
 // 主循环：一块一块读，BFINAL=1 才停。
 fn 解固定(字节们: Int) {
   var 状 = {字节们: 字节们, 位置: 0, 当前: 0, 已: 0}
@@ -438,6 +465,13 @@ fn main() -> Int effects(file) {
     return 2
   }
   let 字节们 = read_bytes(参[1])
+  var 看码长 = false
+  var i = 0
+  while i < len(参) {
+    if 参[i] == "--码长" { 看码长 = true }
+    i = i + 1
+  }
+  if 看码长 { return 打码长(字节们) }
   let 出 = 解固定(字节们)
   write_bytes(参[2], 出)
   print(str(len(字节们)) + " → " + str(len(出)) + chr(10))
