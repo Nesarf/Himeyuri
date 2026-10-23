@@ -38,7 +38,7 @@ console.log("一、宿主全局：正好这十项");
   const 应 = ["String", "Error", "Array", "Math", "JSON", "Map", "Set", "Object", "Number", "TextDecoder"];
   const 候补 = ["Object", "Array", "String", "Number", "Boolean", "Math", "JSON", "Date", "Map", "Set",
     "WeakMap", "WeakSet", "RegExp", "Error", "TypeError", "RangeError", "Symbol", "Promise", "Buffer",
-    "URL", "TextDecoder", "TextEncoder", "Intl", "globalThis", "process", "console", "require"];
+    "URL", "TextDecoder", "TextEncoder", "Intl", "globalThis", "console", "require"];
   const 实 = 候补.filter((名) => 计(名) > 0).sort();
   ok("正好十项", 实.length === 10, 实.join(" "));
   ok("而它们是那十项", JSON.stringify(实) === JSON.stringify([...应].sort()), 实.join(" "));
@@ -46,8 +46,15 @@ console.log("一、宿主全局：正好这十项");
   ok("没有 Promise（执行器是同步的）", 计("Promise") === 0);
   ok("没有 RegExp（正则只出现在字符串里）", 计("RegExp") === 0);
   ok("没有 Symbol 与 Proxy", 计("Symbol") === 0 && 计("Proxy") === 0);
-  // 一处旧误报的墓碑：process 在剥掉字符串之后必须为零。
-  ok("process 不算依赖（它只是效果名的字符串值）", 计("process") === 0, String(计("process")));
+  // process 这一处换过一次形状。原先的墓碑是「它只是效果名那个字符串」；
+  // 现在环境与路径那一组要在能力面上问 cwd，于是它以 cap.process 出现 ——
+  // 仍然是能力面，不是宿主全局。所以计数必须等于「点号后那一次」的计数。
+  {
+    const 全部次 = (全部.match(/\bprocess\b/g) || []).length;
+    const 能力面 = (全部.match(/\.process\b/g) || []).length;
+    ok("process 只作为能力面出现（cap.process）", 全部次 === 能力面,
+      全部次 + " 次里 " + 能力面 + " 次带点号");
+  }
 }
 
 console.log("二、语言构造：正好这八种");

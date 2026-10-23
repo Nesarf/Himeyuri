@@ -351,11 +351,12 @@ const 编译函数 = (decl) => {
 // 分叉的样子是 R0104「没有这个内置」：名字在表里缺一个，编译器就把它当用户函数去查，
 // 而用户函数表里也没有它。加内置时要四处一起加：最小求值器、字节码内置表、这一张、
 // 还有自举层 self/eval.hmyr 的调用分派。
-const 内置名 = new Set(["abs", "argv", "chr", "field_get", "field_has", "field_names", "file_exists", "floor",
-  "int", "is_letter", "is_mark", "len", "max", "min", "nfc", "now_ms", "ord", "print", "print_err", "read_text",
-  "record_new", "slice", "sleep_ms", "split", "str", "term_clear", "term_color", "term_escape", "term_hide",
-  "term_show", "term_size", "to_int", "to_lower", "to_upper", "write_text", "write_bytes", "f64_bytes",
-  "pack_value", "read_line", "read_lines"]);
+const 内置名 = new Set(["abs", "argv", "chr", "console_codepage", "cwd", "field_get", "field_has", "field_names",
+  "file_exists", "floor", "home_dir", "int", "is_letter", "is_mark", "len", "locale_current", "locale_env",
+  "locale_set", "max", "min", "nfc", "now_ms", "ord", "print", "print_err", "python_path", "read_text",
+  "record_new", "repo_path", "slice", "sleep_ms", "split", "str", "temp_path", "term_clear", "term_color",
+  "term_escape", "term_hide", "term_show", "term_size", "to_int", "to_lower", "to_upper", "write_text",
+  "write_bytes", "f64_bytes", "pack_value", "read_line", "read_lines"]);
 
 // 模块 → 一个程序：函数表 + 全局常量表 + 顶层指令（用来登记常量）。
 export const 编译模块 = (ast) => {

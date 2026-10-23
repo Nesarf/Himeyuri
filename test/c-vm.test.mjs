@@ -734,6 +734,43 @@ console.log("十七、时间那一组：只断言形状，不断言值");
   ok("钟在走、等多少交回多少、负数归零", r.c.trim() === "true 5 true 0", JSON.stringify(r.c.trim()));
 }
 
+console.log("十八、环境与路径：与机器有关的只断言形状");
+{
+  // 这些内置读的是「这台机器在哪儿」，两台机器给出不同的串本来就是对的。
+  // 所以程序只输出「拿到的不是空串」与 locale 的名字，不输出路径本身。
+  const 源码 = [
+    "fn main() -> Int {",
+    '  print(str(len(cwd()) > 0) + " ")',
+    '  print(str(len(home_dir()) > 0) + " ")',
+    '  print(str(len(temp_path("probe")) > 0) + " ")',
+    '  print(str(len(repo_path("a/b")) > 0) + " ")',
+    '  print(str(len(python_path()) > 0) + " ")',
+    '  print(str(len(console_codepage()) > 0) + " ")',
+    '  print(locale_set("zh-CN.utf8") + " ")',
+    '  print(str(locale_current() == "zh-CN.utf8"))',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "env");
+  ok("六条形状加两条 locale 两台一样", r.js === r.c, JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  ok("形状是六个 true，locale 名字与选择都对",
+     r.c.trim() === "true true true true true true zh-CN.utf8 true", JSON.stringify(r.c.trim()));
+}
+
+console.log("十九、不认识的 locale 要说出来");
+{
+  const 源路 = path.join(临, "badlocale.hmyr");
+  fs.writeFileSync(源路, 'fn main() -> Int {\n  locale_set("xx-XX.utf8")\n  return 0\n}\n', "utf8");
+  const unit = loadUnit(源路);
+  const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));
+  const 码路 = path.join(临, "badlocale.hmyrb");
+  fs.writeFileSync(码路, 写程序(程序));
+  const r = spawnSync(exe, [码路], { encoding: "utf8" });
+  ok("R0205 说的是没有这套档案",
+     r.status !== 0 && String(r.stderr).includes("HMYR-R0205"),
+     String(r.status) + " " + JSON.stringify(String(r.stderr).slice(0, 140)));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

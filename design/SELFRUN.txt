@@ -105,10 +105,10 @@ HMYR 全面自举：运行时、宿主依赖与启动
 
   还差什么，按代价排（数字都是当场数的）：
 
-    一、世界面还差 28 个内置。账本已经做成工具：tools/builtin-gap.mjs 一次列出
+    一、世界面还差 11 个内置。账本已经做成工具：tools/builtin-gap.mjs 一次列出
        六处（宿主求值器、最小求值器、编译期内置名、字节码内置表、自举求值器、
        C 机器）各有哪些名字，差集就是这一项的待办。
-       2026 实测：宿主 60、最小 31、编译 32、字节码 32、自举 26、C 32。
+       2026 实测：宿主 60、最小 48、编译 49、字节码 49、自举 43、C 49。
 
        已经搬完的一格：split（文本）。它在六处一起加，验收在
        test/c-vm.test.mjs 第十四节 —— 连续分隔留下空段、空分隔按码元切、
@@ -117,16 +117,22 @@ HMYR 全面自举：运行时、宿主依赖与启动
        于是同一段程序被编成「调用一个用户函数」，两台机器都报没有这个函数。
        这正是「加一个内置要动六处」的意思，而工具现在会指出漏在哪一处。
 
-       缺的按组（20 个）：
-         环境 9    cwd home_dir temp_path repo_path python_path locale_current
-                   locale_env locale_set console_codepage
+       缺的按组（11 个）：
          输入 4    key_push key_available key_read key_start
          进程 2    run_program chdir
          线程 4    thr_spawn thr_join thr_cancel thr_count
          内存 1    arena（这是宿主桩：MEMORY.txt 的三区模型还没实现，
                    所以它算在世界面里，但落点可能不在 C 机器上）
 
-       文本、终端、时间三组现在齐了。
+       文本、终端、时间、环境四组现在齐了。
+
+       环境那九个（cwd home_dir temp_path repo_path python_path locale_current
+       locale_env locale_set console_codepage）里有两个是「如实说没有」的：
+       repo_path 只认设了的 HMYR_REPO（没设就把相对路径原样交回），
+       python_path 只认 HMYR_PYTHON（否则交回 python 这个名字）。
+       locale 只认那四套档案的名字，别的报 R0205。
+       验收在 test/c-vm.test.mjs 第十八与第十九节：程序只输出形状与 locale 名字，
+       不输出路径本身 —— 两台机器给出不同的串本来就是对的。
 
        时间那两条（now_ms sleep_ms）的落点值得单说：桌面上用
        GetSystemTimeAsFileTime 与 timespec_get，而板子上两样都没有 ——
@@ -141,14 +147,13 @@ HMYR 全面自举：运行时、宿主依赖与启动
        term_size 在桌面上问一次控制台，问不到就给 24 行 80 列，
        与 JS 那侧 capability 的缺省值一致。
 
-       下一格是路径与环境那一组（9 个）：它们大多能从环境变量与标准库取，
-       而 repo_path 与 python_path 在 C 机器上没有对应物 —— 那两条要如实
-       交回空串并写清「不知道」，而不是编一个看起来像路径的串。
+       下一格是输入那一组（4 个）：它们要一个键队列，而队列在两边都得有 ——
+       套件塞键、真终端读键，同一条队列。之后是进程二与线程四。
 
     二、工具链：LSP、格式化器、嵌入、打包发布、语料生成、测试框架都还是 JS。
        它们不在「跑程序」这条路上，可以一直是工具。
 
-  于是「完全独立」现在有两种读法，两种都说得清：近的那一种只差世界面那 28 项；
+  于是「完全独立」现在有两种读法，两种都说得清：近的那一种只差世界面那 11 项；
   远的那一种还要把工具链也搬过去。前一版是工程，后一版是生态。
 
 

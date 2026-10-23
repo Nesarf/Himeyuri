@@ -32,9 +32,11 @@
 #include <io.h>
 #include <fcntl.h>
 #include <process.h>
+#include <direct.h>
 #elif !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
 /* 裸机的 C 库没有 unistd.h —— ARM 那一边 pid 也没有意义（见 临时路径）。 */
 #include <unistd.h>
+#include <sys/stat.h>
 #endif
 
 /* 按 UTF-8 的路径开文件。
@@ -494,6 +496,45 @@ static void 睡多久(long ms) {
     nanosleep(&ts, NULL);
   }
 #endif
+}
+
+/* ---- 环境与路径 ------------------------------------------------------
+ *
+ * 这一组读的是「这台机器在哪儿」：当前目录、主目录、临时目录、仓库根。
+ * 所以两台机器给出不同的字符串是对的 —— 契约里写的是「读宿主的位置」，
+ * 不是「所有宿主必须同名」。测试因此只断言形状与结尾，不断言整串。
+ *
+ * 两个如实说「没有」的：
+ *   repo_path  这台机器没有仓库根。设了 HMYR_REPO 就用它，否则把相对路径原样交回。
+ *   python_path 这台机器不是 Python 宿主 —— 没有那一条托管路径可给。
+ */
+static char g_locale[32] = "";
+static const char *locale_名字们[] = {"zh-CN.gbk", "zh-CN.utf8", "ja-JP.shift_jis", "en-US.utf8"};
+
+/* 定义在后面（装载那一节）；这里先用一次，所以先声明。 */
+static uint16_t *utf8_to_utf16(const char *s, size_t len, uint32_t *out_len);
+
+static char *拼接(const char *a, const char *b) {
+  size_t na = strlen(a), nb = strlen(b);
+  char *p = (char *)malloc(na + nb + 1);
+  if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  memcpy(p, a, na);
+  memcpy(p + na, b, nb + 1);
+  return p;
+}
+
+/* UTF-8 的 C 串变成语言里的字符串。路径与环境都可能不是纯 ASCII。 */
+static Value 路径值(const char *utf8) {
+  uint32_t n = 0;
+  uint16_t *p = utf8_to_utf16(utf8, (uint32_t)strlen(utf8), &n);
+  return v_str(p, n);
+}
+
+/* 环境变量，没有就给空串。板子上 getenv 是空的（见 port/arm-port.c），
+ * 于是这一组在板子上全部交回空串 —— 那是「没有」，不是「碰巧是空」。 */
+static const char *环境(const char *名) {
+  const char *v = getenv(名);
+  return (v && *v) ? v : "";
 }
 
 static Value *alloc_values(uint32_t n) {
@@ -1880,6 +1921,153 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     if (m < 0) m = 0;
     睡多久(m);
     *out = v_num((double)m);
+    return 1;
+  }
+  /* ---- 环境与路径：读这台机器在哪儿 ---------------------------------- */
+  if (name_is(name_idx, "cwd")) {
+    if (nargs != 0) { fail("HMYR-R0101", "cwd takes no arguments"); return 1; }
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+    /* 板子上没有工作目录这个概念：交回空串，而不是编一条路径。 */
+    *out = ascii_text("");
+#elif defined(_WIN32)
+    {
+      wchar_t wbuf[2048];
+      if (_wgetcwd(wbuf, 2048)) {
+        char u[8192];
+        WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, u, (int)sizeof u, NULL, NULL);
+        *out = 路径值(u);
+      } else *out = ascii_text("");
+    }
+#else
+    {
+      char buf[4096];
+      if (getcwd(buf, sizeof buf)) *out = 路径值(buf);
+      else *out = ascii_text("");
+    }
+#endif
+    return 1;
+  }
+  if (name_is(name_idx, "home_dir")) {
+    if (nargs != 0) { fail("HMYR-R0101", "home_dir takes no arguments"); return 1; }
+    const char *h = 环境("USERPROFILE");
+    if (!*h) h = 环境("HOME");
+    *out = 路径值(h);
+    return 1;
+  }
+  if (name_is(name_idx, "temp_path")) {
+    if (nargs != 1) { fail("HMYR-R0101", "temp_path wants one argument"); return 1; }
+    Value 名;
+    value_to_text(args[0], &名);
+    const char *dir = 环境("HMYR_TMP");
+    if (!*dir) dir = 环境("TEMP");
+    if (!*dir) dir = 环境("TMP");
+#if !defined(_WIN32)
+    if (!*dir) dir = "/tmp";
+#endif
+    char *名文 = utf16_to_utf8(名.s, 名.slen);
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+    /* 板子上没有临时目录：只给这个名字，表示「该有一个地方，而这里没有」。 */
+    char *全 = 拼接("hmyr-", 名文 ? 名文 : "");
+#else
+    char *前半 = 拼接(dir, "/hmyr-");
+    char *全 = 拼接(前半, 名文 ? 名文 : "");
+    free(前半);
+#endif
+    free(名文);
+#ifdef _WIN32
+    _mkdir(全);   /* 已经在就算了：与 JS 那侧的 ensureDir 同一条规矩。 */
+#elif !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+    mkdir(全, 0777);
+#endif
+    *out = 路径值(全);
+    free(全);
+    return 1;
+  }
+  if (name_is(name_idx, "repo_path")) {
+    if (nargs != 1) { fail("HMYR-R0101", "repo_path wants one argument"); return 1; }
+    Value 相对;
+    value_to_text(args[0], &相对);
+    char *rel = utf16_to_utf8(相对.s, 相对.slen);
+    const char *根 = 环境("HMYR_REPO");
+    char *全;
+    if (*根) {
+      char *前半 = 拼接(根, "/");
+      全 = 拼接(前半, rel ? rel : "");
+      free(前半);
+    } else {
+      /* 这台机器没有仓库根。原样交回相对路径，而不是编一个看起来像仓库的串。 */
+      全 = 拼接("", rel ? rel : "");
+    }
+    *out = 路径值(全);
+    free(全);
+    free(rel);
+    return 1;
+  }
+  if (name_is(name_idx, "python_path")) {
+    if (nargs != 0) { fail("HMYR-R0101", "python_path takes no arguments"); return 1; }
+    const char *p = 环境("HMYR_PYTHON");
+    *out = ascii_text(*p ? p : "python");
+    return 1;
+  }
+  if (name_is(name_idx, "locale_current")) {
+    if (nargs != 0) { fail("HMYR-R0101", "locale_current takes no arguments"); return 1; }
+    *out = ascii_text(g_locale);
+    return 1;
+  }
+  if (name_is(name_idx, "locale_set")) {
+    if (nargs != 1) { fail("HMYR-R0101", "locale_set wants one argument"); return 1; }
+    Value 名;
+    value_to_text(args[0], &名);
+    char *文 = utf16_to_utf8(名.s, 名.slen);
+    int 认 = 0;
+    for (size_t i = 0; i < sizeof locale_名字们 / sizeof *locale_名字们; i++) {
+      if (文 && strcmp(文, locale_名字们[i]) == 0) { 认 = 1; break; }
+    }
+    if (!认) {
+      char m[220];
+      snprintf(m, sizeof m,
+               "no such locale profile: '%s' (have: zh-CN.gbk, zh-CN.utf8, ja-JP.shift_jis, en-US.utf8)",
+               文 ? 文 : "");
+      free(文);
+      fail("HMYR-R0205", m);
+      return 1;
+    }
+    snprintf(g_locale, sizeof g_locale, "%s", 文);
+    *out = ascii_text(g_locale);
+    free(文);
+    return 1;
+  }
+  if (name_is(name_idx, "locale_env")) {
+    if (nargs != 0) { fail("HMYR-R0101", "locale_env takes no arguments"); return 1; }
+    const char *l = 环境("LANG");
+    if (!*l) l = 环境("LC_ALL");
+    /* 只认那四套档案对应的三个语区；别的语区给空串（「不知道」）。 */
+    const char *名 = "";
+    if (strncmp(l, "zh_CN", 5) == 0 || strncmp(l, "zh-CN", 5) == 0) {
+#ifdef _WIN32
+      名 = (GetConsoleOutputCP() == 936) ? "zh-CN.gbk" : "zh-CN.utf8";
+#else
+      名 = "zh-CN.utf8";
+#endif
+    } else if (strncmp(l, "ja_JP", 5) == 0 || strncmp(l, "ja-JP", 5) == 0) {
+      名 = "ja-JP.shift_jis";
+    } else if (strncmp(l, "en_US", 5) == 0 || strncmp(l, "en-US", 5) == 0) {
+      名 = "en-US.utf8";
+    }
+    *out = ascii_text(名);
+    return 1;
+  }
+  if (name_is(name_idx, "console_codepage")) {
+    if (nargs != 0) { fail("HMYR-R0101", "console_codepage takes no arguments"); return 1; }
+#ifdef _WIN32
+    {
+      char num[16];
+      snprintf(num, sizeof num, "%u", (unsigned)GetConsoleOutputCP());
+      *out = ascii_text(num);
+    }
+#else
+    *out = ascii_text("utf8");
+#endif
     return 1;
   }
   if (name_is(name_idx, "argv")) {

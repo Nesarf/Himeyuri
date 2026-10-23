@@ -58,6 +58,10 @@ export function 述(v) {
 }
 
 // 内置：只这二十一个。实现照宿主的语义写，包括它们的失败编号。
+// locale 的名字与当前选择：与字节码那一份同一组名字（design/LOCALES.txt）。
+const locale名字们 = ["zh-CN.gbk", "zh-CN.utf8", "ja-JP.shift_jis", "en-US.utf8"];
+let 当前locale = "";
+
 const 内置 = {
   len: (rt, a) => {
     const v = a[0];
@@ -80,6 +84,30 @@ const 内置 = {
   // 切开一个字符串。切法照宿主那一份：空分隔按码元切（空串给空元组），
   // 其余按不重叠的子串切，连续或末尾的分隔留下空段。
   split: (rt, a) => rt.成串(a[0]).split(rt.成串(a[1])),
+  // ---- 环境与路径：读这台机器在哪儿 ----
+  // 两台机器给出不同的字符串是对的；两个如实说「没有」的见各条注释。
+  cwd: (rt) => rt.cap.process.cwd(),
+  home_dir: (rt) => rt.cap.env.home(),
+  temp_path: (rt, a) => {
+    const 目录 = rt.cap.env.get("HMYR_TMP") || rt.cap.env.temp();
+    rt.cap.file.ensureDir(目录);
+    return rt.cap.path.join(目录, "hmyr-" + rt.成串(a[0]));
+  },
+  // 仓库根由能力层给（capabilities.path.root），这一份不自己猜。
+  repo_path: (rt, a) => rt.cap.path.resolve(rt.cap.path.root(), rt.成串(a[0])),
+  // 这台机器不是 Python 宿主：只认设了的环境变量，否则就说 python 这个名字。
+  python_path: (rt) => rt.cap.env.get("HMYR_PYTHON") || "python",
+  locale_current: () => 当前locale,
+  locale_set: (rt, a) => {
+    const 名 = rt.成串(a[0]);
+    if (!locale名字们.includes(名)) {
+      rt.坏("HMYR-R0205", "no such locale profile: '" + 名 + "' (have: " + locale名字们.join(", ") + ")");
+    }
+    当前locale = 名;
+    return 当前locale;
+  },
+  locale_env: (rt) => rt.cap.env.localeGuess(),
+  console_codepage: (rt) => rt.cap.env.codepage(),
   // ---- 时间：读一次钟，或等一会儿 ----
   now_ms: (rt) => rt.cap.time.now(),
   sleep_ms: (rt, a) => {

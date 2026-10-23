@@ -20,6 +20,11 @@ import * as 数 from "./numbers.mjs";
 import { 码元串层 } from "./text-impl.mjs";
 import { 藏路径, 在用脱敏 } from "./redact.mjs";
 
+// locale 的名字与当前选择。四套档案由 design/LOCALES.txt 定义，
+// 这里只认名字，不做格式化 —— 格式化在标准库里。
+const locale名字们 = ["zh-CN.gbk", "zh-CN.utf8", "ja-JP.shift_jis", "en-US.utf8"];
+let 当前locale = "";
+
 export const 内置表 = {
   len: { 做: (vm, a) => {
     const v = a[0];
@@ -49,6 +54,30 @@ export const 内置表 = {
     const d = String(vm.成串(a[1]));
     return new 类元组(s.split(d).map((x) => vm.文.由宿主(x)));
   } },
+  // ---- 环境与路径：读这台机器在哪儿 ----
+  // 两台机器给出不同的字符串是对的：契约写的是「读宿主的位置」，
+  // 不是「所有宿主必须同名」。测试因此只断言形状与结尾。
+  // 两个如实说「没有」的：repo_path 只用设了的根，python_path 只认环境变量。
+  cwd: { 做: (vm) => vm.文.由宿主(vm.cap.process.cwd()) },
+  home_dir: { 做: (vm) => vm.文.由宿主(vm.cap.env.home()) },
+  temp_path: { 做: (vm, a) => {
+    const 目录 = vm.cap.env.get("HMYR_TMP") || vm.cap.env.temp();
+    vm.cap.file.ensureDir(目录);
+    return vm.文.由宿主(vm.cap.path.join(目录, "hmyr-" + vm.成串(a[0])));
+  } },
+  repo_path: { 做: (vm, a) => vm.文.由宿主(vm.cap.path.resolve(vm.cap.path.root(), vm.成串(a[0]))) },
+  python_path: { 做: (vm) => vm.文.由宿主(vm.cap.env.get("HMYR_PYTHON") || "python") },
+  locale_current: { 做: (vm) => vm.文.由宿主(当前locale) },
+  locale_set: { 做: (vm, a) => {
+    const 名 = vm.成串(a[0]);
+    if (!locale名字们.includes(名)) {
+      return vm.坏("HMYR-R0205", "no such locale profile: '" + 名 + "' (have: " + locale名字们.join(", ") + ")");
+    }
+    当前locale = 名;
+    return vm.文.由宿主(当前locale);
+  } },
+  locale_env: { 做: (vm) => vm.文.由宿主(vm.cap.env.localeGuess()) },
+  console_codepage: { 做: (vm) => vm.文.由宿主(vm.cap.env.codepage()) },
   // ---- 时间：读一次钟，或等一会儿 ----
   // 它们破坏可复现性（CAPABILITIES.txt 第六组），所以测试只断言形状。
   now_ms: { 做: (vm) => 数.造(vm.cap.time.now()) },

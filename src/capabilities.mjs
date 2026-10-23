@@ -22,6 +22,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { Worker } from "node:worker_threads";
 
@@ -197,6 +198,29 @@ export const 本机能力 = (options = {}) => ({
     // 环境变量也算世界：读它是读进程的状态，而不是读这门语言自己的东西。
     get: (name) => process.env[name],
     platform: () => process.platform,
+    // 控制台代码页：Windows 上问一次 chcp，别处就是 utf8。
+    // 这两条收在这里，是因为「怎么问机器」属于这一层；
+    // 而最小求值器那一份的宿主依赖正好被钉在十项上，不该为它们多认两项。
+    codepage: () => {
+      if (process.platform !== "win32") return "utf8";
+      const r = spawnSync("cmd", ["/c", "chcp"], { timeout: 5000, windowsHide: true });
+      const m = /(\d{3,5})/.exec(r.stdout ? r.stdout.toString("latin1") : "");
+      return m ? m[1] : "unknown";
+    },
+    // 猜四套 locale 档案里的哪一套：系统的区域设置加上控制台代码页。
+    // 猜不上就空串 —— 那是「不知道」，不是「默认那一套」。
+    localeGuess: () => {
+      let region = "";
+      try { region = new Intl.DateTimeFormat().resolvedOptions().locale || ""; } catch (err) { region = ""; }
+      let page = "utf8";
+      if (process.platform === "win32") {
+        const r = spawnSync("cmd", ["/c", "chcp"], { timeout: 5000, windowsHide: true });
+        const m = /(\d{3,5})/.exec(r.stdout ? r.stdout.toString("latin1") : "");
+        page = m ? (m[1] === "936" ? "gbk" : m[1] === "932" ? "shift_jis" : "utf8") : "utf8";
+      }
+      const guess = region.replace("_", "-") + "." + page;
+      return ["zh-CN.gbk", "zh-CN.utf8", "ja-JP.shift_jis", "en-US.utf8"].includes(guess) ? guess : "";
+    },
   },
   path: {
     join: (...parts) => path.join(...parts),
@@ -204,6 +228,10 @@ export const 本机能力 = (options = {}) => ({
     dirname: (p) => path.dirname(p),
     basename: (p) => path.basename(p),
     isAbsolute: (p) => path.isAbsolute(p),
+    // 仓库根：语言文件里不该写死绝对路径（见 CAPABILITIES 第五节）。
+    // 这一份文件自己就在仓库里，于是它所在目录的上一级就是根。
+    // 字节码执行器与自举求值器都用它，而不是各算一份。
+    root: () => path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
   },
   terminal: {
     // 尺寸取自 options（套件里给一份固定的），而序列是纯字符串。
