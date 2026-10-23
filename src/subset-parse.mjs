@@ -379,10 +379,19 @@ export const 子集解 = (tokens, options = {}) => {
       const condition = 解析表达式();
       if (!是标("{")) 不认("子集的 if 必须有块", t);
       const then = 解析块();
+      // else 之前允许换行：换行是 token，但它在这里不是语句分界。
+      // 规矩是「先往前看，确认隔着若干换行之后真是 else，才把那些换行吃掉」——
+      // 无条件过空行会把「if 表达式之后紧跟着的下一句」的换行也吃掉。
       let otherwise = null;
-      if (是("keyword", "else")) {
-        进();
-        otherwise = 是("keyword", "if") ? 解析首项() : 解析块();
+      {
+        let 距 = 0;
+        while (看(距).type === "newline") 距++;
+        const 非空 = 看(距);
+        if (非空.type === "keyword" && 非空.value === "else") {
+          for (let k = 0; k < 距; k++) 进();
+          进();
+          otherwise = 是("keyword", "if") ? 解析首项() : 解析块();
+        }
       }
       return { kind: "If", condition, then, otherwise, line: t.line, column: t.column };
     }
