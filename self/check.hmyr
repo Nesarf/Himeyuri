@@ -1,0 +1,62 @@
+// 测试调度器：读清单，一个一个跑，汇总。
+//
+// 这是「工具链搬进 HMYR」的第一项。它只用两件世界面：读一份文本、跑一个程序，
+// 而两件都已经是 C 机器上的内置。套件本身仍然是 node 脚本 ——
+// 它们要拿 src/ 那一侧当对照，而对照必须是另一种实现。
+//
+// 用法：hmyr self/check.hmyr [清单路径]
+// 清单格式：每行「名字<TAB>路径」，由 node tools/check-all.mjs --list 生成。
+// 默认读 tools/suite-list.txt。
+
+// 一段输出的最后一行：套件的判定就在那一行（「N passed, M failed」）。
+fn 最后一行(文: String) -> String {
+  if len(文) == 0 { return "" }
+  let 行们 = split(文, chr(10))
+  var i = len(行们) - 1
+  while i >= 0 {
+    let 行 = 行们[i]
+    if len(行) > 0 { return 行 }
+    i = i - 1
+  }
+  return ""
+}
+
+fn 跑一个(名字: String, 路: String) -> Int {
+  let r = run_program("node", (路,))
+  if r.code == 0 {
+    print("  通过  " + 名字 + "  " + 最后一行(r.stdout) + chr(10))
+    return 0
+  }
+  let 错 = 最后一行(r.stderr)
+  if len(错) > 0 {
+    print("  不通过  " + 名字 + "  " + 最后一行(r.stdout) + "  " + 错 + chr(10))
+  } else {
+    print("  不通过  " + 名字 + "  " + 最后一行(r.stdout) + chr(10))
+  }
+  return 1
+}
+
+fn main() -> Int effects(file, process) {
+  let 参 = argv()
+  var 清单路 = "tools/suite-list.txt"
+  if len(参) > 1 { 清单路 = 参[1] }
+  let 文 = read_text(清单路)
+  let 行们 = split(文, chr(10))
+  var 过 = 0
+  var 败 = 0
+  var i = 0
+  while i < len(行们) {
+    let 行 = 行们[i]
+    if len(行) > 0 {
+      let 列 = split(行, chr(9))
+      if len(列) >= 2 {
+        if 跑一个(列[0], 列[1]) == 0 { 过 = 过 + 1 } else { 败 = 败 + 1 }
+      }
+    }
+    i = i + 1
+  }
+  print("" + chr(10))
+  print(str(过) + " passed, " + str(败) + " failed" + chr(10))
+  if 败 > 0 { return 1 }
+  return 0
+}

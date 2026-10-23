@@ -194,10 +194,13 @@ HMYR 全面自举：运行时、宿主依赖与启动
               求值（self/eval.hmyr + self/run.hmyr）、读（self/lex.hmyr 那六件）、
               启动（vm/hmyr.c 自己就是启动器）。于是「跑程序」这条路上
               没有 JavaScript，运行时不依赖任何工具。
+              测试框架也已经搬了：self/check.hmyr 读一份清单、一个一个跑、
+              按退出码汇总。它只用两件世界面（读文本、跑程序），而清单由
+              node tools/check-all.mjs --list 生成，只有这一个来源。
+              验收是 test/check-hmyr.test.mjs（十一项，含「真的调度得动」：
+              三个快套件、三个通过、没有一行不通过）。
 
         还没搬，按代价排：
-          测试框架   tools/check-all.mjs 二百一十九行，要跑子进程与并行；
-                     run_program 已经够了，是最容易的一项。
           格式化器   src/format.mjs 二百零九行，要「读 AST 再写文本」；
                      自举 parser 已经能读那六份源码用的那部分。
           LSP        src/lsp.mjs 一百五十四行，JSON-RPC 走 stdio；
@@ -208,6 +211,13 @@ HMYR 全面自举：运行时、宿主依赖与启动
                      慢，但不需要新能力。
           打包发布   package/release/manifest/verify 约三百九十行，要一个自己的
                      deflate —— 语言里没有压缩，这一项得先有压缩才能搬。
+
+        搬调度器时撞到一处语义分叉，记在这里而不是绕过去：
+        print 自己不添换行。自举层添（self/eval.hmyr 的 print 那一支拼 chr(10)），
+        所以走自举层的程序一次 print 一行；而「JS 编译器编出来、C 直接跑」
+        那条路上没有那一层，输出就是粘在一起的。调度器因此自己补 chr(10)。
+        要统一它，得先决定换行归谁 —— 那个决定会碰到每一台求值器，
+        所以它是一件单独的事，不是顺手能改的。
 
        下一格先搬测试框架那一项：它只需要 run_program 与 argv，
        而两者都已经在 C 机器上验过了。

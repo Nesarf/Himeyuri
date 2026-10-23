@@ -120,6 +120,7 @@ const SUITES = [
   ["container", "test/container.test.mjs", "SPEC M7 - containers round modules: XPK, MMCMP and PowerPacker are recognised, and uncompressing is handed out rather than faked"],
   ["reader", "test/reader.test.mjs", "SPEC 4.1 - reader macros as data: whole tokens only, and the rewritten source parses to the same tree"],
   ["runtimepath", "test/runtime-path.test.mjs", "SPEC M7 - the runtime path and the tool chain are two things: five entry points, no tools in their import closure"],
+  ["checkhmyr", "test/check-hmyr.test.mjs", "SPEC M7 - the test scheduler written in Himeyuri: it reads a list, runs three suites, and counts right"],
   ["manifest", "test/manifest.test.mjs", "SPEC M7 - the distribution manifest: everything it lists actually exists, and the minimal set is exactly fifteen"],
   ["helper", "test/helper.test.mjs", "SPEC M7 - the assistant: a code explains itself, a word searches the meanings, and a miss still hands back the list"],
   ["verify", "test/verify.test.mjs", "SPEC M7 - the manifest verifier: it says pass when it matches, and it really says fail when something was changed"],
@@ -139,6 +140,13 @@ const SUITES = [
   ["selfcompare", "test/self-compare.test.mjs", "SPEC M7 - comparison operators, at the precedence the language declares"],
   ["selfsig", "test/self-sig.test.mjs", "SPEC M7 - function signatures read by Himeyuri agree with the JavaScript reader"],
 ];
+
+/* 清单导出：给 HMYR 写的那一份调度器（self/check.hmyr）用。
+ * 两份清单只此一个来源 —— 少一份手抄的机会。 */
+if (process.argv.includes("--list")) {
+  for (const [名, 路] of SUITES) console.log(名 + "\t" + 路);
+  process.exit(0);
+}
 
 let failed = 0;
 console.log("Himeyuri checks");
