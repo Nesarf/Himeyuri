@@ -199,14 +199,20 @@ HMYR 全面自举：运行时、宿主依赖与启动
               node tools/check-all.mjs --list 生成，只有这一个来源。
               验收是 test/check-hmyr.test.mjs（十一项，含「真的调度得动」：
               三个快套件、三个通过、没有一行不通过）。
+              嵌入也搬了：self/embed.hmyr 把一份 .hmyrb 摊成 C 源码。
+              为此世界面加了一格 read_bytes —— read_text 会按 UTF-8 解码，
+              而字节码文件一过就坏。它同样六处对齐，验收是
+              test/embed-hmyr.test.mjs（十六项，含「数组从 HMYRB 的魔数开始」）。
+              搬的时候撞到的平方级也记在那儿：加号每拼一次就复制一次已经拼好的
+              全部，四万三千字节摊成二十六万字符的 C 文本，逐字节拼会顶到四吉；
+              所以它先入行、再折半拼接，与 self/compile.hmyr 的 拼两半 同一个形状。
 
         还没搬，按代价排：
           格式化器   src/format.mjs 二百零九行，要「读 AST 再写文本」；
-                     自举 parser 已经能读那六份源码用的那部分。
+                     自举侧那份 parse.hmyr 只认表达式，完整的语句树在
+                     stmt.hmyr 与 body.hmyr 里 —— 接口要另接一层。
           LSP        src/lsp.mjs 一百五十四行，JSON-RPC 走 stdio；
                      lib/json.hmyr 已经能把 JSON 读成数据结构。
-          嵌入       src/embed.mjs 九十八行，把字节码摊成 C 数组；
-                     self/pack.hmyr 的字节累积已经能做这件事。
           语料生成   ucd 那四支约五百七十行，要读五十兆的 UCD 文本；
                      慢，但不需要新能力。
           打包发布   package/release/manifest/verify 约三百九十行，要一个自己的

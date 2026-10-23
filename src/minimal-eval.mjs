@@ -83,6 +83,12 @@ const 内置 = {
     if (码元.是码元序列(v)) return 起 >= 止 ? 码元.由宿主("") : 码元.切(s, 起, 止);
     return 起 >= 止 ? "" : s.slice(起, 止);
   },
+  // 原始字节：嵌入与打包要它。read_text 会按 UTF-8 解码，二进制一过就坏。
+  read_bytes: (rt, a) => {
+    const 路径 = rt.成串(a[0]);
+    try { return Array.from(rt.cap.file.read(路径)); }
+    catch (err) { rt.坏("HMYR-R0211", "cannot read '" + 路径 + "'"); }
+  },
   // 切开一个字符串。切法照宿主那一份：空分隔按码元切（空串给空元组），
   // 其余按不重叠的子串切，连续或末尾的分隔留下空段。
   split: (rt, a) => rt.成串(a[0]).split(rt.成串(a[1])),
@@ -367,7 +373,7 @@ const 内置 = {
 };
 
 // 只有这四样碰世界。读文件与问文件在不在属 file，另两个通道属 process。
-const 内置效果 = { read_text: "file", read_line: "file", read_lines: "file", write_text: "file", write_bytes: "file", file_exists: "file", argv: "process", print_err: "process", chdir: "process", run_program: "process", thr_spawn: "thread", thr_cancel: "thread" };
+const 内置效果 = { read_text: "file", read_bytes: "file", read_line: "file", read_lines: "file", write_text: "file", write_bytes: "file", file_exists: "file", argv: "process", print_err: "process", chdir: "process", run_program: "process", thr_spawn: "thread", thr_cancel: "thread" };
 
 class 尾调用 {
   constructor(decl, args, fromEffects) { this.decl = decl; this.args = args; this.fromEffects = fromEffects; }

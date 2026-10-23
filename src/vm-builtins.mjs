@@ -66,6 +66,14 @@ export const 内置表 = {
   thr_count: { 做: () => 数.造(0) },
   // arena：三区模型的桩，字段是函数值；这一份也没有一等函数值。
   arena: { 做: (vm) => vm.坏("HMYR-R0104", "arena is a stub for the zone model: its fields are functions, and this machine has no first-class functions") },
+  // 原始字节：嵌入与打包要它。read_text 会按 UTF-8 解码，二进制一过就坏。
+  read_bytes: { 效果: "file", 做: (vm, a) => {
+    const 路径 = vm.成串(a[0]);
+    try {
+      const buf = vm.cap.file.read(路径);
+      return new 类元组(Array.from(buf).map((b) => 数.造(b)));
+    } catch { return vm.坏("HMYR-R0211", "cannot read '" + 路径 + "'"); }
+  } },
   // ---- 进程：改工作目录 ----
   // 成功交回新的目录（与宿主那一份同一条约定）；进不去报 R0209。
   chdir: { 效果: "process", 做: (vm, a) => {

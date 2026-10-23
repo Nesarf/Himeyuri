@@ -1,0 +1,64 @@
+// 嵌入：把一份 .hmyrb 摊成 C 源码。
+//
+// 它不是编译器 —— 编译那一步是 self/pack.hmyr 的事。这一件只做一件事：
+// 把字节变成一段可以放进 C 程序里的数组。三件东西凑齐才能跑：
+// 读字节（read_bytes）、拼文本（+）与写文本（write_text），
+// 而三件都已经在世界面上。
+//
+// 为什么分成「行」再拼：`+` 每拼一次就复制一次已经拼好的全部。
+// 一份四十三千字节的字节码，摊成 C 源码是两百多千字符 ——
+// 逐字节往一个串上拼，复制量是平方级，实测把内存顶到四吉（退出码 71）。
+// 所以先把每行放进元组，最后用折半拼接把它连起来：复制量降到「行数乘对数」。
+//
+// 用法：hmyr self/embed.hmyr <字节码文件> <输出.c> <符号名>
+// 输出：static const unsigned char <符号名>[] = { ... };
+//       static const unsigned int <符号名>_len = N;
+
+fn 十六(字节: Int) -> String {
+  let 表 = "0123456789abcdef"
+  let 高 = (字节 - (字节 % 16)) / 16
+  let 低 = 字节 % 16
+  return 表[高] + 表[低]
+}
+
+// 折半拼接：与 self/compile.hmyr 的 拼两半 同一个形状，也一样不用除法。
+fn 拼(行们: Int, 起: Int, 止: Int) -> String {
+  if 止 - 起 <= 1 { return 行们[起] }
+  var 左 = 起
+  var 右 = 止
+  while 右 - 左 > 2 {
+    左 = 左 + 1
+    右 = 右 - 1
+  }
+  let 中 = 左 + 1
+  return 拼(行们, 起, 中) + 拼(行们, 中, 止)
+}
+
+fn main() -> Int effects(file) {
+  let 参 = argv()
+  if len(参) < 4 {
+    print("用法：hmyr self/embed.hmyr <字节码文件> <输出.c> <符号名>" + chr(10))
+    return 2
+  }
+  let 字节们 = read_bytes(参[1])
+  let 数 = len(字节们)
+  var 行们 = ()
+  var i = 0
+  while i < 数 {
+    var 行 = "  "
+    var 列 = 0
+    while 列 < 12 && i < 数 {
+      行 = 行 + "0x" + 十六(to_int(字节们[i]))
+      if i + 1 < 数 { 行 = 行 + ", " }
+      i = i + 1
+      列 = 列 + 1
+    }
+    行们 = 行们 + (行 + chr(10),)
+  }
+  let 头 = "/* 由 self/embed.hmyr 生成：" + str(数) + " 字节 */" + chr(10) + "static const unsigned char " + 参[3] + "[] = {" + chr(10)
+  let 尾 = "};" + chr(10) + "static const unsigned int " + 参[3] + "_len = " + str(数) + ";" + chr(10)
+  let 文 = 头 + 拼(行们, 0, len(行们)) + 尾
+  write_text(参[2], 文)
+  print("写出 " + str(数) + " 字节" + chr(10))
+  return 0
+}

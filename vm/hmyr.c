@@ -2062,6 +2062,30 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_str(u, n16);
     return 1;
   }
+  /* 原始字节：嵌入与打包要它。与 read_text 同一条读法，只是不解码 ——
+   * 二进制一过 UTF-8 就坏，而「坏」在这里不报错，只会变成一串替换字符。 */
+  if (name_is(name_idx, "read_bytes")) {
+    if (nargs != 1) { fail("HMYR-R0101", "read_bytes wants one argument"); return 1; }
+    if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_bytes wants a path string"); return 1; }
+    char *p = utf16_to_utf8(args[0].s, args[0].slen);
+    FILE *f = 开文件(p, "rb");
+    if (!f) { free(p); fail("HMYR-R0211", "cannot read that file"); return 1; }
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    unsigned char *buf = (unsigned char *)malloc((size_t)(n > 0 ? n : 1));
+    size_t got = (n > 0) ? fread(buf, 1, (size_t)n, f) : 0;
+    fclose(f);
+    free(p);
+    {
+      Value v = v_null(); v.tag = T_TUPLE; v.ilen = (uint32_t)got;
+      v.items = alloc_values((uint32_t)(got ? got : 1));
+      for (size_t i = 0; i < got; i++) v.items[i] = v_num((double)buf[i]);
+      *out = v;
+    }
+    free(buf);
+    return 1;
+  }
   if (name_is(name_idx, "write_text")) {
     if (nargs != 2) { fail("HMYR-R0101", "write_text wants two arguments"); return 1; }
     if (args[0].tag != T_STR || args[1].tag != T_STR) { fail("HMYR-R0130", "write_text wants two strings"); return 1; }

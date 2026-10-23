@@ -414,7 +414,7 @@ class Scope {
 
 // A builtin that touches the outside world is a capability, and it is checked at the call site against
 // what the calling function declared. Without this, "effects" would only apply to functions we wrote.
-const BUILTIN_EFFECTS = { read_text: "file", write_text: "file", run_program: "process", chdir: "process", argv: "process", file_exists: "file", print_err: "process", thr_spawn: "thread", thr_cancel: "thread" };
+const BUILTIN_EFFECTS = { read_text: "file", read_bytes: "file", write_text: "file", run_program: "process", chdir: "process", argv: "process", file_exists: "file", print_err: "process", thr_spawn: "thread", thr_cancel: "thread" };
 
 /** 编码表按需读入并缓存：表是「字符 -> 字节」，从本运行时的解码器推出来的。
  *
@@ -816,6 +816,18 @@ const BUILTINS = {
   // ---- 字符串与字符的基本手术 ----
   // 这几个本是语言的常规能力，此前靠手写替代品绕过去（截/片段各一份、码位换成十项小表、
   // 大小写换成二十六项小表）。规矩改了：语言达不到就先补语言，不是绕。
+  // 读一份文件的原始字节：嵌入与打包要用它，而 read_text 会按 UTF-8 解码，
+  // 二进制一过就坏。不需要编码参数，也不猜；读不到与 read_text 同一条路。
+  read_bytes: (rt, args) => {
+    const 路径 = String(args[0]);
+    let buf;
+    try { buf = rt.cap.file.read(路径); }
+    catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      rt.fail("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+    }
+    return Array.from(buf);
+  },
   // 按分隔符切：i18n 处理的第一步就是按行切。
   // ---- 六、时间（不需要效果，但破坏可复现性） ----
   now_ms: (rt) => rt.cap.time.now(),
