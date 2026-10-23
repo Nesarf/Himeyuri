@@ -51,8 +51,8 @@ if (!有编译器) {
     const 解路 = path.join(临, "inflate.hmyrb");
     fs.writeFileSync(压路, 压码);
     fs.writeFileSync(解路, 解码);
-    const 压 = (参) => spawnSync(exe, [压路, ...参], { encoding: "utf8", timeout: 300000, env: { ...process.env, HMYR_STEPS: "4000000000" } });
-    const 解 = (参) => spawnSync(exe, [解路, ...参], { encoding: "utf8", timeout: 300000, env: { ...process.env, HMYR_STEPS: "4000000000" } });
+    const 压 = (参) => spawnSync(exe, [压路, ...参], { encoding: "utf8", timeout: 600000, env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" } });
+    const 解 = (参) => spawnSync(exe, [解路, ...参], { encoding: "utf8", timeout: 600000, env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" } });
 
     console.log("二、五个小样本：短到能手工算");
     for (const 内容 of ["a", "ab", "aaaa", "abab", "abcabcabc"]) {
