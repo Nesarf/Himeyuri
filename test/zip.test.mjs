@@ -92,7 +92,26 @@ if (!有编译器) {
         ok("数据逐字节一致", 数据.length === 原.length && Buffer.compare(数据, 原) === 0, 数据.length + " 对 " + 原.length);
       }
 
-      console.log("四、中央目录与尾");
+      console.log("三·五、大文件：整份种子也写得完");
+      {
+        // 这一节量的是「换表之后能处理多大」：逐位异或那一版对 43 KB 会卡到分钟级，
+        // 而 43 KB 是仓库里最小的真实文件（种子）。
+        const 大 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmyrb"));
+        const 大入 = path.join(临, "big.bin");
+        const 大包 = path.join(临, "big.zip");
+        fs.writeFileSync(大入, 大);
+        const t0 = Date.now();
+        const r = spawnSync(exe, [码路, 大入, 大包], { encoding: "utf8", timeout: 600000, env: { ...process.env, HMYR_STEPS: "40000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" } });
+        const 秒 = ((Date.now() - t0) / 1000).toFixed(2);
+        ok("43 KB 写得完（" + 秒 + " 秒）", r.status === 0 && fs.existsSync(大包), String(r.status) + " " + String(r.stderr).slice(0, 120));
+        if (fs.existsSync(大包)) {
+          const p = fs.readFileSync(大包);
+          ok("43 KB 的 CRC 与 node 一致", p.readUInt32LE(14) === zlib.crc32(大), p.readUInt32LE(14) + " 对 " + zlib.crc32(大));
+          ok("数据段是原样的 43 KB", p.readUInt32LE(22) === 大.length, String(p.readUInt32LE(22)));
+        }
+      }
+
+            console.log("四、中央目录与尾");
       ok("中央签名是 50 4b 01 02", 包.subarray(中央起, 中央起 + 4).toString("hex") === "504b0102", 包.subarray(中央起, 中央起 + 4).toString("hex"));
       ok("中央里的 CRC 与本地一致", 包.readUInt32LE(中央起 + 16) === 包.readUInt32LE(14), "");
       ok("中央里的名字与本地一致", 包.subarray(中央起 + 46, 中央起 + 46 + 名长).toString("latin1") === 名, "");
