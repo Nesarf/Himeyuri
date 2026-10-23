@@ -2312,6 +2312,28 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     }
     return 1;
   }
+  /* 字节元组转文本：按 UTF-8 解码。read_stdin_bytes 交回的是字节，
+   * 而 JSON 之类的体是 UTF-8 —— 两格之间需要这一格。
+   * 它不管编码猜测：给的就是 UTF-8，坏字节按替换字符走（与 read_text 同一条路）。 */
+  if (name_is(name_idx, "bytes_to_text")) {
+    if (nargs != 1) { fail("HMYR-R0101", "bytes_to_text wants one argument"); return 1; }
+    if (args[0].tag != T_TUPLE) { fail("HMYR-R0130", "bytes_to_text wants a tuple of bytes"); return 1; }
+    {
+      uint32_t 数 = args[0].ilen;
+      unsigned char *buf = (unsigned char *)malloc((size_t)(数 ? 数 : 1));
+      if (!buf) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+      for (uint32_t i = 0; i < 数; i++) {
+        int ok = 0;
+        double b = as_num(args[0].items[i], &ok);
+        buf[i] = ok ? (unsigned char)((long long)b) : 0;
+      }
+      uint32_t 长 = 0;
+      uint16_t *s = utf8_to_utf16((const char *)buf, 数, &长);
+      free(buf);
+      *out = v_str(s, 长);
+    }
+    return 1;
+  }
   /* 整份按行切好。给「知道自己要全部」的调用者一个省事的入口。 */
   if (name_is(name_idx, "read_lines")) {
     if (nargs != 1) { fail("HMYR-R0101", "read_lines wants one argument"); return 1; }

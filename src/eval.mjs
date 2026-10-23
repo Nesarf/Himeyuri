@@ -816,6 +816,14 @@ const BUILTINS = {
   // ---- 字符串与字符的基本手术 ----
   // 这几个本是语言的常规能力，此前靠手写替代品绕过去（截/片段各一份、码位换成十项小表、
   // 大小写换成二十六项小表）。规矩改了：语言达不到就先补语言，不是绕。
+  // 字节元组转文本：按 UTF-8 解码。read_stdin_bytes 交回字节，而请求体是 UTF-8，
+  // 两格之间需要这一格。不猜编码：给的就是 UTF-8。
+  bytes_to_text: (rt, args) => {
+    const 项们 = Array.isArray(args[0]) ? args[0] : [];
+    const 字节们 = [];
+    for (let i = 0; i < 项们.length; i++) 字节们.push(Number(项们[i]) & 0xFF);
+    return Buffer.from(字节们).toString("utf8");
+  },
   // 从标准输入读 N 个字节：交回 {字节们, 结束}。结束表示没读满（EOF 先到了）。
   // 与 read_stdin_line 分开，是因为请求体未必只有一行：先读头拿长度，再按长度读。
   read_stdin_bytes: (rt, args) => {

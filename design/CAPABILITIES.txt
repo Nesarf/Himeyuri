@@ -97,6 +97,7 @@
       key_push key_available key_read key_start
       read_stdin_line
       read_stdin_bytes
+      bytes_to_text
       read_stdin_line 读的是标准输入的一行，交回一个记录 {行, 结束}：
       结束是 EOF，与「读到一个空行」是两件事 —— 「读到没有为止」的循环
       要能分清它们，所以两者不能都塞进空串里。行尾的 \r 去掉，别的空白不动。
@@ -104,6 +105,9 @@
       结束表示没读满（EOF 先到了）。两格分开是因为 JSON-RPC 的请求体未必只有一行 ——
       先读头拿长度、再按长度读体，是两步。
       板子上没有标准输入，那里一律交回结束。
+      bytes_to_text 把字节元组按 UTF-8 解码成文本：它是 read_stdin_bytes 的搭档 ——
+      一个交回字节，一个把字节变回字。不猜编码，给的必须是 UTF-8；
+      坏字节按替换字符走，与 read_text 同一条路。
       语义：真实终端与套件走同一个队列。而 key_read 有三种情形，三种都要说清：
             一、队列里有东西：立即交回一个键。
             二、队列空而 stdin 是终端：同步读一次 stdin，阻塞到有键为止，一次最多读 64 字节，

@@ -25,9 +25,10 @@ console.log("一、这一格在六处都有");
     "src/eval.mjs", "src/minimal-eval.mjs", "src/vm-builtins.mjs",
     "src/bytecode.mjs", "self/eval.hmyr", "vm/hmyr.c",
   ];
+  const 名们 = ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"];
   for (const f of 源) {
     const 文 = fs.readFileSync(path.join(ROOT, f), "utf8");
-    ok(f + " 认识 read_stdin_line", 文.includes("read_stdin_line"), "");
+    for (const 名 of 名们) ok(f + " 认识 " + 名, 文.includes(名), "");
   }
 }
 
@@ -69,11 +70,7 @@ if (!有编译器) {
       const 源 = [
         "fn main() -> Int {",
         "  let r = read_stdin_bytes(5)",
-        "  var i = 0",
-        "  while i < len(r.字节们) {",
-        '    print(str(to_int(r.字节们[i])) + " ")',
-        "    i = i + 1",
-        "  }",
+        '  print(bytes_to_text(r.字节们) + " ")',
         "  print(str(r.结束) + chr(10))",
         "  return 0",
         "}",
@@ -85,9 +82,9 @@ if (!有编译器) {
       const 码路2 = path.join(临, "bytes.hmyrb");
       fs.writeFileSync(码路2, 写程序(合并程序(u2.order.map((文件) => 编译模块(u2.modules.get(文件))))));
       const 甲2 = spawnSync(exe, [码路2], { input: "hello", encoding: "utf8", timeout: 120000, env: { ...process.env, HMYR_STEPS: "2000000000" } });
-      ok("五个字节读满，结束是假", String(甲2.stdout) === "104 101 108 108 111 false\n", JSON.stringify(String(甲2.stdout)));
+      ok("五个字节读满，解回原文，结束是假", String(甲2.stdout) === "hello false\n", JSON.stringify(String(甲2.stdout)));
       const 乙2 = spawnSync(exe, [码路2], { input: "hi", encoding: "utf8", timeout: 120000, env: { ...process.env, HMYR_STEPS: "2000000000" } });
-      ok("不足五个字节，结束是真", String(乙2.stdout) === "104 105 true\n", JSON.stringify(String(乙2.stdout)));
+      ok("不足五个字节，解回前两个，结束是真", String(乙2.stdout) === "hi true\n", JSON.stringify(String(乙2.stdout)));
     }
   }
   fs.rmSync(临, { recursive: true, force: true });

@@ -66,6 +66,13 @@ export const 内置表 = {
   thr_count: { 做: () => 数.造(0) },
   // arena：三区模型的桩，字段是函数值；这一份也没有一等函数值。
   arena: { 做: (vm) => vm.坏("HMYR-R0104", "arena is a stub for the zone model: its fields are functions, and this machine has no first-class functions") },
+  // 字节元组转文本：按 UTF-8 解码。read_stdin_bytes 交回字节，而请求体是 UTF-8。
+  bytes_to_text: { 做: (vm, a) => {
+    const 项们 = a[0].items;
+    const 字节们 = [];
+    for (let i = 0; i < 项们.length; i++) 字节们.push(数.下整(项们[i].num) & 0xFF);
+    return vm.文.由宿主(Buffer.from(字节们).toString("utf8"));
+  } },
   // 从标准输入读 N 个字节：交回 {字节们, 结束}。结束表示没读满（EOF 先到了）。
   read_stdin_bytes: { 做: (vm, a) => {
     const 原 = 数.下整(vm.成数(a[0]));

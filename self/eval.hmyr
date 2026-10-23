@@ -172,6 +172,11 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 3 { return 坏("slice 要三个参数") }
     return 好(slice(值们[0], 值们[1], 值们[2]))
   }
+  // 字节元组转文本：这一层只转发。解码由下面那一层做。
+  if 名 == "bytes_to_text" {
+    if len(值们) != 1 { return 坏("bytes_to_text 要一个参数") }
+    return 好(bytes_to_text(值们[0]))
+  }
   // 从标准输入读 N 个字节：与读一行分成两格，因为请求体未必只有一行。
   if 名 == "read_stdin_bytes" {
     if len(值们) != 1 { return 坏("read_stdin_bytes 要一个参数") }
