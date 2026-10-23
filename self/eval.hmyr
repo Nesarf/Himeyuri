@@ -187,6 +187,44 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 0 { return 坏("read_stdin_line 不要参数") }
     return 好(read_stdin_line())
   }
+  // 文件那一组剩下的几格。这一层只转发 —— 读不到由下面那一层说。
+  if 名 == "file_exists" {
+    let 欠在 = 要效果(环境, "file", "file_exists")
+    if 欠在 != "" { return 坏(欠在) }
+    if len(值们) != 1 { return 坏("file_exists 要一个参数") }
+    return 好(file_exists(值们[0]))
+  }
+  if 名 == "read_line" {
+    let 欠行 = 要效果(环境, "file", "read_line")
+    if 欠行 != "" { return 坏(欠行) }
+    if len(值们) != 2 { return 坏("read_line 要两个参数") }
+    return 好(read_line(值们[0], 值们[1]))
+  }
+  if 名 == "read_lines" {
+    let 欠们 = 要效果(环境, "file", "read_lines")
+    if 欠们 != "" { return 坏(欠们) }
+    if len(值们) != 1 { return 坏("read_lines 要一个参数") }
+    return 好(read_lines(值们[0]))
+  }
+  if 名 == "write_bytes" {
+    let 欠写 = 要效果(环境, "file", "write_bytes")
+    if 欠写 != "" { return 坏(欠写) }
+    if len(值们) != 2 { return 坏("write_bytes 要两个参数") }
+    return 好(write_bytes(值们[0], 值们[1]))
+  }
+  if 名 == "f64_bytes" {
+    if len(值们) != 1 { return 坏("f64_bytes 要一个参数") }
+    return 好(f64_bytes(值们[0]))
+  }
+  if 名 == "pack_value" {
+    if len(值们) != 1 { return 坏("pack_value 要一个参数") }
+    return 好(pack_value(值们[0]))
+  }
+  // arena 那一格：C 那台与这里都没有它（三区模型还没实现），所以给一句具体的「没有」，
+  // 而不是让名字掉到「没有这个方法」那一条 —— 后者会让人以为是自己拼错了。
+  if 名 == "arena" {
+    return 坏("HMYR-R0104 这台机器没有 arena")
+  }
   // 原始字节：嵌入与打包要它。这一层只转发，读不到由下面那一层说。
   if 名 == "read_bytes" {
     let 欠读 = 要效果(环境, "file", "read_bytes")
