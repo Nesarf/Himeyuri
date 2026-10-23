@@ -390,7 +390,7 @@ export class Runtime {
 export function describe(v) {
   if (v === null) return "nil";
   if (typeof v === "string") return JSON.stringify(v);
-  if (Array.isArray(v)) return "tuple";
+  if (Array.isArray(v)) return v[数组标] === true ? "array" : "tuple";
   if (typeof v === "object") return "a host object";
   return String(v);
 }
@@ -472,6 +472,17 @@ let nextThreadId = 1;
 // 仓库根：语言文件用的相对路径都以它为基准。
 const ROOT = import.meta.dirname.replace(/[\\/][^\\/]*$/, "");
 
+// 可变数组：JS 侧就是一个打了标记的 Array。
+// 元组的不可变靠「+ 复制」，而 设 是原地改 —— 标记让 设 拒绝元组，
+// 免得「不可变」这条被悄悄破掉。
+const 数组标 = "__hmyr_array";
+const 是数组 = (v) => Array.isArray(v) && v[数组标] === true;
+const 造数组 = (t) => {
+  const a = [...t];
+  a[数组标] = true;
+  return a;
+};
+
 const BUILTINS = {
   // ---- 一、文本（纯函数）：只从输入算出输出，不读也不写外部状态 ----
   slice: (rt, args) => {
@@ -498,6 +509,22 @@ const BUILTINS = {
     return Number(s);
   },
   // 目录：cwd 只读，chdir 会改变进程状态——所以后者要 process 效果（见 BUILTIN_EFFECTS）。
+  // 可变数组：从元组复制一个，之后可以原地改。
+  数组: (rt, args) => {
+    const t = args[0];
+    if (!Array.isArray(t)) rt.fail("HMYR-R0150", "数组() 要一个元组，拿到的是 " + describe(t));
+    return 造数组(t);
+  },
+  设: (rt, args) => {
+    const a = args[0];
+    if (!是数组(a)) rt.fail("HMYR-R0151", "设() 的第一个参数必须是 数组() 造出来的可变数组");
+    const i = Math.floor(rt.asNumber(args[1]));
+    if (!Number.isFinite(i) || i < 0 || i >= a.length) {
+      rt.fail("HMYR-R0152", "下标越出数组：" + i + "（长度 " + a.length + "）");
+    }
+    a[i] = args[2];
+    return a;
+  },
   len: (rt, args) => {
     const v = args[0];
     if (typeof v === "string" || Array.isArray(v)) return v.length;

@@ -184,6 +184,9 @@ console.log("");
 const 串行 = new Set([
   "cvm", "cli", "arm", "board", "corpus", "ucd",
   "manifest", "package", "distro", "release",
+  // 这两套都要在临时目录里写同一份文件再读回来；并行时互相踩，
+  // 症状就是「单独跑全过、总表里红三条」。
+  "hostdeps", "text",
 ]);
 const 并行数 = 4;
 

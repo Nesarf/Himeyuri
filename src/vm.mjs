@@ -33,6 +33,7 @@ const 述 = (v, 层 = 文) => {
   if (v === null) return "nil";
   if (层.是串(v)) return JSON.stringify(层.成宿主(v));
   if (v && v.tag === "tuple") return "tuple";
+  if (v && v.tag === "array") return "array";
   if (v && v.tag === "record") return "a host object";
   if (数.是数(v)) return 数.成文(v);
   return String(v);
@@ -86,7 +87,7 @@ export class 虚拟机 {
     // 「一个值怎么写成一个字符串」：走到这一层就要落回宿主串，因为它是输出那一头。
     if (this.文.是串(v)) return this.文.成宿主(v);
     if (v === null) return "nil";
-    if (v && v.tag === "tuple") return "[" + v.items.map((x) => this.成串(x)).join(", ") + "]";
+    if (v && (v.tag === "tuple" || v.tag === "array")) return "[" + v.items.map((x) => this.成串(x)).join(", ") + "]";
     if (数.是数(v)) return 数.成文(v);
     return String(v);               // 记录走这一步，与宿主那边 String(obj) 相同
   }
@@ -171,7 +172,8 @@ export class 虚拟机 {
         case "NEG": 压(数.反(this.成数(弹()))); pc++; break;
         case "NOT": 压(!真(弹(), this.文)); pc++; break;
         case "ADD": { const b = 弹(), a = 弹();
-          if (a && b && a.tag === "tuple" && b.tag === "tuple") 压(new 类元组([...a.items, ...b.items]));
+          // 数组 + 什么 都拼成一个新元组：+ 从来不就地改，这是它和 设 的分界。
+          if (a && b && (a.tag === "tuple" || a.tag === "array") && (b.tag === "tuple" || b.tag === "array")) 压(new 类元组([...a.items, ...b.items]));
           // 拼接要在选定的那种底上做：先把这个值写成文本，再落到那层去。
           else if (this.文.是串(a) || this.文.是串(b)) 压(this.文.拼(收进来(this.文, this.成串(a)), 收进来(this.文, this.成串(b))));
           else 压(数.加(this.成数(a), this.成数(b)));
@@ -227,6 +229,7 @@ export class 虚拟机 {
               // 判类型要走这门语言自己的帮手，不在这里写 typeof ——
               // test/numbers 与 test/text 两条都在盯这件事。
               if (v && v.tag === "tuple") 值类 = "tuple";
+              else if (v && v.tag === "array") 值类 = "array";
               else if (v && v.tag === "record") 值类 = "record";
               else if (数.是数(v)) 值类 = "num";
               else if (this.文.是串(v)) 值类 = "str";
@@ -243,7 +246,7 @@ export class 虚拟机 {
           if (this.文.是串(t)) {
             if (!this.文.在界内(t, i)) { this.坏("HMYR-R0151", "index " + 数.成文(i) + " is outside a value of length " + this.文.长(t)); return null; }
             压(this.文.元(t, i));
-          } else if (t && t.tag === "tuple") {
+          } else if (t && (t.tag === "tuple" || t.tag === "array")) {
             if (i < 0 || i >= t.items.length) { this.坏("HMYR-R0151", "index " + 数.成文(i) + " is outside a value of length " + t.items.length); return null; }
             压(t.items[i]);
           } else {
@@ -275,7 +278,7 @@ export class 虚拟机 {
             let 类们 = "";
             for (let q = 栈.length - n; q < 栈.length; q++) {
               const a = 栈[q];
-              if (a && a.tag === "tuple") 类们 += " 4";
+              if (a && (a.tag === "tuple" || a.tag === "array")) 类们 += " 4";
               else if (a && a.tag === "record") 类们 += " 5";
               else if (数.是数(a)) 类们 += " 1";
               else if (this.文.是串(a)) 类们 += " 2";

@@ -29,10 +29,28 @@ let 当前locale = "";
 const 键队列 = [];
 
 export const 内置表 = {
+  // 可变数组：与解释器同一个约定 —— 一个 tag 为 array 的值，设 原地改。
+  数组: { 做: (vm, a) => {
+    const t = a[0];
+    if (!t || t.tag !== "tuple") return vm.坏("HMYR-R0150", "数组() 要一个元组");
+    return { tag: "array", items: [...t.items] };
+  } },
+  设: { 做: (vm, a) => {
+    const 列 = a[0];
+    if (!列 || 列.tag !== "array") {
+      return vm.坏("HMYR-R0151", "设() 的第一个参数必须是 数组() 造出来的可变数组");
+    }
+    const i = 数.下整(vm.成数(a[1]));
+    if (数.比(i, 0) < 0 || 数.比(i, 列.items.length) >= 0) {
+      return vm.坏("HMYR-R0152", "下标越出数组：" + i + "（长度 " + 列.items.length + "）");
+    }
+    列.items[i] = a[2];
+    return 列;
+  } },
   len: { 做: (vm, a) => {
     const v = a[0];
     if (vm.文.是串(v)) return 数.造(vm.文.长(v));
-    if (v && v.tag === "tuple") return 数.造(v.items.length);
+    if (v && (v.tag === "tuple" || v.tag === "array")) return 数.造(v.items.length);
     return vm.坏("HMYR-R0140", "len() wants a string or a tuple");
   } },
   str: { 做: (vm, a) => vm.成串(a[0]) },

@@ -64,7 +64,26 @@ let 当前locale = "";
 // 键队列：与字节码那一份同一件事。
 const 键队列 = [];
 
+// 可变数组的标记：与原版解释器同一个约定（一个 symbol 属性）。
+const 数组标 = "__hmyr_array";
+
 const 内置 = {
+  // 可变数组：标记与原版解释器一致 —— 一个打了 symbol 的宿主数组。
+  数组: (rt, a) => {
+    const t = a[0];
+    if (!Array.isArray(t)) rt.坏("HMYR-R0150", "数组() 要一个元组");
+    const 出 = [...t];
+    出[数组标] = true;
+    return 出;
+  },
+  设: (rt, a) => {
+    const 列 = a[0];
+    if (!Array.isArray(列) || 列[数组标] !== true) rt.坏("HMYR-R0151", "设() 的第一个参数必须是 数组() 造出来的可变数组");
+    const i = Math.floor(rt.成数(a[1]));
+    if (!Number.isFinite(i) || i < 0 || i >= 列.length) rt.坏("HMYR-R0152", "下标越出数组：" + i);
+    列[i] = a[2];
+    return 列;
+  },
   len: (rt, a) => {
     const v = a[0];
     if (码元.是码元序列(v)) return 码元.长(v);
