@@ -86,7 +86,27 @@ if (!有编译器) {
       ok("自家的流真的压了（小于一半）", fs.readFileSync(自流).length < 2048, String(fs.readFileSync(自流).length));
     }
 
-    console.log("三·五、大流：整份种子，以及十倍于它");
+    console.log("三·六、动态 Huffman：码表在流里");
+    {
+      // 自家编码器只写固定块，所以这一节的对手只能是 zlib 的默认策略。
+      // 它写的是 BTYPE=2，而 16/17/18 那三个重复标记正是最容易错的地方。
+      for (const [名, 选项] of [["默认", {}], ["level9", { level: 9 }], ["rle", { strategy: zlib.constants.Z_RLE }]]) {
+        const 流 = zlib.deflateRawSync(样本, 选项);
+        const 型 = (流[0] - 流[0] % 2) / 2 % 4;
+        ok(名 + " 那一份确实是动态块（BTYPE=2）", 型 === 2, "BTYPE=" + 型);
+        const 流路 = path.join(临, "dyn-" + 名 + ".z");
+        const 出2 = path.join(临, "dyn-" + 名 + ".out");
+        fs.writeFileSync(流路, 流);
+        const r2 = spawnSync(exe, [解路, 流路, 出2], {
+          encoding: "utf8", timeout: 600000,
+          env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_MEM_LIMIT: "0", HMYR_GC: "1" },
+        });
+        const 回2 = fs.existsSync(出2) ? fs.readFileSync(出2) : null;
+        ok(名 + " 的动态流解回原样", r2.status === 0 && 回2 && 回2.length === 样本.length && Buffer.compare(样本, 回2) === 0, String(r2.status) + " " + (回2 ? 回2.length : 0));
+      }
+    }
+
+        console.log("三·五、大流：整份种子，以及十倍于它");
     {
       // 这一节量的是「优化到头了没有」：四万三千字节与四十三万字节，时间该按比例走。
       // 逐字节往元组上拼的那一版在四万三千字节就顶到四吉；块化之后这里是 41 兆与 238 兆。

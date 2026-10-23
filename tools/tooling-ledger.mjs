@@ -94,7 +94,7 @@ export const 账本 = [
     状态: "搬了第一版",
     在哪: "self/deflate.hmyr",
     验收: "deflate",
-    说明: "两个方向都在 HMYR 里：stored 与固定 Huffman 的编码与解码；多块流；43 KB 解 1.0 秒、436 KB 解 12.9 秒，峰值按时长线性长",
+    说明: "两个方向都在 HMYR 里：stored 与固定 Huffman 的编码与解码，外加动态 Huffman 的解码；多块流；43 KB 解 1.0 秒、436 KB 解 12.9 秒，峰值随输入线性长",
   },
   {
     名: "打包发布",
