@@ -101,7 +101,7 @@ export const 账本 = [
     状态: "搬了第一版",
     在哪: "self/zip.hmyr",
     验收: "zip",
-    说明: "ZIP 容器（stored 模式）写得出去了，字段逐一对过 APPNOTE；deflate 成员、清单与发布流程仍待",
+    说明: "ZIP 容器（stored 与 deflate 两种成员、自己的 CRC32）；deflate 编码与解码都在 HMYR 里；清单与发布流程仍待",
     证明: ["tools/package.mjs", "tools/release.mjs", "tools/manifest.mjs", "tools/verify.mjs"],
   },
 ];

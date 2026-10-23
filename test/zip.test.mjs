@@ -63,7 +63,30 @@ if (!有编译器) {
       ok("成员名是文件最后一段", 名 === "twice.hmyr", JSON.stringify(名));
       ok("CRC 与 node 的 crc32 一致", 包.readUInt32LE(14) === zlib.crc32(原), 包.readUInt32LE(14) + " 对 " + zlib.crc32(原));
 
-      console.log("三、数据段：一个字节都不差");
+      console.log("二·五、deflate 成员：方法 8，压缩后能被 zlib 解回原样");
+      {
+        const 压包路 = path.join(临, "twice-deflate.zip");
+        const r2 = spawnSync(exe, [码路, 成员, 压包路, "--压"], { encoding: "utf8", timeout: 300000, env: { ...process.env, HMYR_STEPS: "4000000000" } });
+        ok("带压缩的包写得动", r2.status === 0, String(r2.status) + " " + String(r2.stderr).slice(0, 200));
+        if (fs.existsSync(压包路)) {
+          const 包2 = fs.readFileSync(压包路);
+          ok("方法字段是 8（deflate）", 包2.readUInt16LE(8) === 8, String(包2.readUInt16LE(8)));
+          ok("压缩后比原始小", 包2.readUInt32LE(18) < 原.length, 包2.readUInt32LE(18) + " 对 " + 原.length);
+          ok("原始大小仍写着原长", 包2.readUInt32LE(22) === 原.length, String(包2.readUInt32LE(22)));
+          ok("CRC 仍按原始数据算", 包2.readUInt32LE(14) === zlib.crc32(原), "");
+          const 名长2 = 包2.readUInt16LE(26);
+          const 压长 = 包2.readUInt32LE(18);
+          const 段 = 包2.subarray(30 + 名长2, 30 + 名长2 + 压长);
+          try {
+            const 借 = zlib.inflateRawSync(段);
+            ok("zlib 把 deflate 段解回原样", 借.length === 原.length && Buffer.compare(借, 原) === 0, String(借.length));
+          } catch (e) {
+            ok("zlib 把 deflate 段解回原样", false, e.message);
+          }
+        }
+      }
+
+            console.log("三、数据段：一个字节都不差");
       {
         const 数据 = 包.subarray(30 + 名长 + 额外, 30 + 名长 + 额外 + 原.length);
         ok("数据逐字节一致", 数据.length === 原.length && Buffer.compare(数据, 原) === 0, 数据.length + " 对 " + 原.length);
