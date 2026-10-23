@@ -46,6 +46,33 @@ console.log("拿一份真报告来读：颜色桥写过的那种形状");
   ok("第一个字段里还嵌着一层对象", v.value[0][1].kind === "o" && v.value[0][1].value[0][1].value === "12.3.0");
 }
 
+
+console.log("生成：与 node 的 JSON.stringify 逐字节一致");
+{
+  const 取 = (名) => rt.functions.get(名);
+  const 造 = (s) => rt.callFunction(取("解析"), [s], null)[0];
+  const 紧凑 = (v) => rt.callFunction(取("生成"), [v], null);
+  const 缩进 = (v) => rt.callFunction(取("生成二"), [v], null);
+  const 样本 = [
+    "42",
+    String.fromCharCode(34) + "hi" + String.fromCharCode(34),
+    "true",
+    "null",
+    "[]",
+    "{}",
+    "[1, 2, 3]",
+    "{\"a\": 1}",
+    "{\"a\": [true, false, null], \"b\": {\"c\": \"x\"}}",
+  ];
+  for (const 文 of 样本) {
+    const v = 造(文);
+    const 应 = JSON.stringify(JSON.parse(文));
+    ok("紧凑 " + 文.slice(0, 24) + " 一致", 紧凑(v) === 应, JSON.stringify(紧凑(v)) + " 对 " + JSON.stringify(应));
+    const 应二 = JSON.stringify(JSON.parse(文), null, 2);
+    ok("缩进 " + 文.slice(0, 24) + " 一致", 缩进(v) === 应二, JSON.stringify(缩进(v).slice(0, 60)));
+  }
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

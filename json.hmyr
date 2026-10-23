@@ -33,7 +33,7 @@ fn 是数字字符(c: String) -> Bool {
 }
 
 // 字符串：从开引号之后开始读，认出 \\ 与 \" 两个转义。
-fn 读字符串从(s: String, i: Int, acc: String) -> Int {
+fn 读字符串从(s: String, i: Int, acc: String) {
   if i >= len(s) { return ({kind: "err", text: "字符串没有闭合"}, i) }
   let c = s[i]
   if c == "\"" { return ({kind: "s", value: acc}, i + 1) }
@@ -44,14 +44,14 @@ fn 读字符串从(s: String, i: Int, acc: String) -> Int {
   return 读字符串从(s, i + 1, acc + c)
 }
 
-fn 读字符串(s: String, i: Int) -> Int {
+fn 读字符串(s: String, i: Int) {
   return 读字符串从(s, i, "")
 }
 
 // 数字：整数，可带负号。
 // 数字：整数或小数。小数点只认一个，读到别的字符就收工。
 // 整数给 "n"（值是整数），带小数点的给 "f"（值保留原文，免得把 0.969 悄悄读成 0）。
-fn 读数字从(s: String, i: Int, acc: String, 有点: Bool) -> Int {
+fn 读数字从(s: String, i: Int, acc: String, 有点: Bool) {
   if i >= len(s) { return (收数字(acc), i) }
   let c = s[i]
   if 是数字字符(c) { return 读数字从(s, i + 1, acc + c, 有点) }
@@ -59,7 +59,7 @@ fn 读数字从(s: String, i: Int, acc: String, 有点: Bool) -> Int {
   return (收数字(acc), i)
 }
 
-fn 收数字(原文: String) -> Int {
+fn 收数字(原文: String) {
   if 含点(原文) { return {kind: "f", value: 原文} }
   return {kind: "n", value: to_int(原文)}
 }
@@ -78,7 +78,7 @@ fn 含点(s: String) -> Bool {
 
 
 // 字面量：true / false / null
-fn 读字面量(s: String, i: Int, 字: String, 值: Int) -> Int {
+fn 读字面量(s: String, i: Int, 字: String, 值: Int) {
   if i + len(字) > len(s) { return ({kind: "err", text: "字面量不完整：" + 字}, i) }
   let 片 = slice(s, i, i + len(字))
   if 片 != 字 { return ({kind: "err", text: "不认识的词：" + 片}, i) }
@@ -87,7 +87,7 @@ fn 读字面量(s: String, i: Int, 字: String, 值: Int) -> Int {
 
 
 
-fn 读值(s: String, i: Int) -> Int {
+fn 读值(s: String, i: Int) {
   let j = 跳过空白(s, i)
   if j >= len(s) { return ({kind: "err", text: "没有值"}, j) }
   let c = s[j]
@@ -108,7 +108,7 @@ fn 读值(s: String, i: Int) -> Int {
 }
 
 // 数组：[值, 值, ...]——遇到 ] 收工。
-fn 读数组从(s: String, i: Int, acc: Int) -> Int {
+fn 读数组从(s: String, i: Int, acc: Int) {
   let j = 跳过空白(s, i)
   if j >= len(s) { return ({kind: "err", text: "数组没有闭合"}, j) }
   if s[j] == "]" { return ({kind: "a", value: acc}, j + 1) }
@@ -118,12 +118,12 @@ fn 读数组从(s: String, i: Int, acc: Int) -> Int {
   return 读数组从(s, 一个[1], acc + (一个[0],))
 }
 
-fn 读数组(s: String, i: Int, acc: Int) -> Int {
+fn 读数组(s: String, i: Int, acc: Int) {
   return 读数组从(s, i, acc)
 }
 
 // 对象：{"键": 值, ...}——键读成字符串值，再塞进 (键, 值) 的对里。
-fn 读对象从(s: String, i: Int, acc: Int) -> Int {
+fn 读对象从(s: String, i: Int, acc: Int) {
   let j = 跳过空白(s, i)
   if j >= len(s) { return ({kind: "err", text: "对象没有闭合"}, j) }
   if s[j] == "}" { return ({kind: "o", value: acc}, j + 1) }
@@ -138,28 +138,142 @@ fn 读对象从(s: String, i: Int, acc: Int) -> Int {
   return 读对象从(s, 值[1], acc + ((键[0].value, 值[0]),))
 }
 
-fn 读对象(s: String, i: Int, acc: Int) -> Int {
+fn 读对象(s: String, i: Int, acc: Int) {
   return 读对象从(s, i, acc)
 }
 
 // 入口：读一段 JSON，交回 (值, 结束位置)。值带着 kind，所以调用方不必猜它是什么。
-fn 解析(s: String) -> Int {
+fn 解析(s: String) {
   return 读值(s, 0)
 }
 
 // 从对象里取一个字段。不是对象、或没有这个键，都返回 err——
 // 调用方据此拒绝，而不是拿默认值顶上。
-fn 字段从(对表: Int, 键: String, i: Int) -> Int {
+fn 字段从(对表: Int, 键: String, i: Int) {
   if i >= len(对表) { return {kind: "err", text: "没有字段：" + 键} }
   if 对表[i][0] == 键 { return 对表[i][1] }
   return 字段从(对表, 键, i + 1)
 }
 
-fn 字段(对象: Int, 键: String) -> Int {
+fn 字段(对象: Int, 键: String) {
   if 对象.kind != "o" { return {kind: "err", text: "不是对象，取不到字段 " + 键} }
   return 字段从(对象.value, 键, 0)
 }
 
+
+// ---- 生成：两种形式 ----
+//
+// 紧凑形式对齐 JSON.stringify(x)，缩进形式对齐 JSON.stringify(x, null, 2)。
+// 后者不是「好看」——清单的 digest 是对那一串字节算的，差一个空格就对不上。
+
+fn 转义文(s: String) -> String {
+  var 出 = ""
+  var i = 0
+  while i < len(s) {
+    let c = s[i]
+    if c == "\"" { 出 = 出 + "\\\"" }
+    else if c == "\\" { 出 = 出 + "\\\\" }
+    else if c == chr(10) { 出 = 出 + "\\n" }
+    else if c == chr(13) { 出 = 出 + "\\r" }
+    else if c == chr(9) { 出 = 出 + "\\t" }
+    else { 出 = 出 + c }
+    i = i + 1
+  }
+  return 出
+}
+
+fn 引号(s: String) -> String {
+  return "\"" + 转义文(s) + "\""
+}
+
+fn 缩进空(n: Int) -> String {
+  var 出 = ""
+  var i = 0
+  while i < n {
+    出 = 出 + "  "
+    i = i + 1
+  }
+  return 出
+}
+
+fn 生成紧凑(值: Int) -> String {
+  if 值.kind == "n" { return str(值.value) }
+  if 值.kind == "f" { return 值.value }
+  if 值.kind == "s" { return 引号(值.value) }
+  if 值.kind == "b" {
+    if 值.value { return "true" }
+    return "false"
+  }
+  if 值.kind == "null" { return "null" }
+  if 值.kind == "a" {
+    var 出 = "["
+    var i = 0
+    while i < len(值.value) {
+      if i > 0 { 出 = 出 + "," }
+      出 = 出 + 生成紧凑(值.value[i])
+      i = i + 1
+    }
+    return 出 + "]"
+  }
+  if 值.kind == "o" {
+    var 出 = "{"
+    var i = 0
+    while i < len(值.value) {
+      if i > 0 { 出 = 出 + "," }
+      出 = 出 + 引号(值.value[i][0]) + ":" + 生成紧凑(值.value[i][1])
+      i = i + 1
+    }
+    return 出 + "}"
+  }
+  return "null"
+}
+
+// 缩进形式：空容器写成 [] / {}，非空才换行。
+fn 生成缩进(值: Int, 层: Int) -> String {
+  if 值.kind == "n" { return str(值.value) }
+  if 值.kind == "f" { return 值.value }
+  if 值.kind == "s" { return 引号(值.value) }
+  if 值.kind == "b" {
+    if 值.value { return "true" }
+    return "false"
+  }
+  if 值.kind == "null" { return "null" }
+  if 值.kind == "a" {
+    if len(值.value) == 0 { return "[]" }
+    let 内 = 缩进空(层 + 1)
+    var 出 = "[" + chr(10)
+    var i = 0
+    while i < len(值.value) {
+      出 = 出 + 内 + 生成缩进(值.value[i], 层 + 1)
+      if i + 1 < len(值.value) { 出 = 出 + "," }
+      出 = 出 + chr(10)
+      i = i + 1
+    }
+    return 出 + 缩进空(层) + "]"
+  }
+  if 值.kind == "o" {
+    if len(值.value) == 0 { return "{}" }
+    let 内 = 缩进空(层 + 1)
+    var 出 = "{" + chr(10)
+    var i = 0
+    while i < len(值.value) {
+      出 = 出 + 内 + 引号(值.value[i][0]) + ": " + 生成缩进(值.value[i][1], 层 + 1)
+      if i + 1 < len(值.value) { 出 = 出 + "," }
+      出 = 出 + chr(10)
+      i = i + 1
+    }
+    return 出 + 缩进空(层) + "}"
+  }
+  return "null"
+}
+
+fn 生成(值: Int) -> String {
+  return 生成紧凑(值)
+}
+
+fn 生成二(值: Int) -> String {
+  return 生成缩进(值, 0)
+}
 fn main() -> Int {
   let 一个 = 解析("{\"a\": 1, \"b\": [true, false]}")[0]
   print("kind " + 一个.kind + " 字段 " + str(len(一个.value)) + "\n")
