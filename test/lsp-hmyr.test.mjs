@@ -27,16 +27,9 @@ const 源路 = path.join(ROOT, "self/lsp.hmyr");
 ok("self/lsp.hmyr 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
-const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));
-// 入口文件的 main 覆盖别人那一份 —— 与 tools/emit-code.mjs 里同一条规则。
-// 为什么需要这一句：合并的规矩是「重名先到者赢」，而 import 的顺序是依赖在前，
-// 于是 self/lex.hmyr 的自测 main 会抢走入口的 main。症状是「跑起来没输出、退出码 19」，
-// 19 是那个自测数出来的词数，与语言服务器毫无关系。
-{
-  const 入口名 = unit.order[unit.order.length - 1];
-  const 入口函 = 编译模块(unit.modules.get(入口名)).函数们.get("main");
-  程序.函数们.set("main", 入口函);
-}
+const 份们 = unit.order.map((文件) => 编译模块(unit.modules.get(文件)));
+// 入口 main 覆盖别人那一份 —— 这条规矩在 合并程序 里，不再由每个调用者各抄一遍。
+const 程序 = 合并程序(份们, 份们[份们.length - 1]);
 ok("它把前端与 JSON 库都带了进来", 程序.函数们.size > 60, String(程序.函数们.size));
 
 const 有编译器 = (() => {
@@ -85,22 +78,27 @@ if (!有编译器) {
 
     console.log("四、Content-Length 数的是字节，不是码元");
     {
-      // 一条一条拆：头是 Content-Length: N，随后空行，随后 N 字节。
+      // 按字节切开：头是 Content-Length: N，随后空行，随后正好 N 字节的体 ——
+      // 而那个体必须能单独解析成 JSON。这一条是实的：如果 N 按码元算（偏小），
+      // 切开来的体就是半截 JSON，JSON.parse 会当场拒绝。
+      const 全字节 = Buffer.from(出, "utf8");
       let at = 0;
       let 条数 = 0;
       let 全对 = true;
-      while (at < 出.length) {
-        const 头 = /^Content-Length: (\d+)\r\n\r\n/.exec(出.slice(at));
-        if (!头) break;
-        const n = Number(头[1]);
-        const 体 = Buffer.from(出.slice(at + 头[0].length), "utf8");
-        const 实 = Buffer.byteLength(体.subarray(0, n).toString("utf8"));
-        if (Buffer.byteLength(体.subarray(0, n).toString("utf8")) !== n) 全对 = false;
-        at += 头[0].length + 体.subarray(0, n).length;
+      let 第一处 = "";
+      while (at < 全字节.length) {
+        const 头文 = 全字节.subarray(at, Math.min(at + 80, 全字节.length)).toString("utf8");
+        const m = /^Content-Length: (\d+)\r\n\r\n/.exec(头文);
+        if (!m) { 全对 = false; 第一处 = "第 " + 条数 + " 条之后找不到头"; break; }
+        const n = Number(m[1]);
+        const 体起 = at + Buffer.byteLength(m[0], "utf8");
+        const 体 = 全字节.subarray(体起, 体起 + n);
+        if (体.length !== n) { 全对 = false; 第一处 = "第 " + 条数 + " 条短了"; break; }
+        try { JSON.parse(体.toString("utf8")); } catch (e) { 全对 = false; 第一处 = "第 " + 条数 + " 条不是完整 JSON"; break; }
+        at = 体起 + n;
         条数++;
       }
-      ok("两条回话的长度都按字节算", 全对 && 条数 >= 2, String(条数));
-      // 回话里有中文时，字节数必须大于码元数 —— 那正是这一节存在的理由。
+      ok("三条回话都按字节切开、每条都是完整 JSON", 全对 && 条数 === 3, 第一处 + " 条数=" + 条数);
       ok("含中文的回话字节数大于码元数", Buffer.byteLength(出) > 出.length, Buffer.byteLength(出) + " 对 " + 出.length);
     }
   }
