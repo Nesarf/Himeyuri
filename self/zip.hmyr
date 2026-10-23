@@ -21,6 +21,26 @@
 
 // ---- 位与 CRC ----
 
+// 只算低八位的异或：CRC 每字节的那一次「c 与字节异或」只用到低八位，
+// 拿 32 位版本去算是白跑二十四轮。
+fn 异或8(a: Int, b: Int) -> Int {
+  var 出 = 0
+  var 倍 = 1
+  var x = a % 256
+  var y = b % 256
+  var i = 0
+  while i < 8 {
+    let 甲 = x % 2
+    let 乙 = y % 2
+    if 甲 != 乙 { 出 = 出 + 倍 }
+    x = (x - 甲) / 2
+    y = (y - 乙) / 2
+    倍 = 倍 * 2
+    i = i + 1
+  }
+  return 出
+}
+
 fn 异或(a: Int, b: Int) -> Int {
   var 出 = 0
   var 倍 = 1
@@ -83,7 +103,7 @@ fn crc32(字节们: Int) {
   var c = 4294967295
   var i = 0
   while i < len(字节们) {
-    let 索 = 异或(c % 256, to_int(字节们[i]))
+    let 索 = 异或8(c, to_int(字节们[i]))
     let 项 = to_int(表们[索])
     c = 异或((c - c % 256) / 256, 项)
     i = i + 1
