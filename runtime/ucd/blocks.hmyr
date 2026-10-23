@@ -977,6 +977,11 @@ fn 块名(码点: Int) -> String {
       return "Lydian"
     }
   }
+  if 码点 >= 67904 {  // 0x10940..0x1095F
+    if 码点 <= 67935 {
+      return "Sidetic"
+    }
+  }
   if 码点 >= 67968 {  // 0x10980..0x1099F
     if 码点 <= 67999 {
       return "Meroitic Hieroglyphs"
@@ -1232,6 +1237,11 @@ fn 块名(码点: Int) -> String {
       return "Devanagari Extended-A"
     }
   }
+  if 码点 >= 72544 {  // 0x11B60..0x11B7F
+    if 码点 <= 72575 {
+      return "Sharada Supplement"
+    }
+  }
   if 码点 >= 72640 {  // 0x11BC0..0x11BFF
     if 码点 <= 72703 {
       return "Sunuwar"
@@ -1255,6 +1265,11 @@ fn 块名(码点: Int) -> String {
   if 码点 >= 73056 {  // 0x11D60..0x11DAF
     if 码点 <= 73135 {
       return "Gunjala Gondi"
+    }
+  }
+  if 码点 >= 73136 {  // 0x11DB0..0x11DEF
+    if 码点 <= 73199 {
+      return "Tolong Siki"
     }
   }
   if 码点 >= 73440 {  // 0x11EE0..0x11EFF
@@ -1357,6 +1372,11 @@ fn 块名(码点: Int) -> String {
       return "Medefaidrin"
     }
   }
+  if 码点 >= 93856 {  // 0x16EA0..0x16EDF
+    if 码点 <= 93919 {
+      return "Beria Erfe"
+    }
+  }
   if 码点 >= 93952 {  // 0x16F00..0x16F9F
     if 码点 <= 94111 {
       return "Miao"
@@ -1385,6 +1405,11 @@ fn 块名(码点: Int) -> String {
   if 码点 >= 101632 {  // 0x18D00..0x18D7F
     if 码点 <= 101759 {
       return "Tangut Supplement"
+    }
+  }
+  if 码点 >= 101760 {  // 0x18D80..0x18DFF
+    if 码点 <= 101887 {
+      return "Tangut Components Supplement"
     }
   }
   if 码点 >= 110576 {  // 0x1AFF0..0x1AFFF
@@ -1425,6 +1450,11 @@ fn 块名(码点: Int) -> String {
   if 码点 >= 117760 {  // 0x1CC00..0x1CEBF
     if 码点 <= 118463 {
       return "Symbols for Legacy Computing Supplement"
+    }
+  }
+  if 码点 >= 118464 {  // 0x1CEC0..0x1CEFF
+    if 码点 <= 118527 {
+      return "Miscellaneous Symbols Supplement"
     }
   }
   if 码点 >= 118528 {  // 0x1CF00..0x1CFCF
@@ -1515,6 +1545,11 @@ fn 块名(码点: Int) -> String {
   if 码点 >= 124368 {  // 0x1E5D0..0x1E5FF
     if 码点 <= 124415 {
       return "Ol Onal"
+    }
+  }
+  if 码点 >= 124608 {  // 0x1E6C0..0x1E6FF
+    if 码点 <= 124671 {
+      return "Tai Yo"
     }
   }
   if 码点 >= 124896 {  // 0x1E7E0..0x1E7FF
@@ -1670,6 +1705,11 @@ fn 块名(码点: Int) -> String {
   if 码点 >= 201552 {  // 0x31350..0x323AF
     if 码点 <= 205743 {
       return "CJK Unified Ideographs Extension H"
+    }
+  }
+  if 码点 >= 205744 {  // 0x323B0..0x3347F
+    if 码点 <= 210047 {
+      return "CJK Unified Ideographs Extension J"
     }
   }
   if 码点 >= 917504 {  // 0xE0000..0xE007F
