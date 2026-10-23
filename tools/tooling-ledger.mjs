@@ -98,8 +98,10 @@ export const 账本 = [
   },
   {
     名: "打包发布",
-    状态: "不搬",
-    为什么不搬: "deflate 的第一版已经有了，但 ZIP 容器、清单与发布流程仍是人的动作，不在「跑程序」这条路上。等哪天要「一条命令出一个包」，它会自己变成一件要搬的事。",
+    状态: "搬了第一版",
+    在哪: "self/zip.hmyr",
+    验收: "zip",
+    说明: "ZIP 容器（stored 模式）写得出去了，字段逐一对过 APPNOTE；deflate 成员、清单与发布流程仍待",
     证明: ["tools/package.mjs", "tools/release.mjs", "tools/manifest.mjs", "tools/verify.mjs"],
   },
 ];
