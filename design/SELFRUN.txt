@@ -231,6 +231,13 @@ HMYR 全面自举：运行时、宿主依赖与启动
           打包发布   package/release/manifest/verify 约三百九十行，要一个自己的
                      deflate —— 语言里没有压缩，这一项得先有压缩才能搬。
 
+        这张清单现在有一份可执行的替身：tools/tooling-ledger.mjs。
+        每一项要么「搬了」（必须指一个真的在 check-all 里的验收套件），
+        要么「不搬」（必须写理由，而且它的文件要落在 runtime-path 那五份入口的
+        import 闭包之外 —— 那是「不在运行时路径上」的可执行证明）。
+        验收是 test/tooling-ledger.test.mjs（四十七项）。于是「逐项结清」这句话
+        有一条命令可以核，而不是一句自述。
+
         搬调度器时撞到一处语义分叉，记在这里而不是绕过去：
         print 自己不添换行。自举层添（self/eval.hmyr 的 print 那一支拼 chr(10)），
         所以走自举层的程序一次 print 一行；而「JS 编译器编出来、C 直接跑」
