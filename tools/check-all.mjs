@@ -131,6 +131,7 @@ const SUITES = [
   ["elsenewline", "test/else-newline.test.mjs", "SPEC 2.2 - a newline before else is not a statement boundary: both spellings parse to one tree and run to one answer"],
   ["selfcontained", "test/self-contained.test.mjs", "SPEC M7 - the binary carries its own compiler: a .hmyr runs with no node, no seed beside it, and no manual compile step"],
   ["deflate", "test/deflate.test.mjs", "SPEC M7 - deflate stored blocks written in Himeyuri: round trip, and zlib reads the stream without being told anything"],
+  ["tree", "test/tree.test.mjs", "SPEC M7 - the Huffman tree alone: all three code-length tables must sum to a complete Kraft total"],
   ["inflate", "test/inflate.test.mjs", "SPEC M7 - inflate in Himeyuri: five tiny cases, our own stream back byte for byte, and zlib's fixed-Huffman stream too"],
   ["zip", "test/zip.test.mjs", "SPEC M7 - a ZIP container written in Himeyuri: local header, central directory and end record, field by field against the spec"],
   ["manifest", "test/manifest.test.mjs", "SPEC M7 - the distribution manifest: everything it lists actually exists, and the minimal set is exactly fifteen"],
