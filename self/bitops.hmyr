@@ -1,0 +1,112 @@
+// 32 位位运算：SHA-256 要它们，而 HMYR 没有位运算符。
+//
+// 每一项都按「低位到高位逐位算」写：这是唯一不依赖宿主位运算的路。
+// 值域一律当作 0 到 4294967295 的无符号 32 位。
+//
+// 用法：这一份是被 self/sha256.hmyr 引用的库，不单独跑。
+
+fn 倍(n: Int) -> Int {
+  var v = 1
+  var i = 0
+  while i < n {
+    v = v * 2
+    i = i + 1
+  }
+  return v
+}
+
+fn 与(a: Int, b: Int) -> Int {
+  var 出 = 0
+  var 倍量 = 1
+  var x = a
+  var y = b
+  var i = 0
+  while i < 32 {
+    let 甲 = x % 2
+    let 乙 = y % 2
+    if 甲 == 1 && 乙 == 1 { 出 = 出 + 倍量 }
+    x = (x - 甲) / 2
+    y = (y - 乙) / 2
+    倍量 = 倍量 * 2
+    i = i + 1
+  }
+  return 出
+}
+
+fn 或(a: Int, b: Int) -> Int {
+  var 出 = 0
+  var 倍量 = 1
+  var x = a
+  var y = b
+  var i = 0
+  while i < 32 {
+    let 甲 = x % 2
+    let 乙 = y % 2
+    if 甲 == 1 || 乙 == 1 { 出 = 出 + 倍量 }
+    x = (x - 甲) / 2
+    y = (y - 乙) / 2
+    倍量 = 倍量 * 2
+    i = i + 1
+  }
+  return 出
+}
+
+fn 异或(a: Int, b: Int) -> Int {
+  var 出 = 0
+  var 倍量 = 1
+  var x = a
+  var y = b
+  var i = 0
+  while i < 32 {
+    let 甲 = x % 2
+    let 乙 = y % 2
+    if 甲 != 乙 { 出 = 出 + 倍量 }
+    x = (x - 甲) / 2
+    y = (y - 乙) / 2
+    倍量 = 倍量 * 2
+    i = i + 1
+  }
+  return 出
+}
+
+// 32 位取反：全一减它。
+fn 非(a: Int) -> Int {
+  return 4294967295 - (a % 4294967296)
+}
+
+fn 右移(a: Int, n: Int) -> Int {
+  return (a - a % 倍(n)) / 倍(n)
+}
+
+// 32 位加：溢出就绕回来。
+fn 加32(a: Int, b: Int) -> Int {
+  return (a + b) % 4294967296
+}
+
+// 循环右移：低 n 位搬到高 n 位，其余右移 n 位。
+fn 循环右移(a: Int, n: Int) -> Int {
+  let 割 = 倍(n)
+  let 低 = a % 割
+  let 高 = (a - 低) / 割
+  return 低 * 倍(32 - n) + 高
+}
+
+// 循环左移：与右移相反方向，SHA-256 的 Σ 用它。
+fn 循环左移(a: Int, n: Int) -> Int {
+  let 割 = 倍(32 - n)
+  let 低 = a % 割
+  let 高 = (a - 低) / 割
+  return 低 * 倍(n) + 高
+}
+
+fn main() -> Int {
+  // 自带小测：拿几组已知答案核对，不对就喊出来。
+  print(str(与(12, 10)) + chr(10))          // 8
+  print(str(或(12, 10)) + chr(10))          // 14
+  print(str(异或(12, 10)) + chr(10))        // 6
+  print(str(右移(255, 4)) + chr(10))        // 15
+  print(str(加32(4294967295, 1)) + chr(10)) // 0
+  print(str(循环右移(1, 1)) + chr(10))      // 2147483648
+  print(str(循环左移(2147483648, 1)) + chr(10)) // 1
+  return 0
+}
