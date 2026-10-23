@@ -37,14 +37,14 @@ console.log("三、结论说的是「齐了」，而不是「差不多了」");
   const 结论 = 行("结论");
   ok("结论里写着近读法齐了", 结论.includes("近读法齐了"), 结论);
   ok("结论里写着远读法逐项结清", 结论.includes("远读法逐项结清"), 结论);
-  ok("结论里点明了自举层那几格不藏起来", 结论.includes("自举层"), 结论);
+  ok("结论里点了四处的名字", 结论.includes("自举") && 结论.includes("字节码"), 结论);
   ok("没有「没结清」的字样", !结论.includes("没结清"), 结论);
 }
 
 console.log("四、那几格的话是能查的（SELFRUN 里真有）");
 {
   const 文 = fs.readFileSync(path.join(ROOT, "design/SELFRUN.txt"), "utf8");
-  ok("SELFRUN 写了自举层的差", 文.includes("自举") && 文.includes("53"), "");
+  ok("SELFRUN 写了六处对齐的数", 文.includes("自举 64") && 文.includes("宿主 64"), "");
   ok("SELFRUN 写了两种读法的判据", 文.includes("近的那一种") || 文.includes("近读法"), "");
 }
 
