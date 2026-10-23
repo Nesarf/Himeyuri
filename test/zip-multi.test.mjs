@@ -42,9 +42,9 @@ if (!有编译器) {
     // 三个成员：一个带子目录、两个在根。
     // 三个成员：两个在根、一个带子目录。
     const 成员 = [
+      path.join(ROOT, "src/eval.mjs"),
       path.join(ROOT, "LICENSE"),
-      path.join(ROOT, "MASCOT.txt"),
-      path.join(ROOT, "SPEC.txt"),
+      path.join(ROOT, "examples/twice.hmyr"),
     ].filter((p) => fs.existsSync(p)).map((p) => path.relative(ROOT, p));
     const 包路 = path.join(临, "multi.zip");
     const r = spawnSync(exe, [码路, "--多", 包路, ...成员], {
@@ -81,7 +81,7 @@ if (!有编译器) {
         if (!条) { 全都对 = false; 问题 += " 缺:" + 名; }
         else if (Buffer.compare(条.数据, fs.readFileSync(path.join(ROOT, p))) !== 0) { 全都对 = false; 问题 += " 内容不同:" + 名; }
       }
-      ok("每个成员都在、内容都对", 全都对, 问题);
+      ok("每个成员都在、内容都对", 全都对, 问题 + " | 包里的是: " + 见到的.map((m) => JSON.stringify(m.名)).join(" "));
       ok("目录大小与实际一致", 包.readUInt32LE(尾位 + 12) === 包.length - 22 - 目录起, "");
       ok("目录偏移是中央目录的起点", 包.readUInt32LE(尾位 + 16) === 目录起, "");
     }

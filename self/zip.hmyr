@@ -323,6 +323,18 @@ fn 尾(条数: Int, 目录大小: Int, 目录偏移: Int) {
     写短(目录大小, 4), 写短(目录偏移, 4), 写短(0, 2)))
 }
 
+// 成员名一律用正斜杠。Windows 的路径给的是反斜杠，而 ZIP 规范只认正斜杠 ——
+// 带着反斜杠写进去，别的工具按名字找就找不到了。
+fn 正规名(路: String) -> String {
+  var 出 = ""
+  var i = 0
+  while i < len(路) {
+    if 路[i] == "\\" { 出 = 出 + "/" } else { 出 = 出 + 路[i] }
+    i = i + 1
+  }
+  return 出
+}
+
 // 一个成员：本地头 + 负载，外加它在中央目录里的那一条。
 fn 成员(路: String, 名: String, 压: Bool, 偏移: Int) {
   let 数据 = read_bytes(路)
@@ -373,7 +385,7 @@ fn main() -> Int effects(file) {
     while i < len(参) {
       let p = 参[i]
       if p != "--压" && p != "--多" {
-        let r = 成员(p, p, 压, 偏移)
+        let r = 成员(p, 正规名(p), 压, 偏移)
         本地们 = 本地们 + (r.块,)
         中心们 = 中心们 + (r.中心,)
         偏移 = 偏移 + len(r.块)
