@@ -834,6 +834,21 @@ console.log("二十二、跑一个程序：退出码、两路输出、超时");
   ok("退出码、输出与超时都对", r.c.trim() === "0 hi 3 -1 true", JSON.stringify(r.c.trim()));
 }
 
+console.log("二十三、线程：这一台没有，问了会说");
+{
+  // 跨核要一个独立的机器实例，而这台的执行状态是文件级全局。
+  // 答案与 JS 那侧「起不来」时同一条路：spawn 交回 -1，活的数是 0。
+  const 源码 = [
+    "fn main() -> Int effects(thread) {",
+    '  print(str(thr_spawn("(fn main() -> Int { 0 })", "main")) + " ")',
+    '  print(str(thr_count()))',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "threads");
+  ok("起不来时交回 -1、活的数是 0", r.js === r.c && r.c.trim() === "-1 0", JSON.stringify(r.c.trim()));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

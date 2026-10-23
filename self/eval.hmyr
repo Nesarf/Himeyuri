@@ -215,6 +215,26 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 0 { return 坏("console_codepage 不要参数") }
     return 好(console_codepage())
   }
+  // 线程与 arena：这一层照实转发 —— 下面那一层说「没有」，这一层不替它编。
+  if 名 == "thr_spawn" {
+    if len(值们) != 2 { return 坏("thr_spawn 要两个参数") }
+    return 好(thr_spawn(值们[0], 值们[1]))
+  }
+  if 名 == "thr_join" {
+    if len(值们) < 1 { return 坏("thr_join 至少要一个参数") }
+    if len(值们) == 1 { return 好(thr_join(值们[0])) }
+    return 好(thr_join(值们[0], 值们[1]))
+  }
+  if 名 == "thr_cancel" {
+    if len(值们) != 1 { return 坏("thr_cancel 要一个参数") }
+    return 好(thr_cancel(值们[0]))
+  }
+  if 名 == "thr_count" {
+    if len(值们) != 0 { return 坏("thr_count 不要参数") }
+    return 好(thr_count())
+  }
+  // arena 故意不在这里：它在语言里是关键字（有它自己的语法），
+  // 而自举这条 parser 不认它 —— 写出来就是 E0104，字节码路径上它走不到。
   // 进程：跑一个程序。这一层照参数个数转发（1 到 4 个），
   // 记录那五个字段（code stdout stderr timedOut error）由下面那一层给。
   if 名 == "run_program" {

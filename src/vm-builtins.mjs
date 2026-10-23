@@ -57,6 +57,15 @@ export const 内置表 = {
     const d = String(vm.成串(a[1]));
     return new 类元组(s.split(d).map((x) => vm.文.由宿主(x)));
   } },
+  // ---- 线程：这一份没有独立实例 ----
+  // 跨核要一个独立的机器实例，而字节码这一份的执行状态是模块级共享的。
+  // 如实说没有：spawn 交回 -1，join 与 cancel 报 R0221，count 交回 0。
+  thr_spawn: { 效果: "thread", 做: () => 数.造(-1) },
+  thr_join: { 做: (vm) => vm.坏("HMYR-R0221", "no thread handle: this machine has no thread capability") },
+  thr_cancel: { 效果: "thread", 做: (vm) => vm.坏("HMYR-R0221", "no thread handle: this machine has no thread capability") },
+  thr_count: { 做: () => 数.造(0) },
+  // arena：三区模型的桩，字段是函数值；这一份也没有一等函数值。
+  arena: { 做: (vm) => vm.坏("HMYR-R0104", "arena is a stub for the zone model: its fields are functions, and this machine has no first-class functions") },
   // ---- 进程：改工作目录 ----
   // 成功交回新的目录（与宿主那一份同一条约定）；进不去报 R0209。
   chdir: { 效果: "process", 做: (vm, a) => {

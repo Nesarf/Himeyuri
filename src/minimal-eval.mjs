@@ -110,6 +110,13 @@ const 内置 = {
   },
   locale_env: (rt) => rt.cap.env.localeGuess(),
   console_codepage: (rt) => rt.cap.env.codepage(),
+  // ---- 线程：这一份没有独立实例 ----
+  thr_spawn: (rt) => -1,
+  thr_join: (rt) => rt.坏("HMYR-R0221", "no thread handle: this machine has no thread capability"),
+  thr_cancel: (rt) => rt.坏("HMYR-R0221", "no thread handle: this machine has no thread capability"),
+  thr_count: () => 0,
+  // arena：三区模型的桩，字段是函数值；这一份也没有一等函数值。
+  arena: (rt) => rt.坏("HMYR-R0104", "arena is a stub for the zone model: its fields are functions, and this machine has no first-class functions"),
   // 跑一个程序：一份记录，五个字段。跑不起来也照实报告，不抛。
   run_program: (rt, a) => {
     const 命令 = rt.成串(a[0]);
@@ -360,7 +367,7 @@ const 内置 = {
 };
 
 // 只有这四样碰世界。读文件与问文件在不在属 file，另两个通道属 process。
-const 内置效果 = { read_text: "file", read_line: "file", read_lines: "file", write_text: "file", write_bytes: "file", file_exists: "file", argv: "process", print_err: "process", chdir: "process" };
+const 内置效果 = { read_text: "file", read_line: "file", read_lines: "file", write_text: "file", write_bytes: "file", file_exists: "file", argv: "process", print_err: "process", chdir: "process", run_program: "process", thr_spawn: "thread", thr_cancel: "thread" };
 
 class 尾调用 {
   constructor(decl, args, fromEffects) { this.decl = decl; this.args = args; this.fromEffects = fromEffects; }

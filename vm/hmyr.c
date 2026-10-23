@@ -2499,6 +2499,29 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     free(编码们);
     return 1;
   }
+  /* ---- 线程：这一台没有 ----------------------------------------------
+   * 跨核要一个独立的机器实例，而这台的执行状态还是文件级全局。
+   * 如实说没有：spawn 交回 -1（无效句柄），join 与 cancel 报 R0221，
+   * count 交回 0 —— 与 JS 那侧在「起不来」时的答案同一条路。 */
+  if (name_is(name_idx, "thr_spawn")) {
+    *out = v_num(-1);
+    return 1;
+  }
+  if (name_is(name_idx, "thr_join") || name_is(name_idx, "thr_cancel")) {
+    fail("HMYR-R0221", "no thread handle on this machine: this machine has no thread capability");
+    return 1;
+  }
+  if (name_is(name_idx, "thr_count")) {
+    *out = v_num(0);
+    return 1;
+  }
+  /* arena：三区模型的桩，三个字段都是函数值，而这一台没有一等函数值。
+   * 用 R0104（没有这个内置）而不是另开编号：它确实没有。 */
+  if (name_is(name_idx, "arena")) {
+    fail("HMYR-R0104",
+         "arena is a stub for the zone model: its three fields are functions, and this machine has no first-class functions");
+    return 1;
+  }
   if (name_is(name_idx, "argv")) {
     if (nargs != 0) { fail("HMYR-R0101", "argv takes no arguments"); return 1; }
     *out = g_argv;
