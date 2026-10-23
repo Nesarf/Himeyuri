@@ -47,7 +47,7 @@ if (!有编译器) {
     fs.writeFileSync(码路, 写程序(程序));
     const 跑 = (参) => spawnSync(exe, [码路, ...参], {
       encoding: "utf8", timeout: 600000,
-      env: { ...process.env, HMYR_STEPS: "4000000000" },
+      env: { ...process.env, HMYR_STEPS: "40000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
     });
 
     console.log("二、stored：往返一个字节都不差");
@@ -74,7 +74,38 @@ if (!有编译器) {
       }
     }
 
-    console.log("四、空输入也是一个合法的块");
+    console.log("三·五、动态 Huffman：zlib 接受，且比固定更小");
+    {
+      // 这一节的两个数就是这一件要记的东西：固定与动态各压成多少字节。
+      const 样本路 = path.join(临, "dyn-sample.bin");
+      fs.writeFileSync(样本路, fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmyrb")).subarray(0, 4096));
+      const 固路 = path.join(临, "dyn-fixed.z");
+      const 动路 = path.join(临, "dyn-dynamic.z");
+      const 固 = 跑([样本路, 固路, "--固定"]);
+      const 动 = 跑([样本路, 动路, "--动态"]);
+      ok("固定 Huffman 压得动", 固.status === 0, String(固.status));
+      ok("动态 Huffman 压得动", 动.status === 0, String(动.status) + " " + String(动.stderr).slice(0, 160));
+      if (fs.existsSync(固路) && fs.existsSync(动路)) {
+        const 原 = fs.readFileSync(样本路);
+        const 固长 = fs.readFileSync(固路).length;
+        const 动长 = fs.readFileSync(动路).length;
+        try {
+          const a = zlib.inflateRawSync(fs.readFileSync(固路));
+          ok("固定流 zlib 解得回原样", a.length === 原.length && Buffer.compare(a, 原) === 0, String(a.length));
+        } catch (e) {
+          ok("固定流 zlib 解得回原样", false, e.message);
+        }
+        try {
+          const b = zlib.inflateRawSync(fs.readFileSync(动路));
+          ok("动态流 zlib 解得回原样", b.length === 原.length && Buffer.compare(b, 原) === 0, String(b.length));
+        } catch (e) {
+          ok("动态流 zlib 解得回原样", false, e.message);
+        }
+        ok("动态比固定小（固定 " + 固长 + "，动态 " + 动长 + "）", 动长 < 固长, "");
+      }
+    }
+
+        console.log("四、空输入也是一个合法的块");
     {
       const 空 = path.join(临, "empty.bin");
       fs.writeFileSync(空, Buffer.alloc(0));
