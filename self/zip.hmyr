@@ -317,23 +317,85 @@ fn 一个中心(crc: Int, 压缩: Int, 原始: Int, 名们: Int, 偏移: Int, �
     写短(0, 2), 写短(0, 2), 写短(0, 4), 写短(偏移, 4), 名们))
 }
 
-fn 尾(目录大小: Int, 目录偏移: Int) {
+fn 尾(条数: Int, 目录大小: Int, 目录偏移: Int) {
   return 拼(((80, 75, 5, 6),
-    写短(0, 2), 写短(0, 2), 写短(1, 2), 写短(1, 2),
+    写短(0, 2), 写短(0, 2), 写短(条数, 2), 写短(条数, 2),
     写短(目录大小, 4), 写短(目录偏移, 4), 写短(0, 2)))
+}
+
+// 一个成员：本地头 + 负载，外加它在中央目录里的那一条。
+fn 成员(路: String, 名: String, 压: Bool, 偏移: Int) {
+  let 数据 = read_bytes(路)
+  let 名们 = 写串(名)
+  let crc = crc32(数据)
+  let 原始 = len(数据)
+  var 方法 = 0
+  var 负载 = 数据
+  if 压 {
+    方法 = 8
+    负载 = 固定压(数据)
+  }
+  let 压缩 = len(负载)
+  let 本地 = 本地头(crc, 压缩, 原始, 名们, 方法)
+  let 块 = 拼((本地, 负载))
+  let 中心 = 一个中心(crc, 压缩, 原始, 名们, 偏移, 方法)
+  return {块: 块, 中心: 中心, 原始: 原始, 压缩: 压缩}
 }
 
 fn main() -> Int effects(file) {
   let 参 = argv()
-  if len(参) < 3 {
-    print("用法：hmyr self/zip.hmyr <成员文件> <包.zip> [--压]" + chr(10))
-    return 2
-  }
   var 压 = false
+  var 多 = false
   var i = 0
   while i < len(参) {
     if 参[i] == "--压" { 压 = true }
+    if 参[i] == "--多" { 多 = true }
     i = i + 1
+  }
+  if 多 {
+    // --多 <包.zip> <文件...>：成员名就是参数里的相对路径。
+    var 包位 = 0 - 1
+    i = 0
+    while i < len(参) {
+      if 参[i] == "--多" { 包位 = i + 1 }
+      i = i + 1
+    }
+    if 包位 < 0 || 包位 >= len(参) {
+      print("用法：hmyr self/zip.hmyr --多 <包.zip> <文件...> [--压]" + chr(10))
+      return 2
+    }
+    let 包路 = 参[包位]
+    var 本地们 = ()
+    var 中心们 = ()
+    var 偏移 = 0
+    var 计数 = 0
+    i = 包位 + 1
+    while i < len(参) {
+      let p = 参[i]
+      if p != "--压" && p != "--多" {
+        let r = 成员(p, p, 压, 偏移)
+        本地们 = 本地们 + (r.块,)
+        中心们 = 中心们 + (r.中心,)
+        偏移 = 偏移 + len(r.块)
+        计数 = 计数 + 1
+      }
+      i = i + 1
+    }
+    var 本地全 = ()
+    var 中心全 = ()
+    if 计数 > 0 {
+      本地全 = 拼平(本地们, 0, 计数)
+      中心全 = 拼平(中心们, 0, 计数)
+    }
+    let 包 = 拼((本地全, 中心全, 尾(计数, len(中心全), 偏移)))
+    write_bytes(包路, 包)
+    print("收了 " + str(计数) + " 个文件，包 " + str(len(包)) + " 字节" + chr(10))
+    return 0
+  }
+  if len(参) < 3 {
+    print("用法：hmyr self/zip.hmyr <成员文件> <包.zip> [--压]" + chr(10))
+    print("      hmyr self/zip.hmyr --多 <包.zip> <文件...> [--压]" + chr(10))
+    return 2
   }
   let 数据 = read_bytes(参[1])
   let 名 = 参[1]
@@ -356,7 +418,7 @@ fn main() -> Int effects(file) {
   let 本地 = 本地头(crc, 压缩, 原始, 名们, 方法)
   let 本地全 = 拼((本地, 负载))
   let 中心 = 一个中心(crc, 压缩, 原始, 名们, 0, 方法)
-  let 包 = 拼((本地全, 中心, 尾(len(中心), len(本地全))))
+  let 包 = 拼((本地全, 中心, 尾(1, len(中心), len(本地全))))
   write_bytes(参[2], 包)
   print(短名 + "：" + str(原始) + " → " + str(压缩) + " 字节（方法 " + str(方法) + "），包 " + str(len(包)) + " 字节" + chr(10))
   return 0
