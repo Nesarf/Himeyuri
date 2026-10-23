@@ -94,7 +94,7 @@ export const 账本 = [
     状态: "搬了第一版",
     在哪: "self/deflate.hmyr",
     验收: "deflate",
-    说明: "stored 块与固定 Huffman（LZ77 + 窗口 4096）：4 KB 样本压到 1283、zlib 解回原样；自举侧的解码器还没写",
+    说明: "两个方向都在 HMYR 里：stored 与固定 Huffman 的编码，以及固定 Huffman 的解码（能解 zlib 的流）；4 KB 样本 4096 → 1283 → 4096",
   },
   {
     名: "打包发布",
