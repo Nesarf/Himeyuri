@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
+#include <time.h>
 #ifdef _WIN32
 #include <windows.h>
 #include <io.h>
@@ -451,6 +452,48 @@ static Value ascii_text(const char *s) {
   if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
   for (size_t i = 0; i < n; i++) p[i] = (uint16_t)(unsigned char)s[i];
   return v_str(p, (uint32_t)n);
+}
+
+/* ---- 时间 ------------------------------------------------------------
+ *
+ * now_ms 是墙上时间（毫秒）。板子上还没有时钟源，于是给 0 —— 「没有这一格」
+ * 说成 0，而不是编一个数出来；文档里写清这一条。
+ * sleep_ms 在桌面上真的睡；板子上空转（没有 sleep 系统调用），
+ * 而它的返回值是它答应等的毫秒数，不是它实际等了多久。 */
+static double 现在毫秒(void) {
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+  return 0.0;
+#elif defined(_WIN32)
+  FILETIME ft;
+  ULARGE_INTEGER u;
+  GetSystemTimeAsFileTime(&ft);
+  u.LowPart = ft.dwLowDateTime;
+  u.HighPart = ft.dwHighDateTime;
+  /* FILETIME 从 1601-01-01 起算，单位 100 纳秒；这一句把它换成 1970 起的毫秒。 */
+  return (double)((u.QuadPart - 116444736000000000ULL) / 10000ULL);
+#else
+  struct timespec ts;
+  timespec_get(&ts, TIME_UTC);
+  return (double)ts.tv_sec * 1000.0 + (double)ts.tv_nsec / 1000000.0;
+#endif
+}
+
+static void 睡多久(long ms) {
+  if (ms <= 0) return;
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+  /* 空转：板子上没有 sleep，而「等一等」这件事仍然要有个交代。 */
+  volatile long i;
+  for (i = 0; i < ms * 1000; i++) { }
+#elif defined(_WIN32)
+  Sleep((DWORD)ms);
+#else
+  {
+    struct timespec ts;
+    ts.tv_sec = (time_t)(ms / 1000);
+    ts.tv_nsec = (long)(ms % 1000) * 1000000L;
+    nanosleep(&ts, NULL);
+  }
+#endif
 }
 
 static Value *alloc_values(uint32_t n) {
@@ -1817,6 +1860,26 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     if (b < 0) snprintf(buf, sizeof buf, "\x1b[38;5;%ldm", f);
     else snprintf(buf, sizeof buf, "\x1b[38;5;%ld;48;5;%ldm", f, b);
     *out = ascii_text(buf);
+    return 1;
+  }
+  /* ---- 时间：读一次钟，或等一会儿 ----------------------------------
+   * 它们破坏可复现性，这一条写在设计里（CAPABILITIES.txt 第六组）。
+   * 测试只断言形状 —— 钟走过的方向、sleep_ms 交回它答应等的那个数 ——
+   * 不断言具体值，因为那件事本来就不该被断言。 */
+  if (name_is(name_idx, "now_ms")) {
+    if (nargs != 0) { fail("HMYR-R0101", "now_ms takes no arguments"); return 1; }
+    *out = v_num(现在毫秒());
+    return 1;
+  }
+  if (name_is(name_idx, "sleep_ms")) {
+    if (nargs != 1) { fail("HMYR-R0101", "sleep_ms wants one argument"); return 1; }
+    int o1 = 0;
+    double ms = as_num(args[0], &o1);
+    if (!o1) { fail("HMYR-R0130", "sleep_ms wants a number"); return 1; }
+    long m = (long)floor(ms);
+    if (m < 0) m = 0;
+    睡多久(m);
+    *out = v_num((double)m);
     return 1;
   }
   if (name_is(name_idx, "argv")) {

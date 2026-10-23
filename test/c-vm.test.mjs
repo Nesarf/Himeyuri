@@ -714,6 +714,26 @@ console.log("十六、终端那一组：只算不写");
   ok("答案是 4 27 11 4 2 false 3;7H", r.c.trim() === "4 27 11 4 2 false 3;7H", JSON.stringify(r.c.trim()));
 }
 
+console.log("十七、时间那一组：只断言形状，不断言值");
+{
+  // 这两条故意让程序不可复现，所以测试能问的只有形状：
+  // 钟走过以后不倒退，而 sleep_ms 交回它答应等的那个数。
+  const 源码 = [
+    "fn main() -> Int {",
+    '  print(str(now_ms() > 0) + " ")',
+    '  print(str(sleep_ms(5)) + " ")',
+    '  let 甲 = now_ms()',
+    '  let 乙 = now_ms()',
+    '  print(str(乙 >= 甲) + " ")',
+    '  print(str(sleep_ms(0 - 3)))',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "time");
+  ok("两台机器的形状一样", r.js === r.c, JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  ok("钟在走、等多少交回多少、负数归零", r.c.trim() === "true 5 true 0", JSON.stringify(r.c.trim()));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

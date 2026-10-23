@@ -80,6 +80,13 @@ const 内置 = {
   // 切开一个字符串。切法照宿主那一份：空分隔按码元切（空串给空元组），
   // 其余按不重叠的子串切，连续或末尾的分隔留下空段。
   split: (rt, a) => rt.成串(a[0]).split(rt.成串(a[1])),
+  // ---- 时间：读一次钟，或等一会儿 ----
+  now_ms: (rt) => rt.cap.time.now(),
+  sleep_ms: (rt, a) => {
+    const ms = Math.max(0, Math.floor(rt.成数(a[0])));
+    if (ms > 0) rt.cap.time.sleep(ms);
+    return ms;
+  },
   // ---- 终端：只交回字符串，一个字都不写出去 ----
   term_size: (rt) => { const s = rt.cap.terminal.size(); return [s.rows, s.columns]; },
   term_clear: () => "\u001b[2J",

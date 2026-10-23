@@ -49,6 +49,15 @@ export const 内置表 = {
     const d = String(vm.成串(a[1]));
     return new 类元组(s.split(d).map((x) => vm.文.由宿主(x)));
   } },
+  // ---- 时间：读一次钟，或等一会儿 ----
+  // 它们破坏可复现性（CAPABILITIES.txt 第六组），所以测试只断言形状。
+  now_ms: { 做: (vm) => 数.造(vm.cap.time.now()) },
+  sleep_ms: { 做: (vm, a) => {
+    const n = 数.下整(vm.成数(a[0]));
+    const ms = 数.比(n, 0) < 0 ? 0 : n;
+    if (数.比(ms, 0) > 0) vm.cap.time.sleep(ms);
+    return 数.造(ms);
+  } },
   // ---- 终端：只交回字符串，一个字都不写出去 ----
   // 副作用留给 print：这里算出来的是「该写什么」，于是测试能断言它们，
   // 而板子没有终端也不会假装有。数的意思仍然只走 src/numbers.mjs。

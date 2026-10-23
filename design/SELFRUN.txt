@@ -117,17 +117,22 @@ HMYR 全面自举：运行时、宿主依赖与启动
        于是同一段程序被编成「调用一个用户函数」，两台机器都报没有这个函数。
        这正是「加一个内置要动六处」的意思，而工具现在会指出漏在哪一处。
 
-       缺的按组（22 个）：
+       缺的按组（20 个）：
          环境 9    cwd home_dir temp_path repo_path python_path locale_current
                    locale_env locale_set console_codepage
-         时间 2    now_ms sleep_ms
          输入 4    key_push key_available key_read key_start
          进程 2    run_program chdir
          线程 4    thr_spawn thr_join thr_cancel thr_count
          内存 1    arena（这是宿主桩：MEMORY.txt 的三区模型还没实现，
                    所以它算在世界面里，但落点可能不在 C 机器上）
 
-       文本与终端两组现在齐了。
+       文本、终端、时间三组现在齐了。
+
+       时间那两条（now_ms sleep_ms）的落点值得单说：桌面上用
+       GetSystemTimeAsFileTime 与 timespec_get，而板子上两样都没有 ——
+       于是 now_ms 给 0、sleep_ms 空转，文档写明这是「没有时钟」，
+       不是「时钟恰好是零」。验收在 test/c-vm.test.mjs 第十七节，
+       断言形状而不断言值：钟往前走、sleep_ms(5) 交回 5、负数归零。
 
        终端那六个（term_size term_clear term_escape term_color term_hide term_show）
        只交回「该写什么」，不写出去 —— 所以它们是最便宜的一组，也正是
@@ -136,8 +141,9 @@ HMYR 全面自举：运行时、宿主依赖与启动
        term_size 在桌面上问一次控制台，问不到就给 24 行 80 列，
        与 JS 那侧 capability 的缺省值一致。
 
-       下一格挑要平台口的：时间（now_ms 与 sleep_ms）与路径环境那一组 ——
-       它们各自要在平台口上加一格，而不是加一个纯函数。
+       下一格是路径与环境那一组（9 个）：它们大多能从环境变量与标准库取，
+       而 repo_path 与 python_path 在 C 机器上没有对应物 —— 那两条要如实
+       交回空串并写清「不知道」，而不是编一个看起来像路径的串。
 
     二、工具链：LSP、格式化器、嵌入、打包发布、语料生成、测试框架都还是 JS。
        它们不在「跑程序」这条路上，可以一直是工具。
