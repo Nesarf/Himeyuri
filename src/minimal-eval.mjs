@@ -68,6 +68,23 @@ const 键队列 = [];
 const 数组标 = "__hmyr_array";
 
 const 内置 = {
+  // 32 位位运算：与宿主那份同一套语义（无符号 32 位，移位按 31 取模）。
+  位与: (rt, a) => Math.floor(rt.成数(a[0])) & Math.floor(rt.成数(a[1])),
+  位或: (rt, a) => (Math.floor(rt.成数(a[0])) | Math.floor(rt.成数(a[1]))) >>> 0,
+  位异或: (rt, a) => (Math.floor(rt.成数(a[0])) ^ Math.floor(rt.成数(a[1]))) >>> 0,
+  位非: (rt, a) => (~Math.floor(rt.成数(a[0]))) >>> 0,
+  位右移: (rt, a) => (Math.floor(rt.成数(a[0])) >>> (Math.floor(rt.成数(a[1])) & 31)) >>> 0,
+  位加: (rt, a) => (Math.floor(rt.成数(a[0])) + Math.floor(rt.成数(a[1]))) >>> 0,
+  位循环右移: (rt, a) => {
+    const x = Math.floor(rt.成数(a[0])) >>> 0;
+    const n = Math.floor(rt.成数(a[1])) & 31;
+    return n === 0 ? x : ((x >>> n) | (x << (32 - n))) >>> 0;
+  },
+  位循环左移: (rt, a) => {
+    const x = Math.floor(rt.成数(a[0])) >>> 0;
+    const n = Math.floor(rt.成数(a[1])) & 31;
+    return n === 0 ? x : ((x << n) | (x >>> (32 - n))) >>> 0;
+  },
   // 可变数组：标记与原版解释器一致 —— 一个打了 symbol 的宿主数组。
   数组: (rt, a) => {
     const t = a[0];

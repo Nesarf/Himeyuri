@@ -472,6 +472,10 @@ let nextThreadId = 1;
 // 仓库根：语言文件用的相对路径都以它为基准。
 const ROOT = import.meta.dirname.replace(/[\\/][^\\/]*$/, "");
 
+// 32 位位运算：SHA-256 那类东西在语言里算不动，因为一次 与 要三十二轮循环。
+// 落到宿主的位上，一次就是一次。
+const 位 = (v) => Math.floor(v) >>> 0;
+
 // 可变数组：JS 侧就是一个打了标记的 Array。
 // 元组的不可变靠「+ 复制」，而 设 是原地改 —— 标记让 设 拒绝元组，
 // 免得「不可变」这条被悄悄破掉。
@@ -484,6 +488,23 @@ const 造数组 = (t) => {
 };
 
 const BUILTINS = {
+  // ---- 〇、位运算（32 位无符号）：给 SHA-256 那类算法一条不用逐位循环的路 ----
+  位与: (rt, args) => 位(rt.asNumber(args[0])) & 位(rt.asNumber(args[1])),
+  位或: (rt, args) => (位(rt.asNumber(args[0])) | 位(rt.asNumber(args[1]))) >>> 0,
+  位异或: (rt, args) => (位(rt.asNumber(args[0])) ^ 位(rt.asNumber(args[1]))) >>> 0,
+  位非: (rt, args) => (~位(rt.asNumber(args[0]))) >>> 0,
+  位右移: (rt, args) => (位(rt.asNumber(args[0])) >>> (位(rt.asNumber(args[1])) & 31)) >>> 0,
+  位加: (rt, args) => (位(rt.asNumber(args[0])) + 位(rt.asNumber(args[1]))) >>> 0,
+  位循环右移: (rt, args) => {
+    const a = 位(rt.asNumber(args[0]));
+    const n = 位(rt.asNumber(args[1])) & 31;
+    return n === 0 ? a : ((a >>> n) | (a << (32 - n))) >>> 0;
+  },
+  位循环左移: (rt, args) => {
+    const a = 位(rt.asNumber(args[0]));
+    const n = 位(rt.asNumber(args[1])) & 31;
+    return n === 0 ? a : ((a << n) | (a >>> (32 - n))) >>> 0;
+  },
   // ---- 一、文本（纯函数）：只从输入算出输出，不读也不写外部状态 ----
   slice: (rt, args) => {
     const s = rt.asString(args[0]);

@@ -358,7 +358,7 @@ const 内置名 = new Set(["abs", "arena", "argv", "chdir", "chr", "console_code
   "record_new", "repo_path", "run_program", "slice", "sleep_ms", "split", "str", "temp_path", "term_clear",
   "term_color", "term_escape", "term_hide", "term_show", "term_size", "thr_cancel", "thr_count", "thr_join",
   "thr_spawn", "to_int", "to_lower", "to_upper", "write_text", "write_bytes", "bytes_to_text", "f64_bytes",
-  "pack_value", "read_line", "read_lines", "数组", "设"]);
+  "pack_value", "read_line", "read_lines", "数组", "设", "位与", "位或", "位异或", "位非", "位右移", "位加", "位循环右移", "位循环左移"]);
 
 // 模块 → 一个程序：函数表 + 全局常量表 + 顶层指令（用来登记常量）。
 export const 编译模块 = (ast) => {
