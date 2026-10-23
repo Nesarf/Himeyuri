@@ -53,7 +53,7 @@ if (!有编译器) {
   if (c.status === 0) {
     const 码路 = path.join(临, "fmt.hmyrb");
     fs.writeFileSync(码路, 写程序(程序));
-    const 跑 = (输入) => spawnSync(exe, [码路], {
+    const 跑 = (输入) => spawnSync(exe, [码路, "--expr"], {
       input: 输入 + "\n", encoding: "utf8", timeout: 120000,
       env: { ...process.env, HMYR_STEPS: "2000000000" },
     });
@@ -65,6 +65,41 @@ if (!有编译器) {
     for (const [, 期望] of 例子们) {
       const r = 跑(期望);
       ok(期望 + " 再排一次不变", String(r.stdout || "").trim() === 期望, JSON.stringify(String(r.stdout || "").trim()));
+    }
+  }
+  fs.rmSync(临, { recursive: true, force: true });
+}
+
+console.log("四、整文件：六份源码缩进之后还能编，而且幂等");
+if (!有编译器) {
+  console.log("  跳过  这台机器上没有 gcc");
+} else {
+  const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-fmt-file-"));
+  const exe = path.join(临, "hmyr.exe");
+  const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
+  if (c.status === 0) {
+    const { loadUnit } = await import("../src/loader.mjs");
+    const fs2 = fs;
+    const 码2 = path.join(临, "fmt2.hmyrb");
+    const 源路 = path.join(ROOT, "self/fmt.hmyr");
+    const u0 = loadUnit(源路);
+    const 份们 = u0.order.map((文件) => 编译模块(u0.modules.get(文件)));
+    fs2.writeFileSync(码2, 写程序(合并程序(份们, 份们[份们.length - 1])));
+    const 跑全 = (输入) => spawnSync(exe, [码2], {
+      input: 输入, encoding: "utf8", timeout: 120000,
+      env: { ...process.env, HMYR_STEPS: "2000000000" },
+    });
+    for (const 名 of ["lex", "chain", "stmt", "body", "compile", "pack"]) {
+      const 源 = fs2.readFileSync(path.join(ROOT, "self", 名 + ".hmyr"), "utf8");
+      const a = 跑全(源);
+      const b = 跑全(String(a.stdout || ""));
+      const 幂等 = String(a.stdout || "") === String(b.stdout || "");
+      const 出 = path.join(临, 名 + ".hmyr");
+      fs2.writeFileSync(出, String(a.stdout || ""), "utf8");
+      const u = loadUnit(出);
+      ok(名 + ".hmyr 缩进之后编得动", u.ok, JSON.stringify(u.diagnostics.errors.slice(0, 1).map((e) => e.code)));
+      ok(名 + ".hmyr 再排一次不变", 幂等, "");
     }
   }
   fs.rmSync(临, { recursive: true, force: true });

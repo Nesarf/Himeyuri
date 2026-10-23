@@ -1,20 +1,86 @@
-// 格式化器的第一版：表达式。
+// 格式化器：整文件的缩进与行尾规范化；表达式那一条留在 --expr 上。
 //
-// tools 里那份 src/format.mjs 是整文件排版，它要完整语句树；而自举侧现在有的
-// 是表达式解析器（self/parse.hmyr）。所以这一版只做表达式 —— 诚实的边界写在名字上：
-// 它是「第一版」，不是「格式化器的全部」。
+// 两条路各说各的边界：
+//   整文件  按花括号深度重排行首缩进（每层两个空格），行内一个字不动。
+//           它不重排表达式、不动注释内容 —— 所以「能编 + 幂等」是它能许的承诺。
+//   --expr  走 self/parse.hmyr 的表达式语法树，括号按优先级与结合性补。
+//           那是另一件事：重排，而不是缩进。
 //
-// 两条性质要成立，与整文件那一份同样要求：
-//   round trip   解析、打印、再解析，得到同一棵树
-//   idempotence  打印两次与打印一次一样
+// 为什么整文件那一条不做语法树重排：自举侧读函数体的那一件只到函数体，
+// 读整份声明的接口还没有；而「先缩进、再谈重排」是一条能立刻用上的路。
 //
-// 括号的规矩：左结合运算符的右子表达式，优先级相同也要加括号 ——
-// a - (b - c) 里那一对括号不是多余的，去掉就换了意思。
-//
-// 用法：hmyr self/fmt.hmyr < 表达式.txt
+// 用法：hmyr self/fmt.hmyr < 源.hmyr        （整文件，写到标准输出）
+//       hmyr self/fmt.hmyr --expr < 表达式.txt
 
 import "./parse.hmyr"
 
+fn 去首尾(行: String) -> String {
+  var 起 = 0
+  var 止 = len(行)
+  var 左 = true
+  while 起 < 止 && 左 {
+    if 行[起] == " " || 行[起] == "\t" { 起 = 起 + 1 } else { 左 = false }
+  }
+  var 右 = true
+  while 止 > 起 && 右 {
+    if 行[止 - 1] == " " || 行[止 - 1] == "\t" { 止 = 止 - 1 } else { 右 = false }
+  }
+  return slice(行, 起, 止)
+}
+
+fn 以(文: String, 前: String) -> Bool {
+  if len(文) < len(前) { return false }
+  return slice(文, 0, len(前)) == 前
+}
+
+fn 数(文: String, c: String) -> Int {
+  var 数 = 0
+  var i = 0
+  while i < len(文) {
+    if 文[i] == c { 数 = 数 + 1 }
+    i = i + 1
+  }
+  return 数
+}
+
+fn 空格们(n: Int) -> String {
+  var 出 = ""
+  var i = 0
+  while i < n {
+    出 = 出 + "  "
+    i = i + 1
+  }
+  return 出
+}
+
+// 整文件：逐行算缩进。行首是右花括号时先减一层 —— 这与「关了一层」是同一件事，
+// 所以新层正好等于输出用的那一层；像 } else { 这种一行里又关又开的，也自洽。
+fn 整文件(源: String) -> String {
+  let 行们 = split(源, chr(10))
+  // 末尾那个空项是「最后一行之后的换行」留下的，不是一行 —— 输出它就会每跑一次多一个空行。
+  var 止 = len(行们)
+  if 止 > 0 && len(行们[止 - 1]) == 0 { 止 = 止 - 1 }
+  var 出 = ""
+  var 层 = 0
+  var i = 0
+  while i < 止 {
+    let 净 = 去首尾(行们[i])
+    if len(净) == 0 {
+      出 = 出 + chr(10)
+    } else {
+      var 输出层 = 层
+      if 以(净, "}") { 输出层 = 层 - 1 }
+      if 输出层 < 0 { 输出层 = 0 }
+      出 = 出 + 空格们(输出层) + 净 + chr(10)
+      层 = 层 + 数(净, "{") - 数(净, "}")
+      if 层 < 0 { 层 = 0 }
+    }
+    i = i + 1
+  }
+  return 出
+}
+
+// 表达式那一支：括号按优先级与结合性补，打印两次与打印一次一样。
 fn 优先(op: String) -> Int {
   if op == "+" { return 1 }
   if op == "-" { return 1 }
@@ -24,7 +90,6 @@ fn 优先(op: String) -> Int {
   return 0
 }
 
-// 打印：比父级松就加括号；右侧同优先级也加（左结合）。
 fn 打印(e: Int, 父: Int, 是右: Bool) -> String {
   if e.kind == "num" { return e.text }
   if e.kind == "name" { return e.text }
@@ -38,14 +103,38 @@ fn 打印(e: Int, 父: Int, 是右: Bool) -> String {
 }
 
 fn main() -> Int {
-  var 跑 = true
-  while 跑 {
-    let r = read_stdin_line()
-    if len(r.行) > 0 {
-      let t = parse(r.行)
-      print(打印(t.node, 0, false) + chr(10))
-    }
-    if r.结束 { 跑 = false }
+  let 参 = argv()
+  var 是表达式 = false
+  var i = 0
+  while i < len(参) {
+    if 参[i] == "--expr" { 是表达式 = true }
+    i = i + 1
   }
+  if 是表达式 {
+    var 跑 = true
+    while 跑 {
+      let r = read_stdin_line()
+      if len(r.行) > 0 {
+        let t = parse(r.行)
+        print(打印(t.node, 0, false) + chr(10))
+      }
+      if r.结束 { 跑 = false }
+    }
+    return 0
+  }
+  var 源 = ""
+  var 继续 = true
+  while 继续 {
+    let r = read_stdin_line()
+    if r.结束 {
+      // 末尾那一行：有内容就接上，没有就不再补换行 —— 补了会让每跑一次多一个空行，
+      // 而「打印两次与打印一次一样」正是这一支要许的承诺。
+      if len(r.行) > 0 { 源 = 源 + r.行 }
+      继续 = false
+    } else {
+      源 = 源 + r.行 + chr(10)
+    }
+  }
+  print(整文件(源))
   return 0
 }
