@@ -105,17 +105,32 @@ HMYR 全面自举：运行时、宿主依赖与启动
 
   还差什么，按代价排（数字都是当场数的）：
 
-    一、世界面还差 23 个内置。宿主求值器登记 54 个，C 那台有 31 个
-       （语言核心那 26 个加上算术那一组五个，全齐）。已经搬完的：
-       算术 5（abs floor int min max）—— 它们顺便补了两处：字节码内置表与
-       自举编译器的内置表都不认它们，于是同一段程序在宿主上跑得动、编成字节码就报
-       「没有这个内置」。搬这一组时还撞出一个更深的洞：自举编译器把数字字面量
-       一律交给 to_int，于是 2.7 一进编译器就报「不是整数字面量」，
-       而同一条源码走解释那条路跑得动。现在编译器有自己的一份小数与指数解析。
-       缺的按组：文本 2（split console_codepage）、
-       路径与环境 8（cwd chdir home_dir temp_path repo_path python_path locale_env locale_set）、
-       时间 2（now_ms sleep_ms）、键盘 3（key_*）、终端 3（term_*）、
-       进程与线程 5（run_program、thr_*）。
+    一、世界面还差 28 个内置。账本已经做成工具：tools/builtin-gap.mjs 一次列出
+       六处（宿主求值器、最小求值器、编译期内置名、字节码内置表、自举求值器、
+       C 机器）各有哪些名字，差集就是这一项的待办。
+       2026 实测：宿主 60、最小 31、编译 32、字节码 32、自举 26、C 32。
+
+       已经搬完的一格：split（文本）。它在六处一起加，验收在
+       test/c-vm.test.mjs 第十四节 —— 连续分隔留下空段、空分隔按码元切、
+       末尾分隔留下尾空段，三种边界两台机器逐字相同。
+       搬之前先撞了一次「两边都空」：编译期那张「内置名」表没有 split，
+       于是同一段程序被编成「调用一个用户函数」，两台机器都报没有这个函数。
+       这正是「加一个内置要动六处」的意思，而工具现在会指出漏在哪一处。
+
+       缺的按组（28 个）：
+         环境 9    cwd home_dir temp_path repo_path python_path locale_current
+                   locale_env locale_set console_codepage
+         时间 2    now_ms sleep_ms
+         终端 6    term_size term_clear term_escape term_color term_hide term_show
+         输入 4    key_push key_available key_read key_start
+         进程 2    run_program chdir
+         线程 4    thr_spawn thr_join thr_cancel thr_count
+         内存 1    arena（这是宿主桩：MEMORY.txt 的三区模型还没实现，
+                   所以它算在世界面里，但落点可能不在 C 机器上）
+
+       文本那一组现在齐了（split 补上之后）；下一格按上面这个顺序做，
+       先挑不依赖操作系统的（终端那 6 个只返回字符串），再挑要平台口的。
+
     二、工具链：LSP、格式化器、嵌入、打包发布、语料生成、测试框架都还是 JS。
        它们不在「跑程序」这条路上，可以一直是工具。
 

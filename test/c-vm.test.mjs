@@ -631,7 +631,29 @@ console.log("十三、算术那一组：两台机器同一个数");
   ok("小数字面量也编得过", r.c.trim().startsWith("7 2"), JSON.stringify(r.c.trim().slice(0, 20)));
 }
 
-console.log("十四、调用深度：见底之前先说话");
+console.log("十四、切开一个字符串：三种边界两台一样");
+{
+  // split 是设计/COMPILER 里点名的「还差的那几个纯函数」之一。它在宿主求值器里
+  // 一直有，而字节码执行器与 C 那台都没有 —— 于是同一段程序在宿主上跑得动，
+  // 编成字节码就报「没有这个内置」。这里把三种容易写错的边界钉住：
+  // 连续分隔留下空段、空分隔按码元切、末尾分隔留下尾空段。
+  const 源码 = [
+    "fn main() -> Int {",
+    '  print(str(len(split("a,b,,c", ","))) + " ")',
+    '  print(str(len(split("abc", ""))) + " ")',
+    '  print(str(len(split("", ","))) + " ")',
+    '  print(str(len(split(",a", ","))) + " ")',
+    '  let 段 = split("x--y--z", "--")',
+    "  print(段[1] + 段[2])",
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "split");
+  ok("五种情形的答案两台一样", r.js === r.c, JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  ok("段数是 4 3 1 2，多字符分隔按子串切", r.c.trim() === "4 3 1 2 yz", JSON.stringify(r.c.trim()));
+}
+
+console.log("十五、调用深度：见底之前先说话");
 {
   // 这台机器的调用是 C 递归。栈见底时 Windows 只给一个退出码 0xC00000FD，
   // 一行人话都没有 —— 所以深度要能量，也要能拦。2026 查那次爆栈，

@@ -1380,6 +1380,55 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_str(args[0].s + from, (uint32_t)(to - from));
     return 1;
   }
+  /* 按分隔串切开。语义照 JavaScript 的 String.prototype.split：
+   * 空分隔按码元切（空串给空元组），其余按不重叠的子串切，
+   * 连续或末尾的分隔都会留下空段 —— 那三种情形各写在测试里。 */
+  if (name_is(name_idx, "split")) {
+    if (nargs != 2) { fail("HMYR-R0101", "split wants two arguments"); return 1; }
+    Value s, d;
+    value_to_text(args[0], &s);
+    value_to_text(args[1], &d);
+    if (d.slen == 0) {
+      Value v = v_null(); v.tag = T_TUPLE; v.ilen = s.slen;
+      v.items = alloc_values(s.slen);
+      for (uint32_t i = 0; i < s.slen; i++) {
+        uint16_t *p = (uint16_t *)malloc(sizeof(uint16_t));
+        if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+        p[0] = s.s[i];
+        v.items[i] = v_str(p, 1);
+      }
+      *out = v;
+      return 1;
+    }
+    uint32_t 段 = 1;
+    for (uint32_t i = 0; i + d.slen <= s.slen; ) {
+      if (memcmp(s.s + i, d.s, (size_t)d.slen * sizeof(uint16_t)) == 0) { 段++; i += d.slen; }
+      else i++;
+    }
+    Value v = v_null(); v.tag = T_TUPLE; v.ilen = 段;
+    v.items = alloc_values(段);
+    uint32_t 起 = 0, k = 0;
+    for (uint32_t i = 0; i + d.slen <= s.slen; ) {
+      if (memcmp(s.s + i, d.s, (size_t)d.slen * sizeof(uint16_t)) == 0) {
+        uint32_t 长 = i - 起;
+        uint16_t *p = (uint16_t *)malloc((size_t)(长 ? 长 : 1) * sizeof(uint16_t));
+        if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+        if (长) memcpy(p, s.s + 起, (size_t)长 * sizeof(uint16_t));
+        v.items[k++] = v_str(p, 长);
+        起 = i + d.slen;
+        i = 起;
+      } else i++;
+    }
+    {
+      uint32_t 长 = s.slen - 起;
+      uint16_t *p = (uint16_t *)malloc((size_t)(长 ? 长 : 1) * sizeof(uint16_t));
+      if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+      if (长) memcpy(p, s.s + 起, (size_t)长 * sizeof(uint16_t));
+      v.items[k++] = v_str(p, 长);
+    }
+    *out = v;
+    return 1;
+  }
   /* ---- the character tables ---- */
   if (name_is(name_idx, "is_letter") || name_is(name_idx, "is_mark")) {
     if (nargs != 1) { fail("HMYR-R0101", "that builtin wants one argument"); return 1; }
