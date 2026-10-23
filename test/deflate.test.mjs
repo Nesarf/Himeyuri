@@ -146,7 +146,40 @@ if (!有编译器) {
       }
     }
   }
-  fs.rmSync(临, { recursive: true, force: true });
+    if (process.env.HMYR_HEAVY) {
+      console.log("六、多块：一百 KB 的输入切成多块");
+      {
+        // 每 65535 字节一块，BFINAL 只在最后一块置位。
+        // 链式找匹配对这个规模要五分钟，所以只在 HMYR_HEAVY 下跑。
+        const 种 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmyrb"));
+        const 大 = Buffer.concat([种, 种, 种.subarray(0, 20000)]);
+        const 大入 = path.join(临, "multi.bin");
+        const 大出 = path.join(临, "multi.z");
+        fs.writeFileSync(大入, 大);
+        const r = spawnSync(exe, [path.join(临, "deflate.hmyrb"), 大入, 大出, "--固定"], {
+          encoding: "utf8", timeout: 1800000,
+          env: { ...process.env, HMYR_STEPS: "400000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
+        });
+        ok("一百 KB 压得动", r.status === 0 && fs.existsSync(大出), String(r.status));
+        if (fs.existsSync(大出)) {
+          const 流 = fs.readFileSync(大出);
+          const 取 = (i) => (流[i >> 3] >> (i & 7)) & 1;
+          let 位 = 0;
+          let 头 = 0;
+          for (let k = 0; k < 3; k++) { 头 |= 取(位) << k; 位++; }
+          ok("第一块不是最后一块（BFINAL=0）", 头 % 2 === 0, "头=" + 头);
+          ok("第一块是固定 Huffman（BTYPE=1）", Math.floor(头 / 2) % 4 === 1, "BTYPE=" + (Math.floor(头 / 2) % 4));
+          try {
+            const 回 = zlib.inflateRawSync(流);
+            ok("zlib 解回原样", 回.length === 大.length && Buffer.compare(回, 大) === 0, String(回.length));
+          } catch (e) {
+            ok("zlib 解回原样", false, e.message);
+          }
+        }
+      }
+    }
+
+    fs.rmSync(临, { recursive: true, force: true });
 }
 
 console.log("");
