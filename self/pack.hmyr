@@ -220,17 +220,24 @@ fn 是导入行(行: String) -> Bool {
   return true
 }
 
-fn 拆行从(文本: String, i: Int, 起: Int, acc: Int) -> Int {
-  if i >= len(文本) { return acc + (slice(文本, 起, len(文本)),) }
-  if 文本[i] == chr(10) {
-    return 拆行从(文本, i + 1, i + 1, acc + (slice(文本, 起, i),))
-  }
-  return 拆行从(文本, i + 1, 起, acc)
-}
-
+// 按换行拆成行们。写成循环，而不是「每个字符递归一层」：
+// 那种写法的递归深度就是字符数 —— 一份五百多行的源码一万六千层，
+// 而这台机器的每一层调用都占一层 C 栈，64 MB 直接见底（实测退出码 0xC00000FD）。
 fn 拆行(文本: String) {
   if 文本 == "" { return () }
-  return 拆行从(文本, 0, 0, ())
+  var i = 0
+  var 起 = 0
+  var acc = ()
+  while i < len(文本) {
+    if 文本[i] == chr(10) {
+      acc = acc + (slice(文本, 起, i),)
+      i = i + 1
+      起 = i
+    } else {
+      i = i + 1
+    }
+  }
+  return acc + (slice(文本, 起, len(文本)),)
 }
 
 fn 去导入从(行们: Int, i: Int, acc: String) -> String {

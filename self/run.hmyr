@@ -131,17 +131,26 @@ fn 合并从(已收: Int, 源码们: Int, i: Int) -> Int {
 
 // 按换行拆。与 拆行 不同，这里不要末尾那一个空段——
 // 找 import 只看行，末尾空行没有意义。
-fn 拆行从(文本: String, i: Int, 起: Int, acc: Int) -> Int {
-  if i >= len(文本) { return acc + (slice(文本, 起, len(文本)),) }
-  if 文本[i] == chr(10) {
-    return 拆行从(文本, i + 1, i + 1, acc + (slice(文本, 起, i),))
-  }
-  return 拆行从(文本, i + 1, 起, acc)
-}
-
+// 按换行拆。与 拆行 不同，这里不要末尾那一个空段——
+// 找 import 只看行，末尾空行没有意义。
+//
+// 循环而不是每字符递归：递归深度等于字符数，源码一大就把机器栈吃光
+// （同样的写法在 self/pack.hmyr 那里让 C 机器退出码成了 0xC00000FD）。
 fn 拆行(文本: String) {
   if 文本 == "" { return () }
-  return 拆行从(文本, 0, 0, ())
+  var i = 0
+  var 起 = 0
+  var acc = ()
+  while i < len(文本) {
+    if 文本[i] == chr(10) {
+      acc = acc + (slice(文本, 起, i),)
+      i = i + 1
+      起 = i
+    } else {
+      i = i + 1
+    }
+  }
+  return acc + (slice(文本, 起, len(文本)),)
 }
 
 // 这一行是不是「import "..."」。是就交回引号里的那一段，不是就交回空串。

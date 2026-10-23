@@ -978,6 +978,53 @@ static void trace_dump(void) {
   }
 }
 
+/* ---- 调用深度 ---------------------------------------------------------
+ *
+ * 这台机器的调用是 C 递归：HMYR 里的一层调用就是 C 的一层栈帧。快，但代价是
+ * 「程序递归得深」会变成「机器栈吃掉」。栈见底时 Windows 给的只是退出码
+ * 0xC00000FD，一行人话都没有 —— 所以这里量它，而不是猜它。
+ *
+ * HMYR_DEPTH=1：每刷新一次峰值就打一行（深度 + 函数名，每 64 层一记）。
+ * 崩掉之前留下的最后一行，就是那段递归的名字。
+ * HMYR_MAX_DEPTH=N：到 N 层就自己停下并说明（桌面用；板子上 getenv 是空的）。
+ */
+static uint32_t g_深度 = 0;
+static uint32_t g_最深 = 0;
+static int g_depth_on = 0;
+static uint32_t g_depth_cap = 0;
+
+static void 函数名(Func *f, char *out, size_t cap) {
+  size_t n = 0;
+  if (f && cap > 1) {
+    n = f->name_len < cap - 1 ? f->name_len : cap - 1;
+    for (size_t i = 0; i < n; i++) out[i] = (f->name[i] < 128) ? (char)f->name[i] : '?';
+  }
+  if (cap) out[n] = 0;
+}
+
+static void 记深度(Func *f, Func *父) {
+  g_深度++;
+  if (g_深度 > g_最深) {
+    g_最深 = g_深度;
+    if (g_depth_on && (g_深度 < 8 || g_深度 % 64 == 0)) {
+      char 子名[64], 父名[48];
+      函数名(f, 子名, sizeof 子名);
+      函数名(父, 父名, sizeof 父名);
+      char *名 = utf16_to_utf8(f->name, f->name_len);
+      fprintf(stderr, "DEPTH %u #%ld %s (from %s) %s\n", (unsigned)g_深度,
+              (long)(f - funcs), 子名, 父名, 名 ? 名 : "?");
+      free(名);
+    }
+  }
+  if (g_depth_cap && g_深度 > g_depth_cap) {
+    char *名 = utf16_to_utf8(f->name, f->name_len);
+    fprintf(stderr, "hmyr: calls went %u deep, past the ceiling %u (at %s)\n",
+            (unsigned)g_深度, (unsigned)g_depth_cap, 名 ? 名 : "?");
+    free(名);
+    exit(72);
+  }
+}
+
 static void push(Value v) {
   if (g_stack_n == g_stack_cap) {
     g_stack_cap = g_stack_cap ? g_stack_cap * 2 : 256;
@@ -1667,6 +1714,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
     fail("HMYR-R0101", "that function got the wrong number of arguments");
     return v_null();
   }
+  记深度(f, g_cur);
   Value *slots = alloc_values(f->nslots);
   for (int i = 0; i < nargs && i < (int)f->nslots; i++) slots[i] = args[i];
   uint32_t base = g_stack_n;
@@ -1958,7 +2006,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         if (g_failed) return v_null();
         push(r); pc++; break;
       }
-      case OP_RET: { Value v = pop(); g_stack_n = base; g_base = 外base; g_cur = 外函; return v; }
+      case OP_RET: { Value v = pop(); g_stack_n = base; g_base = 外base; g_cur = 外函; if (g_深度) g_深度--; return v; }
       default: {
         char msg[160];
         uint32_t k = in->op;
@@ -2304,6 +2352,14 @@ int main(int argc, char **argv) {
   g_trace_on = getenv("HMYR_TRACE") != NULL;
   g_calls_on = getenv("HMYR_CALLS") != NULL;
   g_fields_on = getenv("HMYR_FIELDS") != NULL;
+  g_depth_on = getenv("HMYR_DEPTH") != NULL;
+  {
+    const char *md = getenv("HMYR_MAX_DEPTH");
+    if (md) {
+      long v = atol(md);
+      if (v > 0) g_depth_cap = (uint32_t)v;
+    }
+  }
   for (int i = 0; i < TRACE_N; i++) g_trace[i].op = 255;
   if (getenv("HMYR_MEM")) atexit(堆账报一下);
   {

@@ -631,6 +631,45 @@ console.log("十三、算术那一组：两台机器同一个数");
   ok("小数字面量也编得过", r.c.trim().startsWith("7 2"), JSON.stringify(r.c.trim().slice(0, 20)));
 }
 
+console.log("十四、调用深度：见底之前先说话");
+{
+  // 这台机器的调用是 C 递归。栈见底时 Windows 只给一个退出码 0xC00000FD，
+  // 一行人话都没有 —— 所以深度要能量，也要能拦。2026 查那次爆栈，
+  // 就是靠 HMYR_DEPTH 打出的峰值行找到「拼两半」在挖自己。
+  const 源码 = [
+    "fn 下(n: Int) -> Int {",
+    "  if n <= 0 { return 0 }",
+    "  return 下(n - 1) + 1",
+    "}",
+    "fn main() -> Int {",
+    "  print(str(下(50)))",
+    "  return 0",
+    "}",
+  ].join("\n");
+  const 源路 = path.join(临, "deep.hmyr");
+  fs.writeFileSync(源路, 源码, "utf8");
+  const unit = loadUnit(源路);
+  const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));
+  const 码路 = path.join(临, "deep.hmyrb");
+  fs.writeFileSync(码路, 写程序(程序));
+
+  const 拦 = spawnSync(exe, [码路], { encoding: "utf8", env: { ...process.env, HMYR_MAX_DEPTH: "8" } });
+  ok("深度上限会拦住（退出码 72）", 拦.status === 72, String(拦.status));
+  ok("拦住时说得清停在哪一层、哪个函数",
+     /calls went \d+ deep, past the ceiling 8/.test(String(拦.stderr)) && String(拦.stderr).includes("下"),
+     JSON.stringify(String(拦.stderr).slice(0, 140)));
+
+  const 报 = spawnSync(exe, [码路], { encoding: "utf8", env: { ...process.env, HMYR_DEPTH: "1" } });
+  ok("开了探针程序照样跑完", 报.status === 0 && String(报.stdout).trim() === "50",
+     String(报.status) + " " + JSON.stringify(String(报.stdout).trim()));
+  ok("探针把深度报出来了", /DEPTH \d+/.test(String(报.stderr)), JSON.stringify(String(报.stderr).slice(0, 140)));
+
+  const 静 = spawnSync(exe, [码路], { encoding: "utf8" });
+  ok("不问的时候不出声",
+     !String(静.stderr).includes("DEPTH") && !String(静.stderr).includes("ceiling"),
+     JSON.stringify(String(静.stderr).slice(0, 140)));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

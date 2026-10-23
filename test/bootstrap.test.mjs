@@ -56,7 +56,7 @@ console.log("二、它读进来自举那一层：六份，一百二十三条声�
   let 声明 = 0;
   for (const m of u.modules.values()) 声明 += m.decls.length;
   // 声明数随自举层的规模走：读转义那一处补了一个函数，于是它从 123 长到 124。
-  ok("一百五十二条声明", 声明 === 152, String(声明));
+  ok("一百五十一条声明", 声明 === 151, String(声明));
 }
 
 console.log("三、求值不在 Stage 0 里（两份账都不在）");
