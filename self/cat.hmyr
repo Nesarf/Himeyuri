@@ -1,0 +1,21 @@
+// 回显：从标准输入读一行，写出来，直到读完。
+//
+// 它存在的理由是 read_stdin_line 这一格：一件工具最小能小到这个程度，
+// 而它把「读到一行」与「读到没有了」两种情况都走一遍。
+//
+// 用法：hmyr self/cat.hmyr < 某个文件
+
+fn main() -> Int {
+  var 继续 = true
+  while 继续 {
+    let r = read_stdin_line()
+    if len(r.行) > 0 {
+      print(r.行 + chr(10))
+    } else if !r.结束 {
+      // 空行也是行：照原样写一个换行，不然它会和 EOF 混在一起。
+      print(chr(10))
+    }
+    if r.结束 { 继续 = false }
+  }
+  return 0
+}

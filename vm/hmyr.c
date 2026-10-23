@@ -2213,6 +2213,105 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = 记;
     return 1;
   }
+  /* 从标准输入读一行。交回一个记录：{行, 结束}。
+   * 「结束」是 EOF —— 与「读到一个空行」是两件事，LSP 那种「读到没有为止」
+   * 的循环要能分清它们。板子上没有标准输入，于是那里一律交回结束。
+   * 不添换行、也不去尾随空白（行尾的 \r 除外）：这是原始的一行。 */
+  if (name_is(name_idx, "read_stdin_line")) {
+    if (nargs != 0) { fail("HMYR-R0101", "read_stdin_line takes no arguments"); return 1; }
+    uint16_t *行 = NULL;
+    uint32_t 行长 = 0;
+    int 结束 = 1;
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+    行 = 串存(1);
+#else
+    {
+      size_t cap = 256, n = 0;
+      char *buf = (char *)malloc(cap);
+      if (!buf) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+      int c = 0;
+      for (;;) {
+        c = fgetc(stdin);
+        if (c == EOF || c == '\n') break;
+        if (n + 1 >= cap) {
+          cap *= 2;
+          buf = (char *)realloc(buf, cap);
+          if (!buf) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+        }
+        buf[n++] = (char)c;
+      }
+      结束 = (c == EOF) ? 1 : 0;
+      if (n > 0 && buf[n - 1] == '\r') n--;
+      行 = utf8_to_utf16(buf, n, &行长);
+      free(buf);
+    }
+#endif
+    {
+      Value 记 = v_null();
+      记.tag = T_RECORD;
+      记.rec.n = 2;
+      记.rec.vals = alloc_values(2);
+      记.rec.names = (const uint16_t **)calloc(2, sizeof(uint16_t *));
+      记.rec.name_lens = (uint32_t *)calloc(2, sizeof(uint32_t));
+      static const uint16_t 名行[] = {0x884c};
+      static const uint16_t 名终[] = {0x7ed3, 0x675f};
+      记.rec.names[0] = 名行; 记.rec.name_lens[0] = 1; 记.rec.vals[0] = v_str(行, 行长);
+      记.rec.names[1] = 名终; 记.rec.name_lens[1] = 2; 记.rec.vals[1] = v_bool(结束);
+      *out = 记;
+    }
+    return 1;
+  }
+  /* 从标准输入读 N 个字节。交回 {字节们, 结束}。
+   * 与 read_stdin_line 分开，是因为 JSON-RPC 那类东西的请求体未必只有一行：
+   * 先读头拿到长度，再按长度读这么多字节 —— 两件事，两格。
+   * 结束表示「没读满」：EOF 先到了。 */
+  if (name_is(name_idx, "read_stdin_bytes")) {
+    if (nargs != 1) { fail("HMYR-R0101", "read_stdin_bytes wants one argument"); return 1; }
+    {
+      int ok = 0;
+      double nn = as_num(args[0], &ok);
+      if (!ok) { fail("HMYR-R0130", "read_stdin_bytes wants a number"); return 1; }
+      long want = (long)floor(nn);
+      if (want < 0) want = 0;
+      size_t 得 = 0;
+      int 结束 = 1;
+      unsigned char *buf = (unsigned char *)malloc((size_t)(want ? want : 1));
+      if (!buf) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+      /* 板子上没有标准输入：一个字节也读不到。 */
+      结束 = 1;
+#else
+      while (得 < (size_t)want) {
+        size_t n = fread(buf + 得, 1, (size_t)want - 得, stdin);
+        if (n == 0) break;
+        得 += n;
+      }
+      结束 = (得 < (size_t)want) ? 1 : 0;
+#endif
+      {
+        Value 字节们 = v_null();
+        字节们.tag = T_TUPLE;
+        字节们.ilen = (uint32_t)得;
+        字节们.items = alloc_values((uint32_t)(得 ? 得 : 1));
+        for (size_t i = 0; i < 得; i++) 字节们.items[i] = v_num((double)buf[i]);
+        free(buf);
+        {
+          Value 记 = v_null();
+          记.tag = T_RECORD;
+          记.rec.n = 2;
+          记.rec.vals = alloc_values(2);
+          记.rec.names = (const uint16_t **)calloc(2, sizeof(uint16_t *));
+          记.rec.name_lens = (uint32_t *)calloc(2, sizeof(uint32_t));
+          static const uint16_t 名字节[] = {0x5b57, 0x8282, 0x4eec};
+          static const uint16_t 名终[] = {0x7ed3, 0x675f};
+          记.rec.names[0] = 名字节; 记.rec.name_lens[0] = 3; 记.rec.vals[0] = 字节们;
+          记.rec.names[1] = 名终; 记.rec.name_lens[1] = 2; 记.rec.vals[1] = v_bool(结束);
+          *out = 记;
+        }
+      }
+    }
+    return 1;
+  }
   /* 整份按行切好。给「知道自己要全部」的调用者一个省事的入口。 */
   if (name_is(name_idx, "read_lines")) {
     if (nargs != 1) { fail("HMYR-R0101", "read_lines wants one argument"); return 1; }

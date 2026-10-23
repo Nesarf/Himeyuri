@@ -83,6 +83,46 @@ const 内置 = {
     if (码元.是码元序列(v)) return 起 >= 止 ? 码元.由宿主("") : 码元.切(s, 起, 止);
     return 起 >= 止 ? "" : s.slice(起, 止);
   },
+  // 从标准输入读 N 个字节：交回 {字节们, 结束}。结束表示没读满（EOF 先到了）。
+  read_stdin_bytes: (rt, a) => {
+    const n = Math.max(0, Math.floor(rt.成数(a[0])));
+    const 字节们 = [];
+    while (字节们.length < n) {
+      let b;
+      try { b = rt.cap.terminal.readSync(n - 字节们.length); } catch (err) { b = null; }
+      if (!b || b.length === 0) break;
+      for (let i = 0; i < b.length; i++) 字节们.push(b[i]);
+    }
+    return { 字节们, 结束: 字节们.length < n };
+  },
+  // 从标准输入读一行：交回 {行, 结束}。结束是 EOF，与空行是两件事。
+  // 解码手写：这一份的宿主依赖钉在十项上，而 Buffer 与 Uint8Array 都不在那十项里。
+  read_stdin_line: (rt) => {
+    const 字节们 = [];
+    let 结束 = false;
+    for (;;) {
+      let b;
+      try { b = rt.cap.terminal.readSync(1); } catch (err) { b = null; }
+      if (!b || b.length === 0) { 结束 = true; break; }
+      if (b[0] === 10) break;
+      字节们.push(b[0]);
+    }
+    let s = "";
+    let i = 0;
+    while (i < 字节们.length) {
+      const b0 = 字节们[i];
+      let cp = 0, 续 = 0;
+      if (b0 < 0x80) { cp = b0; 续 = 0; }
+      else if ((b0 & 0xE0) === 0xC0) { cp = b0 & 0x1F; 续 = 1; }
+      else if ((b0 & 0xF0) === 0xE0) { cp = b0 & 0x0F; 续 = 2; }
+      else { cp = b0 & 0x07; 续 = 3; }
+      i++;
+      for (let k = 0; k < 续 && i < 字节们.length; k++) { cp = (cp << 6) | (字节们[i] & 0x3F); i++; }
+      s += String.fromCodePoint(cp);
+    }
+    if (s.endsWith("\r")) s = s.slice(0, -1);
+    return { 行: s, 结束 };
+  },
   // 原始字节：嵌入与打包要它。read_text 会按 UTF-8 解码，二进制一过就坏。
   read_bytes: (rt, a) => {
     const 路径 = rt.成串(a[0]);

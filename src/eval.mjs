@@ -816,6 +816,35 @@ const BUILTINS = {
   // ---- 字符串与字符的基本手术 ----
   // 这几个本是语言的常规能力，此前靠手写替代品绕过去（截/片段各一份、码位换成十项小表、
   // 大小写换成二十六项小表）。规矩改了：语言达不到就先补语言，不是绕。
+  // 从标准输入读 N 个字节：交回 {字节们, 结束}。结束表示没读满（EOF 先到了）。
+  // 与 read_stdin_line 分开，是因为请求体未必只有一行：先读头拿长度，再按长度读。
+  read_stdin_bytes: (rt, args) => {
+    const n = Math.max(0, Math.floor(rt.asNumber(args[0])));
+    const 字节们 = [];
+    while (字节们.length < n) {
+      let b;
+      try { b = rt.cap.terminal.readSync(n - 字节们.length); } catch (err) { b = null; }
+      if (!b || b.length === 0) break;
+      for (let i = 0; i < b.length; i++) 字节们.push(b[i]);
+    }
+    return { 字节们, 结束: 字节们.length < n };
+  },
+  // 从标准输入读一行：交回 {行, 结束}。结束是 EOF —— 与空行是两件事，
+  // 「读到没有为止」的循环要能分清它们。行尾的 \r 去掉，别的空白不动。
+  read_stdin_line: (rt) => {
+    const 段们 = [];
+    let 结束 = false;
+    for (;;) {
+      let b;
+      try { b = rt.cap.terminal.readSync(1); } catch (err) { b = null; }
+      if (!b || b.length === 0) { 结束 = true; break; }
+      if (b[0] === 10) break;
+      段们.push(b);
+    }
+    let s = Buffer.concat(段们).toString("utf8");
+    if (s.endsWith("\r")) s = s.slice(0, -1);
+    return { 行: s, 结束 };
+  },
   // 读一份文件的原始字节：嵌入与打包要用它，而 read_text 会按 UTF-8 解码，
   // 二进制一过就坏。不需要编码参数，也不猜；读不到与 read_text 同一条路。
   read_bytes: (rt, args) => {

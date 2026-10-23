@@ -172,6 +172,16 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 3 { return 坏("slice 要三个参数") }
     return 好(slice(值们[0], 值们[1], 值们[2]))
   }
+  // 从标准输入读 N 个字节：与读一行分成两格，因为请求体未必只有一行。
+  if 名 == "read_stdin_bytes" {
+    if len(值们) != 1 { return 坏("read_stdin_bytes 要一个参数") }
+    return 好(read_stdin_bytes(值们[0]))
+  }
+  // 从标准输入读一行。这一层只转发 —— 交回的记录里有「行」与「结束」两格。
+  if 名 == "read_stdin_line" {
+    if len(值们) != 0 { return 坏("read_stdin_line 不要参数") }
+    return 好(read_stdin_line())
+  }
   // 原始字节：嵌入与打包要它。这一层只转发，读不到由下面那一层说。
   if 名 == "read_bytes" {
     let 欠读 = 要效果(环境, "file", "read_bytes")

@@ -66,6 +66,42 @@ export const 内置表 = {
   thr_count: { 做: () => 数.造(0) },
   // arena：三区模型的桩，字段是函数值；这一份也没有一等函数值。
   arena: { 做: (vm) => vm.坏("HMYR-R0104", "arena is a stub for the zone model: its fields are functions, and this machine has no first-class functions") },
+  // 从标准输入读 N 个字节：交回 {字节们, 结束}。结束表示没读满（EOF 先到了）。
+  read_stdin_bytes: { 做: (vm, a) => {
+    const 原 = 数.下整(vm.成数(a[0]));
+    const n = 数.比(原, 0) < 0 ? 0 : 原;
+    const 字节们 = [];
+    while (字节们.length < n) {
+      let b;
+      try { b = vm.cap.terminal.readSync(n - 字节们.length); } catch { b = null; }
+      if (!b || b.length === 0) break;
+      for (let i = 0; i < b.length; i++) 字节们.push(b[i]);
+    }
+    return new 类记录(new Map([
+      ["字节们", new 类元组(字节们.map((x) => 数.造(x)))],
+      ["结束", 字节们.length < n],
+    ]));
+  } },
+  // 从标准输入读一行：交回 {行, 结束}。结束是 EOF，与空行是两件事。
+  read_stdin_line: { 做: (vm) => {
+    const 段们 = [];
+    let 结束 = false;
+    for (;;) {
+      let b;
+      try { b = vm.cap.terminal.readSync(1); } catch { b = null; }
+      if (!b || b.length === 0) { 结束 = true; break; }
+      if (b[0] === 10) break;
+      段们.push(b);
+    }
+    let s = Buffer.concat(段们).toString("utf8");
+    // 去尾 CR 不用宿主方法：这一份里有断言盯着「不借字符串的方法」。
+    if (s.length > 0 && s[s.length - 1] === "\r") {
+      let t = "";
+      for (let i = 0; i < s.length - 1; i++) t += s[i];
+      s = t;
+    }
+    return new 类记录(new Map([["行", vm.文.由宿主(s)], ["结束", 结束]]));
+  } },
   // 原始字节：嵌入与打包要它。read_text 会按 UTF-8 解码，二进制一过就坏。
   read_bytes: { 效果: "file", 做: (vm, a) => {
     const 路径 = vm.成串(a[0]);

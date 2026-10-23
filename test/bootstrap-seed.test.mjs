@@ -57,7 +57,7 @@ console.log("二、gcc 加上种子，重建出种子自己（这条路里没有
       const 链 = ["lex", "chain", "stmt", "body", "compile", "pack"].map((n) => path.join(ROOT, "self", n + ".hmyr"));
       const 出 = path.join(临, "rebuilt.hmyrb");
       // 注意：这里只有 exe 与源码，没有任何 node 参与。
-      const r = spawnSync(exe, [种子路, 出, ...链], { encoding: "utf8", timeout: 900000, env: { ...process.env, HMYR_STEPS: "4000000000" } });
+      const r = spawnSync(exe, [种子路, 出, ...链], { encoding: "utf8", timeout: 900000, env: { ...process.env, HMYR_STEPS: "4000000000", HMYR_GC: "1" } });
       ok("种子跑得起来，编出了东西", r.status === 0 && fs.existsSync(出), String(r.status) + " " + String(r.stderr).slice(0, 160));
       if (fs.existsSync(出)) {
         const 甲 = fs.readFileSync(种子路), 乙 = fs.readFileSync(出);
@@ -65,7 +65,7 @@ console.log("二、gcc 加上种子，重建出种子自己（这条路里没有
         ok("重建出来的字节与种子完全相同（" + 甲.length + " 字节）", 同, 同 ? "" : 甲.length + " 对 " + 乙.length);
         // 再走一遍：用刚重建出来的那一份当编译器，还要得到同样的字节。
         const 二 = path.join(临, "rebuilt2.hmyrb");
-        const r2 = spawnSync(exe, [出, 二, ...链], { encoding: "utf8", timeout: 900000, env: { ...process.env, HMYR_STEPS: "4000000000" } });
+        const r2 = spawnSync(exe, [出, 二, ...链], { encoding: "utf8", timeout: 900000, env: { ...process.env, HMYR_STEPS: "4000000000", HMYR_GC: "1" } });
         if (r2.status === 0 && fs.existsSync(二)) {
           const 丙 = fs.readFileSync(二);
           ok("再编一遍还是同样的字节（固定点站得住）", 丙.length === 甲.length && Buffer.compare(甲, 丙) === 0, 甲.length + " 对 " + 丙.length);
@@ -95,7 +95,10 @@ console.log("三、种子跑得动真实程序（它不只是能重建自己）"
       // 用种子造一份「跑程序的自举层」：种子本身就是编译器，编出来的是 run.hmyr 那条链。
       const 链 = ["lex", "chain", "stmt", "body", "eval", "run"].map((n) => path.join(ROOT, "self", n + ".hmyr"));
       const 层 = path.join(临, "self.hmyrb");
-      const r = spawnSync(exe, [种子路, 层, ...链], { encoding: "utf8", timeout: 900000, env: { ...process.env, HMYR_STEPS: "4000000000" } });
+      // 这一节编的是 eval 与 run 那条链，单份 eval.hmyr 有五百三十八行，
+      // 而它是「一份一份编」里最大的一份 —— 不开回收时峰值已经贴着四吉的上限。
+      // 所以这里开回收、并且把上限放开：回收不改变答案，只改变账。
+      const r = spawnSync(exe, [种子路, 层, ...链], { encoding: "utf8", timeout: 900000, env: { ...process.env, HMYR_STEPS: "4000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" } });
       ok("种子编出了跑程序那一层", r.status === 0 && fs.existsSync(层), String(r.status) + " " + String(r.stderr).slice(0, 160));
       if (fs.existsSync(层)) {
         const 例 = path.join(ROOT, "examples/twice.hmyr");
