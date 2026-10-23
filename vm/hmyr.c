@@ -537,6 +537,30 @@ static const char *环境(const char *名) {
   return (v && *v) ? v : "";
 }
 
+/* 现在的工作目录（UTF-8）。cwd 与 chdir 共用它 ——
+ * chdir 成功之后要交回新的目录，那是同一条读法。 */
+static char *现在工作在(void) {
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+  return 拼接("", "");
+#elif defined(_WIN32)
+  {
+    wchar_t wbuf[2048];
+    if (_wgetcwd(wbuf, 2048)) {
+      char u[8192];
+      WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, u, (int)sizeof u, NULL, NULL);
+      return 拼接("", u);
+    }
+    return 拼接("", "");
+  }
+#else
+  {
+    char buf[4096];
+    if (getcwd(buf, sizeof buf)) return 拼接("", buf);
+    return 拼接("", "");
+  }
+#endif
+}
+
 /* ---- 一条键队列 ------------------------------------------------------
  *
  * 套件塞键、真终端读键，共用同一条队列。有界（64）：满了就不收，
@@ -1972,25 +1996,9 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   /* ---- 环境与路径：读这台机器在哪儿 ---------------------------------- */
   if (name_is(name_idx, "cwd")) {
     if (nargs != 0) { fail("HMYR-R0101", "cwd takes no arguments"); return 1; }
-#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
-    /* 板子上没有工作目录这个概念：交回空串，而不是编一条路径。 */
-    *out = ascii_text("");
-#elif defined(_WIN32)
-    {
-      wchar_t wbuf[2048];
-      if (_wgetcwd(wbuf, 2048)) {
-        char u[8192];
-        WideCharToMultiByte(CP_UTF8, 0, wbuf, -1, u, (int)sizeof u, NULL, NULL);
-        *out = 路径值(u);
-      } else *out = ascii_text("");
-    }
-#else
-    {
-      char buf[4096];
-      if (getcwd(buf, sizeof buf)) *out = 路径值(buf);
-      else *out = ascii_text("");
-    }
-#endif
+    char *p = 现在工作在();
+    *out = 路径值(p);
+    free(p);
     return 1;
   }
   if (name_is(name_idx, "home_dir")) {
@@ -2189,6 +2197,49 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
 #else
     *out = v_bool(0);
 #endif
+    return 1;
+  }
+  /* ---- 进程：改工作目录 ----------------------------------------------
+   * 成功就交回新的目录（与 JS 那侧同一条约定）；进不去报 R0209。
+   * 板子上没有目录概念，于是这一条在那里一律报进不去 ——
+   * 它不装作成功，因为「换了个地方」在板子上不成立。 */
+  if (name_is(name_idx, "chdir")) {
+    if (nargs != 1) { fail("HMYR-R0101", "chdir wants one argument"); return 1; }
+    Value 路;
+    value_to_text(args[0], &路);
+    char *p = utf16_to_utf8(路.s, 路.slen);
+    const char *目标 = p ? p : "";
+    int 成 = 0;
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+    成 = 0;
+#elif defined(_WIN32)
+    {
+      int 宽长 = MultiByteToWideChar(CP_UTF8, 0, 目标, -1, NULL, 0);
+      if (宽长 > 0) {
+        wchar_t *宽 = (wchar_t *)malloc((size_t)宽长 * sizeof(wchar_t));
+        if (宽) {
+          MultiByteToWideChar(CP_UTF8, 0, 目标, -1, 宽, 宽长);
+          成 = (_wchdir(宽) == 0);
+          free(宽);
+        }
+      }
+    }
+#else
+    成 = (chdir(目标) == 0);
+#endif
+    if (!成) {
+      char m[512];
+      snprintf(m, sizeof m, "cannot enter '%s'", 目标);
+      free(p);
+      fail("HMYR-R0209", m);
+      return 1;
+    }
+    free(p);
+    {
+      char *新 = 现在工作在();
+      *out = 路径值(新);
+      free(新);
+    }
     return 1;
   }
   if (name_is(name_idx, "argv")) {

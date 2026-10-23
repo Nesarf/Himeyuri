@@ -792,6 +792,26 @@ console.log("二十、输入那一组：一条队列，没有终端也不阻塞"
      r.c.trim() === "1 true a false true false", JSON.stringify(r.c.trim()));
 }
 
+console.log("二十一、改工作目录：进去、读回来、再回来");
+{
+  // chdir 会改进程状态，所以程序自己负责回到原处 —— 这一条既测「进得去」，
+  // 也测「交回的是新目录」，还测「回得来」，于是三句都能被断言。
+  const 源码 = [
+    "fn main() -> Int effects(process) {",
+    '  let 原 = cwd()',
+    '  let 新 = chdir(temp_path("chdir-probe"))',
+    '  print(str(len(新) > 0) + " ")',
+    '  print(str(cwd() == 新) + " ")',
+    '  chdir(原)',
+    '  print(str(cwd() == 原))',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "chdir");
+  ok("两台机器都进得去、读得回、回得来", r.js === r.c, JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  ok("答案是 true true true", r.c.trim() === "true true true", JSON.stringify(r.c.trim()));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

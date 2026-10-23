@@ -215,6 +215,11 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 0 { return 坏("console_codepage 不要参数") }
     return 好(console_codepage())
   }
+  // 进程：改工作目录。这一层只转发 —— 进不去时下面那一层报 R0209。
+  if 名 == "chdir" {
+    if len(值们) != 1 { return 坏("chdir 要一个参数") }
+    return 好(chdir(值们[0]))
+  }
   // 输入：一条键队列。这一层只转发 —— 队列与「有没有终端」在下面那一层。
   if 名 == "key_push" {
     if len(值们) != 1 { return 坏("key_push 要一个参数") }

@@ -57,6 +57,15 @@ export const 内置表 = {
     const d = String(vm.成串(a[1]));
     return new 类元组(s.split(d).map((x) => vm.文.由宿主(x)));
   } },
+  // ---- 进程：改工作目录 ----
+  // 成功交回新的目录（与宿主那一份同一条约定）；进不去报 R0209。
+  chdir: { 效果: "process", 做: (vm, a) => {
+    const 目标 = vm.成串(a[0]);
+    try {
+      vm.cap.process.chdir(目标);
+      return vm.文.由宿主(vm.cap.process.cwd());
+    } catch { return vm.坏("HMYR-R0209", "cannot enter '" + 目标 + "'"); }
+  } },
   // ---- 环境与路径：读这台机器在哪儿 ----
   // 两台机器给出不同的字符串是对的：契约写的是「读宿主的位置」，
   // 不是「所有宿主必须同名」。测试因此只断言形状与结尾。
