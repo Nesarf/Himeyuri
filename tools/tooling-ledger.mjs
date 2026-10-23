@@ -73,7 +73,7 @@ export const 账本 = [
     状态: "搬了第一版",
     在哪: "self/lsp.hmyr",
     验收: "lsphmyr",
-    说明: "initialize / shutdown / exit；符号、定义、悬浮还没搬",
+    说明: "initialize / shutdown / exit / didOpen / documentSymbol；符号列表来自自举侧前端，定义与悬浮还没搬",
   },
   {
     名: "格式化器",

@@ -12,6 +12,7 @@
 // 用法：hmyr self/lsp.hmyr
 
 import "../lib/json.hmyr"
+import "./sig.hmyr"
 
 fn 是长度行(行: String) -> Bool {
   if len(行) < 16 { return false }
@@ -71,6 +72,30 @@ fn 取串(对象: Int, 键: String) -> String {
   return ""
 }
 
+// 一段文本按 UTF-8 编码要几个字节。Content-Length 数的是字节，而 len 数的是码元 ——
+// 回话里一旦出现中文，两者就不再相等。代理对按四个字节算（两个码元合起来才是一个字符）。
+// 一段文本按 UTF-8 编码要几个字节。Content-Length 数的是字节，而 len 数的是码元 ——
+// 回话里一旦出现中文，两者就不再相等。代理对按四个字节算（两个码元合起来才是一个字符）。
+fn utf8字节数(文: String) -> Int {
+  var 数 = 0
+  var i = 0
+  while i < len(文) {
+    let o = ord(文[i])
+    var 宽 = 3
+    var 是头 = false
+    if o < 0x80 { 宽 = 1 }
+    if o >= 0x80 && o < 0x800 { 宽 = 2 }
+    if o >= 0xD800 && o <= 0xDBFF {
+      宽 = 4
+      是头 = true
+    }
+    数 = 数 + 宽
+    if 是头 { i = i + 1 }
+    i = i + 1
+  }
+  return 数
+}
+
 fn 应答(id: Int, 结果: Int) -> String {
   return 生成({对象: (("jsonrpc", {串: "2.0"}), ("id", id), ("result", 结果))})
 }
@@ -79,37 +104,62 @@ fn 应答错(id: Int, 码: Int, 话: String) -> String {
   return 生成({对象: (("jsonrpc", {串: "2.0"}), ("id", id), ("error", {对象: (("code", {数: 码}), ("message", {串: 话}))}))})
 }
 
-// 处理一条消息：交回 {文, 停}。解析不动或是通知就交回空文。
-fn 处理(体: String) {
+// 一份文档的符号：名字与「函数」这个类。位置先给零范围 ——
+// 自举侧的签名不记行号列号，编一个出来比留空更糟。
+fn 符号表(文本: String) {
+  let tokens = scan(文本)
+  let 列 = all_signatures(tokens)
+  var 出 = ()
+  var i = 0
+  while i < len(列) {
+    let 名 = 列[i].name
+    出 = 出 + ({对象: (("name", {串: 名}), ("kind", {数: 12}))},)
+    i = i + 1
+  }
+  return {数组: 出}
+}
+
+// 处理一条消息：交回 {文, 停, 文本}。文本是「当前打开的文档」——
+// didOpen 送来它，documentSymbol 用它。状态在这一层过一手，因为语言里没有可变的全局。
+fn 处理(体: String, 文本: String) {
   let p = 解析(体)
-  if !p.ok { return {文: "", 停: false} }
+  if !p.ok { return {文: "", 停: false, 文本: 文本} }
   let 值 = p.值
   let 方法 = 取串(值, "method")
   let id = 取(值, "id")
   if 方法 == "initialize" {
-    let 能力 = {对象: (("textDocumentSync", {数: 1}), ("hoverProvider", {真: 1}))}
-    let 己 = {对象: (("name", {串: "himeyuri"}), ("version", {串: "0.1.0-m7"}))}
-    return {文: 应答(id, {对象: (("capabilities", 能力), ("serverInfo", 己))}), 停: false}
+    let 能力 = {对象: (("textDocumentSync", {数: 1}), ("hoverProvider", {真: 1}), ("documentSymbolProvider", {真: 1}))}
+    let 己 = {对象: (("name", {串: "himeyuri"}), ("version", {串: "0.1.0-m8"}))}
+    return {文: 应答(id, {对象: (("capabilities", 能力), ("serverInfo", 己))}), 停: false, 文本: 文本}
+  }
+  if 方法 == "didOpen" {
+    let 文档 = 取(取(值, "params"), "textDocument")
+    return {文: "", 停: false, 文本: 取串(文档, "text")}
+  }
+  if 方法 == "documentSymbol" {
+    return {文: 应答(id, 符号表(文本)), 停: false, 文本: 文本}
   }
   if 方法 == "shutdown" {
-    return {文: 应答(id, {空: 1}), 停: false}
+    return {文: 应答(id, {空: 1}), 停: false, 文本: 文本}
   }
   if 方法 == "exit" {
-    return {文: "", 停: true}
+    return {文: "", 停: true, 文本: 文本}
   }
-  return {文: 应答错(id, 0 - 32601, "method not found"), 停: false}
+  return {文: 应答错(id, 0 - 32601, "method not found"), 停: false, 文本: 文本}
 }
 
 fn main() -> Int {
   var 跑 = true
+  var 文本 = ""
   while 跑 {
     let m = 读消息()
     if m.结束 {
       跑 = false
     } else {
-      let r = 处理(m.体)
+      let r = 处理(m.体, 文本)
+      文本 = r.文本
       if len(r.文) > 0 {
-        print("Content-Length: " + str(len(r.文)) + "\r\n\r\n" + r.文)
+        print("Content-Length: " + str(utf8字节数(r.文)) + "\r\n\r\n" + r.文)
       }
       if r.停 { 跑 = false }
     }

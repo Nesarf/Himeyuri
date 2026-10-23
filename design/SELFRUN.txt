@@ -228,9 +228,12 @@ HMYR 全面自举：运行时、宿主依赖与启动
                      read_stdin_bytes 交回 {字节们, 结束}，bytes_to_text 把字节解成文本。
                      第一版已经搬了：self/lsp.hmyr 答 initialize（能力与服务器信息）、
                      答 shutdown（空结果）、exit 之后自己停，其余一律回「没有这个方法」。
-                     验收是 test/lsp-hmyr.test.mjs（十项，含「exit 之后不再回话」）。
-                     还没搬的是符号、定义与悬浮签名 —— 那三样要读语法树，而读语法树
-                     该由自举侧那一套前端来做，不是在编辑器插件里再养一个解析器。
+                     第二版加了 didOpen 与 documentSymbol：符号列表来自自举侧的
+                     self/sig.hmyr（all_signatures 读真正的 token 流）。
+                     验收是 test/lsp-hmyr.test.mjs（十五项，含「exit 之后不再回话」
+                     与「Content-Length 数的是字节」—— 回话里一旦有中文，两者不再相等）。
+                     还没搬的是定义与悬浮签名 —— 那两样也要读语法树，而符号这一条
+                     已经证明那条路是通的。
                      回话只用 ASCII：Content-Length 数的是字节，字符串长度数的是码元，
                      两者只在全 ASCII 时相等。
           语料生成   剩下三支：ucd-case（大小写表）、ucd-nfc（归一化表）、
