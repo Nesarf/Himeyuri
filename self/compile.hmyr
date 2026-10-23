@@ -124,6 +124,15 @@ fn 是内置(名: String) -> Bool {
   // 可变数组：编译期认这两个名字，运行时落到 vm/hmyr.c 的 name_is 上。
   if 名 == "数组" { return true }
   if 名 == "设" { return true }
+  // 位运算：八个别名，名字带前缀以免与用户函数同名。
+  if 名 == "位与" { return true }
+  if 名 == "位或" { return true }
+  if 名 == "位异或" { return true }
+  if 名 == "位非" { return true }
+  if 名 == "位右移" { return true }
+  if 名 == "位加" { return true }
+  if 名 == "位循环右移" { return true }
+  if 名 == "位循环左移" { return true }
   if 名 == "field_get" { return true }
   if 名 == "field_has" { return true }
   if 名 == "field_names" { return true }

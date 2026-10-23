@@ -1796,6 +1796,49 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     value_to_text(args[0], out);
     return 1;
   }
+  // 32 位位运算：与 JS 那三份同一套语义（无符号 32 位，移位按 31 取模）。
+  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x4E0E}, 2)) {      /* 位与 */
+    if (nargs != 2) { fail("HMYR-R0160", "位与 wants two arguments"); return 1; }
+    *out = v_num((double)(uint32_t)((uint32_t)args[0].num & (uint32_t)args[1].num));
+    return 1;
+  }
+  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x6216}, 2)) {      /* 位或 */
+    if (nargs != 2) { fail("HMYR-R0160", "位或 wants two arguments"); return 1; }
+    *out = v_num((double)(uint32_t)((uint32_t)args[0].num | (uint32_t)args[1].num));
+    return 1;
+  }
+  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x5F02, 0x6216}, 3)) { /* 位异或 */
+    if (nargs != 2) { fail("HMYR-R0160", "位异或 wants two arguments"); return 1; }
+    *out = v_num((double)(uint32_t)((uint32_t)args[0].num ^ (uint32_t)args[1].num));
+    return 1;
+  }
+  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x975E}, 2)) {      /* 位非 */
+    if (nargs != 1) { fail("HMYR-R0160", "位非 wants one argument"); return 1; }
+    *out = v_num((double)(uint32_t)(~(uint32_t)args[0].num));
+    return 1;
+  }
+  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x53F3, 0x79FB}, 3)) { /* 位右移 */
+    if (nargs != 2) { fail("HMYR-R0160", "位右移 wants two arguments"); return 1; }
+    *out = v_num((double)(uint32_t)((uint32_t)args[0].num >> ((uint32_t)args[1].num & 31u)));
+    return 1;
+  }
+  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x52A0}, 2)) {      /* 位加 */
+    if (nargs != 2) { fail("HMYR-R0160", "位加 wants two arguments"); return 1; }
+    *out = v_num((double)(uint32_t)((uint32_t)args[0].num + (uint32_t)args[1].num));
+    return 1;
+  }
+  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x5FAA, 0x73AF, 0x53F3, 0x79FB}, 5)) { /* 位循环右移 */
+    if (nargs != 2) { fail("HMYR-R0160", "位循环右移 wants two arguments"); return 1; }
+    uint32_t x = (uint32_t)args[0].num, n = (uint32_t)args[1].num & 31u;
+    *out = v_num((double)(n == 0 ? x : ((x >> n) | (x << (32 - n)))));
+    return 1;
+  }
+  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x5FAA, 0x73AF, 0x5DE6, 0x79FB}, 5)) { /* 位循环左移 */
+    if (nargs != 2) { fail("HMYR-R0160", "位循环左移 wants two arguments"); return 1; }
+    uint32_t x = (uint32_t)args[0].num, n = (uint32_t)args[1].num & 31u;
+    *out = v_num((double)(n == 0 ? x : ((x << n) | (x >> (32 - n)))));
+    return 1;
+  }
   if (name_is16(name_idx, (const uint16_t[]){0x6570, 0x7EC4}, 2)) {
     if (nargs != 1) { fail("HMYR-R0150", "数组 wants one argument"); return 1; }
     if (args[0].tag != T_TUPLE) { fail("HMYR-R0150", "数组 wants a tuple"); return 1; }
