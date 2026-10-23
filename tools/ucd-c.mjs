@@ -3,17 +3,18 @@
 // 为什么要有这一件：C 那台机器要判「这个码元是不是字母」，而它不能像 JS 那样
 // 问正则的 p{L}。表必须跟着搬过去，否则「不依赖宿主」只搬了一半。
 //
-// 用法：node tools/ucd-c.mjs
-// 产出：vm/ucd-letter.h、vm/ucd-mark.h
+// 用法：node tools/ucd-c.mjs [输入.txt] [输出目录]
+// 缺省读 runtime/ucd/codepoints.txt，写到 vm/。
 //
-// 表的形状：每两个 uint32_t 一段，起与止都含。按码点升序，二分查找。
-// 段数不多（字母约八百段），所以直接写成 C 数组，不必再做一层压缩。
+// 两个参数是给对拍用的：self/ucd-c.hmyr 是同一件事的另一份写法，
+// 两份喂同一段小样本，产物必须逐字节相同 —— 那比「看起来一样」结实。
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const 源 = path.join(ROOT, "runtime/ucd/codepoints.txt");
+const 源 = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT, "runtime/ucd/codepoints.txt");
+const 出目录 = process.argv[3] ? path.resolve(process.argv[3]) : path.join(ROOT, "vm");
 
 const 文 = fs.readFileSync(源, "utf8");
 const 行们 = 文.split("\n");
@@ -69,7 +70,7 @@ ${行们.join("\n")}
 static const size_t ${名.toLowerCase()}_count = ${列.length};
 #endif
 `;
-  const 出 = path.join(ROOT, "vm", 名.toLowerCase().replace(/_/g, "-") + ".h");
+  const 出 = path.join(出目录, 名.toLowerCase().replace(/_/g, "-") + ".h");
   fs.writeFileSync(出, 文本, "utf8");
   console.log(名 + "：" + 列.length + " 段 → " + path.relative(ROOT, 出));
 };

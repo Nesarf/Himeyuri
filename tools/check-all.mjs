@@ -122,6 +122,7 @@ const SUITES = [
   ["runtimepath", "test/runtime-path.test.mjs", "SPEC M7 - the runtime path and the tool chain are two things: five entry points, no tools in their import closure"],
   ["checkhmyr", "test/check-hmyr.test.mjs", "SPEC M7 - the test scheduler written in Himeyuri: it reads a list, runs three suites, and counts right"],
   ["embedhmyr", "test/embed-hmyr.test.mjs", "SPEC M7 - the embedder written in Himeyuri: read_bytes, hex bytes, a C array that starts with HMYRB"],
+  ["ucdchmyr", "test/ucd-c-hmyr.test.mjs", "SPEC M7 - the table generator written in Himeyuri: two implementations, one sample, byte-for-byte identical tables"],
   ["manifest", "test/manifest.test.mjs", "SPEC M7 - the distribution manifest: everything it lists actually exists, and the minimal set is exactly fifteen"],
   ["helper", "test/helper.test.mjs", "SPEC M7 - the assistant: a code explains itself, a word searches the meanings, and a miss still hands back the list"],
   ["verify", "test/verify.test.mjs", "SPEC M7 - the manifest verifier: it says pass when it matches, and it really says fail when something was changed"],

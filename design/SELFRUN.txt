@@ -207,14 +207,19 @@ HMYR 全面自举：运行时、宿主依赖与启动
               全部，四万三千字节摊成二十六万字符的 C 文本，逐字节拼会顶到四吉；
               所以它先入行、再折半拼接，与 self/compile.hmyr 的 拼两半 同一个形状。
 
+        已搬，语料生成的第一支：self/ucd-c.hmyr 从 codepoints.txt 生成两张
+        C 用的区间表（字母与记号）。验收是最结实的那种对拍：两份实现喂同一段
+        两千行的小样本，产物逐字节相同（test/ucd-c-hmyr.test.mjs，十一项）。
+        为此 tools/ucd-c.mjs 加了可选的输入与输出目录参数，缺省行为不变。
+
         还没搬，按代价排：
           格式化器   src/format.mjs 二百零九行，要「读 AST 再写文本」；
                      自举侧那份 parse.hmyr 只认表达式，完整的语句树在
                      stmt.hmyr 与 body.hmyr 里 —— 接口要另接一层。
           LSP        src/lsp.mjs 一百五十四行，JSON-RPC 走 stdio；
-                     lib/json.hmyr 已经能把 JSON 读成数据结构。
-          语料生成   ucd 那四支约五百七十行，要读五十兆的 UCD 文本；
-                     慢，但不需要新能力。
+                     而世界面还缺「读 stdin 的一行」—— 这一项得先补那一格。
+          语料生成   剩下三支：ucd-case（大小写表）、ucd-nfc（归一化表）、
+                     ucd（全码点扫描）。它们与 ucd-c 同一个形状，但数据量大得多。
           打包发布   package/release/manifest/verify 约三百九十行，要一个自己的
                      deflate —— 语言里没有压缩，这一项得先有压缩才能搬。
 

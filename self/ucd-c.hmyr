@@ -1,0 +1,160 @@
+// 从 codepoints.txt 生成两张 C 用的区间表：字母（L*）与记号（M*）。
+//
+// 这是 tools/ucd-c.mjs 的 HMYR 版，也是「语料生成」这一项的第一支。
+// 两份实现喂同一段小样本时，产物必须逐字节相同 —— 验收就那么写的。
+//
+// 形状：每两个 uint32_t 一段，起与止都含，按码点升序。
+// 一行一个码点，字段是「U+XXXX;名字;类别;块;文字」。
+//
+// 用法：hmyr self/ucd-c.hmyr <输入.txt> <输出目录>
+
+fn 十六进制值(文: String) -> Int {
+  var v = 0
+  var i = 0
+  while i < len(文) {
+    let c = 文[i]
+    var d = 0 - 1
+    var k = 0
+    while k < 10 {
+      if c == "0123456789"[k] { d = k }
+      k = k + 1
+    }
+    var k2 = 0
+    while k2 < 6 {
+      if c == "abcdef"[k2] { d = 10 + k2 }
+      if c == "ABCDEF"[k2] { d = 10 + k2 }
+      k2 = k2 + 1
+    }
+    if d >= 0 { v = v * 16 + d }
+    i = i + 1
+  }
+  return v
+}
+
+fn 十六进制写法(n: Int) -> String {
+  if n == 0 { return "0" }
+  let 表 = "0123456789abcdef"
+  var 出 = ""
+  var 余 = n
+  while 余 > 0 {
+    let 低 = 余 % 16
+    出 = 表[低] + 出
+    余 = (余 - 低) / 16
+  }
+  return 出
+}
+
+// 收集：不连续时开新段，并把上一段的止补上（补的是最后见到的那个码点，
+// 不是「下一段起减一」—— 段与段之间有空洞，减一那一下会多算进去）。
+// 两本账一起返回：语言的函数只交回一个值，所以包成元组。
+fn 收(起们: Int, 止们: Int, 上一位: Int, cp: Int) {
+  if cp != 上一位 + 1 {
+    if 上一位 >= 0 { return (起们 + (cp,), 止们 + (上一位,)) }
+    return (起们 + (cp,), 止们)
+  }
+  return (起们, 止们)
+}
+
+// 文件名：大写表名转小写，下划线换成连字符 —— 与 JS 版同一条规矩。
+fn 文件名(名: String) -> String {
+  let 小 = to_lower(名)
+  var 出 = ""
+  var i = 0
+  while i < len(小) {
+    if 小[i] == "_" { 出 = 出 + "-" } else { 出 = 出 + 小[i] }
+    i = i + 1
+  }
+  return 出
+}
+
+fn 写表(名: String, 说: String, 起们: Int, 止们: Int, 目录: String) -> Int {
+  let 段数 = len(起们)
+  var 平 = ()
+  var i = 0
+  while i < 段数 {
+    平 = 平 + (起们[i], 止们[i])
+    i = i + 1
+  }
+  var 文 = "/* " + 说 + chr(10)
+  文 = 文 + " *" + chr(10)
+  文 = 文 + " * 由 tools/ucd-c.mjs 从 runtime/ucd/codepoints.txt 生成，别手改。" + chr(10)
+  文 = 文 + " * 每两个数一段：起、止，两端都含。按码点升序。" + chr(10)
+  文 = 文 + " * " + str(段数) + " 段。" + chr(10)
+  文 = 文 + " */" + chr(10)
+  文 = 文 + "#ifndef HMYR_" + 名 + "_H" + chr(10)
+  文 = 文 + "#define HMYR_" + 名 + "_H" + chr(10)
+  文 = 文 + "#include <stdint.h>" + chr(10)
+  文 = 文 + "#include <stddef.h>" + chr(10) + chr(10)
+  文 = 文 + "static const uint32_t " + to_lower(名) + "_ranges[] = {" + chr(10)
+  var 行 = "  "
+  var 列 = 0
+  var k = 0
+  while k < len(平) {
+    行 = 行 + "0x" + 十六进制写法(to_int(平[k])) + "u"
+    列 = 列 + 1
+    if 列 >= 8 {
+      文 = 文 + 行 + "," + chr(10)
+      行 = "  "
+      列 = 0
+    } else if k + 1 < len(平) {
+      行 = 行 + ", "
+    }
+    k = k + 1
+  }
+  if 列 > 0 { 文 = 文 + 行 + "," + chr(10) }
+  文 = 文 + "};" + chr(10) + chr(10)
+  文 = 文 + "static const size_t " + to_lower(名) + "_count = " + str(段数) + ";" + chr(10)
+  文 = 文 + "#endif" + chr(10)
+  write_text(目录 + "/" + 文件名(名) + ".h", 文)
+  return 段数
+}
+
+fn main() -> Int effects(file) {
+  let 参 = argv()
+  if len(参) < 3 {
+    print("用法：hmyr self/ucd-c.hmyr <输入.txt> <输出目录>" + chr(10))
+    return 2
+  }
+  let 文 = read_text(参[1])
+  let 行们 = split(文, chr(10))
+  var 字起 = ()
+  var 字止 = ()
+  var 记起 = ()
+  var 记止 = ()
+  var 字上 = 0 - 2
+  var 记上 = 0 - 2
+  var i = 0
+  while i < len(行们) {
+    let 行 = 行们[i]
+    if len(行) > 0 {
+      let 段 = split(行, ";")
+      if len(段) >= 3 {
+        let 码文 = 段[0]
+        if len(码文) >= 3 && slice(码文, 0, 2) == "U+" {
+          let cp = 十六进制值(slice(码文, 2, len(码文)))
+          let 类 = 段[2]
+          if len(类) > 0 && slice(类, 0, 1) == "L" {
+            let 果 = 收(字起, 字止, 字上, cp)
+            字起 = 果[0]
+            字止 = 果[1]
+            字上 = cp
+          } else if len(类) > 0 && slice(类, 0, 1) == "M" {
+            let 果2 = 收(记起, 记止, 记上, cp)
+            记起 = 果2[0]
+            记止 = 果2[1]
+            记上 = cp
+          }
+        }
+      }
+    }
+    i = i + 1
+  }
+  // 最后一段的止：它没有「下一个起」可以提醒，所以在这里补。
+  if len(字止) < len(字起) { 字止 = 字止 + (字上,) }
+  if len(记止) < len(记起) { 记止 = 记止 + (记上,) }
+  let 甲 = 写表("UCD_LETTER", "Unicode 里所有 L* 类（字母）的码点区间", 字起, 字止, 参[2])
+  let 乙 = 写表("UCD_MARK", "Unicode 里所有 M* 类（记号，组合用）的码点区间", 记起, 记止, 参[2])
+  print("UCD_LETTER：" + str(甲) + " 段" + chr(10))
+  print("UCD_MARK：" + str(乙) + " 段" + chr(10))
+  return 0
+}
