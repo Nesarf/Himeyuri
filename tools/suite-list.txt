@@ -118,8 +118,14 @@ fmthmyr	test/fmt-hmyr.test.mjs
 elsenewline	test/else-newline.test.mjs
 selfcontained	test/self-contained.test.mjs
 deflate	test/deflate.test.mjs
+tree	test/tree.test.mjs
+array	test/array.test.mjs
 inflate	test/inflate.test.mjs
 zip	test/zip.test.mjs
+zipmulti	test/zip-multi.test.mjs
+bitops	test/bitops.test.mjs
+sha256	test/sha256.test.mjs
+verifyhmyr	test/verify-hmyr.test.mjs
 manifest	test/manifest.test.mjs
 helper	test/helper.test.mjs
 verify	test/verify.test.mjs

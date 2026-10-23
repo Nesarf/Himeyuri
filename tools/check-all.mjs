@@ -138,6 +138,7 @@ const SUITES = [
   ["zipmulti", "test/zip-multi.test.mjs", "SPEC M7 - several members in one archive: N central entries with their own offsets, read back by parsing the archive ourselves"],
   ["bitops", "test/bitops.test.mjs", "SPEC M7 - 32-bit bit operations written without bit operators, every answer checked against node's own"],
   ["sha256", "test/sha256.test.mjs", "SPEC M7 - SHA-256 in Himeyuri: empty, one byte, abc, and three sizes that straddle the block boundary, all against node"],
+  ["verifyhmyr", "test/verify-hmyr.test.mjs", "SPEC M7 - a manifest is verified in Himeyuri: every entry's hash, and the entry main is not stolen by the imported self-test"],
   ["manifest", "test/manifest.test.mjs", "SPEC M7 - the distribution manifest: everything it lists actually exists, and the minimal set is exactly fifteen"],
   ["helper", "test/helper.test.mjs", "SPEC M7 - the assistant: a code explains itself, a word searches the meanings, and a miss still hands back the list"],
   ["verify", "test/verify.test.mjs", "SPEC M7 - the manifest verifier: it says pass when it matches, and it really says fail when something was changed"],

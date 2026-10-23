@@ -101,8 +101,15 @@ export const 账本 = [
     状态: "搬了第一版",
     在哪: "self/zip.hmyr",
     验收: "zip",
-    说明: "ZIP 容器（stored 与 deflate 两种成员、查表 CRC32）：43 KB 的包 1.2 秒写完；deflate 编码与解码都在 HMYR 里；清单与发布流程仍待",
+    说明: "ZIP 容器（stored 与 deflate 两种成员、查表 CRC32）：43 KB 的包 1.2 秒写完；deflate 编码与解码都在 HMYR 里；manifest 与 release 仍是 JS",
     证明: ["tools/package.mjs", "tools/release.mjs", "tools/manifest.mjs", "tools/verify.mjs"],
+  },
+  {
+    名: "清单核对",
+    状态: "搬了第一版",
+    在哪: "self/verify.hmyr",
+    验收: "verifyhmyr",
+    说明: "逐行扫清单、逐项算 sha256 来比对：21568 字节的清单 64 秒、两百零一项全对；整份的 digest 还没接，那一步要重新序列化",
   },
 ];
 

@@ -1,0 +1,132 @@
+// 验一份清单：逐行扫，不做整份解析。
+//
+// 为什么不解析整份：json.hmyr 的解析器用元组追加写，二十一 KB 的清单会让它平方级超时。
+// 而清单是 JSON.stringify(x, null, 2) 生成的，形状固定 —— 每项一行，键在值的前面。
+// 于是这里按行扫，快得多；代价写明：它只验「每项的哈希」，验不了整份的 digest。
+
+import "./sha256.hmyr"
+
+fn 前16(十六: String) -> String {
+  return slice(十六, 0, 16)
+}
+
+fn 找(s: String, 片: String, i: Int) -> Int {
+  if i + len(片) > len(s) { return 0 - 1 }
+  if slice(s, i, i + len(片)) == 片 { return i }
+  return 找(s, 片, i + 1)
+}
+
+// 一行里「第一个引号对」之间的那段，也就是键名。
+//
+// 这个函数是一次真实的错误换来的：早先判断的是「这一行含不含某个键的字符串」，
+// 而清单里有一个套件就叫 sha256，它的 name 行写着 "name": "sha256" ——
+// 于是那一行被当成了哈希行，读出来的「哈希」是字面量 sha256，
+// 标签却是上一项的路径。症状是「有一项莫名其妙不对，而且写着 sha256」。
+// 判键名，不判内容。
+fn 键(s: String) -> String {
+  let 一 = 找(s, "\"", 0)
+  if 一 < 0 { return "" }
+  let 二 = 找(s, "\"", 一 + 1)
+  if 二 < 0 { return "" }
+  return slice(s, 一 + 1, 二)
+}
+
+// 冒号之后第一对引号之间：值。
+fn 值(s: String) -> String {
+  let 冒 = 找(s, ":", 0)
+  if 冒 < 0 { return "" }
+  let 一 = 找(s, "\"", 冒 + 1)
+  if 一 < 0 { return "" }
+  let 二 = 找(s, "\"", 一 + 1)
+  if 二 < 0 { return "" }
+  return slice(s, 一 + 1, 二)
+}
+
+// 找某个顶层键所在的行号（"tools" 与 "documents" 两段的分界）。
+// 同样用键名比：有个套件可能就叫 tools。
+fn 行号(s: String, 名: String) -> Int {
+  let 行们 = split(s, chr(10))
+  var i = 0
+  while i < len(行们) {
+    if 键(行们[i]) == 名 { return i }
+    i = i + 1
+  }
+  return 0 - 1
+}
+
+// 一件：标签（用来印）、路（要读的文件）、写（清单里写的哈希前十六位）、
+// 行（那一行的原文 —— 不通过时一起印出来，证据跟着结论走）。
+fn 验一件(标签: String, 路: String, 写: String, 对: Int, 错: Int, 缺: Int, 说: String, 行: String) effects(file) {
+  if file_exists(路) == false {
+    return {对: 对, 错: 错, 缺: 缺 + 1, 说: 说 + "  [缺] " + 标签 + chr(10)}
+  }
+  let 算 = 前16(sha256(read_bytes(路)))
+  if 算 == 写 {
+    return {对: 对 + 1, 错: 错, 缺: 缺, 说: 说}
+  }
+  return {对: 对, 错: 错 + 1, 缺: 缺, 说: 说 + "  [不通过] " + 标签 + "：写着 " + 写 + "，算出来 " + 算 + chr(10) + "  那一行是 " + 行 + chr(10)}
+}
+
+fn main() -> Int effects(file, process) {
+  let 参 = argv()
+  if len(参) < 2 {
+    print("用法：hmyr self/verify.hmyr <清单.json>" + chr(10))
+    return 2
+  }
+  let 文 = read_text(参[1])
+  let 行们 = split(文, chr(10))
+  // 两段的分界：name 那几项要补前缀，而补哪一个由「它在哪一段里」决定。
+  let 工具起 = 行号(文, "tools")
+  let 文档起 = 行号(文, "documents")
+
+  var 对 = 0
+  var 错 = 0
+  var 缺 = 0
+  var 说 = ""
+  var 上键 = ""
+  var 上值 = ""
+
+  var i = 0
+  while i < len(行们) {
+    let 行 = 行们[i]
+    let 键名 = 键(行)
+    // 只在哈希行上动手：它的上一行给出路径。
+    if 键名 == "sha256" {
+      let 写 = 值(行)
+      var 路 = 上值
+      if 上键 == "name" {
+        // 名字要补前缀：tools 段补 tools/，documents 段补 design/。
+        if 文档起 >= 0 && i > 文档起 {
+          路 = "design/" + 上值
+        } else if 工具起 >= 0 && i > 工具起 {
+          路 = "tools/" + 上值
+        }
+      }
+      let r = 验一件(路, 路, 写, 对, 错, 缺, 说, 行)
+      对 = r.对
+      错 = r.错
+      缺 = r.缺
+      说 = r.说
+    } else if 键名 == "file" {
+      上键 = "file"
+      上值 = 值(行)
+    } else if 键名 == "path" {
+      上键 = "path"
+      上值 = 值(行)
+    } else if 键名 == "name" {
+      上键 = "name"
+      上值 = 值(行)
+    }
+    i = i + 1
+  }
+
+  print(说)
+  print("  对得上 " + str(对) + " 项 · 不对 " + str(错) + " 项 · 缺 " + str(缺) + " 项" + chr(10))
+  print("  注：这份实现只验每项的哈希，不验整份的 digest —— 那一步要重新序列化，见文件头。" + chr(10))
+  if 错 == 0 && 缺 == 0 {
+    print("  通过" + chr(10))
+    return 0
+  }
+  print("  不通过" + chr(10))
+  return 1
+}

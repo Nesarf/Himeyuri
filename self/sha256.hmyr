@@ -142,7 +142,7 @@ fn 填充(字节们: Int) {
   while (len(块们) * 1024 + len(小块) + 8) % 64 != 0 {
     小块 = 小块 + (0,)
   }
-  let 位长 = 原长 * 8
+  var 位长 = 原长 * 8
   var 倍量 = 倍(56)
   var k = 0
   while k < 8 {
@@ -194,7 +194,7 @@ fn sha256(字节们: Int) -> String {
   return 出
 }
 
-fn main() -> Int effects(file) {
+fn main() -> Int effects(file, process) {
   let 参 = argv()
   if len(参) < 2 {
     print("用法：hmyr self/sha256.hmyr <文件>" + chr(10))

@@ -331,7 +331,12 @@ export const 迹输出 = () => {
 //
 // 一个真实的差别：加载器交回的是「按依赖顺序排好的模块」，而这里把它们的函数表并起来。
 // 重名先到者赢（加载器那边已经为这件事报过 W0302）。
+//
+// 但「先到者赢」对 main 不成立：依赖排在前面，被加载的主文件排在最后，
+// 于是 self/verify.hmyr 的 main 会输给它 import 的 sha256.hmyr 的自测 main ——
+// 跑了半天，输出的是别人算出来的哈希。所以入口那一份要显式交上去。
 export const 跑字节码 = (unit, 选项 = {}) => {
   const 几份 = unit.order.map((文件) => 编译模块(unit.modules.get(文件)));
-  return new 虚拟机(合并程序(几份), 选项);
+  const 入口份 = 几份.length > 0 ? 几份[几份.length - 1] : null;
+  return new 虚拟机(合并程序(几份, 入口份), 选项);
 };

@@ -73,6 +73,21 @@ console.log("生成：与 node 的 JSON.stringify 逐字节一致");
   }
 }
 
+console.log("从文本：UTF-8 编码与 node 的 Buffer 逐字节一致");
+{
+  const 从文本 = (s) => rt.callFunction(rt.functions.get("从文本"), [s], null);
+  const 平 = (元组) => { const 出 = []; const n = 元组.length; for (let i = 0; i < n; i++) 出.push(元组[i]); return 出; };
+  const 比 = (标签, 文) => {
+    const 得 = 平(从文本(文));
+    const 应 = [...Buffer.from(文, "utf8")];
+    const 同 = 得.length === 应.length && 得.every((b, i) => b === 应[i]);
+    ok(标签 + " 一致", 同, 得.length + " 字节对 " + 应.length + " 字节");
+  };
+  for (const 文 of ["", "abc", "琥珀音", "a琥珀b", "日本語のテスト"]) 比("从文本 " + JSON.stringify(文), 文);
+  // 1024 字节一块，这一条跨过块边界：折平若把块序弄反，这里会现形。
+  比("从文本 跨过 1024 字节块边界", "琥珀".repeat(700));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
