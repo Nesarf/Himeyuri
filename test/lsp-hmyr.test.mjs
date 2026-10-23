@@ -52,6 +52,8 @@ if (!有编译器) {
       { jsonrpc: "2.0", id: 1, method: "initialize", params: {} },
       { jsonrpc: "2.0", method: "didOpen", params: { textDocument: { uri: "file:///t.hmyr", languageId: "hmyr", version: 1, text: 源码 } } },
       { jsonrpc: "2.0", id: 2, method: "documentSymbol", params: { textDocument: { uri: "file:///t.hmyr" } } },
+      { jsonrpc: "2.0", id: 3, method: "definition", params: { textDocument: { uri: "file:///t.hmyr" }, position: { line: 0, character: 3 } } },
+      { jsonrpc: "2.0", id: 4, method: "hover", params: { textDocument: { uri: "file:///t.hmyr" }, position: { line: 0, character: 3 } } },
       { jsonrpc: "2.0", id: 3, method: "shutdown" },
       { jsonrpc: "2.0", method: "exit" },
     ];
@@ -67,8 +69,8 @@ if (!有编译器) {
     const 出 = String(r.stdout || "");
     ok("回话带着 Content-Length 头", 出.includes("Content-Length: "), JSON.stringify(出.slice(0, 80)));
     ok("第一条回的是 initialize 的能力", 出.includes('"capabilities"') && 出.includes('"id":1'), "");
-    ok("能力里说会列符号", 出.includes('"documentSymbolProvider":true'), "");
-    ok("三回话（初始化、符号、关闭）", 出.split("Content-Length:").length - 1 === 3, String(出.split("Content-Length:").length - 1));
+    ok("能力里说会列符号、给定义、给悬浮", 出.includes('"documentSymbolProvider":true') && 出.includes('"definitionProvider":true') && 出.includes('"hoverProvider":true'), "");
+    ok("五回话（初始化、符号、定义、悬浮、关闭）", 出.split("Content-Length:").length - 1 === 5, String(出.split("Content-Length:").length - 1));
     ok("没有一行不通过", !出.includes("不通过"), "");
 
     console.log("三、列符号：didOpen 送来的文档里两个函数都列得出");
@@ -76,7 +78,19 @@ if (!有编译器) {
     ok("第二个函数列出来了", 出.includes('"name":"二"'), "");
     ok("符号的类是函数（12）", 出.includes('"kind":12'), "");
 
-    console.log("四、Content-Length 数的是字节，不是码元");
+    console.log("四、定义：指着名字问，答的是它声明在哪儿");
+    {
+      ok("定义答了，而且指向名字那一格", 出.includes('"id":3') && 出.includes('"start":{"line":0,"character":3}') && 出.includes('"end":{"line":0,"character":4}'), JSON.stringify(出.slice(0, 400)));
+      ok("定义带着文档地址", 出.includes('"uri":"file:///t.hmyr"'), "");
+    }
+
+    console.log("五、悬浮：指着名字问，答的是一行签名");
+    {
+      ok("悬浮答了", 出.includes('"id":4'), "");
+      ok("签名排成一行", 出.includes('"value":"fn 一() -> Int"'), JSON.stringify(出.slice(-200)));
+    }
+
+        console.log("四、Content-Length 数的是字节，不是码元");
     {
       // 按字节切开：头是 Content-Length: N，随后空行，随后正好 N 字节的体 ——
       // 而那个体必须能单独解析成 JSON。这一条是实的：如果 N 按码元算（偏小），
@@ -98,7 +112,7 @@ if (!有编译器) {
         at = 体起 + n;
         条数++;
       }
-      ok("三条回话都按字节切开、每条都是完整 JSON", 全对 && 条数 === 3, 第一处 + " 条数=" + 条数);
+      ok("五条回话都按字节切开、每条都是完整 JSON", 全对 && 条数 === 5, 第一处 + " 条数=" + 条数);
       ok("含中文的回话字节数大于码元数", Buffer.byteLength(出) > 出.length, Buffer.byteLength(出) + " 对 " + 出.length);
     }
   }

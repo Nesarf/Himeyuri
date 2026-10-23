@@ -73,7 +73,10 @@ console.log("\nsignature by signature, against the JavaScript reader");
 for (const source of SIGNATURES) {
   const mine = attempt(() => read(source));
   const theirs = attempt(() => jsSignature(source));
-  const same = !mine.error && !theirs.error && JSON.stringify(mine.value) === JSON.stringify(theirs.value);
+  // 自举侧的签名多一个 at（名字的码元偏移）：那是 LSP 要的，而宿主那一份算不出它。
+  // 比对时把多出来的那个字段摘掉，只比两边都认的字段。
+  const 去at = (o) => { if (!o || typeof o.at !== "number") return o; const { at, ...其余 } = o; return 其余; };
+  const same = !mine.error && !theirs.error && JSON.stringify(去at(mine.value)) === JSON.stringify(theirs.value);
   ok(source.trim().slice(0, 46), same, mine.error || theirs.error || (JSON.stringify(mine.value) + " vs " + JSON.stringify(theirs.value)));
 }
 

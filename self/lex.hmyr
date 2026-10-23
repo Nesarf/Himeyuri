@@ -180,32 +180,32 @@ fn tokenize(s: String, at: Int, acc: Int, keep_lines: Bool) {
   if i >= len(s) { return acc }
   if s[i] == "\n" {
     // 到这里只能是「保留换行」，不保留的情形已在上面被吃掉
-    return tokenize(s, i + 1, acc + ({kind: "newline", text: "\n"},), keep_lines)
+    return tokenize(s, i + 1, acc + ({kind: "newline", text: "\n", at: i},), keep_lines)
   }
 
   // r"..." 是一个字符串，不是「标识符 r 加一个字符串」
   if (s[i] == "r" || s[i] == "R") && i + 1 < len(s) && s[i + 1] == "\"" {
     let raw = read_string(s, i + 2, "")
-    return tokenize(s, raw.next, acc + ({kind: "string", text: raw.text},), keep_lines)
+    return tokenize(s, raw.next, acc + ({kind: "string", text: raw.text, at: i},), keep_lines)
   }
   if is_ident_start(s[i]) {
     let got = read_ident(s, i, "")
-    return tokenize(s, got.next, acc + ({kind: "ident", text: nfc(got.text)},), keep_lines)
+    return tokenize(s, got.next, acc + ({kind: "ident", text: nfc(got.text), at: i},), keep_lines)
   }
   if is_digit(s[i]) {
     if s[i] == "0" && i + 1 < len(s) && (s[i + 1] == "x" || s[i + 1] == "X" || s[i + 1] == "b" || s[i + 1] == "B" || s[i + 1] == "o" || s[i + 1] == "O") {
       let based = read_based(s, i + 2, slice(s, i, i + 2))
-      return tokenize(s, based.next, acc + ({kind: "int", text: based.text},), keep_lines)
+      return tokenize(s, based.next, acc + ({kind: "int", text: based.text, at: i},), keep_lines)
     }
     let got = read_number(s, i, "")
-    return tokenize(s, got.next, acc + ({kind: "int", text: got.text},), keep_lines)
+    return tokenize(s, got.next, acc + ({kind: "int", text: got.text, at: i},), keep_lines)
   }
   if s[i] == "\"" {
     let got = read_string(s, i + 1, "")
-    return tokenize(s, got.next, acc + ({kind: "string", text: got.text},), keep_lines)
+    return tokenize(s, got.next, acc + ({kind: "string", text: got.text, at: i},), keep_lines)
   }
   let got = read_punct(s, i)
-  return tokenize(s, got.next, acc + ({kind: "punct", text: got.text},), keep_lines)
+  return tokenize(s, got.next, acc + ({kind: "punct", text: got.text, at: i},), keep_lines)
 }
 
 fn scan(text: String) {

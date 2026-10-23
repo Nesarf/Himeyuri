@@ -122,6 +122,8 @@ fn signature_at(tokens: Int, i: Int, is_pub: Bool) {
   if !is_word(t, "fn") { return {node: {kind: "err", text: t.text}, next: i + 1} }
   if i + 1 >= len(tokens) { return {node: {kind: "err", text: "fn"}, next: i + 1} }
   let name = tokens[i + 1].text
+  // 声明在源码里的位置：名字那个 token 的码元偏移。要行列时由调用方按原文换算。
+  let 起 = tokens[i + 1].at
   if i + 2 >= len(tokens) || !is_punct(tokens[i + 2], "(") {
     return {node: {kind: "err", text: "fn " + name}, next: i + 1}
   }
@@ -144,6 +146,7 @@ fn signature_at(tokens: Int, i: Int, is_pub: Bool) {
   return {
     node: {
       kind: "fn",
+      at: 起,
       pub: is_pub,
       name: name,
       params: got.list,

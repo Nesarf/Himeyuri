@@ -104,6 +104,85 @@ fn 应答错(id: Int, 码: Int, 话: String) -> String {
   return 生成({对象: (("jsonrpc", {串: "2.0"}), ("id", id), ("error", {对象: (("code", {数: 码}), ("message", {串: 话}))}))})
 }
 
+// 一个字符算不算「词里的字」。中文与全角都算 —— 这门语言的标识符允许它们。
+fn 是词字(c: String) -> Bool {
+  let o = ord(c)
+  if o >= 48 && o <= 57 { return true }
+  if o >= 65 && o <= 90 { return true }
+  if o >= 97 && o <= 122 { return true }
+  if o >= 128 { return true }
+  return c == "_"
+}
+
+// 按行列从原文里取出那个词。位置给的是零基行列，与 LSP 一致。
+fn 词在(文本: String, 行: Int, 列: Int) -> String {
+  let 行们 = split(文本, chr(10))
+  if 行 >= len(行们) { return "" }
+  let 该行 = 行们[行]
+  var 起 = 列
+  var 左停 = false
+  while 起 > 0 && !左停 {
+    if 是词字(该行[起 - 1]) { 起 = 起 - 1 } else { 左停 = true }
+  }
+  var 止 = 列
+  var 右停 = false
+  while 止 < len(该行) && !右停 {
+    if 是词字(该行[止]) { 止 = 止 + 1 } else { 右停 = true }
+  }
+  if 止 <= 起 { return "" }
+  return slice(该行, 起, 止)
+}
+
+// 码元偏移换成行列。LSP 的 range 要行列，而 token 只记偏移。
+fn at转行列(文本: String, at: Int) {
+  var 行 = 0
+  var 列 = 0
+  var i = 0
+  var 止 = at
+  if 止 > len(文本) { 止 = len(文本) }
+  while i < 止 {
+    if 文本[i] == chr(10) {
+      行 = 行 + 1
+      列 = 0
+    } else {
+      列 = 列 + 1
+    }
+    i = i + 1
+  }
+  return {行: 行, 列: 列}
+}
+
+fn 取数(对象: Int, 键: String) -> Int {
+  let v = 取(对象, 键)
+  if field_has(v, "数") { return v.数 }
+  return 0
+}
+
+fn 找签名(列: Int, 名: String) {
+  var i = 0
+  while i < len(列) {
+    if 列[i].name == 名 { return 列[i] }
+    i = i + 1
+  }
+  return {空: 1}
+}
+
+// 一条签名排成一行：悬浮签名要的就是这一行。
+fn 签名文字(签: Int) -> String {
+  var 文 = "fn " + 签.name + "("
+  var i = 0
+  while i < len(签.params) {
+    if i > 0 { 文 = 文 + ", " }
+    文 = 文 + 签.params[i].name
+    if len(签.params[i].type) > 0 { 文 = 文 + ": " + 签.params[i].type }
+    i = i + 1
+  }
+  文 = 文 + ")"
+  if len(签.returns) > 0 { 文 = 文 + " -> " + 签.returns }
+  return 文
+}
+
+
 // 一份文档的符号：名字与「函数」这个类。位置先给零范围 ——
 // 自举侧的签名不记行号列号，编一个出来比留空更糟。
 fn 符号表(文本: String) {
@@ -128,7 +207,7 @@ fn 处理(体: String, 文本: String) {
   let 方法 = 取串(值, "method")
   let id = 取(值, "id")
   if 方法 == "initialize" {
-    let 能力 = {对象: (("textDocumentSync", {数: 1}), ("hoverProvider", {真: 1}), ("documentSymbolProvider", {真: 1}))}
+    let 能力 = {对象: (("textDocumentSync", {数: 1}), ("hoverProvider", {真: 1}), ("documentSymbolProvider", {真: 1}), ("definitionProvider", {真: 1}))}
     let 己 = {对象: (("name", {串: "himeyuri"}), ("version", {串: "0.1.0-m8"}))}
     return {文: 应答(id, {对象: (("capabilities", 能力), ("serverInfo", 己))}), 停: false, 文本: 文本}
   }
@@ -138,6 +217,28 @@ fn 处理(体: String, 文本: String) {
   }
   if 方法 == "documentSymbol" {
     return {文: 应答(id, 符号表(文本)), 停: false, 文本: 文本}
+  }
+  if 方法 == "definition" {
+    let 位 = 取(取(值, "params"), "position")
+    let 名 = 词在(文本, 取数(位, "line"), 取数(位, "character"))
+    if len(名) == 0 { return {文: 应答(id, {空: 1}), 停: false, 文本: 文本} }
+    let 签 = 找签名(all_signatures(scan(文本)), 名)
+    if field_has(签, "空") { return {文: 应答(id, {空: 1}), 停: false, 文本: 文本} }
+    let 位2 = at转行列(文本, 签.at)
+    let 起 = {对象: (("line", {数: 位2.行}), ("character", {数: 位2.列}))}
+    let 止 = {对象: (("line", {数: 位2.行}), ("character", {数: 位2.列 + len(签.name)}))}
+    let 范围 = {对象: (("start", 起), ("end", 止))}
+    let 地址 = 取串(取(取(值, "params"), "textDocument"), "uri")
+    return {文: 应答(id, {对象: (("uri", {串: 地址}), ("range", 范围))}), 停: false, 文本: 文本}
+  }
+  if 方法 == "hover" {
+    let 位 = 取(取(值, "params"), "position")
+    let 名 = 词在(文本, 取数(位, "line"), 取数(位, "character"))
+    if len(名) == 0 { return {文: 应答(id, {空: 1}), 停: false, 文本: 文本} }
+    let 签 = 找签名(all_signatures(scan(文本)), 名)
+    if field_has(签, "空") { return {文: 应答(id, {空: 1}), 停: false, 文本: 文本} }
+    let 内 = {对象: (("kind", {串: "plaintext"}), ("value", {串: 签名文字(签)}))}
+    return {文: 应答(id, {对象: (("contents", 内),)}), 停: false, 文本: 文本}
   }
   if 方法 == "shutdown" {
     return {文: 应答(id, {空: 1}), 停: false, 文本: 文本}
