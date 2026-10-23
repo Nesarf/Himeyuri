@@ -33,6 +33,7 @@
 #include <fcntl.h>
 #include <process.h>
 #include <direct.h>
+#include <wchar.h>
 #elif !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
 /* 裸机的 C 库没有 unistd.h —— ARM 那一边 pid 也没有意义（见 临时路径）。 */
 #include <unistd.h>
@@ -537,6 +538,101 @@ static const char *环境(const char *名) {
   return (v && *v) ? v : "";
 }
 
+/* ---- 跑一个程序 ------------------------------------------------------
+ *
+ * 结果五件：退出码、stdout、stderr、有没有超时、跑不起来时的错误码。
+ * 它们照实报告，不抛 —— 「程序没找到」是关于世界的结论，不是脚本的错。
+ *
+ * 完整实现只有 Windows 这一份（本机可验收）。别的平台交回一条明确的
+ * 错误码，而不是一个看起来像成功的空结果。
+ */
+typedef struct { char *p; size_t n, cap; } 字节串;
+
+#ifdef _WIN32
+static void 字节串放(字节串 *b, const char *s, size_t n) {
+  if (b->n + n + 1 > b->cap) {
+    size_t 新 = b->cap ? b->cap : 4096;
+    while (b->n + n + 1 > 新) 新 *= 2;
+    b->p = (char *)realloc(b->p, 新);
+    if (!b->p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    b->cap = 新;
+  }
+  memcpy(b->p + b->n, s, n);
+  b->n += n;
+  b->p[b->n] = 0;
+}
+#endif
+
+/* 去掉尾部空白，与 JS 那侧的 trimEnd 一致：那是契约里写明的形状。 */
+static void 字节串去尾白(字节串 *b) {
+  while (b->n > 0) {
+    char c = b->p[b->n - 1];
+    if (c == ' ' || c == '\t' || c == '\n' || c == '\r') { b->n--; b->p[b->n] = 0; }
+    else break;
+  }
+}
+
+#ifdef _WIN32
+/* 一个参数按 MSVCRT 的规矩加引号，拼到宽命令行后面。
+ * 与切宽命令行那一份是同一套规矩的两面。 */
+static void 宽拼参(wchar_t *dst, size_t cap, size_t *at, const wchar_t *s) {
+  int 需引 = (*s == 0) || wcschr(s, L' ') || wcschr(s, L'\t') || wcschr(s, L'"');
+  if (*at + 2 < cap) dst[(*at)++] = L' ';
+  if (需引 && *at + 2 < cap) dst[(*at)++] = L'"';
+  size_t 斜杠 = 0;
+  for (const wchar_t *p = s; ; p++) {
+    if (*p == L'\\') { 斜杠++; continue; }
+    if (*p == L'"') {
+      for (size_t k = 0; k < 斜杠 * 2 + 1 && *at + 1 < cap; k++) dst[(*at)++] = L'\\';
+      斜杠 = 0;
+      if (*at + 1 < cap) dst[(*at)++] = L'"';
+      continue;
+    }
+    for (size_t k = 0; k < 斜杠 && *at + 1 < cap; k++) dst[(*at)++] = L'\\';
+    斜杠 = 0;
+    if (!*p) break;
+    if (*at + 1 < cap) dst[(*at)++] = *p;
+  }
+  if (需引 && *at + 1 < cap) dst[(*at)++] = L'"';
+}
+
+static void 读管道(HANDLE h, 字节串 *b) {
+  for (;;) {
+    DWORD 可读 = 0;
+    if (!PeekNamedPipe(h, NULL, 0, NULL, &可读, NULL) || 可读 == 0) break;
+    char 缓[4096];
+    DWORD 得 = 0;
+    DWORD 要 = 可读 < (DWORD)sizeof 缓 ? 可读 : (DWORD)sizeof 缓;
+    if (!ReadFile(h, 缓, 要, &得, NULL) || 得 == 0) break;
+    字节串放(b, 缓, 得);
+  }
+}
+#endif
+
+/* 输出解码：utf8 一条路，gbk 一条路（中文 Windows 的控制台多半是它）。
+ * 别的编码名按 utf8 读 —— 契约里只承诺这两种。 */
+static Value 解码输出(const 字节串 *b, const char *编码) {
+  const char *s = b->p ? b->p : "";
+  size_t n = b->n;
+#ifdef _WIN32
+  if (编码 && (strcmp(编码, "gbk") == 0 || strcmp(编码, "gb2312") == 0 || strcmp(编码, "cp936") == 0)) {
+    int 长 = MultiByteToWideChar(936, 0, s, (int)n, NULL, 0);
+    if (长 > 0) {
+      wchar_t *宽 = (wchar_t *)malloc((size_t)长 * sizeof(wchar_t));
+      if (宽) {
+        int 得 = MultiByteToWideChar(936, 0, s, (int)n, 宽, 长);
+        Value v = v_str((const uint16_t *)宽, (uint32_t)得);
+        return v;
+      }
+    }
+  }
+#endif
+  {
+    uint32_t 长 = 0;
+    uint16_t *p = utf8_to_utf16(s, n, &长);
+    return v_str(p, 长);
+  }
+}
 /* 现在的工作目录（UTF-8）。cwd 与 chdir 共用它 ——
  * chdir 成功之后要交回新的目录，那是同一条读法。 */
 static char *现在工作在(void) {
@@ -2240,6 +2336,167 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
       *out = 路径值(新);
       free(新);
     }
+    return 1;
+  }
+  /* ---- 进程：跑一个程序 ---------------------------------------------- */
+  if (name_is(name_idx, "run_program")) {
+    if (nargs < 1 || nargs > 4) {
+      fail("HMYR-R0101", "run_program wants one to four arguments");
+      return 1;
+    }
+    Value 命令值;
+    value_to_text(args[0], &命令值);
+    char *命令 = utf16_to_utf8(命令值.s, 命令值.slen);
+    if (!命令 || !*命令) {
+      free(命令);
+      fail("HMYR-R0213", "run_program needs a program name: an empty string names nothing");
+      return 1;
+    }
+    char **参们 = NULL;
+    int 参量 = 0;
+    if (nargs >= 2 && args[1].tag == T_TUPLE) {
+      参量 = (int)args[1].ilen;
+      参们 = (char **)calloc((size_t)(参量 ? 参量 : 1), sizeof(char *));
+      if (!参们) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+      for (uint32_t i = 0; i < args[1].ilen; i++) {
+        Value t;
+        value_to_text(args[1].items[i], &t);
+        参们[i] = utf16_to_utf8(t.s, t.slen);
+      }
+    }
+    double 超时毫秒 = 10000;
+    if (nargs >= 3 && args[2].tag != T_NULL) {
+      int ok = 0;
+      double x = as_num(args[2], &ok);
+      if (!ok) {
+        free(命令);
+        for (int i = 0; i < 参量; i++) free(参们[i]);
+        free(参们);
+        fail("HMYR-R0130", "run_program's timeout must be a number");
+        return 1;
+      }
+      超时毫秒 = x < 0 ? 0 : x;
+    }
+    const char *编码 = "utf8";
+    char *编码们 = NULL;
+    if (nargs >= 4) {
+      Value e;
+      value_to_text(args[3], &e);
+      编码们 = utf16_to_utf8(e.s, e.slen);
+      if (编码们) 编码 = 编码们;
+    }
+    字节串 出 = {0}, 错 = {0};
+    long 码 = -1;
+    int 超时了 = 0;
+    const char *错误码 = NULL;
+#if defined(_WIN32)
+    {
+      SECURITY_ATTRIBUTES sa;
+      HANDLE oR = NULL, oW = NULL, eR = NULL, eW = NULL;
+      sa.nLength = sizeof sa;
+      sa.lpSecurityDescriptor = NULL;
+      sa.bInheritHandle = TRUE;
+      if (CreatePipe(&oR, &oW, &sa, 0) && CreatePipe(&eR, &eW, &sa, 0)) {
+        SetHandleInformation(oR, HANDLE_FLAG_INHERIT, 0);
+        SetHandleInformation(eR, HANDLE_FLAG_INHERIT, 0);
+        wchar_t 行[8192];
+        size_t at = 0;
+        int 拼成 = 1;
+        for (int k = -1; k < 参量 && 拼成; k++) {
+          const char *源 = (k < 0) ? 命令 : 参们[k];
+          int 宽长 = MultiByteToWideChar(CP_UTF8, 0, 源, -1, NULL, 0);
+          if (宽长 <= 0) { 拼成 = 0; break; }
+          wchar_t *宽 = (wchar_t *)malloc((size_t)宽长 * sizeof(wchar_t));
+          if (!宽) { 拼成 = 0; break; }
+          MultiByteToWideChar(CP_UTF8, 0, 源, -1, 宽, 宽长);
+          宽拼参(行, 8192, &at, 宽);
+          free(宽);
+        }
+        行[at] = 0;
+        if (!拼成) {
+          错误码 = "EINVAL";
+        } else {
+          STARTUPINFOW si;
+          PROCESS_INFORMATION pi;
+          ZeroMemory(&si, sizeof si);
+          ZeroMemory(&pi, sizeof pi);
+          si.cb = sizeof si;
+          si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+          si.wShowWindow = SW_HIDE;
+          si.hStdOutput = oW;
+          si.hStdError = eW;
+          si.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+          /* 宽拼参 每次都先写一个空格，所以命令行从第二个字符开始。 */
+          const wchar_t *命令行 = (行[0] == L' ') ? 行 + 1 : 行;
+          if (CreateProcessW(NULL, (wchar_t *)命令行, NULL, NULL, TRUE, CREATE_NO_WINDOW,
+                             NULL, NULL, &si, &pi)) {
+            DWORD 起 = GetTickCount();
+            for (;;) {
+              DWORD 等 = WaitForSingleObject(pi.hProcess, 10);
+              读管道(oR, &出);
+              读管道(eR, &错);
+              if (等 == WAIT_OBJECT_0) break;
+              if (超时毫秒 > 0 && (double)(GetTickCount() - 起) >= 超时毫秒) {
+                TerminateProcess(pi.hProcess, 1);
+                超时了 = 1;
+                break;
+              }
+            }
+            读管道(oR, &出);
+            读管道(eR, &错);
+            if (超时了) {
+              码 = -1;
+            } else {
+              DWORD c = 0;
+              GetExitCodeProcess(pi.hProcess, &c);
+              码 = (long)c;
+            }
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+          } else {
+            错误码 = "ENOENT";
+          }
+        }
+      } else {
+        错误码 = "EPIPE";
+      }
+      if (oW) CloseHandle(oW);
+      if (eW) CloseHandle(eW);
+      if (oR) CloseHandle(oR);
+      if (eR) CloseHandle(eR);
+    }
+#else
+    /* 别的平台还没有这一份实现。说清是哪一个平台没有，而不是装作跑成功了。 */
+    (void)超时毫秒;
+    错误码 = "ENOPROC";
+#endif
+    字节串去尾白(&出);
+    字节串去尾白(&错);
+    {
+      Value 记 = v_null();
+      记.tag = T_RECORD;
+      记.rec.n = 5;
+      记.rec.vals = alloc_values(5);
+      记.rec.names = (const uint16_t **)calloc(5, sizeof(uint16_t *));
+      记.rec.name_lens = (uint32_t *)calloc(5, sizeof(uint32_t));
+      static const uint16_t 名码[] = {'c', 'o', 'd', 'e'};
+      static const uint16_t 名出[] = {'s', 't', 'd', 'o', 'u', 't'};
+      static const uint16_t 名错[] = {'s', 't', 'd', 'e', 'r', 'r'};
+      static const uint16_t 名超[] = {'t', 'i', 'm', 'e', 'd', 'O', 'u', 't'};
+      static const uint16_t 名误[] = {'e', 'r', 'r', 'o', 'r'};
+      记.rec.names[0] = 名码; 记.rec.name_lens[0] = 4; 记.rec.vals[0] = v_num((double)码);
+      记.rec.names[1] = 名出; 记.rec.name_lens[1] = 6; 记.rec.vals[1] = 解码输出(&出, 编码);
+      记.rec.names[2] = 名错; 记.rec.name_lens[2] = 6; 记.rec.vals[2] = 解码输出(&错, 编码);
+      记.rec.names[3] = 名超; 记.rec.name_lens[3] = 8; 记.rec.vals[3] = v_bool(超时了);
+      记.rec.names[4] = 名误; 记.rec.name_lens[4] = 5; 记.rec.vals[4] = 错误码 ? ascii_text(错误码) : v_null();
+      *out = 记;
+    }
+    free(出.p);
+    free(错.p);
+    free(命令);
+    for (int i = 0; i < 参量; i++) free(参们[i]);
+    free(参们);
+    free(编码们);
     return 1;
   }
   if (name_is(name_idx, "argv")) {

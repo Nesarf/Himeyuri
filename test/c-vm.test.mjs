@@ -812,6 +812,28 @@ console.log("二十一、改工作目录：进去、读回来、再回来");
   ok("答案是 true true true", r.c.trim() === "true true true", JSON.stringify(r.c.trim()));
 }
 
+console.log("二十二、跑一个程序：退出码、两路输出、超时");
+{
+  // 这一条是进程组的大件：管道、超时、四个字段一份记录。
+  // 程序只输出可断言的那几件，不输出 stderr 内容（它随宿主的措辞而变）。
+  const 源码 = [
+    "fn main() -> Int effects(process) {",
+    '  let 甲 = run_program("cmd", ("/c", "echo hi"))',
+    '  print(str(甲.code) + " " + 甲.stdout + " ")',
+    '  let 乙 = run_program("cmd", ("/c", "exit 3"))',
+    '  print(str(乙.code) + " ")',
+    '  let 丙 = run_program("no-such-program-xyz")',
+    '  print(str(丙.code) + " ")',
+    '  let 丁 = run_program("cmd", ("/c", "ping -n 4 127.0.0.1"), 60)',
+    '  print(str(丁.timedOut))',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "proc");
+  ok("两台机器的形状一样", r.js === r.c, JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  ok("退出码、输出与超时都对", r.c.trim() === "0 hi 3 -1 true", JSON.stringify(r.c.trim()));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

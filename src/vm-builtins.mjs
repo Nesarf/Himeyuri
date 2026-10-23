@@ -66,6 +66,27 @@ export const 内置表 = {
       return vm.文.由宿主(vm.cap.process.cwd());
     } catch { return vm.坏("HMYR-R0209", "cannot enter '" + 目标 + "'"); }
   } },
+  // 跑一个程序：结果是一份记录，五个字段。跑不起来也照实报告，不抛。
+  run_program: { 效果: "process", 做: (vm, a) => {
+    const 命令 = vm.成串(a[0]);
+    if (命令 === "") return vm.坏("HMYR-R0213", "run_program needs a program name: an empty string names nothing");
+    const 参们 = a[1] && a[1].tag === "tuple" ? a[1].items.map((x) => vm.成串(x)) : [];
+    const 超时 = a[2] === undefined || a[2] === null ? 10000 : vm.成数(a[2]);
+    const 编码 = a[3] === undefined || a[3] === null ? "utf8" : vm.成串(a[3]);
+    const r = vm.cap.process.exec(命令, 参们, { timeout: 超时, windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
+    const 解 = (buf) => {
+      try { return new TextDecoder(编码 === "gbk" || 编码 === "gb2312" ? "gbk" : "utf-8").decode(buf || new Uint8Array()); }
+      catch { return String(buf || ""); }
+    };
+    const 去尾 = (s) => String(s).replace(/[ \t\r\n]+$/, "");
+    return new 类记录(new Map([
+      ["code", 数.造(typeof r.status === "number" ? r.status : -1)],
+      ["stdout", vm.文.由宿主(去尾(解(r.stdout)))],
+      ["stderr", vm.文.由宿主(去尾(解(r.stderr)))],
+      ["timedOut", !!(r.error && r.error.code === "ETIMEDOUT")],
+      ["error", r.error ? vm.文.由宿主(String(r.error.code || r.error.message)) : null],
+    ]));
+  } },
   // ---- 环境与路径：读这台机器在哪儿 ----
   // 两台机器给出不同的字符串是对的：契约写的是「读宿主的位置」，
   // 不是「所有宿主必须同名」。测试因此只断言形状与结尾。

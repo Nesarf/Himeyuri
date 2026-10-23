@@ -110,6 +110,27 @@ const 内置 = {
   },
   locale_env: (rt) => rt.cap.env.localeGuess(),
   console_codepage: (rt) => rt.cap.env.codepage(),
+  // 跑一个程序：一份记录，五个字段。跑不起来也照实报告，不抛。
+  run_program: (rt, a) => {
+    const 命令 = rt.成串(a[0]);
+    if (命令 === "") rt.坏("HMYR-R0213", "run_program needs a program name: an empty string names nothing");
+    const 参们 = Array.isArray(a[1]) ? a[1].map((x) => rt.成串(x)) : [];
+    const 超时 = a[2] === undefined || a[2] === null ? 10000 : rt.成数(a[2]);
+    const 编码 = a[3] === undefined || a[3] === null ? "utf8" : rt.成串(a[3]);
+    const r = rt.cap.process.exec(命令, 参们, { timeout: 超时, windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
+    const 解 = (buf) => {
+      try { return new TextDecoder(编码 === "gbk" || 编码 === "gb2312" ? "gbk" : "utf-8").decode(buf || new Uint8Array()); }
+      catch (err) { return String(buf || ""); }
+    };
+    const 去尾 = (s) => String(s).replace(/[ \t\r\n]+$/, "");
+    return {
+      code: typeof r.status === "number" ? r.status : -1,
+      stdout: 去尾(解(r.stdout)),
+      stderr: 去尾(解(r.stderr)),
+      timedOut: !!(r.error && r.error.code === "ETIMEDOUT"),
+      error: r.error ? String(r.error.code || r.error.message) : null,
+    };
+  },
   // ---- 进程：改工作目录 ----
   chdir: (rt, a) => {
     const 目标 = rt.成串(a[0]);

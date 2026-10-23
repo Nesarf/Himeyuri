@@ -215,6 +215,15 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 0 { return 坏("console_codepage 不要参数") }
     return 好(console_codepage())
   }
+  // 进程：跑一个程序。这一层照参数个数转发（1 到 4 个），
+  // 记录那五个字段（code stdout stderr timedOut error）由下面那一层给。
+  if 名 == "run_program" {
+    if len(值们) == 1 { return 好(run_program(值们[0])) }
+    if len(值们) == 2 { return 好(run_program(值们[0], 值们[1])) }
+    if len(值们) == 3 { return 好(run_program(值们[0], 值们[1], 值们[2])) }
+    if len(值们) == 4 { return 好(run_program(值们[0], 值们[1], 值们[2], 值们[3])) }
+    return 坏("run_program 最多四个参数")
+  }
   // 进程：改工作目录。这一层只转发 —— 进不去时下面那一层报 R0209。
   if 名 == "chdir" {
     if len(值们) != 1 { return 坏("chdir 要一个参数") }
