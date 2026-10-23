@@ -2,9 +2,17 @@
 //
 // 为什么不解析整份：json.hmyr 的解析器用元组追加写，二十一 KB 的清单会让它平方级超时。
 // 而清单是 JSON.stringify(x, null, 2) 生成的，形状固定 —— 每项一行，键在值的前面。
-// 于是这里按行扫，快得多；代价写明：它只验「每项的哈希」，验不了整份的 digest。
+// 于是这里按行扫，快得多；代价写明：结构丢了，两个前缀只能靠「这一行落在哪一段里」推。
+//
+// 验两样：每一项的哈希，以及整份的 digest。
+// digest 那一条同样不用解析：清单是 JSON.stringify 的产物，把 digest 那行删掉、再把前一行
+// 末尾的逗号去掉，得到的就是「不含 digest 的那份」—— 那正是 tools/manifest.mjs 算哈希的对象。
+// 这条规则先在 node 里对着真清单验过（重建的字节与 JSON.stringify 逐字节相同），才写到这里。
+//
+// 进度走 stderr（每五十项一行）：长跑时能看出它在动，而 stdout 只留结论。
 
 import "./sha256.hmyr"
+import "../json.hmyr"
 
 fn 前16(十六: String) -> String {
   return slice(十六, 0, 16)
@@ -54,6 +62,53 @@ fn 行号(s: String, 名: String) -> Int {
   return 0 - 1
 }
 
+// 去掉行尾那一个逗号（只有 digest 之前那一行用得上）。
+fn 去尾逗号(s: String) {
+  if len(s) == 0 { return s }
+  if slice(s, len(s) - 1, len(s)) == "," { return slice(s, 0, len(s) - 1) }
+  return s
+}
+
+// 重建「不含 digest 的那份」的字节：跳过 digest 那行、去掉它前一行的尾逗号、
+// 并丢掉文件末尾那个空元素（写出时补的换行）。
+//
+// 每 128 行封一块再折平 —— 逐行往一个串上接在这里是平方级，这个仓库里已经栽过四次。
+//
+// 换行写在块内（每行后面都带一个），不要在块与块之间去补：折平是用 + 拼字符串，
+// 块边界上没有位置插那个 chr(10)。这一处错过一次，症状很有教育意义 ——
+// 二十几行的小清单只有一块，全对；九百多行分成八块，digest 立刻不对。
+fn 重建文本(行们: Int, dig: Int) {
+  var 前 = dig - 1
+  while 前 >= 0 && 行们[前] == "" { 前 = 前 - 1 }
+  var 块们 = ()
+  var 块 = ""
+  var 块行数 = 0
+  var i = 0
+  while i < len(行们) {
+    var 取 = i != dig
+    if i == len(行们) - 1 && 行们[i] == "" { 取 = false }
+    if 取 {
+      let 原行 = 行们[i]
+      var 行 = 原行
+      if i == 前 { 行 = 去尾逗号(原行) }
+      块 = 块 + 行 + chr(10)
+      块行数 = 块行数 + 1
+      if 块行数 >= 128 {
+        块们 = 块们 + (块,)
+        块 = ""
+        块行数 = 0
+      }
+    }
+    i = i + 1
+  }
+  if 块行数 > 0 { 块们 = 块们 + (块,) }
+  if len(块们) == 0 { return "" }
+  let 拼 = 拼平(块们, 0, len(块们))
+  // 每行后面那个换行多出来一个：JSON.stringify 的输出不以换行结尾。
+  if len(拼) > 0 { return slice(拼, 0, len(拼) - 1) }
+  return 拼
+}
+
 // 一件：标签（用来印）、路（要读的文件）、写（清单里写的哈希前十六位）、
 // 行（那一行的原文 —— 不通过时一起印出来，证据跟着结论走）。
 fn 验一件(标签: String, 路: String, 写: String, 对: Int, 错: Int, 缺: Int, 说: String, 行: String) effects(file) {
@@ -85,6 +140,7 @@ fn main() -> Int effects(file, process) {
   var 说 = ""
   var 上键 = ""
   var 上值 = ""
+  var 已验 = 0
 
   var i = 0
   while i < len(行们) {
@@ -107,6 +163,8 @@ fn main() -> Int effects(file, process) {
       错 = r.错
       缺 = r.缺
       说 = r.说
+      已验 = 已验 + 1
+      if 已验 % 50 == 0 { print_err("  已验 " + str(已验) + " 项" + chr(10)) }
     } else if 键名 == "file" {
       上键 = "file"
       上值 = 值(行)
@@ -122,8 +180,28 @@ fn main() -> Int effects(file, process) {
 
   print(说)
   print("  对得上 " + str(对) + " 项 · 不对 " + str(错) + " 项 · 缺 " + str(缺) + " 项" + chr(10))
-  print("  注：这份实现只验每项的哈希，不验整份的 digest —— 那一步要重新序列化，见文件头。" + chr(10))
-  if 错 == 0 && 缺 == 0 {
+
+  var 整份对 = true
+  let 码 = 行号(文, "digest")
+  if 码 < 0 {
+    print("  清单里没有 digest，整份这一步跳过" + chr(10))
+  } else {
+    let 写 = 值(行们[码])
+    if 写 == "" {
+      print("  digest 是空的，整份这一步跳过" + chr(10))
+    } else {
+      let 重建 = 重建文本(行们, 码)
+      let 算 = sha256(从文本(重建))
+      if 算 == 写 {
+        print("  整份的 digest 对得上（重算 " + str(len(重建)) + " 字符）" + chr(10))
+      } else {
+        print("  整份的 digest 对不上：写着 " + 写 + "，算出来 " + 算 + chr(10))
+        整份对 = false
+      }
+    }
+  }
+
+  if 错 == 0 && 缺 == 0 && 整份对 {
     print("  通过" + chr(10))
     return 0
   }

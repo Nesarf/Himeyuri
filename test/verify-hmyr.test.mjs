@@ -26,7 +26,7 @@ const ok = (label, condition, detail = "") => {
 const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-verify-"));
 const 哈 = (p) => createHash("sha256").update(fs.readFileSync(path.join(ROOT, p))).digest("hex").slice(0, 16);
 
-const 造清单 = ({ 坏 = false, 缺 = false } = {}) => {
+const 造清单 = ({ 坏 = false, 缺 = false, 坏摘要 = false, 无摘要 = false } = {}) => {
   const 清单 = {
     name: "himeyuri",
     language: "HMYR",
@@ -41,9 +41,14 @@ const 造清单 = ({ 坏 = false, 缺 = false } = {}) => {
     ],
     tools: [{ name: "arm-size.mjs", sha256: 哈("tools/arm-size.mjs") }],
     documents: [{ name: "ARRAY.txt", sha256: 坏 ? "0000000000000000" : 哈("design/ARRAY.txt") }],
-    digest: "0".repeat(64),
   };
   if (缺) 清单.suites.push({ name: "nope", path: "test/does-not-exist.test.mjs", sha256: "0".repeat(16) });
+  // digest 算的是「不含 digest 的那份」，与 tools/manifest.mjs 同一规则。
+  // 这里用 node 算，被验的是 HMYR 那一边的重建规则 —— 两边独立。
+  if (!无摘要) {
+    const 底 = JSON.stringify(清单, null, 2);
+    清单.digest = 坏摘要 ? "0".repeat(64) : createHash("sha256").update(底).digest("hex");
+  }
   return JSON.stringify(清单, null, 2) + "\n";
 };
 
@@ -102,6 +107,23 @@ console.log("五、参数不够时给用法，退出码 2");
   const 码 = r.ok ? (typeof r.值 === "number" ? Math.trunc(r.值) : 0) : r.码;
   ok("退出码 2", 码 === 2, String(码) + " " + (r.ok ? "" : r.话));
   ok("说了用法", 出.join("").includes("用法"), JSON.stringify(出.join("").slice(0, 80)));
+}
+
+console.log("六、整份的 digest：删掉它自己、去掉前一行的尾逗号，再算一次");
+{
+  const 好二 = 跑(好路);
+  ok("digest 对得上", 好二.出.includes("整份的 digest 对得上"), JSON.stringify(好二.出.slice(-160)));
+
+  const 缠路 = 写出("baddigest.json", 造清单({ 坏摘要: true }));
+  const 缠 = 跑(缠路);
+  ok("digest 被改过时退出码 1", 缠.码 === 1, 缠.码 + " " + 缠.坏);
+  ok("点名 digest 对不上", 缠.出.includes("整份的 digest 对不上"), JSON.stringify(缠.出.slice(-160)));
+  ok("每一项仍然是对的（两条判定互相独立）", 缠.出.includes("对得上 5 项") && 缠.出.includes("不对 0 项"), JSON.stringify(缠.出.slice(0, 120)));
+
+  const 无摘要路 = 写出("nodigest.json", 造清单({ 无摘要: true }));
+  const 无摘要 = 跑(无摘要路);
+  ok("没有 digest 时说跳过，不判失败", 无摘要.出.includes("没有 digest"), JSON.stringify(无摘要.出.slice(-120)));
+  ok("没有 digest 时退出码仍是 0", 无摘要.码 === 0, 无摘要.码 + " " + 无摘要.坏);
 }
 
 fs.rmSync(临, { recursive: true, force: true });
