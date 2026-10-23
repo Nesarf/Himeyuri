@@ -132,6 +132,7 @@ const SUITES = [
   ["selfcontained", "test/self-contained.test.mjs", "SPEC M7 - the binary carries its own compiler: a .hmyr runs with no node, no seed beside it, and no manual compile step"],
   ["deflate", "test/deflate.test.mjs", "SPEC M7 - deflate stored blocks written in Himeyuri: round trip, and zlib reads the stream without being told anything"],
   ["tree", "test/tree.test.mjs", "SPEC M7 - the Huffman tree alone: all three code-length tables must sum to a complete Kraft total"],
+  ["array", "test/array.test.mjs", "SPEC 2.2 - a mutable array beside the immutable tuple: write, read, out of range, and the tuple it came from stays put"],
   ["inflate", "test/inflate.test.mjs", "SPEC M7 - inflate in Himeyuri: five tiny cases, our own stream back byte for byte, and zlib's fixed-Huffman stream too"],
   ["zip", "test/zip.test.mjs", "SPEC M7 - a ZIP container written in Himeyuri: local header, central directory and end record, field by field against the spec"],
   ["manifest", "test/manifest.test.mjs", "SPEC M7 - the distribution manifest: everything it lists actually exists, and the minimal set is exactly fifteen"],
@@ -187,6 +188,8 @@ const 串行 = new Set([
   // 这两套都要在临时目录里写同一份文件再读回来；并行时互相踩，
   // 症状就是「单独跑全过、总表里红三条」。
   "hostdeps", "text",
+  // 它读 self/ 那六份源码数节点，与 subsetload 抢同一批文件。
+  "subsetparse",
 ]);
 const 并行数 = 4;
 

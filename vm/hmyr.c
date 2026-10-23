@@ -426,7 +426,7 @@ static void compose_all(CpBuf *b) {
 
 /* ---- values ---------------------------------------------------------- */
 
-typedef enum { T_NULL, T_NUM, T_STR, T_BOOL, T_TUPLE, T_RECORD } Tag;
+typedef enum { T_NULL, T_NUM, T_STR, T_BOOL, T_TUPLE, T_ARRAY, T_RECORD } Tag;
 
 typedef struct Value Value;
 
@@ -1352,7 +1352,7 @@ static int truthy(Value v) {
   if (v.tag == T_NUM) return v.num != 0;
   if (v.tag == T_STR) return v.slen != 0;
   if (v.tag == T_NULL) return 0;
-  if (v.tag == T_TUPLE) return v.ilen != 0;
+  if (v.tag == T_TUPLE || v.tag == T_ARRAY) return v.ilen != 0;
   return 1;
 }
 
@@ -1441,7 +1441,7 @@ static void gc_压标(Gc块 *b) {
 }
 
 static void gc_标值(Value v) {
-  if (v.tag == T_TUPLE && v.items) gc_压标(gc_查(v.items));
+  if ((v.tag == T_TUPLE || v.tag == T_ARRAY) && v.items) gc_压标(gc_查(v.items));
   else if (v.tag == T_RECORD && v.rec.vals) gc_压标(gc_查(v.rec.vals));
   else if (v.tag == T_STR && v.s) gc_压标(gc_查((void *)v.s));
 }
@@ -1623,7 +1623,7 @@ static Value value_to_text(Value v, Value *out) {
     *out = v_str(p, 3);
     return *out;
   }
-  if (v.tag == T_TUPLE) {
+  if (v.tag == T_TUPLE || v.tag == T_ARRAY) {
     /* "[" + each + ", " + "]" */
     /* 这一支要 realloc，而回收块不能被 realloc（块头会丢）——
      * 它只用在诊断文本上，量很小，走普通堆。 */
@@ -1787,10 +1787,28 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     value_to_text(args[0], out);
     return 1;
   }
+  if (name_is(name_idx, "数组")) {
+    if (nargs != 1) { fail("HMYR-R0150", "数组 wants one argument"); return 1; }
+    if (args[0].tag != T_TUPLE) { fail("HMYR-R0150", "数组 wants a tuple"); return 1; }
+    Value v = v_null(); v.tag = T_ARRAY; v.ilen = args[0].ilen;
+    v.items = alloc_values(v.ilen);
+    for (uint32_t i = 0; i < v.ilen; i++) v.items[i] = args[0].items[i];
+    *out = v;
+    return 1;
+  }
+  if (name_is(name_idx, "设")) {
+    if (nargs != 3) { fail("HMYR-R0151", "设 wants three arguments"); return 1; }
+    if (args[0].tag != T_ARRAY) { fail("HMYR-R0151", "设 wants an array built by 数组"); return 1; }
+    int64_t i = (int64_t)args[1].num;
+    if (i < 0 || i >= (int64_t)args[0].ilen) { fail("HMYR-R0152", "index outside the array"); return 1; }
+    args[0].items[i] = args[2];
+    *out = args[0];
+    return 1;
+  }
   if (name_is(name_idx, "len")) {
     if (nargs != 1) { fail("HMYR-R0101", "len wants one argument"); return 1; }
     if (args[0].tag == T_STR) { *out = v_num((double)args[0].slen); return 1; }
-    if (args[0].tag == T_TUPLE) { *out = v_num((double)args[0].ilen); return 1; }
+    if (args[0].tag == T_TUPLE || args[0].tag == T_ARRAY) { *out = v_num((double)args[0].ilen); return 1; }
     fail("HMYR-R0107", "len wants a string or a tuple");
     return 1;
   }
@@ -3009,7 +3027,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
       case OP_NOT: { Value v = pop(); push(v_bool(!truthy(v))); pc++; break; }
       case OP_ADD: {
         Value b = pop(), a = pop();
-        if (a.tag == T_TUPLE && b.tag == T_TUPLE) {
+        if ((a.tag == T_TUPLE || a.tag == T_ARRAY) && (b.tag == T_TUPLE || b.tag == T_ARRAY)) {
           Value v = v_null(); v.tag = T_TUPLE; v.ilen = a.ilen + b.ilen;
           v.items = alloc_values(v.ilen);
           memcpy(v.items, a.items, a.ilen * sizeof(Value));
@@ -3151,7 +3169,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         if (t.tag == T_STR) {
           if (idx < 0 || idx >= (long long)t.slen) { fail("HMYR-R0151", "index outside the value"); FRAME_RET(v_null()); }
           push(v_str(t.s + idx, 1));
-        } else if (t.tag == T_TUPLE) {
+        } else if (t.tag == T_TUPLE || t.tag == T_ARRAY) {
           if (idx < 0 || idx >= (long long)t.ilen) { fail("HMYR-R0151", "index outside the value"); FRAME_RET(v_null()); }
           push(t.items[idx]);
         } else { fail("HMYR-R0152", "cannot index that value"); FRAME_RET(v_null()); }
