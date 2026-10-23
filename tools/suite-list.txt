@@ -108,12 +108,16 @@ container	test/container.test.mjs
 reader	test/reader.test.mjs
 runtimepath	test/runtime-path.test.mjs
 toolingledger	test/tooling-ledger.test.mjs
+independence	test/independence.test.mjs
 checkhmyr	test/check-hmyr.test.mjs
 embedhmyr	test/embed-hmyr.test.mjs
 ucdchmyr	test/ucd-c-hmyr.test.mjs
 stdinline	test/stdin-line.test.mjs
 lsphmyr	test/lsp-hmyr.test.mjs
 fmthmyr	test/fmt-hmyr.test.mjs
+elsenewline	test/else-newline.test.mjs
+selfcontained	test/self-contained.test.mjs
+deflate	test/deflate.test.mjs
 manifest	test/manifest.test.mjs
 helper	test/helper.test.mjs
 verify	test/verify.test.mjs

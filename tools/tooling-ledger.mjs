@@ -90,9 +90,16 @@ export const 账本 = [
     证明: ["tools/ucd-case.mjs", "tools/ucd-nfc.mjs", "tools/ucd.mjs"],
   },
   {
+    名: "deflate",
+    状态: "搬了第一版",
+    在哪: "self/deflate.hmyr",
+    验收: "deflate",
+    说明: "stored 块（BTYPE=00）：往返一致、zlib 读得懂；LZ77 与 Huffman 还没写",
+  },
+  {
     名: "打包发布",
     状态: "不搬",
-    为什么不搬: "发布是人的动作，不是程序的动作；而且 ZIP 里的 deflate 要先有压缩实现，而这门语言还没有。它不在「跑程序」这条路上。",
+    为什么不搬: "deflate 的第一版已经有了，但 ZIP 容器、清单与发布流程仍是人的动作，不在「跑程序」这条路上。等哪天要「一条命令出一个包」，它会自己变成一件要搬的事。",
     证明: ["tools/package.mjs", "tools/release.mjs", "tools/manifest.mjs", "tools/verify.mjs"],
   },
 ];

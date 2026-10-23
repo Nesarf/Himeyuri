@@ -1,0 +1,126 @@
+// deflate 的 stored 块：RFC 1951 的 BTYPE=00。
+//
+// 为什么从 stored 开始而不是 LZ77 + Huffman：这一件要先把「格式是对的」这件事立住。
+// stored 块不压（压缩率 1.0），但它是 deflate 规范的一部分，zlib 与任何标准工具都读得懂。
+// 有了它，打包发布就不必再借 zlib；压缩率是下一步的事，而「能不能被读」是这一步的事。
+//
+// 一个块的样子（按字节对齐）：
+//   字节 0     BFINAL 在 bit0，BTYPE=00 在 bit1-2 —— 因为按字节对齐，这个字节就是 0 或 1
+//   字节 1-2   LEN，小端
+//   字节 3-4   NLEN，LEN 的反码，小端
+//   字节 5..   原始数据
+//
+// 用法：hmyr self/deflate.hmyr <输入> <输出> [--解]
+//       hmyr self/deflate.hmyr <输入> <输出> --解   把一份 deflate 流解回原始字节
+
+fn 字节值(n: Int) -> Int {
+  var v = n % 256
+  if v < 0 { v = v + 256 }
+  return v
+}
+
+// 折半拼接：元组的 + 是复制，逐块拼是平方级 —— 与 self/compile.hmyr 的 拼两半 同一个形状。
+fn 拼平(块们: Int, 起: Int, 止: Int) -> Int {
+  if 止 - 起 <= 1 { return 块们[起] }
+  var 左 = 起
+  var 右 = 止
+  while 右 - 左 > 2 {
+    左 = 左 + 1
+    右 = 右 - 1
+  }
+  let 中 = 左 + 1
+  return 拼平(块们, 起, 中) + 拼平(块们, 中, 止)
+}
+
+// 压：切成不超过 65535 的块，每块一个 stored 头。
+// 累积走「小块 + 块们 + 拼平」：一份四十三千字节的输入，逐字节往一个元组上拼会顶到四吉。
+fn 压(字节们: Int) {
+  let 总 = len(字节们)
+  var 块们 = ()
+  var 小块 = ()
+  var 起 = 0
+  var 首 = true
+  while 起 < 总 || 首 {
+    var 块 = 剩(总, 起)
+    if 块 > 65535 { 块 = 65535 }
+    var 是末 = false
+    if 起 + 块 >= 总 { 是末 = true }
+    var 头 = 0
+    if 是末 { 头 = 1 }
+    let 反 = 65535 - 块
+    小块 = 小块 + (头, 字节值(块), 字节值((块 - 块 % 256) / 256), 字节值(反), 字节值((反 - 反 % 256) / 256))
+    var i = 0
+    while i < 块 {
+      小块 = 小块 + (字节值(to_int(字节们[起 + i])),)
+      if len(小块) >= 1024 {
+        块们 = 块们 + (小块,)
+        小块 = ()
+      }
+      i = i + 1
+    }
+    起 = 起 + 块
+    首 = false
+  }
+  if len(小块) > 0 { 块们 = 块们 + (小块,) }
+  return 拼平(块们, 0, len(块们))
+}
+
+fn 剩(总: Int, 起: Int) -> Int {
+  let 剩 = 总 - 起
+  if 剩 < 0 { return 0 }
+  return 剩
+}
+
+// 解：一路读到 BFINAL=1 为止。只认 BTYPE=00 —— 别的类型由调用方另找工具。
+// 累积同样块化：逐字节往一个元组上拼，四十三千字节就会顶到四吉。
+fn 解(字节们: Int) {
+  let 总 = len(字节们)
+  var 块们 = ()
+  var 小块 = ()
+  var at = 0
+  var 完 = false
+  while !完 && at + 5 <= 总 {
+    let 头 = to_int(字节们[at])
+    at = at + 1
+    let 末 = 头 % 2
+    let 型 = (头 - 末) / 2 % 4
+    if 型 != 0 { 完 = true } else {
+      let 长 = to_int(字节们[at]) + to_int(字节们[at + 1]) * 256
+      at = at + 4
+      var i = 0
+      while i < 长 && at < 总 {
+        小块 = 小块 + (to_int(字节们[at]),)
+        if len(小块) >= 1024 {
+          块们 = 块们 + (小块,)
+          小块 = ()
+        }
+        at = at + 1
+        i = i + 1
+      }
+      if 末 == 1 { 完 = true }
+    }
+  }
+  if len(小块) > 0 { 块们 = 块们 + (小块,) }
+  if len(块们) == 0 { return () }
+  return 拼平(块们, 0, len(块们))
+}
+
+fn main() -> Int effects(file) {
+  let 参 = argv()
+  if len(参) < 3 {
+    print("用法：hmyr self/deflate.hmyr <输入> <输出> [--解]" + chr(10))
+    return 2
+  }
+  let 解模式 = false
+  var i = 0
+  while i < len(参) {
+    if 参[i] == "--解" { 解模式 = true }
+    i = i + 1
+  }
+  let 字节们 = read_bytes(参[1])
+  var 出 = 压(字节们)
+  if 解模式 { 出 = 解(字节们) }
+  write_bytes(参[2], 出)
+  print(str(len(字节们)) + " → " + str(len(出)) + chr(10))
+  return 0
+}
