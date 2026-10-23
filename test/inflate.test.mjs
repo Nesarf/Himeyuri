@@ -86,7 +86,29 @@ if (!有编译器) {
       ok("自家的流真的压了（小于一半）", fs.readFileSync(自流).length < 2048, String(fs.readFileSync(自流).length));
     }
 
-    console.log("四、别人的流：zlib 用固定策略压的，HMYR 也解得开");
+    console.log("三·五、大流：整份种子，以及十倍于它");
+    {
+      // 这一节量的是「优化到头了没有」：四万三千字节与四十三万字节，时间该按比例走。
+      // 逐字节往元组上拼的那一版在四万三千字节就顶到四吉；块化之后这里是 41 兆与 238 兆。
+      for (const 倍 of [1, 10]) {
+        const 大 = Buffer.concat(Array.from({ length: 倍 }, () => 全));
+        const 大路 = path.join(临, "big-" + 倍 + ".bin");
+        const 大流 = path.join(临, "big-" + 倍 + ".zfixed");
+        const 大出 = path.join(临, "big-" + 倍 + ".out");
+        fs.writeFileSync(大路, 大);
+        fs.writeFileSync(大流, zlib.deflateRawSync(大, { strategy: zlib.constants.Z_FIXED }));
+        const t0 = Date.now();
+        const r = spawnSync(exe, [解路, 大流, 大出], {
+          encoding: "utf8", timeout: 1800000,
+          env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
+        });
+        const 秒 = ((Date.now() - t0) / 1000).toFixed(1);
+        const 回 = fs.existsSync(大出) ? fs.readFileSync(大出) : null;
+        ok(倍 + " 倍（" + 大.length + " 字节）解得回原样", r.status === 0 && 回 && 回.length === 大.length && Buffer.compare(大, 回) === 0, String(r.status) + " 用时 " + 秒 + "s " + (回 ? 回.length : 0));
+      }
+    }
+
+        console.log("四、别人的流：zlib 用固定策略压的，HMYR 也解得开");
     {
       const z流 = path.join(临, "zlib.fixed");
       const z出 = path.join(临, "zlib.out");
