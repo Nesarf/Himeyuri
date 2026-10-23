@@ -1,10 +1,12 @@
 // SHA-256：清单里每一个文件的哈希与整份的 digest 都要它。
 //
-// 位运算自带在这个文件里，而不是 import：位运算那八个小函数复制一遍
-// 比给「两处同名函数」付代价更省事，两处注释互相指一下即可。
+// 位运算走内建（位与/位或/位异或/位非/位右移/位加/位循环右移/位循环左移）。
+// 早先这一份自带逐位的 32 轮循环版本，对 30 KB 跑了三十分钟没出结果 —— 那是把
+// 「语言里没有位运算符」的代价摊在每一次调用上。内建之后，一次位运算就是一次。
 //
 // 用法：hmyr self/sha256.hmyr <文件>       打印 64 位十六进制
 
+// 2 的 n 次幂：十六进制输出要它按 4 位一段往下取。
 fn 倍(n: Int) -> Int {
   var v = 1
   var i = 0
@@ -13,61 +15,6 @@ fn 倍(n: Int) -> Int {
     i = i + 1
   }
   return v
-}
-
-fn 与(a: Int, b: Int) -> Int {
-  var 出 = 0
-  var 倍量 = 1
-  var x = a
-  var y = b
-  var i = 0
-  while i < 32 {
-    let 甲 = x % 2
-    let 乙 = y % 2
-    if 甲 == 1 && 乙 == 1 { 出 = 出 + 倍量 }
-    x = (x - 甲) / 2
-    y = (y - 乙) / 2
-    倍量 = 倍量 * 2
-    i = i + 1
-  }
-  return 出
-}
-
-fn 异或(a: Int, b: Int) -> Int {
-  var 出 = 0
-  var 倍量 = 1
-  var x = a
-  var y = b
-  var i = 0
-  while i < 32 {
-    let 甲 = x % 2
-    let 乙 = y % 2
-    if 甲 != 乙 { 出 = 出 + 倍量 }
-    x = (x - 甲) / 2
-    y = (y - 乙) / 2
-    倍量 = 倍量 * 2
-    i = i + 1
-  }
-  return 出
-}
-
-fn 非(a: Int) -> Int {
-  return 4294967295 - (a % 4294967296)
-}
-
-fn 右移(a: Int, n: Int) -> Int {
-  return (a - a % 倍(n)) / 倍(n)
-}
-
-fn 加32(a: Int, b: Int) -> Int {
-  return (a + b) % 4294967296
-}
-
-fn 循环右移(a: Int, n: Int) -> Int {
-  let 割 = 倍(n)
-  let 低 = a % 割
-  let 高 = (a - 低) / 割
-  return 低 * 倍(32 - n) + 高
 }
 
 // 六十四轮常量。
@@ -86,24 +33,24 @@ fn 初值() {
   return (1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225)
 }
 
-// 小写 sigma0：ror7 ^ ror18 ^ shr3
+// 小写 sigma0：ror7 异或 ror18 异或 shr3
 fn 小零(x: Int) -> Int {
-  return 异或(异或(循环右移(x, 7), 循环右移(x, 18)), 右移(x, 3))
+  return 位异或(位异或(位循环右移(x, 7), 位循环右移(x, 18)), 位右移(x, 3))
 }
 
-// 小写 sigma1：ror17 ^ ror19 ^ shr10
+// 小写 sigma1：ror17 异或 ror19 异或 shr10
 fn 小一(x: Int) -> Int {
-  return 异或(异或(循环右移(x, 17), 循环右移(x, 19)), 右移(x, 10))
+  return 位异或(位异或(位循环右移(x, 17), 位循环右移(x, 19)), 位右移(x, 10))
 }
 
-// 大写 Sigma0：ror2 ^ ror13 ^ ror22
+// 大写 Sigma0：ror2 异或 ror13 异或 ror22
 fn 大零(x: Int) -> Int {
-  return 异或(异或(循环右移(x, 2), 循环右移(x, 13)), 循环右移(x, 22))
+  return 位异或(位异或(位循环右移(x, 2), 位循环右移(x, 13)), 位循环右移(x, 22))
 }
 
-// 大写 Sigma1：ror6 ^ ror11 ^ ror25
+// 大写 Sigma1：ror6 异或 ror11 异或 ror25
 fn 大一(x: Int) -> Int {
-  return 异或(异或(循环右移(x, 6), 循环右移(x, 11)), 循环右移(x, 25))
+  return 位异或(位异或(位循环右移(x, 6), 位循环右移(x, 11)), 位循环右移(x, 25))
 }
 
 fn 取字(块: Int, i: Int) -> Int {
@@ -122,7 +69,7 @@ fn 一块(哈希们: Int, 块: Int) {
   while i < 64 {
     let x = to_int(W[i - 15])
     let y = to_int(W[i - 2])
-    W = W + (加32(加32(加32(to_int(W[i - 16]), 小零(x)), to_int(W[i - 7])), 小一(y)),)
+    W = W + (位加(位加(位加(to_int(W[i - 16]), 小零(x)), to_int(W[i - 7])), 小一(y)),)
     i = i + 1
   }
   var a = to_int(哈希们[0])
@@ -136,22 +83,22 @@ fn 一块(哈希们: Int, 块: Int) {
   i = 0
   while i < 64 {
     // Ch(e,f,g) = (e 与 f) 异或 (非 e 与 g)；Maj(a,b,c) = 三对两两相与再异或。
-    let Ch = 异或(与(e, f), 与(非(e), g))
-    let Maj = 异或(异或(与(a, b), 与(a, c)), 与(b, c))
-    let t1 = 加32(加32(加32(h, 大一(e)), Ch), 加32(to_int(常[i]), to_int(W[i])))
-    let t2 = 加32(大零(a), Maj)
+    let Ch = 位异或(位与(e, f), 位与(位非(e), g))
+    let Maj = 位异或(位异或(位与(a, b), 位与(a, c)), 位与(b, c))
+    let t1 = 位加(位加(位加(h, 大一(e)), Ch), 位加(to_int(常[i]), to_int(W[i])))
+    let t2 = 位加(大零(a), Maj)
     h = g
     g = f
     f = e
-    e = 加32(d, t1)
+    e = 位加(d, t1)
     d = c
     c = b
     b = a
-    a = 加32(t1, t2)
+    a = 位加(t1, t2)
     i = i + 1
   }
-  return (加32(to_int(哈希们[0]), a), 加32(to_int(哈希们[1]), b), 加32(to_int(哈希们[2]), c), 加32(to_int(哈希们[3]), d),
-    加32(to_int(哈希们[4]), e), 加32(to_int(哈希们[5]), f), 加32(to_int(哈希们[6]), g), 加32(to_int(哈希们[7]), h))
+  return (位加(to_int(哈希们[0]), a), 位加(to_int(哈希们[1]), b), 位加(to_int(哈希们[2]), c), 位加(to_int(哈希们[3]), d),
+    位加(to_int(哈希们[4]), e), 位加(to_int(哈希们[5]), f), 位加(to_int(哈希们[6]), g), 位加(to_int(哈希们[7]), h))
 }
 
 // 填充：0x80、若干 0、最后八字节是大端位长。
