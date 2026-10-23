@@ -21,6 +21,14 @@
  * Run:    ./hmyr-vm program.hmyrb
  */
 
+/* 内置种子：桌面那一支把整份编译器编进来，于是这个可执行文件自带编译能力。
+ * 板子上不编它 —— 那台没有文件系统，也用不到 cli_main；而且几百千字节的常量
+ * 会把 flash 塞满，那不是「最小机器层」该有的样子。 */
+#if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+#include "pack_seed.h"
+#endif
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -3338,12 +3346,42 @@ static void 临时路径(char *buf, size_t cap) {
 
 /* 种子在哪。三种找法，按「离用户近」排：环境变量、可执行文件旁边、
  * 当前目录。找不到就明说，别让人等一个「没有这个文件」的通用消息。 */
+/* 内置种子写到哪儿：与编译产物分开一个名字，免得 cli_main 的清理删错文件。 */
+#if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+static char g_种子临时[1024];
+
+static int 写种子临时(char *buf, size_t cap) {
+  临时路径(buf, cap);
+  size_t n = strlen(buf);
+  if (n > 6 && strcmp(buf + n - 6, ".hmyrb") == 0) {
+    snprintf(buf + n - 6, cap - (n - 6), ".seed.hmyrb");
+  }
+  FILE *f = 开文件(buf, "wb");
+  if (!f) return 0;
+  size_t 写 = fwrite(hmyr_pack_seed, 1, sizeof hmyr_pack_seed, f);
+  fclose(f);
+  return 写 == sizeof hmyr_pack_seed;
+}
+#endif
+
+
+/* 种子在哪。内置优先：可执行文件带着编译器，拷到哪都能用，不依赖旁边的 bootstrap/。
+ * 然后才是环境变量、可执行文件旁边、当前目录 —— 那三条给「想用另一份种子」的人留的。 */
 static int 找种子(char *buf, size_t cap, const char *argv0) {
   const char *env = getenv("HMYR_SEED");
   if (env && *env) {
     snprintf(buf, cap, "%s", env);
     if (文件在(buf)) return 1;
+    /* 给了却不在：明说，别悄悄落到内置那一份 —— 那会让人以为自己的种子生效了。 */
+    return 0;
   }
+#if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+  /* 没有明确指定时用内置那一份：可执行文件自带编译器。 */
+  if (sizeof hmyr_pack_seed > 1 && 写种子临时(buf, cap)) {
+    snprintf(g_种子临时, sizeof g_种子临时, "%s", buf);
+    return 1;
+  }
+#endif
   /* 可执行文件所在目录：砍掉最后一段路径。 */
   char 目录[900];
   snprintf(目录, sizeof 目录, "%s", argv0);
@@ -3618,7 +3656,13 @@ int main(int argc, char **argv) {
    * 判据是后缀 —— 别看文件内容去猜，猜错的时候症状比报错难查得多。 */
   {
     size_t 名长 = strlen(argv[1]);
-    if (名长 > 5 && strcmp(argv[1] + 名长 - 5, ".hmyr") == 0) return cli_main(argc, argv);
+    if (名长 > 5 && strcmp(argv[1] + 名长 - 5, ".hmyr") == 0) {
+      int 码 = cli_main(argc, argv);
+#if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+      if (g_种子临时[0]) remove(g_种子临时);
+#endif
+      return 码;
+    }
   }
   return run_bytecode(argv[1], argv[1], argc - 2, argv + 2, 步限从环境());
 }
