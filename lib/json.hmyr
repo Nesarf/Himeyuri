@@ -13,7 +13,7 @@
 //
 // 三条老规矩照旧：没有复合条件（嵌套 if）、没有 break（标志收尾）、没有整数除法。
 
-fn 错(话: String) -> Int {
+fn 错(话: String) {
   return {ok: false, 错: 话}
 }
 
@@ -116,7 +116,7 @@ fn 值从文(s: String) -> Int {
 }
 
 // 认一个词（true / false / null）。对不上就是错。
-fn 认词(文: String, i: Int, 词: String) -> Int {
+fn 认词(文: String, i: Int, 词: String) {
   let 末 = i + len(词)
   if 末 > len(文) { return 错("这里该是 " + 词) }
   if slice(文, i, 末) != 词 { return 错("这里该是 " + 词) }
@@ -138,7 +138,7 @@ fn 四位的码点(文: String, i: Int) -> Int {
 }
 
 // 串：i 已经在开头的引号之后。acc 是已经收下的部分。
-fn 解析串(文: String, i: Int, acc: String) -> Int {
+fn 解析串(文: String, i: Int, acc: String) {
   if i >= len(文) { return 错("字符串没有收尾的引号") }
   let c = 文[i]
   if c == "\"" { return {ok: true, 值: {串: acc}, next: i + 1} }
@@ -166,7 +166,7 @@ fn 转义后(文: String, i: Int, acc: String) -> Int {
 }
 
 // 数：符号、整数位、可选的小数、可选的指数。
-fn 解析数(文: String, i: Int) -> Int {
+fn 解析数(文: String, i: Int) {
   let 起 = i
   var j = i
   if j < len(文) {
@@ -206,7 +206,7 @@ fn 指数后(文: String, i: Int) -> Int {
 }
 
 // 一个值。i 已经跳过空白。
-fn 解析值(文: String, i: Int) -> Int {
+fn 解析值(文: String, i: Int) {
   if i >= len(文) { return 错("文到头了，这里该有一个值") }
   let c = 文[i]
   if c == "{" { return 解析对象(文, i + 1, ()) }
@@ -231,7 +231,7 @@ fn 解析值(文: String, i: Int) -> Int {
 }
 
 // 数组：i 已经在开头的方括号之后。
-fn 解析数组(文: String, i: Int, acc: Int) -> Int {
+fn 解析数组(文: String, i: Int, acc: Int) {
   let j = 跳空(文, i)
   if j >= len(文) { return 错("数组没有收尾的方括号") }
   if 文[j] == "]" { return {ok: true, 值: {数组: acc}, next: j + 1} }
@@ -246,7 +246,7 @@ fn 解析数组(文: String, i: Int, acc: Int) -> Int {
 }
 
 // 对象：i 已经在开头的花括号之后。
-fn 解析对象(文: String, i: Int, acc: Int) -> Int {
+fn 解析对象(文: String, i: Int, acc: Int) {
   let j = 跳空(文, i)
   if j >= len(文) { return 错("对象没有收尾的花括号") }
   if 文[j] == "}" { return {ok: true, 值: {对象: acc}, next: j + 1} }
@@ -267,7 +267,7 @@ fn 解析对象(文: String, i: Int, acc: Int) -> Int {
 }
 
 // 入口：整份文都要读掉。尾部还剩下东西就是错 —— 那不是 JSON，是一段以 JSON 开头的文字。
-fn 解析(文: String) -> Int {
+fn 解析(文: String) {
   let i = 跳空(文, 0)
   let r = 解析值(文, i)
   if r.ok == false { return r }

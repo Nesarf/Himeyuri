@@ -218,8 +218,14 @@ HMYR 全面自举：运行时、宿主依赖与启动
                      stmt.hmyr 与 body.hmyr 里 —— 接口要另接一层。
           LSP        src/lsp.mjs 一百五十四行，JSON-RPC 走 stdio。
                      它等的两格现在都有了：read_stdin_line 交回 {行, 结束}，
-                     read_stdin_bytes 交回 {字节们, 结束}。于是「读头拿长度、
-                     按长度读体」这两步写得出来。下一格从它开始。
+                     read_stdin_bytes 交回 {字节们, 结束}，bytes_to_text 把字节解成文本。
+                     第一版已经搬了：self/lsp.hmyr 答 initialize（能力与服务器信息）、
+                     答 shutdown（空结果）、exit 之后自己停，其余一律回「没有这个方法」。
+                     验收是 test/lsp-hmyr.test.mjs（十项，含「exit 之后不再回话」）。
+                     还没搬的是符号、定义与悬浮签名 —— 那三样要读语法树，而读语法树
+                     该由自举侧那一套前端来做，不是在编辑器插件里再养一个解析器。
+                     回话只用 ASCII：Content-Length 数的是字节，字符串长度数的是码元，
+                     两者只在全 ASCII 时相等。
           语料生成   剩下三支：ucd-case（大小写表）、ucd-nfc（归一化表）、
                      ucd（全码点扫描）。它们与 ucd-c 同一个形状，但数据量大得多。
           打包发布   package/release/manifest/verify 约三百九十行，要一个自己的

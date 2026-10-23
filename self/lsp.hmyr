@@ -1,0 +1,118 @@
+// 语言服务器：JSON-RPC 走标准输入与标准输出，照 LSP 的 Content-Length 框。
+//
+// 这是「工具链搬进 HMYR」的最后一件里最难的一件 —— 而它要的东西现在都有了：
+// 读一行（头）、读 N 字节（体）、把字节解成文本、一个 JSON 库（lib/json.hmyr）。
+//
+// 它不重新分析程序：现在只回答「你是谁」与「关掉吧」。符号、定义、悬浮签名
+// 都要读语法树，而那件事该由自举侧那一套前端来做 —— 一件一件来。
+//
+// 回话只用 ASCII：Content-Length 数的是字节，而这里的字符串长度数的是码元；
+// 两边只有在全 ASCII 时才相等。要写中文进回话，得先量一次 UTF-8 字节数。
+//
+// 用法：hmyr self/lsp.hmyr
+
+import "../lib/json.hmyr"
+
+fn 是长度行(行: String) -> Bool {
+  if len(行) < 16 { return false }
+  return slice(行, 0, 15) == "Content-Length:"
+}
+
+// " 123" → 123。只看数字，别的字符跳过。
+fn 数值(文: String) -> Int {
+  var v = 0
+  var i = 0
+  while i < len(文) {
+    let o = ord(文[i])
+    if o >= 48 && o <= 57 { v = v * 10 + (o - 48) }
+    i = i + 1
+  }
+  return v
+}
+
+// 读一条消息：头先读到空行为止，体按长度读。交回 {体, 结束}。
+fn 读消息() {
+  var 长 = 0 - 1
+  var 继续 = true
+  var 完 = false
+  while 继续 {
+    let r = read_stdin_line()
+    if r.结束 {
+      完 = true
+      继续 = false
+    } else if len(r.行) == 0 {
+      继续 = false
+    } else if 是长度行(r.行) {
+      长 = 数值(slice(r.行, 15, len(r.行)))
+    }
+  }
+  if 完 { return {体: "", 结束: true} }
+  if 长 < 0 { return {体: "", 结束: true} }
+  let b = read_stdin_bytes(长)
+  return {体: bytes_to_text(b.字节们), 结束: b.结束}
+}
+
+// 从 JSON 对象里取一个键。找不到交回空。
+// 键是裸字符串（写对表那一支就是这么写的），值才是带标记的记录。
+fn 取(对象: Int, 键: String) {
+  if !field_has(对象, "对象") { return {空: 1} }
+  let 对们 = 对象.对象
+  var i = 0
+  while i < len(对们) {
+    if 对们[i][0] == 键 { return 对们[i][1] }
+    i = i + 1
+  }
+  return {空: 1}
+}
+
+fn 取串(对象: Int, 键: String) -> String {
+  let v = 取(对象, 键)
+  if field_has(v, "串") { return v.串 }
+  return ""
+}
+
+fn 应答(id: Int, 结果: Int) -> String {
+  return 生成({对象: (("jsonrpc", {串: "2.0"}), ("id", id), ("result", 结果))})
+}
+
+fn 应答错(id: Int, 码: Int, 话: String) -> String {
+  return 生成({对象: (("jsonrpc", {串: "2.0"}), ("id", id), ("error", {对象: (("code", {数: 码}), ("message", {串: 话}))}))})
+}
+
+// 处理一条消息：交回 {文, 停}。解析不动或是通知就交回空文。
+fn 处理(体: String) {
+  let p = 解析(体)
+  if !p.ok { return {文: "", 停: false} }
+  let 值 = p.值
+  let 方法 = 取串(值, "method")
+  let id = 取(值, "id")
+  if 方法 == "initialize" {
+    let 能力 = {对象: (("textDocumentSync", {数: 1}), ("hoverProvider", {真: 1}))}
+    let 己 = {对象: (("name", {串: "himeyuri"}), ("version", {串: "0.1.0-m7"}))}
+    return {文: 应答(id, {对象: (("capabilities", 能力), ("serverInfo", 己))}), 停: false}
+  }
+  if 方法 == "shutdown" {
+    return {文: 应答(id, {空: 1}), 停: false}
+  }
+  if 方法 == "exit" {
+    return {文: "", 停: true}
+  }
+  return {文: 应答错(id, 0 - 32601, "method not found"), 停: false}
+}
+
+fn main() -> Int {
+  var 跑 = true
+  while 跑 {
+    let m = 读消息()
+    if m.结束 {
+      跑 = false
+    } else {
+      let r = 处理(m.体)
+      if len(r.文) > 0 {
+        print("Content-Length: " + str(len(r.文)) + "\r\n\r\n" + r.文)
+      }
+      if r.停 { 跑 = false }
+    }
+  }
+  return 0
+}
