@@ -849,6 +849,55 @@ console.log("二十三、线程：这一台没有，问了会说");
   ok("起不来时交回 -1、活的数是 0", r.js === r.c && r.c.trim() === "-1 0", JSON.stringify(r.c.trim()));
 }
 
+console.log("二十四、回收：同一个程序开着回收，峰值降下来");
+{
+  // 这台机器默认不回收。HMYR_GC=1 打开之后，元组的元素、记录的 vals、
+  // 调用帧的槽都会被标扫；字符串这一轮不收，所以降下来的是一部分 ——
+  // 而那一部分正是「一份一份编」时累积得最凶的那种临时对象。
+  const 源码 = [
+    "fn 造(k: Int) -> Int {",
+    "  var t = ()",
+    "  var i = 0",
+    "  while i < k {",
+    "    t = t + (i, i + 1, i + 2, i + 3)",
+    "    i = i + 1",
+    "  }",
+    "  return t",
+    "}",
+    "fn 丢(k: Int, 次: Int) -> Int {",
+    "  if 次 <= 0 { return 0 }",
+    "  let x = 造(k)",
+    "  return 丢(k, 次 - 1) + len(x)",
+    "}",
+    "fn main() -> Int {",
+    "  var 和 = 0",
+    "  var i = 0",
+    "  while i < 50 {",
+    "    和 = 和 + 丢(20, 20)",
+    "    i = i + 1",
+    "  }",
+    '  print(str(和))',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const 源路 = path.join(临, "gcmem.hmyr");
+  fs.writeFileSync(源路, 源码, "utf8");
+  const unit = loadUnit(源路);
+  const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));
+  const 码路 = path.join(临, "gcmem.hmyrb");
+  fs.writeFileSync(码路, 写程序(程序));
+  const 读峰 = (env) => {
+    const r = spawnSync(exe, [码路], { encoding: "utf8", timeout: 120000, env: { ...process.env, HMYR_MEM: "1", ...env } });
+    const m = /peak (\d+)/.exec(String(r.stderr));
+    return { 峰: m ? Number(m[1]) : -1, 出: String(r.stdout).trim(), 码: r.status };
+  };
+  const 甲 = 读峰({});
+  const 乙 = 读峰({ HMYR_GC: "1" });
+  ok("两次都跑对了", 甲.码 === 0 && 乙.码 === 0 && 甲.出 === 乙.出, JSON.stringify([甲, 乙]));
+  ok("开着回收时峰值不到一半", 乙.峰 > 0 && 甲.峰 > 0 && 乙.峰 * 2 < 甲.峰,
+     Math.round(乙.峰 / 1048576) + " MB 对 " + Math.round(甲.峰 / 1048576) + " MB");
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

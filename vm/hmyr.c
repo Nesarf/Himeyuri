@@ -703,10 +703,32 @@ static int 拆码点(Value s, Value *out, int 上限) {
 }
 #endif
 
+/* ---- 回收：开关与分配入口 ---------------------------------------------
+ *
+ * 这一台的分配一直不回收，于是「一份一份编」时前面几份的堆全留着 ——
+ * 自编译峰值 3.145 GB 就是这么来的。
+ *
+ * 收的是 Value 数组：元组的元素、记录的 vals、调用帧的槽。
+ * 字符串这一轮不收（它们可能在文件镜像里，来源混杂），所以
+ * 「字符串与数组」里只有后者被标扫。这一条边界写在 design/MEMORY.txt。
+ *
+ * 默认不开。HMYR_GC=1 打开，阈值默认 2 MB（HMYR_GC_BYTES 改）。
+ * 实现见 run_func 之前那一段：它要知道帧链与根在哪儿。
+ */
+static int g_gc开 = 0;
+static void *gc_分配(size_t 字节);
+
 static Value *alloc_values(uint32_t n) {
-  Value *p = (Value *)calloc(n ? n : 1, sizeof(Value));
-  if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
-  return p;
+  size_t 字节 = (size_t)(n ? n : 1) * sizeof(Value);
+  if (!g_gc开) {
+    Value *p = (Value *)hm_calloc(n ? n : 1, sizeof(Value));
+    return p;
+  }
+  {
+    Value *p = (Value *)gc_分配(字节);
+    memset(p, 0, 字节);
+    return p;
+  }
 }
 
 /* 大小写：逐码点查表。上界是「每个单元都摊成三份」，因为表里最长的一条是三个单元。 */
@@ -1340,6 +1362,193 @@ static int64_t g_last_field = -1;
  * the first element is where the bytecode came from, the rest are the
  * programme's own arguments - the same shape the JavaScript machine uses. */
 static Value g_argv;
+
+/* ---- 回收：标记与清扫 ------------------------------------------------
+ *
+ * 一次收集做三件事：从根标起（操作栈、argv、键队列、每个活动帧的槽、
+ * 函数表里的常量），把没标到的块还掉，再重建地址表。
+ * 地址表让「这个指针是不是我的块」变成一次查找 —— 否则标记阶段
+ * 会去读一个不属于自己的地址，那种崩法比泄漏难查得多。
+ *
+ * 板子上不编这一块：地址表在桌面占两兆左右的静态内存，而板子的堆
+ * 只有几十千字节。那一台本来也遇不到三吉字节级的自编译。
+ */
+typedef struct 帧记录 {
+  Value *slots;
+  uint32_t 槽数;
+  struct 帧记录 *上;
+} 帧记录;
+
+static 帧记录 *g_帧链 = NULL;
+
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+static void *gc_分配(size_t 字节) { (void)字节; return NULL; }
+#else
+/* 这三个只在桌面那一支里用：板子上不编回收，也就没有账可记。 */
+static size_t g_gc字节 = 0, g_gc数 = 0, g_gc阈值 = 32 * 1024 * 1024;
+static int g_gc日志 = 0;
+typedef struct Gc块 {
+  struct Gc块 *下;
+  size_t 载荷;
+  uint32_t 标记;
+} Gc块;
+
+static Gc块 *g_gc链 = NULL;
+
+/* 地址表按需扩容。自编译一次要分配几十万块，表一开始只给四千槽 ——
+ * 固定十三万槽的版本在表满之后每次插入都要走一遍全表，慢到十几倍。 */
+static void **g_gc键 = NULL;
+static Gc块 **g_gc值 = NULL;
+static size_t g_gc槽 = 0, g_gc占 = 0;
+
+/* 标记用显式栈，不递归：元组可以套得很深，而标记走的是数据的形状 ——
+ * 递归版在自编译那种规模上会把机器栈吃掉（实测退出码 0xC00000FD）。 */
+static Gc块 **g_标栈 = NULL;
+static size_t g_标数 = 0, g_标容 = 0;
+
+static Gc块 *gc_查(void *p);
+
+static void gc_压标(Gc块 *b) {
+  if (!b || b->标记) return;
+  b->标记 = 1;
+  if (g_标数 == g_标容) {
+    size_t 新 = g_标容 ? g_标容 * 2 : 4096;
+    g_标栈 = (Gc块 **)hm_realloc(g_标栈, 新 * sizeof(Gc块 *));
+    g_标容 = 新;
+  }
+  g_标栈[g_标数++] = b;
+}
+
+static void gc_标值(Value v) {
+  if (v.tag == T_TUPLE && v.items) gc_压标(gc_查(v.items));
+  else if (v.tag == T_RECORD && v.rec.vals) gc_压标(gc_查(v.rec.vals));
+}
+
+static void gc_建表(size_t 槽) {
+  g_gc槽 = 槽;
+  g_gc占 = 0;
+  g_gc键 = (void **)hm_calloc(槽, sizeof(void *));
+  g_gc值 = (Gc块 **)hm_calloc(槽, sizeof(Gc块 *));
+}
+
+static size_t gc_槽(void *p, size_t 槽数) {
+  return (size_t)(((uintptr_t)p >> 3) & (槽数 - 1));
+}
+
+static void gc_插(void *p, Gc块 *b);
+
+static void gc_扩容(void) {
+  size_t 新槽 = g_gc槽 ? g_gc槽 * 2 : 4096;
+  void **旧键 = g_gc键;
+  Gc块 **旧值 = g_gc值;
+  size_t 旧槽 = g_gc槽;
+  gc_建表(新槽);
+  for (size_t i = 0; i < 旧槽; i++) if (旧键[i]) gc_插(旧键[i], 旧值[i]);
+  if (旧键) hm_free(旧键);
+  if (旧值) hm_free(旧值);
+}
+
+static void gc_插(void *p, Gc块 *b) {
+  if (g_gc占 * 10 >= g_gc槽 * 7) gc_扩容();
+  {
+    size_t i = gc_槽(p, g_gc槽);
+    while (g_gc键[i]) i = (i + 1) & (g_gc槽 - 1);
+    g_gc键[i] = p;
+    g_gc值[i] = b;
+    g_gc占++;
+  }
+}
+
+static Gc块 *gc_查(void *p) {
+  if (!g_gc槽) return NULL;
+  {
+    size_t i = gc_槽(p, g_gc槽);
+    while (g_gc键[i]) {
+      if (g_gc键[i] == p) return g_gc值[i];
+      i = (i + 1) & (g_gc槽 - 1);
+    }
+  }
+  return NULL;
+}
+
+static void *gc_分配(size_t 字节) {
+  Gc块 *b = (Gc块 *)hm_malloc(sizeof(Gc块) + 字节);
+  void *载荷 = (void *)(b + 1);
+  b->下 = g_gc链;
+  b->载荷 = 字节;
+  b->标记 = 0;
+  g_gc链 = b;
+  g_gc字节 += 字节;
+  g_gc数++;
+  gc_插(载荷, b);
+  return 载荷;
+}
+
+static size_t gc_收集(void) {
+  size_t 前 = g_gc字节;
+  size_t 前数 = g_gc数;
+  if (g_gc日志) fprintf(stderr, "gc: 开始 前 %llu 字节 %llu 块\n",
+                        (unsigned long long)前, (unsigned long long)前数);
+  for (uint32_t i = 0; i < g_stack_n; i++) gc_标值(g_stack[i]);
+  gc_标值(g_argv);
+  for (int i = 0; i < g_key数; i++) gc_标值(g_keys[(g_key头 + i) % KEY_环]);
+  for (帧记录 *f = g_帧链; f; f = f->上) {
+    /* 标的是「槽数组」这一个块本身：它也是 alloc_values 分配的，
+     * 只标槽里的值会让清扫把它自己收掉 —— 那是「活着的东西被回收」的典型形状。 */
+    gc_压标(gc_查(f->slots));
+  }
+  for (uint32_t i = 0; i < nfuncs; i++) {
+    Func *fn = &funcs[i];
+    for (uint32_t j = 0; j < fn->ncode; j++) gc_标值(fn->code[j].val);
+  }
+  /* 显式栈把标记走完：每弹一个块，把它里面的值再压进去。 */
+  while (g_标数 > 0) {
+    Gc块 *b = g_标栈[--g_标数];
+    Value *v = (Value *)(b + 1);
+    size_t n = b->载荷 / sizeof(Value);
+    for (size_t i = 0; i < n; i++) gc_标值(v[i]);
+  }
+  {
+    Gc块 *存活 = NULL;
+    size_t 字节 = 0, 数 = 0;
+    Gc块 *b = g_gc链;
+    while (b) {
+      Gc块 *下 = b->下;
+      if (b->标记) {
+        b->标记 = 0;
+        b->下 = 存活;
+        存活 = b;
+        字节 += b->载荷;
+        数++;
+      } else {
+        hm_free(b);
+      }
+      b = 下;
+    }
+    g_gc链 = 存活;
+    g_gc字节 = 字节;
+    g_gc数 = 数;
+  }
+  /* 表按活块数重建：清扫之后块数掉下去，表也该跟着小下来 ——
+   * 否则下一次增长又要撞上扩容。 */
+  {
+    size_t 新 = 4096;
+    while (新 < (g_gc数 + 1) * 2) 新 *= 2;
+    if (g_gc键) { hm_free(g_gc键); g_gc键 = NULL; }
+    if (g_gc值) { hm_free(g_gc值); g_gc值 = NULL; }
+    gc_建表(新);
+    for (Gc块 *b = g_gc链; b; b = b->下) gc_插((void *)(b + 1), b);
+  }
+  /* 活数据不肯降到阈值以下时，把阈值抬上去：否则每一次函数调用都会收一次，
+   * 而收集本身要把整张图走一遍 —— 那会把程序拖成以收集为主。
+   * 自适应到「活数据的两倍 + 一兆」，与多数标记清扫的做法一致。 */
+  if (g_gc字节 * 10 > g_gc阈值 * 8) g_gc阈值 = g_gc字节 * 2 + (1u << 20);
+  if (g_gc日志) fprintf(stderr, "gc: 结束 后 %llu 字节 %llu 块（放掉 %llu，新阈值 %llu）\n",
+                        (unsigned long long)g_gc字节, (unsigned long long)g_gc数,
+                        (unsigned long long)(前 - g_gc字节), (unsigned long long)g_gc阈值);
+  return 前 - g_gc字节;
+}
+#endif
 
 static Value fail(const char *code, const char *msg) {
   if (!g_failed) {
@@ -2554,6 +2763,16 @@ static Value run_func(Func *f, Value *args, int nargs) {
   记深度(f, g_cur);
   Value *slots = alloc_values(f->nslots);
   for (int i = 0; i < nargs && i < (int)f->nslots; i++) slots[i] = args[i];
+  /* 帧链：GC 靠它看见递归中的槽；出口要还原，否则它指向一个已经没了的栈帧。 */
+  帧记录 帧;
+  帧.slots = slots;
+  帧.槽数 = f->nslots;
+  帧.上 = g_帧链;
+  g_帧链 = &帧;
+#if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+  if (g_gc开 && g_gc字节 > g_gc阈值) gc_收集();
+#endif
+#define FRAME_RET(x) do { g_帧链 = 帧.上; return (x); } while (0)
   uint32_t base = g_stack_n;
   /* 进帧时把基线交给 pop：从那以后弹栈不会越过它。
    * 退出时要还原 —— 否则回到调用者之后，它自己也弹不动自己压的东西了。 */
@@ -2563,9 +2782,9 @@ static Value run_func(Func *f, Value *args, int nargs) {
   g_cur = f;
   int32_t pc = 0;
   for (;;) {
-    if (g_failed) return v_null();
-    if (++steps > step_limit) { fail("HMYR-R0102", "the program ran for too long"); return v_null(); }
-    if ((uint32_t)pc >= f->ncode) { fail("HMYR-R0110", "the instruction stream ran off its end"); return v_null(); }
+    if (g_failed) FRAME_RET(v_null());
+    if (++steps > step_limit) { fail("HMYR-R0102", "the program ran for too long"); FRAME_RET(v_null()); }
+    if ((uint32_t)pc >= f->ncode) { fail("HMYR-R0110", "the instruction stream ran off its end"); FRAME_RET(v_null()); }
     Ins *in = &f->code[pc];
     if (g_trace_on) {
       Trace *t = &g_trace[g_trace_at];
@@ -2581,7 +2800,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
           char m[160];
           snprintf(m, sizeof m, "load from slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
           fail("HMYR-R0110", m);
-          return v_null();
+          FRAME_RET(v_null());
         }
         push(slots[in->a]); pc++; break;
       case OP_STORE:
@@ -2589,7 +2808,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
           char m[160];
           snprintf(m, sizeof m, "store to slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
           fail("HMYR-R0110", m);
-          return v_null();
+          FRAME_RET(v_null());
         }
         slots[in->a] = pop(); pc++; break;
       case OP_ASSIGN:
@@ -2597,14 +2816,14 @@ static Value run_func(Func *f, Value *args, int nargs) {
           char m[160];
           snprintf(m, sizeof m, "assign to slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
           fail("HMYR-R0110", m);
-          return v_null();
+          FRAME_RET(v_null());
         }
         slots[in->a] = pop(); pc++; break;
       case OP_POP: pop(); pc++; break;
-      case OP_GLOBAL: { fail("HMYR-R0104", "globals are not in this machine yet"); return v_null(); }
+      case OP_GLOBAL: { fail("HMYR-R0104", "globals are not in this machine yet"); FRAME_RET(v_null()); }
       case OP_BOOL: { Value v = pop(); push(v_bool(truthy(v))); pc++; break; }
       case OP_NEG: { Value v = pop(); int ok = 0; double d = as_num(v, &ok);
-        if (!ok) { fail("HMYR-R0130", "expected a number"); return v_null(); } push(v_num(-d)); pc++; break; }
+        if (!ok) { fail("HMYR-R0130", "expected a number"); FRAME_RET(v_null()); } push(v_num(-d)); pc++; break; }
       case OP_NOT: { Value v = pop(); push(v_bool(!truthy(v))); pc++; break; }
       case OP_ADD: {
         Value b = pop(), a = pop();
@@ -2623,28 +2842,28 @@ static Value run_func(Func *f, Value *args, int nargs) {
         } else {
           int ok1 = 0, ok2 = 0;
           double x = as_num(a, &ok1), y = as_num(b, &ok2);
-          if (!ok1 || !ok2) { fail("HMYR-R0130", "expected numbers"); return v_null(); }
+          if (!ok1 || !ok2) { fail("HMYR-R0130", "expected numbers"); FRAME_RET(v_null()); }
           push(v_num(x + y));
         }
         pc++; break;
       }
       case OP_SUB: { Value b = pop(), a = pop(); int o1 = 0, o2 = 0;
         double x = as_num(a, &o1), y = as_num(b, &o2);
-        if (!o1 || !o2) { fail("HMYR-R0130", "expected numbers"); return v_null(); }
+        if (!o1 || !o2) { fail("HMYR-R0130", "expected numbers"); FRAME_RET(v_null()); }
         push(v_num(x - y)); pc++; break; }
       case OP_MUL: { Value b = pop(), a = pop(); int o1 = 0, o2 = 0;
         double x = as_num(a, &o1), y = as_num(b, &o2);
-        if (!o1 || !o2) { fail("HMYR-R0130", "expected numbers"); return v_null(); }
+        if (!o1 || !o2) { fail("HMYR-R0130", "expected numbers"); FRAME_RET(v_null()); }
         push(v_num(x * y)); pc++; break; }
       case OP_DIV: { Value b = pop(), a = pop(); int o1 = 0, o2 = 0;
         double x = as_num(a, &o1), y = as_num(b, &o2);
-        if (!o1 || !o2) { fail("HMYR-R0130", "expected numbers"); return v_null(); }
-        if (y == 0) { fail("HMYR-R0120", "division by zero"); return v_null(); }
+        if (!o1 || !o2) { fail("HMYR-R0130", "expected numbers"); FRAME_RET(v_null()); }
+        if (y == 0) { fail("HMYR-R0120", "division by zero"); FRAME_RET(v_null()); }
         push(v_num(x / y)); pc++; break; }
       case OP_MOD: { Value b = pop(), a = pop(); int o1 = 0, o2 = 0;
         double x = as_num(a, &o1), y = as_num(b, &o2);
-        if (!o1 || !o2) { fail("HMYR-R0130", "expected numbers"); return v_null(); }
-        if (y == 0) { fail("HMYR-R0120", "division by zero"); return v_null(); }
+        if (!o1 || !o2) { fail("HMYR-R0130", "expected numbers"); FRAME_RET(v_null()); }
+        if (y == 0) { fail("HMYR-R0120", "division by zero"); FRAME_RET(v_null()); }
         double m = x - y * (double)(long long)(x / y);
         push(v_num(m)); pc++; break; }
       case OP_EQ: { Value b = pop(), a = pop(); push(v_bool(values_equal(a, b))); pc++; break; }
@@ -2654,7 +2873,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         int c = 0;
         if (a.tag == T_NUM && b.tag == T_NUM) c = (a.num < b.num) ? -1 : (a.num > b.num ? 1 : 0);
         else if (a.tag == T_STR && b.tag == T_STR) c = str_cmp(a, b);
-        else { fail("HMYR-R0131", "cannot compare those two values"); return v_null(); }
+        else { fail("HMYR-R0131", "cannot compare those two values"); FRAME_RET(v_null()); }
         int r = 0;
         if (in->op == OP_LT) r = c < 0;
         else if (in->op == OP_LE) r = c <= 0;
@@ -2708,7 +2927,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
           snprintf(m, sizeof m, "field '%s' read off a value that is not a record (tag=%d, %s pc=%u)",
                    名, (int)t.tag, 函名, (unsigned)pc);
           fail("HMYR-R0106", m);
-          return v_null();
+          FRAME_RET(v_null());
         }
         /* find the field by name */
         int found = 0;
@@ -2739,21 +2958,21 @@ static Value run_func(Func *f, Value *args, int nargs) {
           }
           fprintf(stderr, "\n");
         }
-        if (!found) { fail("HMYR-R0106", "no field with that name"); return v_null(); }
+        if (!found) { fail("HMYR-R0106", "no field with that name"); FRAME_RET(v_null()); }
         pc++; break;
       }
       case OP_INDEX: {
         Value i = pop(), t = pop();
         int ok = 0; double d = as_num(i, &ok);
-        if (!ok) { fail("HMYR-R0130", "index must be a number"); return v_null(); }
+        if (!ok) { fail("HMYR-R0130", "index must be a number"); FRAME_RET(v_null()); }
         long long idx = (long long)d;
         if (t.tag == T_STR) {
-          if (idx < 0 || idx >= (long long)t.slen) { fail("HMYR-R0151", "index outside the value"); return v_null(); }
+          if (idx < 0 || idx >= (long long)t.slen) { fail("HMYR-R0151", "index outside the value"); FRAME_RET(v_null()); }
           push(v_str(t.s + idx, 1));
         } else if (t.tag == T_TUPLE) {
-          if (idx < 0 || idx >= (long long)t.ilen) { fail("HMYR-R0151", "index outside the value"); return v_null(); }
+          if (idx < 0 || idx >= (long long)t.ilen) { fail("HMYR-R0151", "index outside the value"); FRAME_RET(v_null()); }
           push(t.items[idx]);
-        } else { fail("HMYR-R0152", "cannot index that value"); return v_null(); }
+        } else { fail("HMYR-R0152", "cannot index that value"); FRAME_RET(v_null()); }
         pc++; break;
       }
       case OP_CALLB: {
@@ -2771,7 +2990,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
           snprintf(m, sizeof m, "a builtin call wants %u argument(s), the frame has %u",
                    (unsigned)n, (unsigned)(g_stack_n - base));
           fail("HMYR-R0110", m);
-          return v_null();
+          FRAME_RET(v_null());
         }
         Value *args = (Value *)malloc((size_t)(n ? n : 1) * sizeof(Value));
         for (uint32_t i = 0; i < n; i++) args[i] = g_stack[g_stack_n - n + i];
@@ -2779,13 +2998,13 @@ static Value run_func(Func *f, Value *args, int nargs) {
         Value out = v_null();
         call_builtin(in->a, args, (int)n, &out);
         free(args);
-        if (g_failed) return v_null();
+        if (g_failed) FRAME_RET(v_null());
         push(out); pc++; break;
       }
       case OP_CALLF: {
         int64_t 位 = find_func_index(in->a);
         Func *callee = (位 >= 0) ? &funcs[位] : NULL;
-        if (!callee) { fail("HMYR-R0104", "there is no such function"); return v_null(); }
+        if (!callee) { fail("HMYR-R0104", "there is no such function"); FRAME_RET(v_null()); }
         if (g_calls_on && g_calls_n < 200000) {
           /* 对某一个函数，顺手把实参的种类打出来：调用序列只说明「调了它」，
            * 说不清「给了它什么」。求二元 就是被盯的那个（79 号）。 */
@@ -2821,7 +3040,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
             char m[200];
             snprintf(m, sizeof m, "%s uses effect '%s', which the caller did not declare", 名, 效);
             fail("HMYR-R0201", m);
-            return v_null();
+            FRAME_RET(v_null());
           }
         }
         if (g_stack_n < base || g_stack_n - base < n) {
@@ -2833,24 +3052,24 @@ static Value run_func(Func *f, Value *args, int nargs) {
           snprintf(m, sizeof m, "calling %s (#%lld) wants %u argument(s), the frame has %u (pc=%u)",
                    fname, (long long)位, (unsigned)n, (unsigned)(g_stack_n - base), (unsigned)pc);
           fail("HMYR-R0110", m);
-          return v_null();
+          FRAME_RET(v_null());
         }
         Value *args = (Value *)malloc((size_t)(n ? n : 1) * sizeof(Value));
         for (uint32_t i = 0; i < n; i++) args[i] = g_stack[g_stack_n - n + i];
         g_stack_n -= n;
         Value r = run_func(callee, args, (int)n);
         free(args);
-        if (g_failed) return v_null();
+        if (g_failed) FRAME_RET(v_null());
         push(r); pc++; break;
       }
-      case OP_RET: { Value v = pop(); g_stack_n = base; g_base = 外base; g_cur = 外函; if (g_深度) g_深度--; return v; }
+      case OP_RET: { Value v = pop(); g_stack_n = base; g_base = 外base; g_cur = 外函; if (g_深度) g_深度--; FRAME_RET(v); }
       default: {
         char msg[160];
         uint32_t k = in->op;
         const char *nm = (k < sizeof op_names / sizeof *op_names) ? op_names[k] : "?";
         snprintf(msg, sizeof msg, "cannot execute the instruction %s", nm);
         fail("HMYR-R0110", msg);
-        return v_null();
+        FRAME_RET(v_null());
       }
     }
   }
@@ -3199,6 +3418,19 @@ int main(int argc, char **argv) {
   }
   for (int i = 0; i < TRACE_N; i++) g_trace[i].op = 255;
   if (getenv("HMYR_MEM")) atexit(堆账报一下);
+  /* 回收：默认关。HMYR_GC=1 打开，阈值默认三十二兆（HMYR_GC_BYTES 改）。
+   * 板子上不编这一块，那几个变量也不在 —— 所以这一段只给桌面。 */
+#if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+  g_gc开 = getenv("HMYR_GC") != NULL;
+  g_gc日志 = getenv("HMYR_GC_LOG") != NULL;
+  {
+    const char *gb = getenv("HMYR_GC_BYTES");
+    if (gb) {
+      long v = atol(gb);
+      if (v > 0) g_gc阈值 = (size_t)v;
+    }
+  }
+#endif
   {
     /* 上限：给了就照给的，给 0 表示不限。 */
     const char *ml = getenv("HMYR_MEM_LIMIT");
