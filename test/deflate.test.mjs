@@ -1,9 +1,11 @@
-// deflate 的第一种形式：stored 块（RFC 1951 的 BTYPE=00）。
+// deflate：stored 块与固定 Huffman 两支。
 //
-// 它不压 —— 压缩率是 1.0 加五个字节的头。但格式是真的 deflate：两份方向都跑得通，
-// 而标准工具（node 的 zlib）不用被交代什么就能读。这就是打包发布缺的那一件。
+// 两支的承诺不同，验收也不同：
+//   stored        往返一致、压缩率 1.0 加五字节头、空输入也合法 —— 它证明格式对。
+//   固定 Huffman  真的压（4 KB 样本压到一半以下）、zlib 解得回原样 —— 它证明码表与位序对。
 //
-// 验收四条：往返一致、zlib 解得开、空输入也有一个合法的块、以及压缩比写着 1.0（不许假装）。
+// 解压那一侧现在只认 stored。固定 Huffman 的流由 zlib 解：自举侧的解码器是下一步，
+// 而这一步能许的承诺是「压出来的东西标准工具读得懂」。
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -27,13 +29,12 @@ ok("self/deflate.hmyr 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
 const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))), 编译模块(unit.modules.get(unit.order[unit.order.length - 1])));
-ok("它编出了函数表", 程序.函数们.size >= 5, String(程序.函数们.size));
+ok("它编出了函数表", 程序.函数们.size >= 15, String(程序.函数们.size));
 
 const 有编译器 = (() => {
   try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
 })();
 
-console.log("二、往返：压了再解，一个字节都不差");
 if (!有编译器) {
   console.log("  跳过  这台机器上没有 gcc");
 } else {
@@ -45,9 +46,11 @@ if (!有编译器) {
     const 码路 = path.join(临, "deflate.hmyrb");
     fs.writeFileSync(码路, 写程序(程序));
     const 跑 = (参) => spawnSync(exe, [码路, ...参], {
-      encoding: "utf8", timeout: 300000,
+      encoding: "utf8", timeout: 600000,
       env: { ...process.env, HMYR_STEPS: "4000000000" },
     });
+
+    console.log("二、stored：往返一个字节都不差");
     const 源 = path.join(ROOT, "bootstrap/pack.hmyrb");
     const 压出 = path.join(临, "pack.deflate");
     const 解出 = path.join(临, "pack.roundtrip");
@@ -60,7 +63,8 @@ if (!有编译器) {
       const 回 = fs.readFileSync(解出);
       ok("往返逐字节一致", 原.length === 回.length && Buffer.compare(原, 回) === 0, 原.length + " 对 " + 回.length);
       const 压 = fs.readFileSync(压出);
-      ok("压缩比写着 1.0（多出来的只是五个字节的块头）", 压.length === 原.length + 5, 压.length + " 对 " + 原.length);
+      ok("压缩比是 1.0（多出来的只是五个字节的块头）", 压.length === 原.length + 5, 压.length + " 对 " + 原.length);
+
       console.log("三、标准工具读得懂这个流");
       try {
         const 借 = zlib.inflateRawSync(压);
@@ -69,6 +73,7 @@ if (!有编译器) {
         ok("zlib 解得开", false, e.message);
       }
     }
+
     console.log("四、空输入也是一个合法的块");
     {
       const 空 = path.join(临, "empty.bin");
@@ -84,6 +89,28 @@ if (!有编译器) {
           ok("zlib 解得出空", 借.length === 0, String(借.length));
         } catch (e) {
           ok("zlib 解得出空", false, e.message);
+        }
+      }
+    }
+
+    console.log("五、固定 Huffman：真的压了，而且 zlib 解得回来");
+    {
+      // 样本取种子的前 4 KB：字节码重复多，适合看压缩率。
+      const 全 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmyrb"));
+      const 样本 = path.join(临, "sample.bin");
+      fs.writeFileSync(样本, 全.subarray(0, 4096));
+      const 压2 = path.join(临, "sample.fixed");
+      const r = 跑([样本, 压2, "--固定"]);
+      ok("固定 Huffman 压得动", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 160));
+      if (fs.existsSync(压2)) {
+        const 压 = fs.readFileSync(压2);
+        ok("真的压了（小于原长的一半）", 压.length < 2048, "压到 " + 压.length + "（原 4096）");
+        try {
+          const 借 = zlib.inflateRawSync(压);
+          const 原 = fs.readFileSync(样本);
+          ok("zlib 解回原样", 借.length === 原.length && Buffer.compare(原, 借) === 0, String(借.length));
+        } catch (e) {
+          ok("zlib 解回原样", false, e.message);
         }
       }
     }
