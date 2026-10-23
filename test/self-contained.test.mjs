@@ -70,6 +70,19 @@ if (!有编译器) {
       ok("同一份源码跑两遍输出相同", String(r.stdout) === String(再.stdout) && r.status === 再.status, JSON.stringify(String(再.stdout || "")));
       ok("没有留下种子临时文件", fs.readdirSync(临).every((名) => !名.endsWith(".seed.hmyrb")), fs.readdirSync(临).join(" "));
     }
+
+    console.log("四、与 node 那一面的编译执行逐字节相同");
+    {
+      // node bin/hmyr.mjs 默认走解释（会把 main 的返回值也打出来），--compile 走编译。
+      // 后者才与这一份同语义 —— 于是「同一个程序，两台机器」有了可以逐字节比的两个入口。
+      const 节 = spawnSync("node", [path.join(ROOT, "bin/hmyr.mjs"), "--compile", 源], {
+        cwd: 临, encoding: "utf8", timeout: 300000,
+        env: { ...process.env, HMYR_STEPS: "4000000000" },
+      });
+      ok("node --compile 那一面跑完了", 节.status === 0, String(节.status) + " " + String(节.stderr).slice(0, 200));
+      ok("标准输出逐字节相同", String(r.stdout) === String(节.stdout), JSON.stringify([String(r.stdout), String(节.stdout)]));
+      ok("退出码相同", r.status === 节.status, String(r.status) + " 对 " + 节.status);
+    }
   }
   fs.rmSync(临, { recursive: true, force: true });
 }

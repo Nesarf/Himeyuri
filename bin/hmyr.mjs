@@ -27,6 +27,43 @@ import { 子集解 } from "../src/subset-parse.mjs";
 import * as 数 from "../src/numbers.mjs";
 import { 设脱敏, 在用脱敏, 脱线 } from "../src/redact.mjs";
 
+// 编译执行那一面：与这个入口的另一面（解释）相对照。
+//
+// 解释那一面走 self/run.hmyr，会把 main 的返回值也打出来 —— 那是 REPL 的显示选择。
+// 编译这一面不打印返回值，跑的就是程序本身 —— 这才与 C 那台 hmyr <源码.hmyr> 的语义一致，
+// 于是「同一个程序，两台机器」这句话就有了可以逐字节比较的两个入口。
+if (process.argv.includes("--compile")) {
+  const 其余 = process.argv.slice(2).filter((x) => x !== "--compile");
+  const 目标 = 其余[0];
+  if (!目标) {
+    console.error("用法：node bin/hmyr.mjs --compile 程序.hmyr [参数...]");
+    process.exit(2);
+  }
+  // 不引入 fs：加载器自己读文件，而这个启动器「不直接碰文件系统」是一条被验收盯着的性质。
+  const [{ loadUnit }, { 跑字节码 }, { 本机能力 }, path] = await Promise.all([
+    import("../src/loader.mjs"),
+    import("../src/vm.mjs"),
+    import("../src/capabilities.mjs"),
+    import("node:path"),
+  ]);
+  const 绝对 = path.resolve(目标);
+  const 层 = loadUnit(绝对);
+  if (!层.ok) {
+    for (const e of 层.diagnostics.errors) console.error(e.code + " " + e.message);
+    process.exit(1);
+  }
+  const vm = 跑字节码(层, {
+    capabilities: 本机能力(),
+    argv: [目标, ...其余.slice(1)],
+    stepLimit: Number(process.env.HMYR_STEPS || 50000000),
+  });
+  vm.write = (s) => process.stdout.write(s);
+  vm.writeErr = (s) => process.stderr.write(s);
+  const r = vm.调用("main", [], null);
+  if (!r.ok) { console.error(r.码 + " " + r.话); process.exit(1); }
+  process.exit(typeof r.值 === "number" ? Math.trunc(r.值) : 0);
+}
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 子集读 = (source) => 子集解(切(source));
 

@@ -45,7 +45,7 @@ export const 账本 = [
     状态: "搬了",
     在哪: "vm/hmyr.c",
     验收: "cvm",
-    说明: "C 那台自己就是启动器，不需要 node",
+    说明: "C 那台自己就是启动器，而且带着内置种子（vm/pack_seed.h）：hmyr <源码.hmyr> 一条命令，不经 node",
   },
   {
     名: "测试框架",
