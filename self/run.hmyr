@@ -180,16 +180,38 @@ fn 包声明(声明们: Int, i: Int, acc: Int) {
   return 包声明(声明们, i + 1, acc + (函,))
 }
 
+// 从 token 流里找出 import 行，包成 Import 节点。
+//
+// 为什么从 token 找而不是从文本找：位置要得从 token 来，而 找导入们 只交回路径字符串。
+// 宿主那边 Import 的位置记在 import 这个关键字上，这一侧照同一个规矩。
+// alias 与 rev 先留空：这一层的语法还不认它们，等认了再填 —— 空的与「没有」不是一回事，
+// 所以量具只比 path 与位置，不比这两项。
+fn 导入节点们(tokens: Int, i: Int, acc: Int) {
+  if i >= len(tokens) { return acc }
+  let t = tokens[i]
+  if t.kind == "ident" && t.text == "import" && i + 1 < len(tokens) && tokens[i + 1].kind == "string" {
+    let s = tokens[i + 1]
+    let 节 = {kind: "Import", path: s.text, alias: "", rev: 0, line: t.line, column: t.column}
+    return 导入节点们(tokens, i + 2, acc + (节,))
+  }
+  return 导入节点们(tokens, i + 1, acc)
+}
+
 // 一整个文件 → Module。有声明就按声明走；没有就照旧包一层 fn main 的壳（老用法）。
 fn 造模块(源: String) {
   let 净 = 去导入(源)
+  // import 行被 去导入 剥掉了，所以找它们要用原始源码。
+  let 全toks = scan_lines(源)
+  let 导入 = 导入节点们(全toks, 0, ())
   if 行首是声明(净) {
-    let 全部 = parse_decls(scan_lines(净))
-    return {kind: "Module", imports: (), decls: 包声明(全部.fns, 0, ()), rev: 0}
+    // 注意：解析用**原始** token 流。去导入 把 import 行整行删了，行号会跟着上移，
+    // 于是同一段源码在两边报出不同的位置 —— 这个坑先在「带 import 的文件」那个样本上现形。
+    let 全部 = parse_decls(全toks)
+    return {kind: "Module", imports: 导入, decls: 包声明(全部.fns, 0, ()), rev: 0}
   }
   let 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
   let 体 = parse_body(scan_lines(有壳))
-  return {kind: "Module", imports: (), decls: 包声明((("main", (), 体.list, (), 1, 1),), 0, ()), rev: 0}
+  return {kind: "Module", imports: 导入, decls: 包声明((("main", (), 体.list, (), 1, 1),), 0, ()), rev: 0}
 }
 
 // 只解析、不求值，交回声明树。

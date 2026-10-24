@@ -31,15 +31,22 @@ const 映射 = {
   tuple: "Tuple", record: "Record", err: "Error",
   let: "Let", var: "Var", return: "Return", assign: "Assign", expr: "ExprStmt",
   if: "If", while: "While",
-  Fn: "Fn", Block: "Block", Module: "Module",
+  Fn: "Fn", Block: "Block", Module: "Module", Import: "Import",
+};
+
+// self 侧的元组在 JS 里是类数组对象，宿主侧是数组 —— 统一成数组再用。
+const 列 = (x) => {
+  if (Array.isArray(x)) return x;
+  if (x && typeof x === "object") return Object.values(x);
+  return [];
 };
 
 // 子节点怎么对：给同一层的两个节点，交回若干 [self 子, 宿主子] 对。
 const 子对们 = (s, h) => {
   switch (s.kind) {
-    case "Module": return (s.decls || []).map((x, i) => [x, (h.decls || [])[i]]);
+    case "Module": return [...列(s.imports).map((x, i) => [x, 列(h.imports)[i]]), ...列(s.decls).map((x, i) => [x, 列(h.decls)[i]])];
     case "Fn": return [[s.body, h.body]];
-    case "Block": return (s.statements || []).map((x, i) => [x, (h.statements || [])[i]]);
+    case "Block": return 列(s.statements).map((x, i) => [x, 列(h.statements)[i]]);
     case "let": case "var": case "assign": case "return":
       return [[s.value, h.value]];
     case "expr": return [[s.value, h.expr]];
@@ -47,9 +54,9 @@ const 子对们 = (s, h) => {
     case "while": return [[s.cond, h.condition]];
     case "bin": return [[s.left, h.left], [s.right, h.right]];
     case "unary": return [[s.operand, h.operand]];
-    case "call": return [[s.callee, h.callee], ...((s.args || []).map((x, i) => [x, (h.args || [])[i]]))];
+    case "call": return [[s.callee, h.callee], ...列(s.args).map((x, i) => [x, 列(h.args)[i]])];
     case "field": case "index": return [[s.target, h.target]];
-    case "tuple": return (s.items || []).map((x, i) => [x, (h.items || [])[i]]);
+    case "tuple": return 列(s.items).map((x, i) => [x, 列(h.items)[i]]);
     default: return [];
   }
 };
@@ -67,6 +74,7 @@ const 字字段 = {
   var: [["name", "name"]],
   assign: [["name", "name"]],
   Fn: [["name", "name"]],
+  Import: [["path", "path"]],
 };
 
 // 源文本 → 数值。self 那一侧的数字节点存的是源文本（"0x1f" 就是这四个字符），
@@ -136,6 +144,7 @@ const 样本 = [
   ["if 与赋值", "fn main() -> Int {\n  var a = 1\n  a = a + 1\n  if a > 0 {\n    return 1\n  }\n  return 0\n}\n"],
   ["while 与赋值", "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n"],
   ["字符串与十六进制", 'fn main() -> Int {\n  let s = "a\\nb"\n  let n = 0x1f + 2\n  return n\n}\n'],
+  ["带 import 的文件", 'import "./examples/twice.hmyr"\nimport "./design/TOUR.txt"\nfn main() -> Int {\n  return 1\n}\n'],
 ];
 
 console.log("一、并排走一遍，看第一处对不上的在哪里");
@@ -156,9 +165,9 @@ for (const [名, 源] of 样本) {
 
 console.log("二、结论");
 if (差异.length === 0) {
-  ok("七段样本整棵树逐节点相同", true);
+  ok("八段样本整棵树逐节点相同", true);
 } else {
-  ok("七段样本整棵树逐节点相同", false, "第一处：" + JSON.stringify(差异[0]));
+  ok("八段样本整棵树逐节点相同", false, "第一处：" + JSON.stringify(差异[0]));
 }
 
 console.log("");
