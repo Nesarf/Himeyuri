@@ -126,6 +126,34 @@ fn 走文件(路: String) effects(file) {
   return 出
 }
 
+fn 去尾回车(s: String) {
+  if len(s) > 0 && slice(s, len(s) - 1, len(s)) == chr(13) { return slice(s, 0, len(s) - 1) }
+  return s
+}
+
+fn 首行(s: String) {
+  return 去尾回车(split(s, chr(10))[0])
+}
+
+// git 的短哈希：版本号最诚实的一种 —— 它指向确切的字节，而任何自称的版本号都能被改。
+// 读 .git/HEAD（`ref: refs/heads/main`），再读它指的那份 ref；detached HEAD 时
+// HEAD 里直接就是 sha。两条路都只读文本，所以不需要新内建，也不需要起进程问 git。
+fn 短路哈希() effects(file) {
+  if file_exists(".git/HEAD") == false { return "unknown" }
+  let 头 = 首行(read_text(".git/HEAD"))
+  if 以头(头, "ref: ") {
+    let 路 = ".git/" + slice(头, 5, len(头))
+    if file_exists(路) {
+      let 全 = 首行(read_text(路))
+      if len(全) >= 7 { return slice(全, 0, 7) }
+      return 全
+    }
+    return "unknown"
+  }
+  if len(头) >= 7 { return slice(头, 0, 7) }
+  return "unknown"
+}
+
 fn 造库项(路: String) effects(file) {
   let 文 = read_text(路)
   let 哈 = 前16(sha256(read_bytes(路)))
@@ -170,7 +198,8 @@ fn 主(出路: String) effects(file, process) {
   let 头们 = (
     "{",
     "  \"name\": \"himeyuri\",",
-    "  \"language\": \"HMYR\","
+    "  \"language\": \"HMYR\",",
+    "  \"commit\": \"" + 短路哈希() + "\","
   )
   var h = 0
   while h < len(头们) {
