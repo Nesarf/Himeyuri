@@ -143,6 +143,7 @@ const SUITES = [
   ["isdir", "test/isdir.test.mjs", "SPEC 2.2 - is_dir: a directory, a file, a Chinese-named directory and a missing path, answered the same by all three"],
   ["packagehmyr", "test/package-hmyr.test.mjs", "SPEC M7 - a package built in Himeyuri: EOCD, central directory and every member read back by offset, byte for byte against the source"],
   ["crc", "test/crc.test.mjs", "SPEC 2.2 - the CRC32 builtin: three implementations agree with each other and with node, and a blocked tuple equals the flat one"],
+  ["releasehmyr", "test/release-hmyr.test.mjs", "SPEC M7 - release: manifest, archive and notes from one command, and the notes answer the three questions"],
   ["manifesthmyr", "test/manifest-hmyr.test.mjs", "SPEC M7 - the manifest built by Himeyuri: valid JSON, a digest that matches the standard indentation, and a loop closed by its own verifier"],
   ["manifest", "test/manifest.test.mjs", "SPEC M7 - the distribution manifest: everything it lists actually exists, and the minimal set is exactly fifteen"],
   ["helper", "test/helper.test.mjs", "SPEC M7 - the assistant: a code explains itself, a word searches the meanings, and a miss still hands back the list"],
