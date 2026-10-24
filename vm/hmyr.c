@@ -2261,6 +2261,40 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_bool(是);
     return 1;
   }
+  /* CRC32：纯算术，不需要效果。参数收字节元组，元素可以是一字节，也可以是一块。
+   * 表第一次用时生成（256 项，多项式 0xEDB88320），与 src/eval.mjs、src/vm-builtins.mjs
+   * 是同一张 —— 三处对同一串字节必须给出同一个值，否则 ZIP 不互通。 */
+  if (name_is16(name_idx, (const uint16_t[]){0x6821, 0x9A8C, 0x548C}, 3)) {  /* 校验和 */
+    if (nargs != 1) { fail("HMYR-R0101", "校验和 wants one argument"); return 1; }
+    if (args[0].tag != T_TUPLE && args[0].tag != T_ARRAY) { fail("HMYR-R0130", "校验和 wants a tuple of bytes"); return 1; }
+    static uint32_t 校验表[256];
+    static int 表已建 = 0;
+    if (!表已建) {
+      for (uint32_t n = 0; n < 256; n++) {
+        uint32_t x = n;
+        for (int k = 0; k < 8; k++) x = (x & 1u) ? (0xEDB88320u ^ (x >> 1)) : (x >> 1);
+        校验表[n] = x;
+      }
+      表已建 = 1;
+    }
+    uint32_t c = 0xFFFFFFFFu;
+    for (uint32_t i = 0; i < args[0].ilen; i++) {
+      Value x = args[0].items[i];
+      if (x.tag == T_TUPLE || x.tag == T_ARRAY) {
+        for (uint32_t k = 0; k < x.ilen; k++) {
+          if (x.items[k].tag != T_NUM) { fail("HMYR-R0130", "校验和 wants bytes"); return 1; }
+          uint32_t b = (uint32_t)((long long)x.items[k].num) & 0xffu;
+          c = (c >> 8) ^ 校验表[(c ^ b) & 0xffu];
+        }
+      } else {
+        if (x.tag != T_NUM) { fail("HMYR-R0130", "校验和 wants bytes"); return 1; }
+        uint32_t b = (uint32_t)((long long)x.num) & 0xffu;
+        c = (c >> 8) ^ 校验表[(c ^ b) & 0xffu];
+      }
+    }
+    *out = v_num((double)(c ^ 0xFFFFFFFFu));
+    return 1;
+  }
   if (name_is(name_idx, "read_text")) {
     if (nargs < 1) { fail("HMYR-R0101", "read_text wants at least one argument"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_text wants a path string"); return 1; }

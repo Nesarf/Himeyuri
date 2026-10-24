@@ -139,6 +139,7 @@ fn 是内置(名: String) -> Bool {
   if 名 == "file_exists" { return true }
   if 名 == "floor" { return true }
   if 名 == "int" { return true }
+  if 名 == "校验和" { return true }
   if 名 == "is_dir" { return true }
   if 名 == "is_letter" { return true }
   if 名 == "is_mark" { return true }

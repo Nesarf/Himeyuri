@@ -33,9 +33,13 @@ fn 收一件(路们: Int, 目录: String, 名们: Int) {
 // 名字要带自己的前缀：合并程序是「先到者赢」，而 manifest.hmyr 里也有一个 主。
 // 撞名不会报错 —— 只会安静地跑成另一个工具。这一条与 zip.hmyr 文件头那句同源。
 fn 打包(包路: String, 只收: String, 要压: Bool) effects(file, process) {
-  // 要收的目录。默认这两层；给了第三个参数就只收那一个 —— 后者用来验结构，
-  // 因为整棵仓库的规模下，CRC32 与「成员累加」会把步数上限撞掉（这一版还没优化）。
-  var 目录们 = ("design", "runtime")
+  // 要收的目录。默认这一层；给了第三个参数就只收那一个 —— 后者用来验结构。
+  //
+  // runtime/ 与 conformance/ 不在表里：它们装着 UCD 语料（几 MB 的单个文件），
+  // 而这份语言把「一串字节」表示成每个字节一个值 —— 5 MB 就是 500 万个值，
+  // 读进来先撞内存上限（实测：带 runtime 的那一版分配了 7609 MB 就停了）。
+  // 那是表示层面的限制，不是打包逻辑的问题；语料由 tools/ucd*.mjs 从 Unicode 源生成。
+  var 目录们 = ("src", "self", "bin", "tools", "test", "design", "examples", "assets")
   if 只收 != "" { 目录们 = (只收,) }
   var 路们 = ()
   var d = 0

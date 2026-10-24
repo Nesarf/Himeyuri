@@ -412,6 +412,21 @@ class Scope {
   }
 }
 
+// CRC32 的表：256 项，第一次用时生成。与 C 那台同一张表（多项式 0xEDB88320），
+// 于是两边对同一串字节给出同一个值 —— 而「同一个值」是 ZIP 能互通的前提。
+let 校验表缓存 = null;
+const 取校验表 = () => {
+  if (校验表缓存) return 校验表缓存;
+  const 表 = [];
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    表.push(c >>> 0);
+  }
+  校验表缓存 = 表;
+  return 表;
+};
+
 // A builtin that touches the outside world is a capability, and it is checked at the call site against
 // what the calling function declared. Without this, "effects" would only apply to functions we wrote.
 const BUILTIN_EFFECTS = { read_text: "file", read_bytes: "file", read_dir: "file", is_dir: "file", write_text: "file", run_program: "process", chdir: "process", argv: "process", file_exists: "file", print_err: "process", thr_spawn: "thread", thr_cancel: "thread" };
@@ -751,6 +766,29 @@ const BUILTINS = {
   is_dir: (rt, args) => {
     const 路径 = String(args[0]);
     try { return rt.cap.file.isDir(路径); } catch (err) { return false; }
+  },
+  // CRC32（多吉性与 ZIP 都用它）。表第一次用时生成。
+  //
+  // 为什么不 import node:zlib：「执行器对宿主要求什么」是一张被 test/host-deps.test.mjs
+  // 盯着的清单，而 CRC 是纯算术 —— 不该让宿主少一项自由的代价换它。
+  // 参数收字节的元组，元素可以是一字节，也可以是一块（与 write_bytes 同一条规矩）。
+  校验和: (rt, args) => {
+    const 元组 = args[0];
+    if (!Array.isArray(元组)) throw new Error("校验和 wants a tuple of bytes");
+    const 表 = 取校验表();
+    let c = -1;
+    for (const x of 元组) {
+      if (Array.isArray(x)) {
+        for (const y of x) {
+          const b = rt.asNumber(y) & 0xff;
+          c = (c >>> 8) ^ 表[(c ^ b) & 0xff];
+        }
+      } else {
+        const b = rt.asNumber(x) & 0xff;
+        c = (c >>> 8) ^ 表[(c ^ b) & 0xff];
+      }
+    }
+    return (c ^ -1) >>> 0;
   },
   // 写一串字节、把双精度拆成字节、把一个值编成 .hmyrb 的一段 ——
   // 这三条是「打包搬进 HMYR」用的，出口都在能力层。

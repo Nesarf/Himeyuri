@@ -439,6 +439,11 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 1 { return 坏("is_dir 要一个参数") }
     return 好(is_dir(值们[0]))
   }
+  // CRC32：纯算术，不需要效果。收字节元组，元素可以是一字节也可以是一块。
+  if 名 == "校验和" {
+    if len(值们) != 1 { return 坏("校验和 要一个参数") }
+    return 好(校验和(值们[0]))
+  }
   // 读一份文本。与 write_text 配成一对，两边都要 file 效果。
   if 名 == "read_text" {
     let 欠读 = 要效果(环境, "file", "read_text")

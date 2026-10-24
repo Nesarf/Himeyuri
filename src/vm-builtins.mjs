@@ -16,6 +16,21 @@ import { 类元组, 类记录 } from "./vm-values.mjs";
 // 数的意思只在 src/numbers.mjs 里定义。这一份不再自己写 Math.floor / Number()，
 // 也不再自己判断「这是不是数」——换掉标量时要改的是那一份文件。
 import * as 数 from "./numbers.mjs";
+
+// CRC32 的表：256 项，第一次用时生成。与 src/eval.mjs 和 C 那台同一张表
+// （多项式 0xEDB88320），于是三处对同一串字节给出同一个值。
+let 校验表缓存 = null;
+const 取校验表 = () => {
+  if (校验表缓存) return 校验表缓存;
+  const 表 = [];
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    表.push(c >>> 0);
+  }
+  校验表缓存 = 表;
+  return 表;
+};
 // 哪一层是码元序列，问它 —— 只为了一处：空串要交回那个底上的空值。
 import { 码元串层 } from "./text-impl.mjs";
 import { 藏路径, 在用脱敏 } from "./redact.mjs";
@@ -442,6 +457,28 @@ export const 内置表 = {
   // 这是不是一个目录。递归要走下去就得先问这一句；问不到就是 false。
   is_dir: { 效果: "file", 做: (vm, a) => {
     try { return vm.cap.file.isDir(vm.成串(a[0])); } catch (err) { return false; }
+  } },
+  // CRC32：纯算术，不需要效果。参数收字节元组，元素可以是一字节，也可以是一块。
+  校验和: { 做: (vm, a) => {
+    const 元组 = a[0];
+    if (!元组 || 元组.tag !== "tuple") return vm.坏("HMYR-R0130", "校验和 wants a tuple of bytes");
+    const 表 = 取校验表();
+    let c = -1;
+    // 长度取 items.length：这一侧的值是普通 JS 数组，ilen 是 C 那台的字段名。
+    // 抄错一处不会报错 —— 循环零次，CRC 恒为 0。
+    for (let i = 0; i < 元组.items.length; i++) {
+      const x = 元组.items[i];
+      if (x && x.tag === "tuple") {
+        for (let k = 0; k < x.items.length; k++) {
+          const b = vm.成数(x.items[k]) & 0xff;
+          c = (c >>> 8) ^ 表[(c ^ b) & 0xff];
+        }
+      } else {
+        const b = vm.成数(x) & 0xff;
+        c = (c >>> 8) ^ 表[(c ^ b) & 0xff];
+      }
+    }
+    return (c ^ -1) >>> 0;
   } },
   // 它交回的是一个元组，不是 JS 数组：值现在自己带标签，两个求值器之间也是同一套值。
   // 漏掉这一处会让 len(argv()) 报「要一个字符串或元组」——而那正是一次真实的失败。
