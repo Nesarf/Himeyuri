@@ -57,7 +57,8 @@ fn statement(tokens: Int, i: Int) {
     if i + 1 >= len(tokens) {
       return {node: {kind: "Return", value: {kind: "nil"}, line: t.line, column: t.column}, next: i + 1}
     }
-    let got = from_here(tokens, i + 1)
+    // return 之后可能先有一个换行，然后是跨行的表达式（return ( 换行 元素... ））。
+    let got = from_here(tokens, skip_newlines(tokens, i + 1))
     return {node: {kind: "Return", value: got.node, line: t.line, column: t.column}, next: got.next}
   }
   let got = from_here(tokens, i)
