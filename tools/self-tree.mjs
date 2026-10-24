@@ -47,16 +47,16 @@ const 子对们 = (s, h) => {
     case "Module": return [...列(s.imports).map((x, i) => [x, 列(h.imports)[i]]), ...列(s.decls).map((x, i) => [x, 列(h.decls)[i]])];
     case "Fn": return [[s.body, h.body]];
     case "Block": return 列(s.statements).map((x, i) => [x, 列(h.statements)[i]]);
-    case "let": case "var": case "assign": case "return":
+    case "Let": case "Var": case "Assign": case "Return":
       return [[s.value, h.value]];
-    case "expr": return [[s.value, h.expr]];
-    case "if": return [[s.cond, h.condition]];
-    case "while": return [[s.cond, h.condition]];
-    case "bin": return [[s.left, h.left], [s.right, h.right]];
-    case "unary": return [[s.operand, h.operand]];
-    case "call": return [[s.callee, h.callee], ...列(s.args).map((x, i) => [x, 列(h.args)[i]])];
-    case "field": case "index": return [[s.target, h.target]];
-    case "tuple": return 列(s.items).map((x, i) => [x, 列(h.items)[i]]);
+    case "ExprStmt": return [[s.value, h.expr]];
+    case "If": return [[s.cond, h.condition]];
+    case "While": return [[s.cond, h.condition]];
+    case "Binary": return [[s.left, h.left], [s.right, h.right]];
+    case "Unary": return [[s.operand, h.operand]];
+    case "Call": return [[s.callee, h.callee], ...列(s.args).map((x, i) => [x, 列(h.args)[i]])];
+    case "Field": case "Index": return [[s.target, h.target]];
+    case "Tuple": return 列(s.items).map((x, i) => [x, 列(h.items)[i]]);
     default: return [];
   }
 };
@@ -66,13 +66,13 @@ const 子对们 = (s, h) => {
 // 数字与字符串字面量的值暂时不比：self 那一侧存的是源文本（"0x1f"），宿主存的是值（31），
 // 按文本比会全红，按值比要先有一份「文本 → 值」的解析 —— 那是下一件。
 const 字字段 = {
-  bin: [["op", "op"]],
-  unary: [["op", "op"]],
-  field: [["name", "name"]],
-  name: [["text", "name"]],
-  let: [["name", "name"]],
-  var: [["name", "name"]],
-  assign: [["name", "name"]],
+  Binary: [["op", "op"]],
+  Unary: [["op", "op"]],
+  Field: [["name", "name"]],
+  Ident: [["text", "name"]],
+  Let: [["name", "name"]],
+  Var: [["name", "name"]],
+  Assign: [["name", "name"]],
   Fn: [["name", "name"]],
   Import: [["path", "path"]],
 };
@@ -88,13 +88,14 @@ const 数值 = (t) => {
 };
 
 // 走一遍，交回第一个差异（没有就 null）与走过的节点数。
+//
+// 名字已经统一了（2026-10-24 那次重命名：self 直接产出宿主那套 Let/Return/Literal），
+// 所以这里不再过映射表 —— 种类直接相等即可。留一句说明，免得后来的人以为漏了一步。
 const 走 = (s, h, 路, 计) => {
   if (计) 计.n++;
   if (!s || typeof s !== "object") return { 路, 因: "self 这一侧没有节点" };
   if (!h || typeof h !== "object") return { 路, 因: "宿主那一侧没有节点" };
-  const 期望 = 映射[s.kind];
-  if (!期望) return { 路, 因: "self 的 " + s.kind + " 不在映射表里" };
-  if (h.kind !== 期望) return { 路, 因: "种类：self=" + s.kind + " 宿主=" + h.kind };
+  if (h.kind !== s.kind) return { 路, 因: "种类：self=" + s.kind + " 宿主=" + h.kind };
   if (s.line !== h.line || s.column !== h.column) {
     return { 路, 因: "位置：self=" + s.line + ":" + s.column + " 宿主=" + h.line + ":" + h.column };
   }
@@ -104,10 +105,10 @@ const 走 = (s, h, 路, 计) => {
     }
   }
   // 字面量：字符串那一侧两边都存解好的值，可以直接比；数字那一侧差一次解析。
-  if (s.kind === "str" && s.text !== h.value) {
+  if (s.kind === "Literal" && s.type === "string" && s.text !== h.value) {
     return { 路: 路 + "/text", 因: "字符串：self=" + JSON.stringify(s.text) + " 宿主=" + JSON.stringify(h.value) };
   }
-  if (s.kind === "num") {
+  if (s.kind === "Literal" && s.type === "int") {
     const 己数 = 数值(s.text);
     if (己数 !== h.value) {
       return { 路: 路 + "/text", 因: "数字：self=" + JSON.stringify(s.text) + " → " + 己数 + " 宿主=" + JSON.stringify(h.value) };

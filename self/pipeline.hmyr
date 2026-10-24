@@ -47,10 +47,10 @@ fn expression_of(line: String) -> String {
 
 // 语法树上的叶子，按顺序取出来。
 fn leaves(tree: Int, acc: Int) -> Int {
-  if tree.kind == "bin" {
+  if tree.kind == "Binary" {
     return leaves(tree.right, leaves(tree.left, acc))
   }
-  if tree.kind == "num" || tree.kind == "name" {
+  if tree.kind == "Literal" || tree.kind == "Ident" {
     return acc + (tree.text,)
   }
   return acc

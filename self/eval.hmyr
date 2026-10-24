@@ -6,16 +6,16 @@
 //
 // 节点形状（由 self/chain.hmyr 与 self/stmt.hmyr 定义）：
 //   {kind: "int" | "num", text}      整数（原文）
-//   {kind: "str", text}              字符串
-//   {kind: "name", text}             标识符
-//   {kind: "bin", op, left, right}
-//   {kind: "unary", op, operand}
-//   {kind: "call", callee, args}
-//   {kind: "index", target, index}
-//   {kind: "field", target, name}
-//   {kind: "tuple", items}
-//   {kind: "record", fields}
-//   {kind: "err", text}
+//   {kind: "Literal", type: "string", text}              字符串
+//   {kind: "Ident", text}             标识符
+//   {kind: "Binary", op, left, right}
+//   {kind: "Unary", op, operand}
+//   {kind: "Call", callee, args}
+//   {kind: "Index", target, index}
+//   {kind: "Field", target, name}
+//   {kind: "Tuple", items}
+//   {kind: "Record", fields}
+//   {kind: "Error", text}
 //
 // 环境是键值对的元组（与 json.hmyr 那边同一个表示）：记录的字段名必须是标识符，
 // 而环境里的名字来自程序本身，所以用对表。
@@ -153,7 +153,7 @@ fn 要效果(环境: Int, 效: String, 名: String) -> String {
 }
 
 fn 求调用(节点: Int, 环境: Int) -> Int {
-  if 节点.callee.kind != "name" { return 坏("这一版只认按名字调用") }
+  if 节点.callee.kind != "Ident" { return 坏("这一版只认按名字调用") }
   let 名 = 节点.callee.text
   let 参 = 求参数(节点.args, 环境)
   if 参.ok == false { return 参 }
@@ -652,12 +652,12 @@ fn 数到(s: String) -> Int {
 fn 求值(节点: Int, 环境: Int) -> Int {
   let 种 = 节点.kind
   if 种 == "int" { return 好(to_int(节点.text)) }
-  if 种 == "num" { return 好(数到(节点.text)) }
-  if 种 == "str" { return 好(节点.text) }
+  if 种 == "Literal" && 节点.type == "int" { return 好(数到(节点.text)) }
+  if 种 == "Literal" && 节点.type == "string" { return 好(节点.text) }
   // nil：这门语言没有 null，空元组就是它。而求值器要认得出 {kind: "nil"} 这种节点，
   // 因为 stmt.hmyr 用它在「return 不带值」时占位。
   if 种 == "nil" { return 好(()) }
-  if 种 == "name" {
+  if 种 == "Ident" {
     // 布尔字面量：自举那一层的切词器把关键字一律当成标识符（见 lex.hmyr 开头那段），
     // 于是 true 与 false 到这一步是「一个名字」。要在这里把它们认回来，
     // 否则目标程序里写一个 true 就会报「没有这个名字：true」。
@@ -668,17 +668,17 @@ fn 求值(节点: Int, 环境: Int) -> Int {
     if r.found == false { return 坏("没有这个名字：" + 节点.text) }
     return 好(r.value)
   }
-  if 种 == "bin" { return 求二元(节点.op, 求值(节点.left, 环境), 求值(节点.right, 环境)) }
-  if 种 == "unary" { return 求一元(节点.op, 求值(节点.operand, 环境)) }
-  if 种 == "call" { return 求调用(节点, 环境) }
-  if 种 == "index" {
+  if 种 == "Binary" { return 求二元(节点.op, 求值(节点.left, 环境), 求值(节点.right, 环境)) }
+  if 种 == "Unary" { return 求一元(节点.op, 求值(节点.operand, 环境)) }
+  if 种 == "Call" { return 求调用(节点, 环境) }
+  if 种 == "Index" {
     let 标 = 求值(节点.target, 环境)
     if 标.ok == false { return 标 }
     let 位 = 求值(节点.index, 环境)
     if 位.ok == false { return 位 }
     return 好(标.value[位.value])
   }
-  if 种 == "field" {
+  if 种 == "Field" {
     // 不能写 标.value[节点.name]：下标只收数字，而这里字段名是个变量。
     // 先问再取：field_get 取不到会抛（有编号），而这里接不住异常，所以先问 field_has。
     let 标 = 求值(节点.target, 环境)
@@ -686,9 +686,9 @@ fn 求值(节点: Int, 环境: Int) -> Int {
     if field_has(标.value, 节点.name) == false { return 坏("没有这个字段：" + 节点.name) }
     return 好(field_get(标.value, 节点.name))
   }
-  if 种 == "tuple" { return 求参数(节点.items, 环境) }
-  if 种 == "record" { return 求记录(节点, 环境) }
-  if 种 == "err" { return 坏("语法层报的错：" + 节点.text) }
+  if 种 == "Tuple" { return 求参数(节点.items, 环境) }
+  if 种 == "Record" { return 求记录(节点, 环境) }
+  if 种 == "Error" { return 坏("语法层报的错：" + 节点.text) }
   return 坏("不认识的节点：" + 种)
 }
 
@@ -736,24 +736,24 @@ fn 坏执行(原因: String) {
 
 fn 执行(节点: Int, 环境: Int) -> Int {
   let 种 = 节点.kind
-  if 种 == "let" || 种 == "var" {
+  if 种 == "Let" || 种 == "Var" {
     let v = 求值(节点.value, 环境)
     if v.ok == false { return 坏执行(v.text) }
     return 好执行(更新(环境, 节点.name, v.value), false, ())
   }
-  if 种 == "assign" {
+  if 种 == "Assign" {
     let 现有 = 查找(环境, 节点.name)
     if 现有.found == false { return 坏执行("不能给没声明过的名字赋值：" + 节点.name) }
     let v = 求值(节点.value, 环境)
     if v.ok == false { return 坏执行(v.text) }
     return 好执行(更新(环境, 节点.name, v.value), false, ())
   }
-  if 种 == "expr" {
+  if 种 == "ExprStmt" {
     let v = 求值(节点.value, 环境)
     if v.ok == false { return 坏执行(v.text) }
     return 好执行(环境, false, ())
   }
-  if 种 == "return" {
+  if 种 == "Return" {
     // 无值时那个位置是 {kind: "nil"}，于是这一层只看 kind——不用 len 去探，
     // 因为值也可能是一个记录，而 len 只收字符串与元组。
     if 节点.value.kind == "nil" { return 好执行(环境, true, ()) }
@@ -761,7 +761,7 @@ fn 执行(节点: Int, 环境: Int) -> Int {
     if v.ok == false { return 坏执行(v.text) }
     return 好执行(环境, true, v.value)
   }
-  if 种 == "if" {
+  if 种 == "If" {
     let c = 求值(节点.cond, 环境)
     if c.ok == false { return 坏执行(c.text) }
     if c.value != false {
@@ -771,8 +771,8 @@ fn 执行(节点: Int, 环境: Int) -> Int {
     if len(节点.otherwise) == 0 { return 好执行(环境, false, ()) }
     return 执行块(节点.otherwise, 环境)
   }
-  if 种 == "while" { return 执行反复(节点, 环境, 0) }
-  if 种 == "err" { return 坏执行("语法层报的错：" + 节点.text) }
+  if 种 == "While" { return 执行反复(节点, 环境, 0) }
+  if 种 == "Error" { return 坏执行("语法层报的错：" + 节点.text) }
   return 坏执行("这一版还不认这种语句：" + 种)
 }
 
@@ -856,7 +856,7 @@ fn 求记录(节点: Int, 环境: Int) -> Int {
 }
 
 fn main() -> Int effects(process) {
-  let 节点 = {kind: "bin", op: "+", left: {kind: "int", text: "1"}, right: {kind: "bin", op: "*", left: {kind: "int", text: "2"}, right: {kind: "int", text: "3"}}}
+  let 节点 = {kind: "Binary", op: "+", left: {kind: "int", text: "1"}, right: {kind: "Binary", op: "*", left: {kind: "int", text: "2"}, right: {kind: "int", text: "3"}}}
   print(求值成文字(节点, ()) + "\n")
   return 0
 }

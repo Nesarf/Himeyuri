@@ -1,7 +1,8 @@
-// 门前的试推：把 self 造出的 Module 直接交给宿主的 Runtime，看它收不收、跑到哪儿为止。
+// 门前的试推：把 self 造出的 Module 交给宿主的 Runtime，看它收不收、跑到哪儿为止。
 //
-// 并排比较是「两棵树长得一样」，这一件问的是另一句话：「宿主肯不肯把它当自己的树吃下去」。
-// 分两步问：先 registerModule（只登记函数表），再 callFunction（真的要跑）。
+// 并排比较问的是「两棵树长得一样」，这一件问的是另一句话：「宿主肯不肯把它当自己的树吃下去」。
+// 名字已经统一（2026-10-24 那次重命名：self 直接产出 Let/Return/Literal），所以这里只剩字段：
+// 字面量的 type/value/raw、If 的 then 包 Block、Return 的空值用 null、params 的形状。
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
@@ -21,6 +22,57 @@ if (!unit.ok) {
 }
 const rt = runUnit(unit, { stepLimit: 40000000000 });
 const 造模块 = (源) => rt.callFunction(rt.functions.get("造模块"), [源], null);
+
+const 列 = (x) => {
+  if (Array.isArray(x)) return x;
+  if (x && typeof x === "object") return Object.values(x);
+  return [];
+};
+const 数值 = (t) => {
+  const s = String(t).replace(/_/g, "");
+  if (/^0[xX]/.test(s)) return parseInt(s.slice(2), 16);
+  if (/^0[bB]/.test(s)) return parseInt(s.slice(2), 2);
+  if (/^0[oO]/.test(s)) return parseInt(s.slice(2), 8);
+  return Number(s);
+};
+
+// 一层「改字段」：名字已经同了，这里只把字段摆成宿主求值器要的样子。
+const 改 = (n) => {
+  if (!n || typeof n !== "object") return n;
+  const 位 = { line: n.line, column: n.column };
+  switch (n.kind) {
+    case "Module": return { kind: "Module", imports: 列(n.imports).map(改), decls: 列(n.decls).map(改), rev: null };
+    case "Import": return { kind: "Import", path: n.path, alias: null, rev: null, ...位 };
+    case "Fn": return {
+      kind: "Fn", name: n.name,
+      params: 列(n.params).map((p) => ({ name: String(p), fallback: null })),
+      returns: null, effects: 列(n.effects).map(String),
+      contracts: { requires: [], ensures: [] },
+      body: 改(n.body), pub: false, ...位,
+    };
+    case "Block": return { kind: "Block", statements: 列(n.statements).map(改), line: n.line };
+    case "Let": return { kind: "Let", name: n.name, type: null, value: 改(n.value), ...位 };
+    case "Var": return { kind: "Var", name: n.name, type: null, value: 改(n.value), ...位 };
+    case "Assign": return { kind: "Assign", name: n.name, value: 改(n.value), ...位 };
+    case "Return": return { kind: "Return", value: (n.value && n.value.kind === "nil") ? null : 改(n.value), ...位 };
+    case "ExprStmt": return { kind: "ExprStmt", expr: 改(n.value), ...位 };
+    case "If": return {
+      kind: "If", condition: 改(n.cond),
+      then: { kind: "Block", statements: 列(n.then).map(改), line: n.line },
+      otherwise: 列(n.otherwise).length ? { kind: "Block", statements: 列(n.otherwise).map(改), line: n.line } : null, ...位,
+    };
+    case "While": return { kind: "While", condition: 改(n.cond), body: { kind: "Block", statements: 列(n.body).map(改), line: n.line }, ...位 };
+    case "Literal": return { kind: "Literal", type: n.type, value: n.type === "int" ? 数值(n.text) : n.text, raw: n.text, ...位 };
+    case "Ident": return { kind: "Ident", name: n.text, ...位 };
+    case "Binary": return { kind: "Binary", op: n.op, left: 改(n.left), right: 改(n.right), ...位 };
+    case "Unary": return { kind: "Unary", op: n.op, operand: 改(n.operand), ...位 };
+    case "Call": return { kind: "Call", callee: 改(n.callee), args: 列(n.args).map(改), ...位 };
+    case "Field": return { kind: "Field", target: 改(n.target), name: n.name, ...位 };
+    case "Index": return { kind: "Index", target: 改(n.target), index: 改(n.index), ...位 };
+    case "Tuple": return { kind: "Tuple", items: 列(n.items).map(改), ...位 };
+    default: return n;
+  }
+};
 
 const 样本 = [
   ["常数", "fn main() -> Int {\n  return 42\n}\n", 42],
@@ -45,63 +97,7 @@ for (const [名, 源] of 样本) {
   ok(名 + "：登记进函数表", 错误 === null && 表 && 表.includes("main"), 错误 || JSON.stringify(表));
 }
 
-const 列 = (x) => {
-  if (Array.isArray(x)) return x;
-  if (x && typeof x === "object") return Object.values(x);
-  return [];
-};
-const 数值 = (t) => {
-  const s = String(t).replace(/_/g, "");
-  if (/^0[xX]/.test(s)) return parseInt(s.slice(2), 16);
-  if (/^0[bB]/.test(s)) return parseInt(s.slice(2), 2);
-  if (/^0[oO]/.test(s)) return parseInt(s.slice(2), 8);
-  return Number(s);
-};
-
-// 一层「改形状」：把 self 的节点翻成宿主求值器认的那一套。
-//
-// 它是一块验证用的适配层，不是产品代码 —— 目的只是量出「还差什么」。
-// 差的东西在这张表里一目了然：kind 的大小写、Literal 的 type/value/raw、If 的 then 要包 Block、
-// Return 的空值要用 null、params 要从名字变成 {name, fallback}。
-const 改 = (n) => {
-  if (!n || typeof n !== "object") return n;
-  const 位 = { line: n.line, column: n.column };
-  switch (n.kind) {
-    case "Module": return { kind: "Module", imports: 列(n.imports).map(改), decls: 列(n.decls).map(改), rev: null };
-    case "Import": return { kind: "Import", path: n.path, alias: null, rev: null, ...位 };
-    case "Fn": return {
-      kind: "Fn", name: n.name,
-      params: 列(n.params).map((p) => ({ name: String(p), fallback: null })),
-      returns: null, effects: 列(n.effects).map(String),
-      contracts: { requires: [], ensures: [] },
-      body: 改(n.body), pub: false, ...位,
-    };
-    case "Block": return { kind: "Block", statements: 列(n.statements).map(改), line: n.line };
-    case "let": return { kind: "Let", name: n.name, type: null, value: 改(n.value), ...位 };
-    case "var": return { kind: "Var", name: n.name, type: null, value: 改(n.value), ...位 };
-    case "assign": return { kind: "Assign", name: n.name, value: 改(n.value), ...位 };
-    case "return": return { kind: "Return", value: (n.value && n.value.kind === "nil") ? null : 改(n.value), ...位 };
-    case "expr": return { kind: "ExprStmt", expr: 改(n.value), ...位 };
-    case "if": return {
-      kind: "If", condition: 改(n.cond),
-      then: { kind: "Block", statements: 列(n.then).map(改), line: n.line },
-      otherwise: 列(n.otherwise).length ? { kind: "Block", statements: 列(n.otherwise).map(改), line: n.line } : null, ...位,
-    };
-    case "while": return { kind: "While", condition: 改(n.cond), body: { kind: "Block", statements: 列(n.body).map(改), line: n.line }, ...位 };
-    case "num": return { kind: "Literal", type: "int", value: 数值(n.text), raw: n.text, ...位 };
-    case "str": return { kind: "Literal", type: "string", value: n.text, raw: false, ...位 };
-    case "name": return { kind: "Ident", name: n.text, ...位 };
-    case "bin": return { kind: "Binary", op: n.op, left: 改(n.left), right: 改(n.right), ...位 };
-    case "unary": return { kind: "Unary", op: n.op, operand: 改(n.operand), ...位 };
-    case "call": return { kind: "Call", callee: 改(n.callee), args: 列(n.args).map(改), ...位 };
-    case "field": return { kind: "Field", target: 改(n.target), name: n.name, ...位 };
-    case "index": return { kind: "Index", target: 改(n.target), index: 改(n.index), ...位 };
-    case "tuple": return { kind: "Tuple", items: 列(n.items).map(改), ...位 };
-    default: return n;
-  }
-};
-
-console.log("二、改一层形状之后，callFunction 能不能真的跑");
+console.log("二、改一层字段之后，callFunction 能不能真的跑");
 for (const [名, 源, 期望] of 样本) {
   const mod = 改(造模块(源));
   let 结果 = null;

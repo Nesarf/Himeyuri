@@ -255,3 +255,23 @@ registerModule 一次就收（它只读 decls 里的 kind 与 name），callFunc
 要说明的是：这层适配写在工具里，是验证用的，不是产品代码。它证明的是「两边差一层翻译」，
 而不是「已经换成功了」。真正的换法要么让 self 直接产出宿主那套名字，要么让宿主接受两种形状。
 今天量到的是：翻译的清单就是上面那五条，没有隐蔽的第六类。
+第十二件（2026-10-24）：名字统一。走的是「甲」那条路 —— 让 self 直接产出宿主那套名字，
+而不是在工具里做一层翻译。改的是九个文件：chain、stmt、eval、compile、fmt、pipeline、sig、
+run、parse。节点从 {kind: "let"} 变成 {kind: "Let"}、{kind: "bin"} 变成 {kind: "Binary"}，
+num 与 str 合成 {kind: "Literal", type: "int" | "string"}（求值器按 type 分派）。
+
+这一改，工具里那层适配退了一半：selfhandoff 的适配器从「改名字 + 改字段」缩成「只改字段」；
+selftree 的映射表整个删掉（种类直接相等）。剩下没对齐的只有字段：Literal 的 value/raw、
+If 的 then 包 Block、Return 的空值用 null、params 的形状。
+
+顺带抓到两件：
+
+  一、批量替换漏了 run.hmyr 里 `n.kind == "if" || n.kind == "while"` 那一处判断。症状是 Block
+     的语句层不再包 ExprStmt，selftree 立刻红 —— 而它红得对，因为那时 self 与宿主的语句层
+     确实差了这一层。
+  二、selfcompile 期望的函数数过期了：lex 26 对 27、run 32 对 43。那不是改名气的，是这几轮
+     新增的函数（补位置、加载语义四件、解析与形状七件）攒出来的。数字随规模走，那套件的
+     注释里早就写着这一条。
+
+九套自举与编译套件全绿：selfcov、selfload、selfmod、selfpos、selfnodes、selftree、
+selfhandoff、selfcompile、hmyrcompile。

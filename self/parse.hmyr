@@ -5,9 +5,9 @@
 // 所以它不会碰到调用深度上限。
 //
 // 形状与 JS 版解析器对齐，只保留结构：
-//   {kind: "num", text}         整数（原文）
-//   {kind: "name", text}        标识符
-//   {kind: "bin", op, left, right}
+//   {kind: "Literal", type: "int", text}         整数（原文）
+//   {kind: "Ident", text}        标识符
+//   {kind: "Binary", op, left, right}
 // 对拍时 JS 侧做同样的映射，行号一类的位置信息两边都不带。
 //
 // 自足：模块系统还没有，工具函数在这里重写一份。
@@ -60,7 +60,7 @@ fn read_name(s: String, i: Int, acc: String) {
 // 原子：括号、整数、标识符。括号里的解析回到最低优先级那一层。
 fn parse_atom(s: String, i: Int) {
   let j = skip_sp(s, i)
-  if j >= len(s) { return {node: {kind: "err", text: ""}, next: j} }
+  if j >= len(s) { return {node: {kind: "Error", text: ""}, next: j} }
   let c = s[j]
   if c == "(" {
     let inner = parse_add(s, j + 1)
@@ -70,13 +70,13 @@ fn parse_atom(s: String, i: Int) {
   }
   if is_digit_c(c) {
     let got = read_num(s, j, "")
-    return {node: {kind: "num", text: got.text}, next: got.next}
+    return {node: {kind: "Literal", type: "int", text: got.text}, next: got.next}
   }
   if is_alpha_c(c) {
     let got = read_name(s, j, "")
-    return {node: {kind: "name", text: got.text}, next: got.next}
+    return {node: {kind: "Ident", text: got.text}, next: got.next}
   }
-  return {node: {kind: "err", text: c}, next: j + 1}
+  return {node: {kind: "Error", text: c}, next: j + 1}
 }
 
 // 乘除一层：左结合，靠尾递归累积，层数不随运算个数增长。
@@ -86,7 +86,7 @@ fn mul_tail(s: String, i: Int, left: Int) {
   let c = s[j]
   if c == "*" || c == "/" || c == "%" {
     let right = parse_atom(s, j + 1)
-    return mul_tail(s, right.next, {kind: "bin", op: c, left: left, right: right.node})
+    return mul_tail(s, right.next, {kind: "Binary", op: c, left: left, right: right.node})
   }
   return {node: left, next: j}
 }
@@ -103,7 +103,7 @@ fn add_tail(s: String, i: Int, left: Int) {
   let c = s[j]
   if c == "+" || c == "-" {
     let right = parse_mul(s, j + 1)
-    return add_tail(s, right.next, {kind: "bin", op: c, left: left, right: right.node})
+    return add_tail(s, right.next, {kind: "Binary", op: c, left: left, right: right.node})
   }
   return {node: left, next: j}
 }
