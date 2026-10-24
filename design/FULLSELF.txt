@@ -533,3 +533,20 @@ tools/loader-swap.mjs 把每个 import 宿主 loader 的套件换成桥跑一遍
 
 最后一条是这一类里唯一还没修的根：parse_decls 只收名字、参数、语句、效果、行列 ——
 返回类型从来没进过这棵树。它不是桥的错，是自举解析层的边界，而桥只是把它显形了。
+第二十六件（2026-10-24）：工程地图 —— 改一个文件，跑哪几套。
+
+每改一处就拉十套、隔一阵还跑十几分钟的量具，是拿时间买「不用想影响面」。而那些关系一直是
+写着的：哪个套件加载哪个 .hmyr、self/ 六份之间谁 import 谁、哪个套件 import 哪个 src 模块。
+只是没人把它们拼起来。
+
+tools/impact.mjs 拼起来了。它读套件表，抽出每个套件的 loadUnit 目标与 src import，
+再顺着 self/ 的 import 链往回走，答三行：直接、间接、无关。
+
+    node tools/impact.mjs self/body.hmyr
+      直接   1   selfbody
+      间接  19   selfrun selfimport selfcompile bootstrap subsetload …
+      无关 145   （不跑）
+
+0.7 秒换掉一次四十秒的试跑。src 模块也答：src/eval.mjs 直接牵动 28 套。
+
+这件的价值不在省时间，在于它把「我大概记得」换成「写得出来的关系」。
