@@ -99,7 +99,9 @@ fn is_hex_char(c: String) -> Bool {
 // 进制字面量：0x / 0b / 0o 之后一律按十六进制字符集读下去。
 fn read_based(s: String, i: Int, acc: String) -> {next: Int, text: String} {
   if i >= len(s) { return {next: i, text: acc} }
-  if is_hex_char(s[i]) { return read_based(s, i + 1, acc + s[i]) }
+  // 下划线是分隔符，但它属于字面量的一部分（0x1_0 的原文要完整留着），
+  // 否则词法先把它截断，后面再聪明也补不回来。
+  if is_hex_char(s[i]) || s[i] == "_" { return read_based(s, i + 1, acc + s[i]) }
   return {next: i, text: acc}
 }
 
