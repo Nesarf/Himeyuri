@@ -147,6 +147,7 @@ const SUITES = [
   ["bigint", "test/bigint.test.mjs", "SPEC M7 - 256-bit integers built from 16-bit words: add, subtract, multiply and compare, checked against node's BigInt"],
   ["curve", "test/curve.test.mjs", "SPEC M7 - the Ed25519 curve: 0 and 1 times the base point, and every result from 2 to 8 landing on the curve equation"],
   ["sha512", "test/sha512.test.mjs", "SPEC M7 - SHA-512 over four samples: empty, three bytes, the padding boundary, and a two-block input, all against node's crypto"],
+  ["ssh", "test/ssh.test.mjs", "SPEC M7 - the OpenSSH signature wire format: base64 decoded and every section of the SSHSIG structure matched byte for byte"],
   ["manifesthmyr", "test/manifest-hmyr.test.mjs", "SPEC M7 - the manifest built by Himeyuri: valid JSON, a digest that matches the standard indentation, and a loop closed by its own verifier"],
   ["manifest", "test/manifest.test.mjs", "SPEC M7 - the distribution manifest: everything it lists actually exists, and the minimal set is exactly fifteen"],
   ["helper", "test/helper.test.mjs", "SPEC M7 - the assistant: a code explains itself, a word searches the meanings, and a miss still hands back the list"],

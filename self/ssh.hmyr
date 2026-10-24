@@ -1,0 +1,136 @@
+// OpenSSH 的分离签名：base64 里包着一个二进制结构。
+//
+// 结构（openssh PROTOCOL.sshsig）：
+//   "SSHSIG"        6 字节魔数
+//   版本            uint32
+//   公钥 blob       一个 SSH 串（长度 + 内容）
+//   命名空间        一个 SSH 串
+//   保留            一个 SSH 串（空）
+//   哈希算法        一个 SSH 串（sha512）
+//   签名 blob       一个 SSH 串
+//
+// 这一版只做「解出来」：把四段取出来、看到里面是什么。验签要等 Ed25519 的点解压
+// 与标量模 L —— 那是下一层。
+import "./sha512.hmyr"
+import "./bigint.hmyr"
+
+fn 值(c: Int) -> Int {
+  if c >= 65 && c <= 90 { return c - 65 }
+  if c >= 97 && c <= 122 { return c - 97 + 26 }
+  if c >= 48 && c <= 57 { return c - 48 + 52 }
+  if c == 43 { return 62 }
+  if c == 47 { return 63 }
+  return 0
+}
+
+// base64 → 字节元组。忽略换行；遇到等号就停（填充之后没有数据了）。
+fn 解base64(s: String) {
+  var 出 = ()
+  var 攒 = 0
+  var 位数 = 0
+  var i = 0
+  while i < len(s) {
+    let c = ord(slice(s, i, i + 1))
+    if c == 61 {
+      i = len(s)
+    } else {
+      if c != 10 && c != 13 && c != 32 {
+        攒 = 攒 * 64 + 值(c)
+        位数 = 位数 + 6
+        if 位数 >= 8 {
+          位数 = 位数 - 8
+          出 = 出 + ((攒 - 攒 % 倍2(位数)) / 倍2(位数),)
+          攒 = 攒 % 倍2(位数)
+        }
+      }
+      i = i + 1
+    }
+  }
+  return 出
+}
+
+fn 倍2(n: Int) -> Int {
+  var v = 1
+  var i = 0
+  while i < n {
+    v = v * 2
+    i = i + 1
+  }
+  return v
+}
+
+// 读一个大端 uint32。
+fn 读四(字节们: Int, 起: Int) -> Int {
+  return to_int(字节们[起]) * 16777216 + to_int(字节们[起 + 1]) * 65536 +
+         to_int(字节们[起 + 2]) * 256 + to_int(字节们[起 + 3])
+}
+
+// 读一个 SSH 串：长度 + 内容。交回 {身, 下}。
+fn 读串(字节们: Int, 起: Int) {
+  let 长 = 读四(字节们, 起)
+  var 身 = ()
+  var i = 0
+  while i < 长 {
+    身 = 身 + (字节们[起 + 4 + i],)
+    i = i + 1
+  }
+  return {身: 身, 下: 起 + 4 + 长}
+}
+
+// 字节元组 → 十六进制串。
+fn 十六进制(字节们: Int) {
+  let 表 = "0123456789abcdef"
+  var 出 = ""
+  var i = 0
+  while i < len(字节们) {
+    let v = to_int(字节们[i])
+    出 = 出 + slice(表, (v - v % 16) / 16, (v - v % 16) / 16 + 1)
+    出 = 出 + slice(表, v % 16, v % 16 + 1)
+    i = i + 1
+  }
+  return 出
+}
+
+fn 字节们成文(字节们: Int) {
+  var 出 = ""
+  var i = 0
+  while i < len(字节们) {
+    出 = 出 + chr(to_int(字节们[i]))
+    i = i + 1
+  }
+  return 出
+}
+
+fn 主(串: String) -> Int {
+  let 字节们 = 解base64(串)
+  print("总字节 " + str(len(字节们)) + chr(10))
+  // 魔数
+  let 头 = 字节们成文((字节们[0], 字节们[1], 字节们[2], 字节们[3], 字节们[4], 字节们[5]))
+  print("魔数 " + 头 + chr(10))
+  print("版本 " + str(读四(字节们, 6)) + chr(10))
+  // 公钥 blob
+  let 公 = 读串(字节们, 10)
+  print("公钥 blob " + str(len(公.身)) + " 字节：" + 十六进制(公.身) + chr(10))
+  // 命名空间
+  let 名 = 读串(字节们, 公.下)
+  print("命名空间 " + 字节们成文(名.身) + chr(10))
+  // 保留
+  let 保 = 读串(字节们, 名.下)
+  print("保留 " + str(len(保.身)) + " 字节" + chr(10))
+  // 哈希算法
+  let 哈 = 读串(字节们, 保.下)
+  print("哈希算法 " + 字节们成文(哈.身) + chr(10))
+  // 签名 blob
+  let 签 = 读串(字节们, 哈.下)
+  print("签名 blob " + str(len(签.身)) + " 字节：" + 十六进制(签.身) + chr(10))
+  return 0
+}
+
+fn main() -> Int effects(process) {
+  let 参 = argv()
+  if len(参) < 2 {
+    print("用法：hmyr self/ssh.hmyr <base64>" + chr(10))
+    return 2
+  }
+  return 主(参[1])
+}
