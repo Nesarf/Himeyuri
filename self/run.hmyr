@@ -173,6 +173,18 @@ fn 数字值(s: String) -> Int {
   return 数到(s)
 }
 
+// 位置的安全读法：语法错的节点本来就可能没有位置（越界时连 token 都没有）。
+// 这里缺就填 0，而不是让一次缺字段把整棵树造失败 —— 诊断要的是「尽力说清」，不是「全有或全无」。
+fn 行(n: Int) -> Int {
+  if field_has(n, "line") { return n.line }
+  return 0
+}
+
+fn 列(n: Int) -> Int {
+  if field_has(n, "column") { return n.column }
+  return 0
+}
+
 // 把表达式树翻成宿主那边认的形状：Literal 补 value 与 raw，Ident 的 text 改叫 name。
 //
 // 这三件（字面量的值、空 return、Ident 的字段名）是适配器里最后的翻译。把它们挪进 HMYR，
@@ -180,32 +192,47 @@ fn 数字值(s: String) -> Int {
 fn 翻表达式(n: Int) {
   if n.kind == "Literal" {
     if n.type == "int" {
-      return {kind: "Literal", type: "int", value: 数字值(n.text), raw: n.text, text: n.text, line: n.line, column: n.column}
+      return {kind: "Literal", type: "int", value: 数字值(n.text), raw: n.text, text: n.text, line: 行(n), column: 列(n)}
     }
-    return {kind: "Literal", type: "string", value: n.text, raw: false, text: n.text, line: n.line, column: n.column}
+    return {kind: "Literal", type: "string", value: n.text, raw: false, text: n.text, line: 行(n), column: 列(n)}
   }
   if n.kind == "Ident" {
-    return {kind: "Ident", name: n.text, text: n.text, line: n.line, column: n.column}
+    // true 与 false 在这一侧是标识符（词法把关键字也归在 ident 里），在宿主那边是字面量。
+    // 不转的话，宿主会去找一个叫 false 的名字 —— 报 HMYR-R0104，而那句话听起来像拼写错误。
+    if n.text == "true" { return {kind: "Literal", type: "bool", value: true, raw: false, text: n.text, line: 行(n), column: 列(n)} }
+    if n.text == "false" { return {kind: "Literal", type: "bool", value: false, raw: false, text: n.text, line: 行(n), column: 列(n)} }
+    return {kind: "Ident", name: n.text, text: n.text, line: 行(n), column: 列(n)}
   }
   if n.kind == "Binary" {
-    return {kind: "Binary", op: n.op, left: 翻表达式(n.left), right: 翻表达式(n.right), line: n.line, column: n.column}
+    return {kind: "Binary", op: n.op, left: 翻表达式(n.left), right: 翻表达式(n.right), line: 行(n), column: 列(n)}
   }
   if n.kind == "Unary" {
-    return {kind: "Unary", op: n.op, operand: 翻表达式(n.operand), line: n.line, column: n.column}
+    return {kind: "Unary", op: n.op, operand: 翻表达式(n.operand), line: 行(n), column: 列(n)}
   }
   if n.kind == "Call" {
-    return {kind: "Call", callee: 翻表达式(n.callee), args: 翻表达式们(n.args, 0, ()), line: n.line, column: n.column}
+    return {kind: "Call", callee: 翻表达式(n.callee), args: 翻表达式们(n.args, 0, ()), line: 行(n), column: 列(n)}
   }
   if n.kind == "Field" {
-    return {kind: "Field", target: 翻表达式(n.target), name: n.name, line: n.line, column: n.column}
+    return {kind: "Field", target: 翻表达式(n.target), name: n.name, line: 行(n), column: 列(n)}
   }
   if n.kind == "Index" {
-    return {kind: "Index", target: 翻表达式(n.target), index: 翻表达式(n.index), line: n.line, column: n.column}
+    return {kind: "Index", target: 翻表达式(n.target), index: 翻表达式(n.index), line: 行(n), column: 列(n)}
   }
   if n.kind == "Tuple" {
-    return {kind: "Tuple", items: 翻表达式们(n.items, 0, ()), line: n.line, column: n.column}
+    return {kind: "Tuple", items: 翻表达式们(n.items, 0, ()), line: 行(n), column: 列(n)}
+  }
+  // 记录字面量：字段的值也是表达式，也要翻。漏了这一步不会报错 —— 它只是把没翻过的
+  // Ident 原样交给宿主，然后宿主去找一个叫 undefined 的名字。
+  if n.kind == "Record" {
+    return {kind: "Record", fields: 翻字段们(n.fields, 0, ()), line: 行(n), column: 列(n)}
   }
   return n
+}
+
+fn 翻字段们(们: Int, i: Int, acc: Int) {
+  if i >= len(们) { return acc }
+  let f = 们[i]
+  return 翻字段们(们, i + 1, acc + ({name: f.name, value: 翻表达式(f.value)},))
 }
 
 fn 翻表达式们(们: Int, i: Int, acc: Int) {
@@ -216,14 +243,14 @@ fn 翻表达式们(们: Int, i: Int, acc: Int) {
 // 语句里的那几个表达式字段也要翻。空 return 干脆不带 value —— 宿主读出来是 undefined，
 // 与它自己的 null 同效；而这一侧本来就没有 null 这个词。
 fn 翻语句(n: Int) {
-  if n.kind == "Let" { return {kind: "Let", name: n.name, value: 翻表达式(n.value), line: n.line, column: n.column} }
-  if n.kind == "Var" { return {kind: "Var", name: n.name, value: 翻表达式(n.value), line: n.line, column: n.column} }
-  if n.kind == "Assign" { return {kind: "Assign", name: n.name, value: 翻表达式(n.value), line: n.line, column: n.column} }
+  if n.kind == "Let" { return {kind: "Let", name: n.name, value: 翻表达式(n.value), line: 行(n), column: 列(n)} }
+  if n.kind == "Var" { return {kind: "Var", name: n.name, value: 翻表达式(n.value), line: 行(n), column: 列(n)} }
+  if n.kind == "Assign" { return {kind: "Assign", name: n.name, value: 翻表达式(n.value), line: 行(n), column: 列(n)} }
   if n.kind == "Return" {
-    if n.value.kind == "nil" { return {kind: "Return", line: n.line, column: n.column} }
-    return {kind: "Return", value: 翻表达式(n.value), line: n.line, column: n.column}
+    if n.value.kind == "nil" { return {kind: "Return", line: 行(n), column: 列(n)} }
+    return {kind: "Return", value: 翻表达式(n.value), line: 行(n), column: 列(n)}
   }
-  if n.kind == "ExprStmt" { return {kind: "ExprStmt", expr: 翻表达式(n.value), line: n.line, column: n.column} }
+  if n.kind == "ExprStmt" { return {kind: "ExprStmt", expr: 翻表达式(n.value), line: 行(n), column: 列(n)} }
   return n
 }
 
@@ -234,12 +261,12 @@ fn 转语句们(语句们: Int, i: Int, acc: Int) {
   // If 与 While 在这一侧还要换字段名：cond 对 condition，then/otherwise/body 要包成 Block。
   // 解析那一层不动（求值器读的还是 cond 与语句元组），只在包装这一层翻。
   if n.kind == "If" {
-    let 内 = {kind: "If", condition: 翻表达式(n.cond), then: 包块(n.then, n.line), otherwise: 包块(n.otherwise, n.line), line: n.line, column: n.column}
-    出 = {kind: "ExprStmt", expr: 内, line: n.line, column: n.column}
+    let 内 = {kind: "If", condition: 翻表达式(n.cond), then: 包块(n.then, n.line), otherwise: 包块(n.otherwise, n.line), line: 行(n), column: 列(n)}
+    出 = {kind: "ExprStmt", expr: 内, line: 行(n), column: 列(n)}
   }
   if n.kind == "While" {
-    let 内 = {kind: "While", condition: 翻表达式(n.cond), body: 包块(n.body, n.line), line: n.line, column: n.column}
-    出 = {kind: "ExprStmt", expr: 内, line: n.line, column: n.column}
+    let 内 = {kind: "While", condition: 翻表达式(n.cond), body: 包块(n.body, n.line), line: 行(n), column: 列(n)}
+    出 = {kind: "ExprStmt", expr: 内, line: 行(n), column: 列(n)}
   }
   return 转语句们(语句们, i + 1, acc + (出,))
 }
@@ -298,10 +325,11 @@ fn 造模块(源: String) {
   // import 行被 去导入 剥掉了，所以找它们要用原始源码。
   let 全toks = scan_lines(源)
   let 导入 = 导入节点们(全toks, 0, ())
-  if 行首是声明(净) {
-    // 注意：解析用**原始** token 流。去导入 把 import 行整行删了，行号会跟着上移，
-    // 于是同一段源码在两边报出不同的位置 —— 这个坑先在「带 import 的文件」那个样本上现形。
-    let 全部 = parse_decls(全toks)
+  // 判断「这是不是一份带声明的程序」看 parse_decls 的结果，不看第一行 —— 文件以注释开头
+  // 时会误判（lex.hmyr 就是这样：第一行是注释，于是整份被当成裸语句包进 fn main 的壳）。
+  // 解析用**原始** token 流：去导入 会把行号整体上移，两边就对不上位置了。
+  let 全部 = parse_decls(全toks)
+  if len(全部.fns) > 0 {
     return {kind: "Module", imports: 导入, decls: 包声明(全部.fns, 0, ()), rev: 0}
   }
   let 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"

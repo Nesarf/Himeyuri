@@ -68,7 +68,7 @@ fn arg_list(tokens: Int, i: Int, acc: Int) {
 }
 
 fn atom(tokens: Int, i: Int) {
-  if i >= len(tokens) { return {node: {kind: "Error", text: ""}, next: i} }
+  if i >= len(tokens) { return {node: {kind: "Error", text: "", line: 0, column: 0}, next: i} }
   let t = tokens[i]
   if t.kind == "int" { return {node: {kind: "Literal", type: "int", text: t.text, line: t.line, column: t.column}, next: i + 1} }
   if t.kind == "string" { return {node: {kind: "Literal", type: "string", text: t.text, line: t.line, column: t.column}, next: i + 1} }
@@ -111,10 +111,10 @@ fn record_tail(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {node: {kind: "Record", fields: acc}, next: i} }
   let t = tokens[i]
   if is_punct(t, "}") { return {node: {kind: "Record", fields: acc}, next: i + 1} }
-  if t.kind != "ident" { return {node: {kind: "Error", text: t.text}, next: i + 1} }
+  if t.kind != "ident" { return {node: {kind: "Error", text: t.text, line: t.line, column: t.column}, next: i + 1} }
   let name = t.text
   if i + 1 >= len(tokens) || !is_punct(tokens[i + 1], ":") {
-    return {node: {kind: "Error", text: name}, next: i + 1}
+    return {node: {kind: "Error", text: name, line: t.line, column: t.column}, next: i + 1}
   }
   let value = logic(tokens, i + 2)
   var next = value.next

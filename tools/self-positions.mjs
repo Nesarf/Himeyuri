@@ -6,7 +6,7 @@
 //
 // 为什么位置值得单独量：诊断要说「第几行第几列」，而宿主解析器交出的每个节点都带位置。
 // self 这一侧以前只有字符偏移，于是它给不出人能读的位置。
-import { loadUnit, runUnit } from "../src/loader.mjs";
+import { loadUnit, runUnit } from "./self-bridge.mjs";
 import { 切 } from "../src/subset-lex.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

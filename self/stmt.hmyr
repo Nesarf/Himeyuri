@@ -45,7 +45,7 @@ fn binding(tokens: Int, i: Int, keyword: String) {
 
 fn statement(tokens: Int, i: Int) {
   if i >= len(tokens) {
-    return {node: {kind: "Error", text: ""}, next: i}
+    return {node: {kind: "Error", text: "", line: 0, column: 0}, next: i}
   }
   let t = tokens[i]
   if is_word(t, "let") || is_word(t, "var") {
@@ -96,7 +96,7 @@ fn parse_if(tokens: Int, i: Int) {
   let cond = from_here(tokens, i)
   let at = skip_newlines(tokens, cond.next)
   if at >= len(tokens) || !is_punct(tokens[at], "{") {
-    return {node: {kind: "Error", text: "if"}, next: at}
+    return {node: {kind: "Error", text: "if", line: 位.line, column: 位.column}, next: at}
   }
   let then = block(tokens, at + 1)
   var otherwise = ()
@@ -124,7 +124,7 @@ fn parse_while(tokens: Int, i: Int) {
   let cond = from_here(tokens, i)
   let at = skip_newlines(tokens, cond.next)
   if at >= len(tokens) || !is_punct(tokens[at], "{") {
-    return {node: {kind: "Error", text: "while"}, next: at}
+    return {node: {kind: "Error", text: "while", line: 位.line, column: 位.column}, next: at}
   }
   let body = block(tokens, at + 1)
   return {node: {kind: "While", cond: cond.node, body: body.list, line: 位.line, column: 位.column}, next: body.next}
