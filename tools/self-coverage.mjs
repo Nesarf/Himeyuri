@@ -5,7 +5,7 @@
 // 这是它的下界样本：求值这一层能对上多少。样本挑的是表达与语句都有的短程序。
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadUnit, runUnit } from "../src/loader.mjs";
+import { loadUnit, runUnit } from "./self-bridge.mjs";
 import { run as js跑 } from "../src/eval.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");

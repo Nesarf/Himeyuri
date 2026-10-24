@@ -8,7 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadUnit, runUnit } from "../src/loader.mjs";
+import { loadUnit, runUnit } from "./self-bridge.mjs";
 import { Runtime } from "../src/eval.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");

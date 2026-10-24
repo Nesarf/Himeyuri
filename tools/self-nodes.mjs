@@ -5,7 +5,7 @@
 // 「位置集合」—— 先把名字的差异放在一边，只量位置这一维。
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadUnit, runUnit } from "../src/loader.mjs";
+import { loadUnit, runUnit } from "./self-bridge.mjs";
 import { lex } from "../src/lexer.mjs";
 import { parse } from "../src/parser.mjs";
 

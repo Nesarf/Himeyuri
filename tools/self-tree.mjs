@@ -5,7 +5,7 @@
 // 把两边的路径都报出来 —— 那种报法比「有 N 个不同」有用，因为要修的是第一处。
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadUnit, runUnit } from "../src/loader.mjs";
+import { loadUnit, runUnit } from "./self-bridge.mjs";
 import { lex } from "../src/lexer.mjs";
 import { parse } from "../src/parser.mjs";
 
