@@ -336,7 +336,8 @@ fn 正规名(路: String) -> String {
 }
 
 // 一个成员：本地头 + 负载，外加它在中央目录里的那一条。
-fn 成员(路: String, 名: String, 压: Bool, 偏移: Int) {
+// 它自己读文件，所以自己声明 file 效果 —— 靠调用者代传是解释器的宽容，字节码那台不认。
+fn 成员(路: String, 名: String, 压: Bool, 偏移: Int) effects(file) {
   let 数据 = read_bytes(路)
   let 名们 = 写串(名)
   let crc = crc32(数据)
