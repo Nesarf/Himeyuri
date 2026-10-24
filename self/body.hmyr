@@ -208,17 +208,20 @@ fn 效果们(tokens: Int, 起: Int, 末: Int) {
 fn decls_from(tokens: Int, i: Int, acc: Int) {
   let at = next_fn(tokens, i)
   if at < 0 { return {fns: acc, next: len(tokens)} }
+  let 位 = tokens[at]
   let 名 = 名字在(tokens, at)
   let open = find_body(tokens, at + 1)
   if open < 0 { return {fns: acc, next: len(tokens)} }
   let got = each(tokens, open + 1, ())
-  // 四件：名字、参数名们、语句们、效果名们。后两件都从 fn 之后扫到 { 之前。
+  // 六件：名字、参数名们、语句们、效果名们、行、列。
+  // 位置加在**末尾**，所以读 选[2] 与 选[3] 的老代码一行都不用改 ——
+  // 而声明层要包成 Fn 节点时，位置才有东西可抄。
   let 参名们 = 参数名们(tokens, at + 1, open)
   let 效们 = 效果们(tokens, at + 1, open)
-  return decls_from(tokens, got.next, acc + ((名, 参名们, got.list, 效们),))
+  return decls_from(tokens, got.next, acc + ((名, 参名们, got.list, 效们, 位.line, 位.column),))
 }
 
-// 交回 {fns: ((名字, 参数名们, 语句们, 效果名们), …), next}。
+// 交回 {fns: ((名字, 参数名们, 语句们, 效果名们, 行, 列), …), next}。
 fn parse_decls(tokens: Int) -> Int {
   return decls_from(tokens, 0, ())
 }

@@ -135,6 +135,51 @@ fn 加载多(目录: String, 路们: Int, i: Int, 栈: Int, 已载: Int) effects
   return 加载多(目录, 路们, i + 1, 栈, r.已载)
 }
 
+// ---- 声明层：把元组包成节点 ----
+//
+// 宿主的树有三层：Module → Fn → Block → 语句。这一侧以前只有元组
+// （名字, 参数名们, 语句们, 效果名们, 行, 列），于是两边的节点数永远对不上 ——
+// 比较只能问「self 的位置宿主有没有」，问不了「节点对不对得上」。
+//
+// 这两个函数只做包装，不动解析：解析仍是 parse_decls 与 parse_body 干的活。
+// 包一层不是为了好看：Module、Fn、Block 是宿主 loader 与 runUnit 认得的那三种东西，
+// 有了它们，换掉 src/loader.mjs 才谈得上。
+fn 包块(语句们: Int, 行: Int) {
+  return {kind: "Block", statements: 语句们, line: 行}
+}
+
+fn 包声明(声明们: Int, i: Int, acc: Int) {
+  if i >= len(声明们) { return acc }
+  let d = 声明们[i]
+  var 名 = ""
+  var 参 = ()
+  var 句 = ()
+  var 效 = ()
+  var 行 = 1
+  var 列 = 1
+  if len(d) > 0 { 名 = d[0] }
+  if len(d) > 1 { 参 = d[1] }
+  if len(d) > 2 { 句 = d[2] }
+  if len(d) > 3 { 效 = d[3] }
+  if len(d) > 4 { 行 = d[4] }
+  if len(d) > 5 { 列 = d[5] }
+  let 体 = 包块(句, 行)
+  let 函 = {kind: "Fn", name: 名, params: 参, returns: (), effects: 效, contracts: (), body: 体, pub: false, line: 行, column: 列}
+  return 包声明(声明们, i + 1, acc + (函,))
+}
+
+// 一整个文件 → Module。有声明就按声明走；没有就照旧包一层 fn main 的壳（老用法）。
+fn 造模块(源: String) {
+  let 净 = 去导入(源)
+  if 行首是声明(净) {
+    let 全部 = parse_decls(scan_lines(净))
+    return {kind: "Module", imports: (), decls: 包声明(全部.fns, 0, ()), rev: 0}
+  }
+  let 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
+  let 体 = parse_body(scan_lines(有壳))
+  return {kind: "Module", imports: (), decls: 包声明((("main", (), 体.list, (), 1, 1),), 0, ()), rev: 0}
+}
+
 // 只解析、不求值，交回声明树。
 //
 // 量「节点位置」时用它：求值会把树丢掉，而位置在树上。函数的形状与 parse_decls 交回的

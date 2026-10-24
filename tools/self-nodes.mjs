@@ -23,6 +23,7 @@ if (!unit.ok) {
 }
 const rt = runUnit(unit, { stepLimit: 40000000000 });
 const 自己树 = (源) => rt.callFunction(rt.functions.get("解析程序"), [源], null);
+const 自己模块 = (源) => rt.callFunction(rt.functions.get("造模块"), [源], null);
 
 // self 的节点：记录里只要有 kind 与 line 就算一个（语句层与表达式层都这样）。
 const 收自己 = (x, 出) => {
@@ -68,7 +69,20 @@ for (const [名, 源] of 样本) {
    缺.length ? "这些位置在宿主那边没有：" + JSON.stringify(缺.slice(0, 4)) : "");
 }
 
-console.log("二、self 的每个节点都带着位置");
+console.log("二、声明层：Module → Fn → Block");
+for (const [名, 源] of 样本) {
+  const 己 = 自己模块(源);
+  const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
+  const { ast } = parse(lex(源, { diagnostics: d }).tokens, { diagnostics: d });
+  const 描 = (f) => f.kind + " " + f.name + "@" + f.line + ":" + f.column + " " + f.body.kind + "(" + f.body.statements.length + ")";
+  const 己描 = Array.from(己.decls).map(描);
+  const 彼描 = ast.decls.map(描);
+  ok(名 + "（" + 己.kind + "，" + 己描.length + " 个声明）",
+    己.kind === "Module" && JSON.stringify(己描) === JSON.stringify(彼描),
+    己描.length === 彼描.length && 己描.every((x, i) => x === 彼描[i]) ? "" : "self=" + JSON.stringify(己描) + " 宿主=" + JSON.stringify(彼描));
+}
+
+console.log("三、self 的每个节点都带着位置");
 {
   const 己 = 收自己(自己树(样本[1][1]), []);
   ok("节点数大于零", 己.length > 0, String(己.length));
