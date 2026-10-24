@@ -86,6 +86,15 @@ const 深转 = (v) => {
     if (o.kind === "If" && o.otherwise && Array.isArray(o.otherwise.statements) && o.otherwise.statements.length === 0) {
       o.otherwise = null;
     }
+    // rev 0 在这一侧表示「没写」；宿主用 null 表示不提要求。
+    // -1 表示「写了 rev 但没有数字」—— 那是一条语法错，不是「不提要求」。
+    if ((o.kind === "Module" || o.kind === "Import") && o.rev === 0) o.rev = null;
+    if ((o.kind === "Module" || o.kind === "Import") && o.rev === -1) {
+      const 条 = { code: "HMYR-E0100", message: "rev is not followed by a revision number" };
+      诊断.errors.push(条);
+      诊断.items.push(条);
+      o.rev = null;
+    }
     return o;
   }
   if (Array.isArray(v)) return v.map(深转);
@@ -154,6 +163,32 @@ export function loadUnit(entry, options = {}) {
       }
     }
   }
+  // 版本协商：import 要第 M 版，模块提供到第 N 版，M <= N 才成。
+  // 宿主在 visit 之后做这件事，桥原来不做 —— 于是「模块 rev 对不上」这条它从不开口。
+  for (const 键 of order) {
+    const 模块 = modules.get(键);
+    for (const imp of Array.from(模块.imports || [])) {
+      const p = String((imp && imp.path) || "");
+      if (!p) continue;
+      const 算路径 = p.startsWith("./") || p.startsWith("../") || /^[A-Za-z]:[\\/]/.test(p) || path.isAbsolute(p);
+      if (!算路径) continue;
+      const 目标路 = path.resolve(path.dirname(键), p.split("/").join(path.sep));
+      const 目标 = modules.get(目标路);
+      if (!目标) continue;
+      const 有 = 目标.rev;
+      const 要 = imp.rev;
+      if (有 !== null && 有 !== undefined && 要 !== null && 要 !== undefined && 要 > 有) {
+        const 条 = {
+          code: "HMYR-E0303",
+          message: "module '" + p + "' offers revision " + 有 + ", but the import asks for " + 要 +
+            "; there is no version both sides support",
+          file: 键,
+        };
+        诊断.errors.push(条);
+        诊断.items.push(条);
+      }
+    }
+  }
   // 非路径的 import：加载器跳过它（那是包管理器的事），但那句话要说出来 —— 宿主用的是 W0301。
   for (const 键 of order) {
     for (const imp of Array.from(modules.get(键).imports || [])) {
@@ -168,7 +203,9 @@ export function loadUnit(entry, options = {}) {
       }
     }
   }
-  return { ok: true, order, modules, diagnostics: 诊断 };
+  // 有错就不是一条能用的加载结果 —— 宿主那边 ok 与 diagnostics 是同一个判断。
+  const 好用 = 诊断.errors.length === 0;
+  return { ok: 好用, order, modules, diagnostics: 诊断 };
 }
 
 export function runUnit(unit, options = {}) {
