@@ -76,19 +76,30 @@ fn find_body(tokens: Int, i: Int) -> Int {
 // 收集一条语句的 token。
 //   depth 用来照顾语句内部的嵌套花括号（例如记录字面量）；
 //   顶层的换行表示这一条到此为止；顶层的右花括号表示整个体到此为止。
-fn collect(tokens: Int, i: Int, depth: Int, acc: Int) {
+// 圆括号里的换行不算语句边界 —— 这一条是跨行表达式的前提。
+//
+// 原来的问题：只有花括号有深度，于是 `return (` 换行之后，collect 认为这一条语句到此为止，
+// 把后面的元组元素切成一条条独立语句。而解析器本身（atom 与 paren_or_tuple）是认得跨行的，
+// 只是它从没拿到完整的那一段。
+fn collect(tokens: Int, i: Int, depth: Int, paren: Int, acc: Int) {
   if i >= len(tokens) { return {line: acc, next: i, end: true} }
   let t = tokens[i]
-  if is_punct(t, "{") { return collect(tokens, i + 1, depth + 1, acc + (t,)) }
+  if is_punct(t, "{") { return collect(tokens, i + 1, depth + 1, paren, acc + (t,)) }
   if is_punct(t, "}") {
     if depth == 0 { return {line: acc, next: i, end: true} }
-    return collect(tokens, i + 1, depth - 1, acc + (t,))
+    return collect(tokens, i + 1, depth - 1, paren, acc + (t,))
+  }
+  if is_punct(t, "(") { return collect(tokens, i + 1, depth, paren + 1, acc + (t,)) }
+  if is_punct(t, ")") {
+    var p = paren - 1
+    if p < 0 { p = 0 }
+    return collect(tokens, i + 1, depth, p, acc + (t,))
   }
   if t.kind == "newline" {
-    if depth == 0 { return {line: acc, next: i + 1, end: false} }
-    return collect(tokens, i + 1, depth, acc)
+    if depth == 0 && paren == 0 { return {line: acc, next: i + 1, end: false} }
+    return collect(tokens, i + 1, depth, paren, acc)
   }
-  return collect(tokens, i + 1, depth, acc + (t,))
+  return collect(tokens, i + 1, depth, paren, acc + (t,))
 }
 
 // 一条条读下去，直到体的收尾。空行跳过。
@@ -99,7 +110,7 @@ fn collect(tokens: Int, i: Int, depth: Int, acc: Int) {
 // 而单行写法 fn f() { return 7 } 里，那一行就是全部内容 —— 早先直接返回，
 // 于是函数体被读成空的：编译出来只有「交回空」，跑什么都不对。
 fn each(tokens: Int, i: Int, acc: Int) {
-  let got = collect(tokens, i, 0, ())
+  let got = collect(tokens, i, 0, 0, ())
   var 收 = acc
   if len(got.line) > 0 {
     let st = parse_statement(got.line)
