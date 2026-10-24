@@ -1,6 +1,6 @@
 // Himeyuri 的终端动画示例。
 //
-// 跑法（在 E:\himeyuri 下）：
+// 跑法（在 D:\himeyuri 下）：
 //   node examples/run-demo.mjs
 //
 // 它用上了这些件：画布 · 场景栈（点与横线）· 大字（标题）· 节拍（一拍一幅字样）· 按键退出。

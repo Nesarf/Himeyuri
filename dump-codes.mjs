@@ -1,5 +1,6 @@
 const fs = await import("node:fs");
-const 源 = fs.readFileSync("E:/himeyuri/conformance/codes.mjs", "utf8");
+// 按本文件自己的位置找 conformance/codes.mjs，仓库搬到哪一页都还站得住。
+const 源 = fs.readFileSync(new URL("conformance/codes.mjs", import.meta.url), "utf8");
 const 条 = [];
 for (const 行 of 源.split(/\r?\n/)) {
   const m = /\{ code: "([A-Z0-9\-]+)", stage: "([a-z]+)"([^}]*)/.exec(行);

@@ -105,7 +105,7 @@ const PROSE = new Map([
   ["6.4", "the module-system gap and its plan: a record of what is missing, exercised by test/module.test.mjs"],
   ["6.5", "the design papers: each is dated and marked as a draft, not as terms"],
   ["7", "the relationship to KID: descriptive"],
-  ["8", "the open-source position: licence business, verified by E:/CZGD/selfcheck.mjs"],
+  ["8", "the open-source position: licence business, verified by the CZGD licence home's own selfcheck.mjs"],
 ]);
 const wanted = [...declared].filter((c) => /^\d(\.\d+)?$/.test(c)).sort();
 const covered = new Map();
