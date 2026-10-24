@@ -5,6 +5,8 @@
 // It runs each suite as its own process, so a crash in one is reported as that suite failing rather
 // than as this script dying, and it prints the M2 status line the specification asks about.
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -205,7 +207,64 @@ const 串行 = new Set([
   // 它读 self/ 那六份源码数节点，与 subsetload 抢同一批文件。
   "subsetparse",
 ]);
-const 并行数 = 4;
+// 并行数：八路。这台是 12 核 16 GB，八路留四核给系统与 gcc 的子进程，
+// 同时把内存峰值压在 8 × 768 MB 的名义上限之内。
+// 原来写死四路，等于让八核闲着，而全量的墙钟由最慢那一套决定。
+const 并行数 = 8;
+
+// ---- 只跑该跑的 ----
+//
+// 全量是十几分钟，而改一个 self/*.hmyr 只影响用到它的那几套。所以：
+//   --only a,b,c    只跑这几套
+//   --skip a,b      跳过这几套
+//   --affects <文件>  从 import 图反推：哪些测试 import 了这个文件（或其传递依赖）
+// 判据是保守的：图上有一条路就选中。宁可多跑一套，不可漏掉一套。
+const 参 = process.argv.slice(2);
+const 取值 = (旗) => {
+  const i = 参.indexOf(旗);
+  return i >= 0 && i + 1 < 参.length ? 参[i + 1] : null;
+};
+const 分号 = (s) => String(s || "").split(",").map((x) => x.trim()).filter(Boolean);
+const 只跑 = 分号(取值("--only"));
+const 跳过 = new Set(分号(取值("--skip")));
+
+// 从某个测试文件出发，顺着相对 import 与路径字面量收集它依赖的所有仓库内文件。
+// 两种都要扫：有的套件 import 源码，有的套件是 spawn 一个 self/*.hmyr 去跑
+// （比如 curve 套件跑标量乘、package 套件跑打包）—— 后者在 import 图里是隐形的。
+const 依赖表 = new Map();
+const 收依赖 = (文件, 见过) => {
+  if (见过.has(文件)) return 见过;
+  见过.add(文件);
+  let 文 = "";
+  try { 文 = readFileSync(path.join(ROOT, 文件), "utf8"); } catch { return 见过; }
+  for (const m of 文.matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)) {
+    const 指 = m[1];
+    if (!指.startsWith(".")) continue;
+    const 绝对 = path.resolve(path.dirname(path.join(ROOT, 文件)), 指);
+    const 相对 = path.relative(ROOT, 绝对).split(path.sep).join("/");
+    if (!相对.startsWith("..")) 收依赖(相对, 见过);
+  }
+  for (const m of 文.matchAll(/["'`]((?:self|src|tools|test|bin|vm)\/[A-Za-z0-9_.\/-]+\.(?:hmyr|mjs|c|txt|json))["'`]/g)) {
+    收依赖(m[1], 见过);
+  }
+  return 见过;
+};
+const 依赖于 = (文件) => {
+  if (!依赖表.has(文件)) 依赖表.set(文件, 收依赖(文件, new Set()));
+  return 依赖表.get(文件);
+};
+
+const 改过的 = 分号(取值("--affects"));
+let 选中 = SUITES;
+if (只跑.length) 选中 = SUITES.filter(([名]) => 只跑.includes(名));
+if (改过的.length) {
+  选中 = SUITES.filter(([名, 脚本]) => {
+    const 依赖 = 依赖于(脚本);
+    return 改过的.some((f) => 依赖.has(f) || f === 脚本);
+  });
+}
+if (跳过.size) 选中 = 选中.filter(([名]) => !跳过.has(名));
+const 名单 = new Set(选中.map(([名]) => 名));
 
 const 跑一套 = (script) => new Promise((resolve) => {
   const 子 = spawn(process.execPath, ["--max-old-space-size=768", path.join(ROOT, script)], { cwd: ROOT });
@@ -220,22 +279,23 @@ const 跑一套 = (script) => new Promise((resolve) => {
 // 自己跑得过去、在这里跑不过去的，是调度的事，不是代码的事；
 // 这两类要能分开 —— 所以失败的重试一次，并在输出里说明。
 const 跑一套带重试 = async (script) => {
+  const 起 = Date.now();
   let r = await 跑一套(script);
   let 重试过 = false;
   if (r.码 !== 0) {
     重试过 = true;
     r = await 跑一套(script);
   }
-  return { ...r, 重试过 };
+  return { ...r, 重试过, 耗时: Date.now() - 起 };
 };
 
 const 结果 = new Map();
-for (const [名, 脚本] of SUITES) {
+for (const [名, 脚本] of 选中) {
   if (!串行.has(名)) continue;
   结果.set(名, await 跑一套带重试(脚本));
 }
 {
-  const 轻 = SUITES.filter(([名]) => !串行.has(名));
+  const 轻 = 选中.filter(([名]) => !串行.has(名));
   let 下一个 = 0;
   const 工人 = async () => {
     for (;;) {
@@ -248,12 +308,15 @@ for (const [名, 脚本] of SUITES) {
   await Promise.all(Array.from({ length: 并行数 }, 工人));
 }
 
-for (const [name, script, what] of SUITES) {
+const 慢的 = [];
+for (const [name, script, what] of 选中) {
   const result = 结果.get(name);
   const tail = String(result.出 || "").trim().split("\n").filter(Boolean).pop() || "";
   const ok = result.码 === 0;
   if (!ok) failed++;
-  console.log("  " + (ok ? "[通过] " : "[不通过] ") + name.padEnd(7) + tail);
+  慢的.push([result.耗时, name]);
+  console.log("  " + (ok ? "[通过] " : "[不通过] ") + name.padEnd(7) + tail +
+    (result.耗时 >= 1000 ? "  (" + (result.耗时 / 1000).toFixed(1) + "s)" : ""));
   console.log("          " + what);
   if (!ok) {
     console.log("          exit " + result.码 + (result.重试过 ? ", after retrying once" : ""));
@@ -265,5 +328,12 @@ for (const [name, script, what] of SUITES) {
   }
 }
 console.log("");
+// 最慢的五套：知道时间花在哪，才知道下一次该不该跑全量。
+慢的.sort((a, b) => b[0] - a[0]);
+const 慢五 = 慢的.slice(0, 5).filter(([毫]) => 毫 >= 500);
+if (慢五.length) {
+  console.log("慢的五套：" + 慢五.map(([毫, 名]) => 名 + " " + (毫 / 1000).toFixed(1) + "s").join(" · "));
+  console.log("");
+}
 console.log(failed === 0 ? "all suites held" : failed + " suite(s) did not hold");
 process.exit(failed === 0 ? 0 : 1);
