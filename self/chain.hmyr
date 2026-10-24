@@ -31,19 +31,26 @@ fn postfix(tokens: Int, i: Int) -> Int {
 fn postfix_tail(tokens: Int, i: Int, target: Int) {
   if i >= len(tokens) { return {node: target, next: i} }
   if is_punct(tokens[i], "(") {
+    let 位 = tokens[i]
     let got = arg_list(tokens, i + 1, ())
-    return postfix_tail(tokens, got.next, {kind: "call", callee: target, args: got.list})
+    return postfix_tail(tokens, got.next, {kind: "call", callee: target, args: got.list, line: 位.line, column: 位.column})
   }
   if is_punct(tokens[i], ".") {
     if i + 1 < len(tokens) && tokens[i + 1].kind == "ident" {
-      return postfix_tail(tokens, i + 2, {kind: "field", target: target, name: tokens[i + 1].text})
+      // 位置上照抄宿主的一处怪处：它的 Field 记的是**字段名之后**那个 token 的位子
+      //（subset-parse 的注释写着「照抄而不是改对」，为的是两棵树能逐节点核）。
+      // 这一侧的 token 流不留换行，所以等价写法是「名字的列 + 名字的长度」——
+      // 名字后面紧跟的就是那个位子。不照抄，两棵树就永远差一列。
+      let 名 = tokens[i + 1]
+      return postfix_tail(tokens, i + 2, {kind: "field", target: target, name: 名.text, line: 名.line, column: 名.column + len(名.text)})
     }
     return {node: target, next: i + 1}
   }
   if is_punct(tokens[i], "[") {
+    let 位 = tokens[i]
     let inner = compare(tokens, i + 1)
     if inner.next < len(tokens) && is_punct(tokens[inner.next], "]") {
-      return postfix_tail(tokens, inner.next + 1, {kind: "index", target: target, index: inner.node})
+      return postfix_tail(tokens, inner.next + 1, {kind: "index", target: target, index: inner.node, line: 位.line, column: 位.column})
     }
     return {node: target, next: inner.next}
   }
@@ -63,12 +70,12 @@ fn arg_list(tokens: Int, i: Int, acc: Int) {
 fn atom(tokens: Int, i: Int) {
   if i >= len(tokens) { return {node: {kind: "err", text: ""}, next: i} }
   let t = tokens[i]
-  if t.kind == "int" { return {node: {kind: "num", text: t.text}, next: i + 1} }
-  if t.kind == "string" { return {node: {kind: "str", text: t.text}, next: i + 1} }
-  if t.kind == "ident" { return {node: {kind: "name", text: t.text}, next: i + 1} }
+  if t.kind == "int" { return {node: {kind: "num", text: t.text, line: t.line, column: t.column}, next: i + 1} }
+  if t.kind == "string" { return {node: {kind: "str", text: t.text, line: t.line, column: t.column}, next: i + 1} }
+  if t.kind == "ident" { return {node: {kind: "name", text: t.text, line: t.line, column: t.column}, next: i + 1} }
   if is_punct(t, "(") { return paren_or_tuple(tokens, i + 1) }
   if is_punct(t, "{") { return record_of(tokens, i + 1) }
-  return {node: {kind: "err", text: t.text}, next: i + 1}
+  return {node: {kind: "err", text: t.text, line: t.line, column: t.column}, next: i + 1}
 }
 
 // (x) 是分组，(x, …) 是元组——含尾逗号的一元组也算元组。
@@ -120,7 +127,7 @@ fn mul_tail(tokens: Int, i: Int, left: Int) {
   let t = tokens[i]
   if t.kind == "punct" && (t.text == "*" || t.text == "/" || t.text == "%") {
     let right = postfix(tokens, i + 1)
-    return mul_tail(tokens, right.next, {kind: "bin", op: t.text, left: left, right: right.node})
+    return mul_tail(tokens, right.next, {kind: "bin", op: t.text, left: left, right: right.node, line: t.line, column: t.column})
   }
   return {node: left, next: i}
 }
@@ -135,7 +142,7 @@ fn add_tail(tokens: Int, i: Int, left: Int) {
   let t = tokens[i]
   if t.kind == "punct" && (t.text == "+" || t.text == "-") {
     let right = mul(tokens, i + 1)
-    return add_tail(tokens, right.next, {kind: "bin", op: t.text, left: left, right: right.node})
+    return add_tail(tokens, right.next, {kind: "bin", op: t.text, left: left, right: right.node, line: t.line, column: t.column})
   }
   return {node: left, next: i}
 }
@@ -166,10 +173,11 @@ fn logic(tokens: Int, i: Int) -> Int {
 
 fn logic_tail(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {node: acc, next: i} }
-  let op = or_op(tokens[i])
+  let t = tokens[i]
+  let op = or_op(t)
   if op == "" { return {node: acc, next: i} }
   let right = and_level(tokens, i + 1)
-  return logic_tail(tokens, right.next, {kind: "bin", op: op, left: acc, right: right.node})
+  return logic_tail(tokens, right.next, {kind: "bin", op: op, left: acc, right: right.node, line: t.line, column: t.column})
 }
 
 fn and_level(tokens: Int, i: Int) -> Int {
@@ -179,10 +187,11 @@ fn and_level(tokens: Int, i: Int) -> Int {
 
 fn and_tail(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {node: acc, next: i} }
-  let op = and_op(tokens[i])
+  let t = tokens[i]
+  let op = and_op(t)
   if op == "" { return {node: acc, next: i} }
   let right = compare(tokens, i + 1)
-  return and_tail(tokens, right.next, {kind: "bin", op: op, left: acc, right: right.node})
+  return and_tail(tokens, right.next, {kind: "bin", op: op, left: acc, right: right.node, line: t.line, column: t.column})
 }
 
 // 比较层（低于加减，高于逻辑）。
@@ -201,10 +210,11 @@ fn compare(tokens: Int, i: Int) -> Int {
 
 fn compare_tail(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {node: acc, next: i} }
-  let op = cmp_op(tokens[i])
+  let t = tokens[i]
+  let op = cmp_op(t)
   if op == "" { return {node: acc, next: i} }
   let right = add(tokens, i + 1)
-  return compare_tail(tokens, right.next, {kind: "bin", op: op, left: acc, right: right.node})
+  return compare_tail(tokens, right.next, {kind: "bin", op: op, left: acc, right: right.node, line: t.line, column: t.column})
 }
 
 // 一元负号只作用在一个乘除项上，然后这个结果回到加减的尾部继续走——
@@ -212,13 +222,15 @@ fn compare_tail(tokens: Int, i: Int, acc: Int) {
 // 一元负号自己也要递归一层，好认得出 --5。
 fn unary_or_mul(tokens: Int, i: Int) {
   if i < len(tokens) && is_punct(tokens[i], "-") {
+    let 位 = tokens[i]
     let operand = unary_or_mul(tokens, i + 1)
-    return {node: {kind: "unary", op: "-", operand: operand.node}, next: operand.next}
+    return {node: {kind: "unary", op: "-", operand: operand.node, line: 位.line, column: 位.column}, next: operand.next}
   }
   // 逻辑非：!x。它缺席的样子是「解析器在 ! 上停住，上层报出来的却是别处的错」。
   if i < len(tokens) && is_punct(tokens[i], "!") {
+    let 位 = tokens[i]
     let operand = unary_or_mul(tokens, i + 1)
-    return {node: {kind: "unary", op: "!", operand: operand.node}, next: operand.next}
+    return {node: {kind: "unary", op: "!", operand: operand.node, line: 位.line, column: 位.column}, next: operand.next}
   }
   return mul(tokens, i)
 }

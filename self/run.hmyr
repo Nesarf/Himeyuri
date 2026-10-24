@@ -135,6 +135,21 @@ fn 加载多(目录: String, 路们: Int, i: Int, 栈: Int, 已载: Int) effects
   return 加载多(目录, 路们, i + 1, 栈, r.已载)
 }
 
+// 只解析、不求值，交回声明树。
+//
+// 量「节点位置」时用它：求值会把树丢掉，而位置在树上。函数的形状与 parse_decls 交回的
+// 一致 —— 声明是 (名字, 参数名们, 语句们)。
+fn 解析程序(源: String) {
+  let 净 = 去导入(源)
+  if 行首是声明(净) {
+    let 全部 = parse_decls(scan_lines(净))
+    return 全部.fns
+  }
+  let 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
+  let 体 = parse_body(scan_lines(有壳))
+  return (体.list,)
+}
+
 // 给一个入口（相对当前目录），交回 "ok <文件数>" 或 "错 <码> <路径>"。
 fn 只加载(入口: String) -> String effects(file) {
   let r = 加载走(".", 入口, (), ())
