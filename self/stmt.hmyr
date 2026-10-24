@@ -27,19 +27,20 @@ fn from_here(tokens: Int, i: Int) -> Int {
 }
 
 fn binding(tokens: Int, i: Int, keyword: String) {
+  let 位 = tokens[i]
   if i + 2 >= len(tokens) {
-    return {node: {kind: "err", text: keyword}, next: i}
+    return {node: {kind: "err", text: keyword, line: 位.line, column: 位.column}, next: i}
   }
   let name = tokens[i + 1]
   let sign = tokens[i + 2]
   if name.kind != "ident" || sign.kind != "punct" || sign.text != "=" {
-    return {node: {kind: "err", text: keyword + " " + name.text}, next: i + 1}
+    return {node: {kind: "err", text: keyword + " " + name.text, line: 位.line, column: 位.column}, next: i + 1}
   }
   let got = from_here(tokens, i + 3)
   if keyword == "let" {
-    return {node: {kind: "let", name: name.text, value: got.node}, next: got.next}
+    return {node: {kind: "let", name: name.text, value: got.node, line: 位.line, column: 位.column}, next: got.next}
   }
-  return {node: {kind: "var", name: name.text, value: got.node}, next: got.next}
+  return {node: {kind: "var", name: name.text, value: got.node, line: 位.line, column: 位.column}, next: got.next}
 }
 
 fn statement(tokens: Int, i: Int) {
@@ -54,19 +55,19 @@ fn statement(tokens: Int, i: Int) {
   if is_word(t, "while") { return parse_while(tokens, i + 1) }
   if is_word(t, "return") {
     if i + 1 >= len(tokens) {
-      return {node: {kind: "return", value: {kind: "nil"}}, next: i + 1}
+      return {node: {kind: "return", value: {kind: "nil"}, line: t.line, column: t.column}, next: i + 1}
     }
     let got = from_here(tokens, i + 1)
-    return {node: {kind: "return", value: got.node}, next: got.next}
+    return {node: {kind: "return", value: got.node, line: t.line, column: t.column}, next: got.next}
   }
   let got = from_here(tokens, i)
   // 赋值是语句而不是表达式：形状是「裸名字 = 表达式」。
   // 词法把 = 与 == 留成不同的 token，所以比较不会被误读成赋值。
   if got.node.kind == "name" && got.next < len(tokens) && is_punct(tokens[got.next], "=") {
     let value = from_here(tokens, got.next + 1)
-    return {node: {kind: "assign", name: got.node.text, value: value.node}, next: value.next}
+    return {node: {kind: "assign", name: got.node.text, value: value.node, line: got.node.line, column: got.node.column}, next: value.next}
   }
-  return {node: {kind: "expr", value: got.node}, next: got.next}
+  return {node: {kind: "expr", value: got.node, line: t.line, column: t.column}, next: got.next}
 }
 
 // 跳过换行：块内的语句之间有换行，它们只是分隔，不是内容。
@@ -88,6 +89,10 @@ fn block(tokens: Int, i: Int) {
 
 // if：条件是一个表达式，然后是一个块，可选 else（块或单条语句）。
 fn parse_if(tokens: Int, i: Int) {
+  // 「if 这个节点在哪」= if 关键字在哪。调用方传进来的是关键字之后那一位，
+  // 所以往回看一格；位置与宿主那边同一个规矩（If 记关键字的位置）。
+  var 位 = tokens[0]
+  if i > 0 { 位 = tokens[i - 1] }
   let cond = from_here(tokens, i)
   let at = skip_newlines(tokens, cond.next)
   if at >= len(tokens) || !is_punct(tokens[at], "{") {
@@ -108,19 +113,21 @@ fn parse_if(tokens: Int, i: Int) {
       next = one.next
     }
   }
-  return {node: {kind: "if", cond: cond.node, then: then.list, otherwise: otherwise}, next: next}
+  return {node: {kind: "if", cond: cond.node, then: then.list, otherwise: otherwise, line: 位.line, column: 位.column}, next: next}
 }
 
 // while：条件是一个表达式，然后是一个块。
 // 与 if 相比它没有 else——而「什么时候停」由条件说，这一层不管。
 fn parse_while(tokens: Int, i: Int) {
+  var 位 = tokens[0]
+  if i > 0 { 位 = tokens[i - 1] }
   let cond = from_here(tokens, i)
   let at = skip_newlines(tokens, cond.next)
   if at >= len(tokens) || !is_punct(tokens[at], "{") {
     return {node: {kind: "err", text: "while"}, next: at}
   }
   let body = block(tokens, at + 1)
-  return {node: {kind: "while", cond: cond.node, body: body.list}, next: body.next}
+  return {node: {kind: "while", cond: cond.node, body: body.list, line: 位.line, column: 位.column}, next: body.next}
 }
 
 // 宿主入口：读一条语句。

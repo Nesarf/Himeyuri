@@ -51,6 +51,8 @@ const 样本 = [
   ["标识符与二元", "fn main() -> Int {\n  let a = 1\n  let b = 2\n  return a + b\n}\n"],
   ["一元负号", "fn main() -> Int {\n  return -5 + 3\n}\n"],
   ["调用与字段", "fn main() -> Int {\n  return f(1).g\n}\n"],
+  ["if 与赋值", "fn main() -> Int {\n  var a = 1\n  a = a + 1\n  if a > 0 {\n    return 1\n  }\n  return 0\n}\n"],
+  ["while 与赋值", "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n"],
 ];
 
 console.log("一、self 的每个节点位置，宿主那边都有对应的节点");

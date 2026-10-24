@@ -177,3 +177,13 @@ num、str、name、err、bin、unary、call、field、index 处各从它那个 t
 还没做的：语句层（let、var、return、assign、expr、if、while）还没有位置；声明层（Fn、
 Block、Module、Import）在 self 这一侧还没有节点 —— 宿主的树里有，这边只是一组元组。
 这两条是「形状」剩下的主要工作。
+第六件（2026-10-24）：语句层也带位置。self/stmt.hmyr 的 let、var、return、assign、expr、
+if、while 各从它该抄的那个 token 抄一次 —— 关键字节点抄关键字，赋值抄名字，表达式语句抄
+语句起始那个 token，与宿主那边同一个规矩。
+
+判据扩到六段样本（多了 if 与赋值、while 与赋值），五十个节点位置全部在宿主树上找得到。
+selfnodes 从六项长到八项。
+
+至此表达式层与语句层的位置都齐了。剩下的是声明层：宿主的树里有 Module、Import、Fn、Block
+四个节点，self 这一侧还是元组 —— 那是「形状」最后也是最实的一块。它一动，两侧的节点数才
+会真正相等；在此之前的比较都只能问「self 的位置宿主有没有」，还不能问「节点对不对得上」。
