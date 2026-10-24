@@ -54,6 +54,31 @@ const 子对们 = (s, h) => {
   }
 };
 
+// 载荷：种类对上之后，有些节点还带一个字符串（运算符、名字）。这些必须先比，
+// 否则「结构一样」这句话会盖住「里面写的不是同一个词」。
+// 数字与字符串字面量的值暂时不比：self 那一侧存的是源文本（"0x1f"），宿主存的是值（31），
+// 按文本比会全红，按值比要先有一份「文本 → 值」的解析 —— 那是下一件。
+const 字字段 = {
+  bin: [["op", "op"]],
+  unary: [["op", "op"]],
+  field: [["name", "name"]],
+  name: [["text", "name"]],
+  let: [["name", "name"]],
+  var: [["name", "name"]],
+  assign: [["name", "name"]],
+  Fn: [["name", "name"]],
+};
+
+// 源文本 → 数值。self 那一侧的数字节点存的是源文本（"0x1f" 就是这四个字符），
+// 宿主存的是值（31），所以要先解析一次才谈得上比。
+const 数值 = (t) => {
+  const s = String(t).replace(/_/g, "");
+  if (/^0[xX]/.test(s)) return parseInt(s.slice(2), 16);
+  if (/^0[bB]/.test(s)) return parseInt(s.slice(2), 2);
+  if (/^0[oO]/.test(s)) return parseInt(s.slice(2), 8);
+  return Number(s);
+};
+
 // 走一遍，交回第一个差异（没有就 null）与走过的节点数。
 const 走 = (s, h, 路, 计) => {
   if (计) 计.n++;
@@ -64,6 +89,21 @@ const 走 = (s, h, 路, 计) => {
   if (h.kind !== 期望) return { 路, 因: "种类：self=" + s.kind + " 宿主=" + h.kind };
   if (s.line !== h.line || s.column !== h.column) {
     return { 路, 因: "位置：self=" + s.line + ":" + s.column + " 宿主=" + h.line + ":" + h.column };
+  }
+  for (const [己键, 彼键] of (字字段[s.kind] || [])) {
+    if (s[己键] !== h[彼键]) {
+      return { 路: 路 + "/" + 己键, 因: "载荷：self=" + JSON.stringify(s[己键]) + " 宿主=" + JSON.stringify(h[彼键]) };
+    }
+  }
+  // 字面量：字符串那一侧两边都存解好的值，可以直接比；数字那一侧差一次解析。
+  if (s.kind === "str" && s.text !== h.value) {
+    return { 路: 路 + "/text", 因: "字符串：self=" + JSON.stringify(s.text) + " 宿主=" + JSON.stringify(h.value) };
+  }
+  if (s.kind === "num") {
+    const 己数 = 数值(s.text);
+    if (己数 !== h.value) {
+      return { 路: 路 + "/text", 因: "数字：self=" + JSON.stringify(s.text) + " → " + 己数 + " 宿主=" + JSON.stringify(h.value) };
+    }
   }
   // if 与 while 的内层语句：self 是语句数组，宿主是 Block —— 结构对不上时先在这里停，
   // 免得 子对们 拿数组去对一个 Block 而报出难读的差异。
@@ -95,6 +135,7 @@ const 样本 = [
   ["调用与字段", "fn main() -> Int {\n  return f(1).g\n}\n"],
   ["if 与赋值", "fn main() -> Int {\n  var a = 1\n  a = a + 1\n  if a > 0 {\n    return 1\n  }\n  return 0\n}\n"],
   ["while 与赋值", "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n"],
+  ["字符串与十六进制", 'fn main() -> Int {\n  let s = "a\\nb"\n  let n = 0x1f + 2\n  return n\n}\n'],
 ];
 
 console.log("一、并排走一遍，看第一处对不上的在哪里");
@@ -115,9 +156,9 @@ for (const [名, 源] of 样本) {
 
 console.log("二、结论");
 if (差异.length === 0) {
-  ok("六段样本整棵树逐节点相同", true);
+  ok("七段样本整棵树逐节点相同", true);
 } else {
-  ok("六段样本整棵树逐节点相同", false, "第一处：" + JSON.stringify(差异[0]));
+  ok("七段样本整棵树逐节点相同", false, "第一处：" + JSON.stringify(差异[0]));
 }
 
 console.log("");
