@@ -72,6 +72,34 @@ console.log("三、标量不同，点就不同（不是恒定回来的）");
   ok("2G 也不是基点", !二.坏 && (二.x !== Gx || 二.y !== Gy));
 }
 
+console.log("四、点解压：32 字节还原成曲线上的点");
+{
+  // 基点的压缩形式：y 的小端字节，最高位是 x 的符号（Gx 最低位为 0，所以最高位是 0）。
+  const 基压缩 = "5866666666666666666666666666666666666666666666666666666666666666";
+  const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/curve.hmyr", "--解压", 基压缩], {
+    cwd: ROOT, encoding: "utf8", timeout: 300000,
+    env: { ...process.env, HMYR_STEPS: "4000000000" },
+  });
+  ok("解压基点的压缩形式跑得动", r.status === 0, String(r.stderr || "").slice(0, 140));
+  if (r.status === 0) {
+    const 行 = String(r.stdout || "").trim().split(/\r?\n/);
+    ok("解压得到基点的 x", 行[0] === Gx.toString(16).padStart(64, "0"), 行[0]);
+    ok("解压得到基点的 y", 行[1] === Gy.toString(16).padStart(64, "0"), 行[1]);
+  }
+  // 真签名里的公钥（dist/manifest.json.sig 的公钥 blob 末尾 32 字节）：解出来必须落在曲线上。
+  const 公钥 = "64a89fdc0c28e4cd557905bf815cda9f25be9842ef39615854f30a48a1e819a7";
+  const r2 = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/curve.hmyr", "--解压", 公钥], {
+    cwd: ROOT, encoding: "utf8", timeout: 300000,
+    env: { ...process.env, HMYR_STEPS: "4000000000" },
+  });
+  ok("解压真签名里的公钥跑得动", r2.status === 0, String(r2.stderr || "").slice(0, 140));
+  if (r2.status === 0) {
+    const 行 = String(r2.stdout || "").trim().split(/\r?\n/);
+    const x = BigInt("0x" + 行[0]), y = BigInt("0x" + 行[1]);
+    ok("那个公钥解出来在曲线上", 在曲线上(x, y));
+  }
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
