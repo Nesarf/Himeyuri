@@ -216,6 +216,26 @@ fn 效果们(tokens: Int, 起: Int, 末: Int) {
   return 收名从(tokens, 开 + 1, 闭, true, 0, ())
 }
 
+// 返回类型：`-> X` 里那个 X。宿主把它记成 {kind:"TypeRef", name}，
+// 而这一层原来只收名字、参数、语句、效果 —— 于是静态核对拿不到 returns，
+// 字节码产物也少了它那一段。收成一个字符串，包成节点的事留给包装层。
+fn 返回类型在(tokens: Int, 起: Int, 末: Int) -> String {
+  var i = 起
+  while i < 末 {
+    let t = tokens[i]
+    if t.kind == "punct" && t.text == "->" {
+      var j = i + 1
+      while j < 末 {
+        if tokens[j].kind == "ident" { return tokens[j].text }
+        j = j + 1
+      }
+      return ""
+    }
+    i = i + 1
+  }
+  return ""
+}
+
 fn decls_from(tokens: Int, i: Int, acc: Int) {
   let at = next_fn(tokens, i)
   if at < 0 { return {fns: acc, next: len(tokens)} }
@@ -229,7 +249,9 @@ fn decls_from(tokens: Int, i: Int, acc: Int) {
   // 而声明层要包成 Fn 节点时，位置才有东西可抄。
   let 参名们 = 参数名们(tokens, at + 1, open)
   let 效们 = 效果们(tokens, at + 1, open)
-  return decls_from(tokens, got.next, acc + ((名, 参名们, got.list, 效们, 位.line, 位.column),))
+  // 第七件是返回类型。它加在末尾，所以读 选[2] 与 选[3] 的老代码一行都不用改。
+  let 返型 = 返回类型在(tokens, at + 1, open)
+  return decls_from(tokens, got.next, acc + ((名, 参名们, got.list, 效们, 位.line, 位.column, 返型),))
 }
 
 // 交回 {fns: ((名字, 参数名们, 语句们, 效果名们, 行, 列), …), next}。

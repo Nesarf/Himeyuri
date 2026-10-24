@@ -312,8 +312,10 @@ fn 包声明(声明们: Int, i: Int, acc: Int) {
   if len(d) > 3 { 效 = d[3] }
   if len(d) > 4 { 行 = d[4] }
   if len(d) > 5 { 列 = d[5] }
+  var 返 = ()
+  if len(d) > 6 && d[6] != "" { 返 = {kind: "TypeRef", name: d[6]} }
   let 体 = 包块(句, 行)
-  let 函 = {kind: "Fn", name: 名, params: 转参数们(参, 0, ()), returns: (), effects: 效, contracts: (), body: 体, pub: false, line: 行, column: 列}
+  let 函 = {kind: "Fn", name: 名, params: 转参数们(参, 0, ()), returns: 返, effects: 效, contracts: (), body: 体, pub: false, line: 行, column: 列}
   return 包声明(声明们, i + 1, acc + (函,))
 }
 
