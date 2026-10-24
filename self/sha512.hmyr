@@ -1,0 +1,256 @@
+// SHA-512：64 位字用两个 32 位半表示（小半在前）。
+//
+// 为什么不用 64 位整数：这门语言的数字是双精度，2 的 53 次方以上不精确，
+// 而 64 位加法的进位与循环移位都要精确到个位。两个 32 位半各自精确，进位自己管。
+//
+// 左移靠反复自加实现（位加 是 32 位截断的），所以慢一点 —— SHA-512 本来就只在
+// 签名与验签各跑一次，不在热路径上。
+import "./bigint.hmyr"
+
+// 八十个轮常量：前八十个素数立方根的小数部分，各取六十四位。
+// 这一串由工具算出来（整数二分求立方根），不是抄的 —— 抄八十个十六进制数太容易错一位。
+fn 常量串() -> String {
+  return "428a2f98d728ae227137449123ef65cdb5c0fbcfec4d3b2fe9b5dba58189dbbc3956c25bf348b53859f111f1b605d019923f82a4af194f9bab1c5ed5da6d8118d807aa98a303024212835b0145706fbe243185be4ee4b28c550c7dc3d5ffb4e272be5d74f27b896f80deb1fe3b1696b19bdc06a725c71235c19bf174cf692694e49b69c19ef14ad2efbe4786384f25e30fc19dc68b8cd5b5240ca1cc77ac9c652de92c6f592b02754a7484aa6ea6e4835cb0a9dcbd41fbd476f988da831153b5983e5152ee66dfaba831c66d2db43210b00327c898fb213fbf597fc7beef0ee4c6e00bf33da88fc2d5a79147930aa72506ca6351e003826f142929670a0e6e7027b70a8546d22ffc2e1b21385c26c9264d2c6dfc5ac42aed53380d139d95b3df650a73548baf63de766a0abb3c77b2a881c2c92e47edaee692722c851482353ba2bfe8a14cf10364a81a664bbc423001c24b8b70d0f89791c76c51a30654be30d192e819d6ef5218d69906245565a910f40e35855771202a106aa07032bbd1b819a4c116b8d2d0c81e376c085141ab532748774cdf8eeb9934b0bcb5e19b48a8391c0cb3c5c95a634ed8aa4ae3418acb5b9cca4f7763e373682e6ff3d6b2b8a3748f82ee5defb2fc78a5636f43172f6084c87814a1f0ab728cc702081a6439ec90befffa23631e28a4506cebde82bde9bef9a3f7b2c67915c67178f2e372532bca273eceea26619cd186b8c721c0c207eada7dd6cde0eb1ef57d4f7fee6ed17806f067aa72176fba0a637dc5a2c898a6113f9804bef90dae1b710b35131c471b28db77f523047d8432caab7b40c724933c9ebe0a15c9bebc431d67c49c100d4c4cc5d4becb3e42b6597f299cfc657e2a5fcb6fab3ad6faec6c44198c4a475817"
+}
+
+fn 初始串() -> String {
+  return "6a09e667f3bcc908bb67ae8584caa73b3c6ef372fe94f82ba54ff53a5f1d36f1" +
+         "510e527fade682d19b05688c2b3e6c1f1f83d9abfb41bd6b5be0cd19137e2179"
+}
+
+// 十六进制串里第 i 个 64 位常量，交回 (小半, 大半)。
+// 一串十六进制是「高位在前」写的，所以前八个字符是**高** 32 位。
+// 第一版把前八个当成低半，于是每一轮的常数都反着进来 —— 摘要对不上但从外面看不出为什么。
+fn 取64(串: String, i: Int) {
+  let 起 = i * 16
+  let 高半 = 从十六进制(slice(串, 起, 起 + 8))
+  let 低半 = 从十六进制(slice(串, 起 + 8, 起 + 16))
+  return (成数32(低半), 成数32(高半))
+}
+
+// 从一个大整数里取低 32 位（八个 16 位字里的前两个）。
+fn 成数32(a: Int) -> Int {
+  return a[0] + a[1] * 65536
+}
+
+// ---- 64 位字的四则 ----
+
+fn 左移32(x: Int, n: Int) -> Int {
+  var y = x
+  var i = 0
+  while i < n {
+    y = 位加(y, y)
+    i = i + 1
+  }
+  return y
+}
+
+fn 右移64(a: Int, n: Int) {
+  let lo = a[0]
+  let hi = a[1]
+  if n == 0 { return (lo, hi) }
+  if n < 32 { return (位或(位右移(lo, n), 左移32(hi, 32 - n)), 位右移(hi, n)) }
+  return (位右移(hi, n - 32), 0)
+}
+
+fn 左移64(a: Int, n: Int) {
+  let lo = a[0]
+  let hi = a[1]
+  if n == 0 { return (lo, hi) }
+  if n < 32 { return (左移32(lo, n), 位或(左移32(hi, n), 位右移(lo, 32 - n))) }
+  return (0, 左移32(lo, n - 32))
+}
+
+fn 循环右移64(a: Int, n: Int) {
+  let 右 = 右移64(a, n)
+  let 左 = 左移64(a, 64 - n)
+  return (位或(右[0], 左[0]), 位或(右[1], 左[1]))
+}
+
+fn 加64(a: Int, b: Int) {
+  let 和 = a[0] + b[0]
+  let lo = 和 % 4294967296
+  let 进 = (和 - lo) / 4294967296
+  return (lo, 位加(a[1], 位加(b[1], 进)))
+}
+
+fn 异或64(a: Int, b: Int) {
+  return (位异或(a[0], b[0]), 位异或(a[1], b[1]))
+}
+
+fn 与64(a: Int, b: Int) {
+  return (位与(a[0], b[0]), 位与(a[1], b[1]))
+}
+
+fn 非64(a: Int) {
+  return (位非(a[0]), 位非(a[1]))
+}
+
+// ---- 压缩函数要用的六个小函数 ----
+
+fn 大Σ0(a: Int) {
+  return 异或64(异或64(循环右移64(a, 28), 循环右移64(a, 34)), 循环右移64(a, 39))
+}
+
+fn 大Σ1(a: Int) {
+  return 异或64(异或64(循环右移64(a, 14), 循环右移64(a, 18)), 循环右移64(a, 41))
+}
+
+fn 小σ0(a: Int) {
+  return 异或64(异或64(循环右移64(a, 1), 循环右移64(a, 8)), 右移64(a, 7))
+}
+
+fn 小σ1(a: Int) {
+  return 异或64(异或64(循环右移64(a, 19), 循环右移64(a, 61)), 右移64(a, 6))
+}
+
+fn 选(e: Int, f: Int, g: Int) {
+  // Ch(e,f,g) = (e & f) ^ (~e & g)
+  return 异或64(与64(e, f), 与64(非64(e), g))
+}
+
+fn 择(a: Int, b: Int, c: Int) {
+  // Maj(a,b,c) = (a & b) ^ (a & c) ^ (b & c)
+  return 异或64(异或64(与64(a, b), 与64(a, c)), 与64(b, c))
+}
+
+fn 一64() -> Int { return (1, 0) }
+
+fn 零64() -> Int { return (0, 0) }
+
+// ---- 分块与压缩 ----
+
+// 一块 128 字节 → 16 个 64 位字（大端）。
+fn 读块(字节们: Int, 起: Int) {
+  var 出 = ()
+  var i = 0
+  while i < 16 {
+    let 位 = 起 + i * 8
+    var lo = 0
+    var hi = 0
+    var k = 0
+    while k < 4 {
+      hi = hi * 256 + to_int(字节们[位 + k])
+      lo = lo * 256 + to_int(字节们[位 + 4 + k])
+      k = k + 1
+    }
+    出 = 出 + ((lo, hi),)
+    i = i + 1
+  }
+  return 出
+}
+
+fn 压缩(哈希们: Int, 块: Int) {
+  var w = ()
+  var i = 0
+  while i < 16 {
+    w = w + (块[i],)
+    i = i + 1
+  }
+  while i < 80 {
+    let s0 = 小σ0(w[i - 15])
+    let s1 = 小σ1(w[i - 2])
+    w = w + (加64(加64(加64(w[i - 16], s0), w[i - 7]), s1),)
+    i = i + 1
+  }
+  var a = 哈希们[0]
+  var b = 哈希们[1]
+  var c = 哈希们[2]
+  var d = 哈希们[3]
+  var e = 哈希们[4]
+  var f = 哈希们[5]
+  var g = 哈希们[6]
+  var h = 哈希们[7]
+  i = 0
+  while i < 80 {
+    let t1 = 加64(加64(加64(加64(h, 大Σ1(e)), 选(e, f, g)), 取64(常量串(), i)), w[i])
+    let t2 = 加64(大Σ0(a), 择(a, b, c))
+    h = g
+    g = f
+    f = e
+    e = 加64(d, t1)
+    d = c
+    c = b
+    b = a
+    a = 加64(t1, t2)
+    i = i + 1
+  }
+  return (加64(哈希们[0], a), 加64(哈希们[1], b), 加64(哈希们[2], c), 加64(哈希们[3], d),
+          加64(哈希们[4], e), 加64(哈希们[5], f), 加64(哈希们[6], g), 加64(哈希们[7], h))
+}
+
+// 填充：补一个 0x80，补零到 112 mod 128，最后 16 字节写大端的消息位长。
+fn 填充(字节们: Int) {
+  let 长 = len(字节们)
+  var 出 = 字节们 + (128,)
+  while len(出) % 128 != 112 {
+    出 = 出 + (0,)
+  }
+  var 位长 = 长 * 8
+  var 头 = ()
+  var i = 0
+  while i < 8 {
+    头 = (位长 % 256,) + 头
+    位长 = (位长 - 位长 % 256) / 256
+    i = i + 1
+  }
+  // SHA-512 的长度字段是 16 字节：高 64 位在前，所以八个零在前，长度在后。
+  // 第一版把长度写在前面 —— 「abc」立刻对不上，而错位只有八字节那么远。
+  出 = 出 + (0, 0, 0, 0, 0, 0, 0, 0) + 头
+  return 出
+}
+
+fn sha512(字节们: Int) {
+  let 填 = 填充(字节们)
+  let 串 = 初始串()
+  var 哈希们 = ()
+  var i = 0
+  while i < 8 {
+    哈希们 = 哈希们 + (取64(串, i),)
+    i = i + 1
+  }
+  var 起 = 0
+  while 起 < len(填) {
+    哈希们 = 压缩(哈希们, 读块(填, 起))
+    起 = 起 + 128
+  }
+  var 出 = ""
+  i = 0
+  while i < 8 {
+    出 = 出 + 十六进制32(哈希们[i][1]) + 十六进制32(哈希们[i][0])
+    i = i + 1
+  }
+  return 出
+}
+
+fn 十六进制32(v: Int) -> String {
+  let 表 = "0123456789abcdef"
+  var 出 = ""
+  var i = 7
+  while i >= 0 {
+    let 倍 = 倍16(i)
+    出 = 出 + slice(表, (v - v % 倍) / 倍 % 16, (v - v % 倍) / 倍 % 16 + 1)
+    i = i - 1
+  }
+  return 出
+}
+
+fn 倍16(n: Int) -> Int {
+  var v = 1
+  var i = 0
+  while i < n {
+    v = v * 16
+    i = i + 1
+  }
+  return v
+}
+
+fn main() -> Int effects(file, process) {
+  let 参 = argv()
+  if len(参) < 2 {
+    print("用法：hmyr self/sha512.hmyr <文件>" + chr(10))
+    return 2
+  }
+  print(sha512(read_bytes(参[1])) + chr(10))
+  return 0
+}

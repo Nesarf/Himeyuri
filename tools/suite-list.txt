@@ -133,6 +133,7 @@ crc	test/crc.test.mjs
 releasehmyr	test/release-hmyr.test.mjs
 bigint	test/bigint.test.mjs
 curve	test/curve.test.mjs
+sha512	test/sha512.test.mjs
 manifesthmyr	test/manifest-hmyr.test.mjs
 manifest	test/manifest.test.mjs
 helper	test/helper.test.mjs
