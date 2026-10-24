@@ -1,0 +1,30 @@
+// 一条 OpenSSH 分离签名与它签的文件：读进来、拼被签数据、交给 Ed25519 验。
+//
+// 这是发布链的最后一跳：manifest.json 与 manifest.json.sig 都由 HMYR 自己验，
+// 不需要 ssh-keygen，也不需要 node。
+import "./ssh.hmyr"
+import "./curve.hmyr"
+
+fn 验文件(签名路: String, 消息路: String) -> Bool effects(file, process) {
+  let 解 = 解签名(read_text(签名路))
+  let 消哈 = sha512字节(read_bytes(消息路))
+  // 被签数据里没有版本与公钥 —— 见 ssh.hmyr 里 造签名数据 的注释。
+  let 数据 = 造签名数据(解.名, 解.保, 解.哈希算法, 消哈)
+  // 签名 blob 是「算法名 + 64 字节」，尾巴才是 R 与 S。
+  let 签 = 后几(解.签, 64)
+  return 验签(解.公钥点, 前几(签, 32), 前几(从第(签, 32), 32), 数据)
+}
+
+fn main() -> Int effects(file, process) {
+  let 参 = argv()
+  if len(参) < 3 {
+    print("用法：hmyr self/sign.hmyr <签名.sig> <被签文件>" + chr(10))
+    return 2
+  }
+  if 验文件(参[1], 参[2]) {
+    print("通过" + chr(10))
+  } else {
+    print("不通过" + chr(10))
+  }
+  return 0
+}
