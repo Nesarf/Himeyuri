@@ -80,6 +80,12 @@ const 深转 = (v) => {
   if (v && v.tag === "record") {
     const o = {};
     for (const [k, x] of v.fields) o[k] = 深转(x);
+    // 无 else 的 if：这一侧包成「空 Block」，而宿主的编译按「有没有 otherwise」决定
+    // 要不要在假分支补 CONST。空 Block 是真值，会被当成「有」，于是少一条指令；
+    // 折成 null 才是宿主自己的说法。
+    if (o.kind === "If" && o.otherwise && Array.isArray(o.otherwise.statements) && o.otherwise.statements.length === 0) {
+      o.otherwise = null;
+    }
     return o;
   }
   if (Array.isArray(v)) return v.map(深转);
