@@ -5,6 +5,7 @@
 // 所以这一套今天只剩两个动作：registerModule，然后 callFunction。
 //
 // 它问的仍然是那句话：「宿主肯不肯把它当自己的树吃下去」。答案是肯 —— 而且是一口。
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
@@ -60,6 +61,34 @@ for (const [名, 源, 期望] of 样本) {
     错误 = String(e && e.message).slice(0, 160);
   }
   ok(名 + "：跑出 " + 期望, 错误 === null && 结果 === 期望, 错误 || "结果=" + JSON.stringify(结果));
+}
+
+console.log("三、整棵 import 树：两个文件，一个 Runtime");
+{
+  const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-tree-"));
+  fs.writeFileSync(path.join(临, "lib.hmyr"), "fn double(x: Int) -> Int {\n  return x * 2\n}\n", "utf8");
+  fs.writeFileSync(path.join(临, "main.hmyr"), 'import "./lib.hmyr"\nfn main() -> Int {\n  return double(21)\n}\n', "utf8");
+  const 入口 = path.relative(ROOT, path.join(临, "main.hmyr")).split("\\").join("/");
+  let 模块数 = 0;
+  let 结果 = null;
+  let 错误 = null;
+  try {
+    const 树 = rt.callFunction(rt.functions.get("造整棵"), [入口], null);
+    if (!树.ok) {
+      错误 = "加载失败：" + String(树.错);
+    } else {
+      const 模块们 = Array.from(树.模块们);
+      模块数 = 模块们.length;
+      const 宿主 = new Runtime({});
+      for (const m of 模块们) 宿主.registerModule(m);
+      结果 = 宿主.callFunction(宿主.functions.get("main"), [], null);
+    }
+  } catch (e) {
+    错误 = String(e && e.message).slice(0, 140);
+  }
+  ok("造出两个 Module（依赖在前）", 模块数 === 2, String(模块数));
+  ok("跨模块调用跑出 42", 结果 === 42, 错误 || "结果=" + JSON.stringify(结果));
+  fs.rmSync(临, { recursive: true, force: true });
 }
 
 console.log("");
