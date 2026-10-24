@@ -97,10 +97,13 @@ export function loadUnit(entry, options = {}) {
     诊断.errors.push({ code: "HMYR-SELF", message: String(树 && 树.错 ? 树.错 : "造整棵没有交回结果") });
     return { ok: false, order: [], modules: new Map(), diagnostics: 诊断 };
   }
+  // order 用真实路径（与宿主 loader 同一个说法）。加载器交回的路径带 "./" 前缀，去掉。
   const modules = new Map();
   const order = [];
+  const 路径们 = Array.from(树.路径们 || []);
   Array.from(树.模块们).forEach((m, i) => {
-    const 键 = 相对 + "#" + i;
+    const 原 = 路径们[i] || (相对 + "#" + i);
+    const 键 = String(原).startsWith("./") ? String(原).slice(2) : String(原);
     modules.set(键, m);
     order.push(键);
   });

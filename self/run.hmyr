@@ -345,7 +345,7 @@ fn 造模块(源: String) {
 // 入口走相对路径（与 加载走 同一个约定：拼路径 只认相对与 ./）。
 fn 造整棵(入口: String) effects(file) {
   let r = 加载走(".", 入口, (), ())
-  if r.错 != "" { return {ok: false, 错: r.错, 模块们: ()} }
+  if r.错 != "" { return {ok: false, 错: r.错, 模块们: (), 路径们: ()} }
   var 模块们 = ()
   var i = 0
   while i < len(r.已载) {
@@ -353,7 +353,8 @@ fn 造整棵(入口: String) effects(file) {
     模块们 = 模块们 + (造模块(源码),)
     i = i + 1
   }
-  return {ok: true, 错: "", 模块们: 模块们}
+  // 路径与模块一起交回去：宿主 loader 的 order 是路径，桥要能照原样说同一个序列。
+  return {ok: true, 错: "", 模块们: 模块们, 路径们: r.已载}
 }
 
 // 只解析、不求值，交回声明树。
