@@ -95,7 +95,49 @@ if (!有编译器) {
       }
     }
   }
-  fs.rmSync(临, { recursive: true, force: true });
+  console.log("三、整棵仓库：默认目录表一次打完");
+if (有编译器) {
+  const 全路 = path.join(临, "all.zip");
+  // 字节码是上一节生成的（同一个文件名）。这里只用它，不再生成一遍。
+  const 全码路 = path.join(临, "package.hmyrb");
+  ok("上一节烘好的字节码还在", fs.existsSync(全码路), 全码路);
+  // 用 spawnSync 而不是命令行：PowerShell 那边的引号层会把参数嚼掉一次，
+  // 症状是「cannot open <包里那个名字>」—— 看起来像打包失败，其实是参数顺序被打乱。
+  const r2 = spawnSync(exe, [全码路, 全路], {
+    cwd: ROOT, encoding: "utf8", timeout: 600000,
+    env: { ...process.env, HMYR_STEPS: "2000000000", HMYR_MEM_LIMIT: "0" },
+  });
+  ok("整棵仓库打得动", r2.status === 0 && fs.existsSync(全路), String(r2.status) + " " + String(r2.stderr || "").slice(0, 200));
+  if (fs.existsSync(全路)) {
+    const 包 = fs.readFileSync(全路);
+    const 尾位 = 包.length - 22;
+    const 条数 = 包.readUInt16LE(尾位 + 10);
+    ok("条目数超过两百", 条数 > 200, String(条数));
+    // 抽查三个成员，按偏移取回、与源文件逐字节比。
+    const 想要 = ["src/eval.mjs", "design/TOOLING.txt", "self/zip.hmyr"];
+    let 找到 = 0;
+    let at = 包.readUInt32LE(尾位 + 16);
+    for (let i = 0; i < 条数; i++) {
+      const 名长 = 包.readUInt16LE(at + 28);
+      const 名 = 包.subarray(at + 46, at + 46 + 名长).toString("utf8");
+      const 压缩 = 包.readUInt32LE(at + 20);
+      const 偏移 = 包.readUInt32LE(at + 42);
+      const 本名长 = 包.readUInt16LE(偏移 + 26);
+      const 本扩长 =包.readUInt16LE(偏移 + 28);
+      if (想要.includes(名)) {
+        const 载起 = 偏移 + 30 + 本名长 + 本扩长;
+        const 内容 = 包.subarray(载起, 载起 + 压缩);
+        const 原 = fs.readFileSync(path.join(ROOT, 名.split("/").join(path.sep)));
+        if (原.length === 压缩 && Buffer.compare(原, 内容) === 0) 找到++;
+      }
+      at += 46 + 名长 + 包.readUInt16LE(at + 30) + 包.readUInt16LE(at + 32);
+    }
+    ok("抽查三个成员，逐字节相同", 找到 === 想要.length, 找到 + " 对 " + 想要.length);
+    ok("包的大小与条目数相称", 包.length > 3000000 && 包.length < 6000000, String(包.length));
+  }
+}
+
+fs.rmSync(临, { recursive: true, force: true });
 }
 
 console.log("");
