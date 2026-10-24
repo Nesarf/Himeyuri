@@ -63,6 +63,21 @@ console.log("四、找不到的文件：如实说，不装作认得");
   ok("诊断里有一条", (桥.diagnostics.errors || []).length > 0, JSON.stringify((桥.diagnostics.errors || []).map((e) => e.code)));
 }
 
+console.log("五、字节码产物：在，而且不比源旧");
+{
+  // 桥会因为「字节码缺失或过期」而退回解释器 —— 那是对的，但那时它慢十倍。
+  // 这一条把那个静默的回退变成一句会红的话：改完 self/run.hmyr 忘了重新生成，
+  // 桥不会说谎，只是悄悄变慢，而套件该替人记住这件事。
+  const 字节路 = path.join(ROOT, "runtime/run.hmyrb");
+  const 源路 = path.join(ROOT, "self/run.hmyr");
+  const 在 = fs.existsSync(字节路);
+  ok("runtime/run.hmyrb 在", 在);
+  if (在) {
+    const 新 = fs.statSync(字节路).mtimeMs >= fs.statSync(源路).mtimeMs;
+    ok("它不比 self/run.hmyr 旧", 新, "旧了就重新生成：node tools/emit-code.mjs self/run.hmyr runtime/run.hmyrb");
+  }
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

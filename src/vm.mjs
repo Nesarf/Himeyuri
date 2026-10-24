@@ -289,6 +289,34 @@ export class 虚拟机 {
             叫数++;
           }
           const 实参 = 栈.splice(栈.length - n, n);
+          // 尾调用：下一条指令就是 RET 时，换掉这一帧而不是压新的。
+          //
+          // 这是解释器里那条规矩（src/eval.mjs 的 TailCall）搬到显式栈上：调用者的返回值
+          // 就是被调者的返回值，中间那一层不需要存在。于是尾递归不再吃 JS 栈 ——
+          // 而 tokenize 那样的「每读一个 token 递归一次」正是靠这一点才跑得动一千多层。
+          //
+          // 效果与参数数的检查照做：省掉的是帧，不是规矩。
+          if (码[pc + 1] && 码[pc + 1].op === "RET") {
+            const 函 = this.程序.函数们.get(指令.a);
+            if (!函) { this.坏("HMYR-R0104", "there is no name '" + 指令.a + "' in scope"); return null; }
+            for (const 效 of 函.效果) {
+              if (!帧.效果.has(效)) {
+                this.坏("HMYR-R0201", "function '" + 指令.a + "' uses effect '" + 效 + "', which the caller did not declare");
+                return null;
+              }
+            }
+            if (实参.length !== 函.参数量) {
+              this.坏("HMYR-R0101", "function '" + 指令.a + "' expects " + 函.参数量 + " argument(s), got " + 实参.length);
+              return null;
+            }
+            帧.槽 = new Array(函.槽数).fill(null).map(() => ({ v: null, 可写: true }));
+            for (let i = 0; i < 实参.length; i++) 帧.槽[i] = { v: 实参[i], 可写: true };
+            帧.效果 = new Set(函.效果);
+            码 = 函.码;
+            pc = 0;
+            栈.length = 0;
+            continue;
+          }
           const r = this.调用(指令.a, 实参, 帧.效果);
           if (!r.ok) return null;
           压(r.值);
