@@ -275,3 +275,18 @@ If 的 then 包 Block、Return 的空值用 null、params 的形状。
 
 九套自举与编译套件全绿：selfcov、selfload、selfmod、selfpos、selfnodes、selftree、
 selfhandoff、selfcompile、hmyrcompile。
+第十三件（2026-10-24）：字段对齐。名字统一之后，包装那一层（造模块）又翻了三处字段，
+让 self 交出的树更接近宿主能直接吃下去的样子：
+
+    params     名字字符串 → {name}（不写 fallback 就是「没有默认值」——不写比写一个假的干净）
+    If         cond → condition，then 与 otherwise 包成 Block
+    While      cond → condition，body 包成 Block
+
+三处都做在包装层，解析与求值两条路仍然不动：求值器读的还是 cond 与语句元组。
+
+工具的适配器因此只剩三件：Literal 的 value/raw（要把文本算成值）、Return 的空值（nil 对 null）、
+以及 Ident 的 text → name 这一类字段改名。self-tree 除了改读新字段名之外无事可做 ——
+一次对齐从外面看起来就该是这样。
+
+又一次被 selfcompile 抓到：run.hmyr 从 43 个函数变成 44（新增 转参数们）。这套件的固定数字
+今天第二次报红，两次都不是它错 —— 它报的正是「规模变了」。

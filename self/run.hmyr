@@ -150,14 +150,28 @@ fn 转语句们(语句们: Int, i: Int, acc: Int) {
   if i >= len(语句们) { return acc }
   let n = 语句们[i]
   var 出 = n
-  if n.kind == "If" || n.kind == "While" {
-    出 = {kind: "ExprStmt", value: n, line: n.line, column: n.column}
+  // If 与 While 在这一侧还要换字段名：cond 对 condition，then/otherwise/body 要包成 Block。
+  // 解析那一层不动（求值器读的还是 cond 与语句元组），只在包装这一层翻。
+  if n.kind == "If" {
+    let 内 = {kind: "If", condition: n.cond, then: 包块(n.then, n.line), otherwise: 包块(n.otherwise, n.line), line: n.line, column: n.column}
+    出 = {kind: "ExprStmt", value: 内, line: n.line, column: n.column}
+  }
+  if n.kind == "While" {
+    let 内 = {kind: "While", condition: n.cond, body: 包块(n.body, n.line), line: n.line, column: n.column}
+    出 = {kind: "ExprStmt", value: 内, line: n.line, column: n.column}
   }
   return 转语句们(语句们, i + 1, acc + (出,))
 }
 
 fn 包块(语句们: Int, 行: Int) {
   return {kind: "Block", statements: 转语句们(语句们, 0, ()), line: 行}
+}
+
+// 参数名 → {name}。宿主的参数是记录（还可能带 fallback），这一侧只需要名字那一个字段；
+// 缺的 fallback 读出来是 undefined，在宿主那边就是「没有默认值」—— 不写比写了更准。
+fn 转参数们(名们: Int, i: Int, acc: Int) {
+  if i >= len(名们) { return acc }
+  return 转参数们(名们, i + 1, acc + ({name: 名们[i]},))
 }
 
 fn 包声明(声明们: Int, i: Int, acc: Int) {
@@ -176,7 +190,7 @@ fn 包声明(声明们: Int, i: Int, acc: Int) {
   if len(d) > 4 { 行 = d[4] }
   if len(d) > 5 { 列 = d[5] }
   let 体 = 包块(句, 行)
-  let 函 = {kind: "Fn", name: 名, params: 参, returns: (), effects: 效, contracts: (), body: 体, pub: false, line: 行, column: 列}
+  let 函 = {kind: "Fn", name: 名, params: 转参数们(参, 0, ()), returns: (), effects: 效, contracts: (), body: 体, pub: false, line: 行, column: 列}
   return 包声明(声明们, i + 1, acc + (函,))
 }
 

@@ -45,7 +45,7 @@ const 改 = (n) => {
     case "Import": return { kind: "Import", path: n.path, alias: null, rev: null, ...位 };
     case "Fn": return {
       kind: "Fn", name: n.name,
-      params: 列(n.params).map((p) => ({ name: String(p), fallback: null })),
+      params: 列(n.params),
       returns: null, effects: 列(n.effects).map(String),
       contracts: { requires: [], ensures: [] },
       body: 改(n.body), pub: false, ...位,
@@ -57,11 +57,11 @@ const 改 = (n) => {
     case "Return": return { kind: "Return", value: (n.value && n.value.kind === "nil") ? null : 改(n.value), ...位 };
     case "ExprStmt": return { kind: "ExprStmt", expr: 改(n.value), ...位 };
     case "If": return {
-      kind: "If", condition: 改(n.cond),
-      then: { kind: "Block", statements: 列(n.then).map(改), line: n.line },
-      otherwise: 列(n.otherwise).length ? { kind: "Block", statements: 列(n.otherwise).map(改), line: n.line } : null, ...位,
+      kind: "If", condition: 改(n.condition),
+      then: 改(n.then),
+      otherwise: (n.otherwise && 列(n.otherwise.statements).length) ? 改(n.otherwise) : null, ...位,
     };
-    case "While": return { kind: "While", condition: 改(n.cond), body: { kind: "Block", statements: 列(n.body).map(改), line: n.line }, ...位 };
+    case "While": return { kind: "While", condition: 改(n.condition), body: 改(n.body), ...位 };
     case "Literal": return { kind: "Literal", type: n.type, value: n.type === "int" ? 数值(n.text) : n.text, raw: n.text, ...位 };
     case "Ident": return { kind: "Ident", name: n.text, ...位 };
     case "Binary": return { kind: "Binary", op: n.op, left: 改(n.left), right: 改(n.right), ...位 };

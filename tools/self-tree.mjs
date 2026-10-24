@@ -50,8 +50,8 @@ const 子对们 = (s, h) => {
     case "Let": case "Var": case "Assign": case "Return":
       return [[s.value, h.value]];
     case "ExprStmt": return [[s.value, h.expr]];
-    case "If": return [[s.cond, h.condition]];
-    case "While": return [[s.cond, h.condition]];
+    case "If": return [[s.condition, h.condition]];
+    case "While": return [[s.condition, h.condition]];
     case "Binary": return [[s.left, h.left], [s.right, h.right]];
     case "Unary": return [[s.operand, h.operand]];
     case "Call": return [[s.callee, h.callee], ...列(s.args).map((x, i) => [x, 列(h.args)[i]])];
@@ -123,11 +123,11 @@ const 走 = (s, h, 路, 计) => {
     if (typeof x === "object") return Object.keys(x).length;   // self 的元组在 JS 侧是类数组对象
     return -1;
   };
-  if (s.kind === "if") {
+  if (s.kind === "If") {
     if (数(s.then) !== 数(h.then)) return { 路: 路 + "/then", 因: "语句数 self=" + 数(s.then) + " 宿主=" + 数(h.then) };
     if (数(s.otherwise) !== 数(h.otherwise)) return { 路: 路 + "/otherwise", 因: "语句数 self=" + 数(s.otherwise) + " 宿主=" + 数(h.otherwise) };
   }
-  if (s.kind === "while") {
+  if (s.kind === "While") {
     if (数(s.body) !== 数(h.body)) return { 路: 路 + "/body", 因: "语句数 self=" + 数(s.body) + " 宿主=" + 数(h.body) };
   }
   for (const [己子, 彼子] of 子对们(s, h)) {
