@@ -70,9 +70,9 @@ fn arg_list(tokens: Int, i: Int, acc: Int) {
 fn atom(tokens: Int, i: Int) {
   if i >= len(tokens) { return {node: {kind: "Error", text: "", line: 0, column: 0}, next: i} }
   let t = tokens[i]
-  if t.kind == "int" { return {node: {kind: "Literal", type: "int", text: t.text, line: t.line, column: t.column}, next: i + 1} }
-  if t.kind == "string" { return {node: {kind: "Literal", type: "string", text: t.text, line: t.line, column: t.column}, next: i + 1} }
-  if t.kind == "ident" { return {node: {kind: "Ident", text: t.text, line: t.line, column: t.column}, next: i + 1} }
+  if t.kind == "int" { return {node: {kind: "Literal", type: "int", text: t.text, raw: t.text, line: t.line, column: t.column}, next: i + 1} }
+  if t.kind == "string" { return {node: {kind: "Literal", type: "string", text: t.text, raw: false, line: t.line, column: t.column}, next: i + 1} }
+  if t.kind == "ident" { return {node: {kind: "Ident", name: t.text, text: t.text, line: t.line, column: t.column}, next: i + 1} }
   if is_punct(t, "(") { return paren_or_tuple(tokens, i + 1) }
   if is_punct(t, "{") { return record_of(tokens, i + 1) }
   return {node: {kind: "Error", text: t.text, line: t.line, column: t.column}, next: i + 1}

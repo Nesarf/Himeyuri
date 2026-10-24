@@ -431,3 +431,30 @@ self/run.hmyr 旧 —— 旧了桥会静默退回解释器，而套件该替人�
 桥仍比宿主慢五倍上下 —— 它毕竟是「用 HMYR 写的加载器跑在宿主求值器上」，而那五倍里没有一处
 是含糊的。但七十秒变成三秒半之后，「真实套件走自己的加载器」就不再需要特意挑一套来演示了：
 它已经是默认形状（selfload 与 selfmod 除外，它们是对照本身）。
+第二十一件（2026-10-24）：量「多少套能换」，顺手补上改名的漏网。
+
+tools/loader-swap.mjs：把每个套件的 import 从 src/loader.mjs 换成桥，复制到 swap/ 跑一遍。
+绿的就是换得动的。第一次跑出 103 处引用，十几分钟，一片红。
+
+跑出来的东西比那个数字更有用 —— 它抓到了一批**本来就红**的套件：self-chain3/4/5、self-eval、
+self-if、self-stmt、self-assign、self-compare、self-agree。它们是「把 self 的节点形状钉住」的
+里程碑测试，而甲路那次改名（kind 从小写改大写）之后没有人跑过它们 —— 我一直在跑的是自举那十套，
+它们不在这批里。
+
+这一轮修好六个：
+
+    self-chain3/4/5   加 canon（剥位置，Ident 与 Literal 各自归一）之后全过
+    self-eval         手写节点里的 err 改 Error
+    self-if           同上，另加 canon
+    self-stmt         加 canon
+
+还剩三个红，原因都已定位：
+
+    self-assign / self-compare   theirs 那一侧的归约还没跟上（detail 里只剩 mine）
+    self-agree                   自举侧报「不认这种语句：return」—— 它走的那条路还没吃到改名
+
+解析层也补了两处字段：Ident 带 name（原来只有 text），Literal 带 raw。补在解析层而不是包装层，
+是因为这批测试看的就是解析层。
+
+一件该记住的事：改名的代价不只在自举那十套里，还在每一个「把形状钉住」的测试里。今天量到的是
+九个；明天还可能有别的 —— 所以这个量具同时也在当一张回归网。

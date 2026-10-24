@@ -10,6 +10,24 @@ import { parse } from "../src/parser.mjs";
 import { loadUnit, runUnit } from "../src/loader.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// 位置与原文不参与比较；Ident 与 Literal 各归一到一个字段。
+const canon = (v) => {
+  if (Array.isArray(v)) return v.map(canon);
+  if (v && typeof v === "object") {
+    if (v.kind === "Ident") return { kind: "Ident", name: v.name !== undefined ? v.name : v.text };
+    if (v.kind === "Literal") {
+      const 原 = v.value !== undefined ? v.value : (v.text !== undefined ? v.text : v.raw);
+      return { kind: "Literal", type: v.type, value: v.type === "int" ? Number(原) : 原 };
+    }
+    const o = {};
+    for (const key of Object.keys(v)) {
+      if (key === "line" || key === "column" || key === "raw" || key === "text") continue;
+      o[key] = canon(v[key]);
+    }
+    return o;
+  }
+  return v;
+};
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
@@ -40,16 +58,16 @@ function jsStatement(source) {
   const stmt = ast.decls[0].body.statements[0];
   const shape = (node) => {
     if (!node) return null;
-    if (node.kind === "Binary") return { kind: "bin", op: node.op, left: shape(node.left), right: shape(node.right) };
-    if (node.kind === "Literal" && node.type === "int") return { kind: "num", text: node.raw };
-    if (node.kind === "Ident") return { kind: "name", text: node.name };
+    if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: shape(node.left), right: shape(node.right) };
+    if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", type: "int", text: node.raw };
+    if (node.kind === "Ident") return { kind: "Ident", text: node.name };
     return { kind: "other:" + node.kind };
   };
-  if (stmt.kind === "Let") return { kind: "let", name: stmt.name, value: shape(stmt.value) };
-  if (stmt.kind === "Var") return { kind: "var", name: stmt.name, value: shape(stmt.value) };
+  if (stmt.kind === "Let") return { kind: "Let", name: stmt.name, value: shape(stmt.value) };
+  if (stmt.kind === "Var") return { kind: "Var", name: stmt.name, value: shape(stmt.value) };
   // 无值的 return 用 nil 节点：空元组是一个值，而「没有值」不是值，两者不能混。
-  if (stmt.kind === "Return") return { kind: "return", value: stmt.value ? shape(stmt.value) : { kind: "nil" } };
-  if (stmt.kind === "ExprStmt") return { kind: "expr", value: shape(stmt.expr) };
+  if (stmt.kind === "Return") return { kind: "Return", value: stmt.value ? shape(stmt.value) : { kind: "nil" } };
+  if (stmt.kind === "ExprStmt") return { kind: "ExprStmt", value: shape(stmt.expr) };
   return { kind: "other:" + stmt.kind };
 }
 
@@ -67,25 +85,25 @@ console.log("\none statement at a time, against the JavaScript reader");
 for (const source of STATEMENTS) {
   const mine = attempt(() => readStatement(source));
   const theirs = attempt(() => jsStatement(source));
-  const same = !mine.error && !theirs.error && JSON.stringify(mine.value) === JSON.stringify(theirs.value);
+  const same = !mine.error && !theirs.error && JSON.stringify(canon(mine.value)) === JSON.stringify(canon(theirs.value));
   ok(source, same,
-    mine.error || theirs.error || (JSON.stringify(mine.value) + " vs " + JSON.stringify(theirs.value)));
+    mine.error || theirs.error || (JSON.stringify(canon(mine.value)) + " vs " + JSON.stringify(canon(theirs.value))));
 }
 
 console.log("\nthe parts of a statement");
 {
   const node = readStatement("let x = 1 + 2");
   ok("a binding keeps the name", node.name === "x", JSON.stringify(node));
-  ok("and the value is a tree", node.value && node.value.kind === "bin" && node.value.op === "+");
+  ok("and the value is a tree", node.value && node.value.kind === "Binary" && node.value.op === "+");
 }
 {
   const node = readStatement("return");
   // 无值的 return 带一个 nil 节点：空元组是一个值，而「没有值」不是值。
-  ok("a bare return carries no value", node.kind === "return" && node.value && node.value.kind === "nil", JSON.stringify(node));
+  ok("a bare return carries no value", node.kind === "Return" && node.value && node.value.kind === "nil", JSON.stringify(node));
 }
 {
   const node = readStatement("a + b");
-  ok("a bare expression is an expression statement", node.kind === "expr" && node.value.kind === "bin");
+  ok("a bare expression is an expression statement", node.kind === "ExprStmt" && node.value.kind === "Binary");
 }
 
 console.log("\nwhat it refuses to guess");
@@ -93,19 +111,19 @@ console.log("\nwhat it refuses to guess");
   // A call is not in this subset yet: the chain knows + - * / % and brackets, nothing else. The
   // statement reader reads the name and stops at the bracket, which is honest rather than clever.
   const node = readStatement("f(1)");
-  ok("a call is now read as a call", node.kind === "expr" && node.value.kind === "call" && node.value.args.length === 1, JSON.stringify(node));
+  ok("a call is now read as a call", node.kind === "ExprStmt" && node.value.kind === "Call" && node.value.args.length === 1, JSON.stringify(node));
 }
 {
   const node = attempt(() => readStatement(""));
-  ok("an empty line is refused", !node.error && node.value.kind === "err", node.error || JSON.stringify(node.value));
+  ok("an empty line is refused", !node.error && node.value.kind === "Error", node.error || JSON.stringify(node.value));
 }
 {
   const node = readStatement("let x 1");
-  ok("a binding without '=' is refused", node.kind === "err", JSON.stringify(node));
+  ok("a binding without '=' is refused", node.kind === "Error", JSON.stringify(node));
 }
 {
   const node = attempt(() => call("parse_statement", [[]]));
-  ok("an empty token stream is refused", !node.error && node.value.node.kind === "err", node.error || JSON.stringify(node.value));
+  ok("an empty token stream is refused", !node.error && node.value.node.kind === "Error", node.error || JSON.stringify(node.value));
 }
 
 console.log("\n" + passed + " passed, " + failed + " failed");

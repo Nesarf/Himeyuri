@@ -25,27 +25,30 @@ const call = (name, args) => {
 };
 const mine = (source) => call("chain", [call("scan", [source])]).node;
 
+// 位置与原文不参与比较；Ident 与 Literal 各归一到一个字段。
+// 两个人交出的树现在同名同形，于是「归约」这件事只剩剥位置。
+const canon = (v) => {
+  if (Array.isArray(v)) return v.map(canon);
+  if (v && typeof v === "object") {
+    if (v.kind === "Ident") return { kind: "Ident", name: v.name !== undefined ? v.name : v.text };
+    if (v.kind === "Literal") {
+      const 原 = v.value !== undefined ? v.value : (v.text !== undefined ? v.text : v.raw);
+      return { kind: "Literal", type: v.type, value: v.type === "int" ? Number(原) : 原 };
+    }
+    const o = {};
+    for (const key of Object.keys(v)) {
+      if (key === "line" || key === "column" || key === "raw" || key === "text") continue;
+      o[key] = canon(v[key]);
+    }
+    return o;
+  }
+  return v;
+};
+
 /** The JavaScript tree, reduced to the shapes the chain produces. */
 function jsShape(node) {
-  if (!node) return null;
-  if (node.kind === "Binary") return { kind: "bin", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
-  if (node.kind === "Literal" && node.type === "int") return { kind: "num", text: node.raw };
-  if (node.kind === "Literal" && node.type === "string") return { kind: "str", text: node.value };
-  if (node.kind === "Ident") return { kind: "name", text: node.name };
-  if (node.kind === "Unary") return { kind: "unary", op: node.op, operand: jsShape(node.operand) };
-  if (node.kind === "Tuple") return { kind: "tuple", items: node.items.map(jsShape) };
-  if (node.kind === "Record") return { kind: "record", fields: node.fields.map((f) => ({ name: f.name, value: jsShape(f.value) })) };
-  if (node.kind === "Call") return { kind: "call", callee: jsShape(node.callee), args: node.args.map(jsShape) };
-  if (node.kind === "Index") return { kind: "index", target: jsShape(node.target), index: jsShape(node.index) };
-  if (node.kind === "Field") {
-    // the JavaScript node names its parts differently from ours, so accept either spelling here
-    const target = node.target !== undefined ? node.target : node.object;
-    const name = node.name !== undefined ? node.name : node.field;
-    return { kind: "field", target: jsShape(target), name: name };
-  }
-  return { kind: "other:" + node.kind };
-}
-const theirs = (source) => {
+  return canon(node);
+}const theirs = (source) => {
   const diagnostics = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
   const { ast } = parse(lex("fn t() {\n  let r = " + source + "\n}\n", {}).tokens, { diagnostics });
   if (diagnostics.errors.length) throw new Error("the JavaScript parser refused: " + diagnostics.errors[0].code);
@@ -67,40 +70,40 @@ console.log("\nfield access, against the JavaScript parser");
 for (const source of CASES) {
   const m = attempt(() => mine(source));
   const t = attempt(() => theirs(source));
-  const same = !m.error && !t.error && JSON.stringify(m.value) === JSON.stringify(t.value);
-  ok(source, same, m.error || t.error || (JSON.stringify(m.value) + " vs " + JSON.stringify(t.value)));
+  const same = !m.error && !t.error && JSON.stringify(canon(m.value)) === JSON.stringify(canon(t.value));
+  ok(source, same, m.error || t.error || (JSON.stringify(canon(m.value)) + " vs " + JSON.stringify(canon(t.value))));
 }
 
 console.log("\nthe parts, spelled out");
 {
   const tree = mine("r.name");
-  ok("a field keeps its target and its name", tree.kind === "field" && tree.target.kind === "name" && tree.name === "name", JSON.stringify(tree));
+  ok("a field keeps its target and its name", tree.kind === "Field" && tree.target.kind === "Ident" && tree.name === "name", JSON.stringify(tree));
 }
 {
   const tree = mine("a.b.c");
-  ok("fields chain left to right", tree.kind === "field" && tree.target.kind === "field" && tree.name === "c", JSON.stringify(tree));
+  ok("fields chain left to right", tree.kind === "Field" && tree.target.kind === "Field" && tree.name === "c", JSON.stringify(tree));
 }
 {
   const tree = mine("obj.field(1)");
-  ok("a field can be called", tree.kind === "call" && tree.callee.kind === "field" && tree.callee.name === "field", JSON.stringify(tree));
+  ok("a field can be called", tree.kind === "Call" && tree.callee.kind === "Field" && tree.callee.name === "field", JSON.stringify(tree));
 }
 {
   const tree = mine("x.y[2]");
-  ok("a field can be subscripted", tree.kind === "index" && tree.target.kind === "field", JSON.stringify(tree));
+  ok("a field can be subscripted", tree.kind === "Index" && tree.target.kind === "Field", JSON.stringify(tree));
 }
 {
   const tree = mine("f().x");
-  ok("a call result can have a field", tree.kind === "field" && tree.target.kind === "call", JSON.stringify(tree));
+  ok("a call result can have a field", tree.kind === "Field" && tree.target.kind === "Call", JSON.stringify(tree));
 }
 
 console.log("\nwhat it still cannot read");
 {
   const tree = attempt(() => mine("if a { 1 } else { 2 }"));
-  ok("if is still just a name", !tree.error && tree.value.kind === "name" && tree.value.text === "if", tree.error || JSON.stringify(tree.value));
+  ok("if is still just a name", !tree.error && tree.value.kind === "Ident" && tree.value.text === "if", tree.error || JSON.stringify(tree.value));
 }
 {
   const tree = attempt(() => mine("n = n + 1"));
-  ok("an assignment is still read as a bare name", !tree.error && tree.value.kind === "name" && tree.value.text === "n", tree.error || JSON.stringify(tree.value));
+  ok("an assignment is still read as a bare name", !tree.error && tree.value.kind === "Ident" && tree.value.text === "n", tree.error || JSON.stringify(tree.value));
 }
 
 console.log("\n" + passed + " passed, " + failed + " failed");

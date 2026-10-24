@@ -12,6 +12,24 @@ import { parse } from "../src/parser.mjs";
 import { loadUnit, runUnit } from "../src/loader.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// 位置与原文不参与比较；Ident 与 Literal 各归一到一个字段。
+const canon = (v) => {
+  if (Array.isArray(v)) return v.map(canon);
+  if (v && typeof v === "object") {
+    if (v.kind === "Ident") return { kind: "Ident", name: v.name !== undefined ? v.name : v.text };
+    if (v.kind === "Literal") {
+      const 原 = v.value !== undefined ? v.value : (v.text !== undefined ? v.text : v.raw);
+      return { kind: "Literal", type: v.type, value: v.type === "int" ? Number(原) : 原 };
+    }
+    const o = {};
+    for (const key of Object.keys(v)) {
+      if (key === "line" || key === "column" || key === "raw" || key === "text") continue;
+      o[key] = canon(v[key]);
+    }
+    return o;
+  }
+  return v;
+};
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
@@ -31,16 +49,16 @@ const mine = (source) => call("chain", [call("scan", [source])]).node;
 
 function jsShape(node) {
   if (!node) return null;
-  if (node.kind === "Binary") return { kind: "bin", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
-  if (node.kind === "Literal" && node.type === "int") return { kind: "num", text: node.raw };
-  if (node.kind === "Ident") return { kind: "name", text: node.name };
-  if (node.kind === "Unary") return { kind: "unary", op: node.op, operand: jsShape(node.operand) };
-  if (node.kind === "Call") return { kind: "call", callee: jsShape(node.callee), args: node.args.map(jsShape) };
-  if (node.kind === "Index") return { kind: "index", target: jsShape(node.target), index: jsShape(node.index) };
+  if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
+  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", type: "int", text: node.raw };
+  if (node.kind === "Ident") return { kind: "Ident", text: node.name };
+  if (node.kind === "Unary") return { kind: "Unary", op: node.op, operand: jsShape(node.operand) };
+  if (node.kind === "Call") return { kind: "Call", callee: jsShape(node.callee), args: node.args.map(jsShape) };
+  if (node.kind === "Index") return { kind: "Index", target: jsShape(node.target), index: jsShape(node.index) };
   if (node.kind === "Field") {
     const target = node.target !== undefined ? node.target : node.object;
     const name = node.name !== undefined ? node.name : node.field;
-    return { kind: "field", target: jsShape(target), name: name };
+    return { kind: "Field", target: jsShape(target), name: name };
   }
   return { kind: "other:" + node.kind };
 }
@@ -95,21 +113,21 @@ console.log("\nprecedence, spelled out");
 console.log("\nwhere it reaches");
 {
   const tree = mine("f(a == b)");
-  ok("an argument can be a comparison", tree.kind === "call" && tree.args[0].op === "==", JSON.stringify(tree));
+  ok("an argument can be a comparison", tree.kind === "Call" && tree.args[0].op === "==", JSON.stringify(tree));
 }
 {
   const tree = mine("t[a < b]");
-  ok("so can a subscript", tree.kind === "index" && tree.index.op === "<", JSON.stringify(tree));
+  ok("so can a subscript", tree.kind === "Index" && tree.index.op === "<", JSON.stringify(tree));
 }
 {
   const tree = mine("{flag: a != b}");
-  ok("so can a record value", tree.kind === "record" && tree.fields[0].value.op === "!=", JSON.stringify(tree));
+  ok("so can a record value", tree.kind === "Record" && tree.fields[0].value.op === "!=", JSON.stringify(tree));
 }
 
 console.log("\nwhat it still cannot read");
 {
   const tree = attempt(() => mine("a && b"));
-  ok("the logical operators are still out (they are levels 0 and 1)", !tree.error && tree.value.kind === "name" && tree.value.text === "a",
+  ok("the logical operators are still out (they are levels 0 and 1)", !tree.error && tree.value.kind === "Ident" && tree.value.text === "a",
     tree.error || JSON.stringify(tree.value));
 }
 
