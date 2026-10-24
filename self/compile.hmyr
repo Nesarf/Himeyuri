@@ -148,6 +148,7 @@ fn 是内置(名: String) -> Bool {
   if 名 == "ord" { return true }
   if 名 == "print" { return true }
   if 名 == "print_err" { return true }
+  if 名 == "read_dir" { return true }
   if 名 == "read_text" { return true }
   if 名 == "record_new" { return true }
   if 名 == "slice" { return true }

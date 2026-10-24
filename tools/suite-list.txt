@@ -126,6 +126,7 @@ zipmulti	test/zip-multi.test.mjs
 bitops	test/bitops.test.mjs
 sha256	test/sha256.test.mjs
 verifyhmyr	test/verify-hmyr.test.mjs
+readdir	test/readdir.test.mjs
 manifest	test/manifest.test.mjs
 helper	test/helper.test.mjs
 verify	test/verify.test.mjs

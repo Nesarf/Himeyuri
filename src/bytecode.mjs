@@ -354,7 +354,7 @@ const 编译函数 = (decl) => {
 const 内置名 = new Set(["abs", "arena", "argv", "chdir", "chr", "console_codepage", "cwd", "field_get", "field_has",
   "field_names", "file_exists", "floor", "home_dir", "int", "is_letter", "is_mark", "key_available", "key_push",
   "key_read", "key_start", "len", "locale_current", "locale_env", "locale_set", "max", "min", "nfc", "now_ms",
-  "ord", "print", "print_err", "python_path", "read_bytes", "read_stdin_bytes", "read_stdin_line", "read_text",
+  "ord", "print", "print_err", "python_path", "read_bytes", "read_dir", "read_stdin_bytes", "read_stdin_line", "read_text",
   "record_new", "repo_path", "run_program", "slice", "sleep_ms", "split", "str", "temp_path", "term_clear",
   "term_color", "term_escape", "term_hide", "term_show", "term_size", "thr_cancel", "thr_count", "thr_join",
   "thr_spawn", "to_int", "to_lower", "to_upper", "write_text", "write_bytes", "bytes_to_text", "f64_bytes",

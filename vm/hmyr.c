@@ -46,6 +46,7 @@
 /* 裸机的 C 库没有 unistd.h —— ARM 那一边 pid 也没有意义（见 临时路径）。 */
 #include <unistd.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #endif
 
 /* 按 UTF-8 的路径开文件。
@@ -73,6 +74,88 @@ static FILE *开文件(const char *utf8, const char *模式) {
 #else
   return fopen(utf8, 模式);
 #endif
+}
+
+/* 列一个目录：交回名字的数组（UTF-8，已排好序），*out_n 是条数。
+ *
+ * 注意这个函数在 #define malloc→hm_malloc 之前，所以它用的是系统堆。
+ * 调用处必须用 原free 释放，不能让它走 hm_free —— 两套堆的指针混着释放，
+ * 症状是 0xC0000374（堆损坏），而错误信息里一个字都不会说这件事。
+ * 把这两个函数挪到宏之后也是对的，那样全走 hm_*；选现在这条是因为它不动已有的行。
+ *
+ * 排序放在这里，不留给调用者：「两台机器交回同一个顺序」是清单能逐字节比对的前提，
+ * 而目录顺序是文件系统的习惯，不是语言的。JS 那一侧与这一侧都排，于是两边一致。
+ *
+ * 四种结局要分得开：
+ *   打不开        -> NULL
+ *   打开了但是空的 -> 一个非 NULL 的哑指针，*out_n = 0
+ *   有名字        -> 数组，*out_n 是条数
+ *   裸机 ARM      -> NULL（那一边没有「一个目录」这种东西，与 unistd.h 同一个条件）
+ */
+static int 比名字(const void *a, const void *b) {
+  return strcmp(*(const char *const *)a, *(const char *const *)b);
+}
+
+static char **列目录(const char *utf8, uint32_t *out_n) {
+  *out_n = 0;
+  char **名们 = NULL;
+  uint32_t 数 = 0, 容 = 0;
+#if defined(_WIN32)
+  int 宽长 = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
+  if (宽长 <= 0) return NULL;
+  wchar_t *宽 = (wchar_t *)malloc((size_t)(宽长 + 2) * sizeof(wchar_t));
+  if (!宽) return NULL;
+  MultiByteToWideChar(CP_UTF8, 0, utf8, -1, 宽, 宽长);
+  /* 宽长 含结尾的那个 0，所以它的位置是 宽长 - 1；往后拼一个 \* 通配符。 */
+  size_t 末位 = (size_t)宽长 - 1;
+  宽[末位] = L'\\';
+  宽[末位 + 1] = L'*';
+  宽[末位 + 2] = 0;
+  WIN32_FIND_DATAW 找;
+  HANDLE h = FindFirstFileW(宽, &找);
+  free(宽);
+  if (h == INVALID_HANDLE_VALUE) return NULL;
+  do {
+    if (wcscmp(找.cFileName, L".") == 0 || wcscmp(找.cFileName, L"..") == 0) continue;
+    int 字节数 = WideCharToMultiByte(CP_UTF8, 0, 找.cFileName, -1, NULL, 0, NULL, NULL);
+    if (字节数 <= 0) continue;
+    char *名 = (char *)malloc((size_t)字节数);
+    if (!名) break;
+    WideCharToMultiByte(CP_UTF8, 0, 找.cFileName, -1, 名, 字节数, NULL, NULL);
+    if (数 == 容) {
+      容 = 容 ? 容 * 2 : 16;
+      名们 = (char **)realloc(名们, (size_t)容 * sizeof(char *));
+    }
+    名们[数++] = 名;
+  } while (FindNextFileW(h, &找));
+  FindClose(h);
+#elif !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+  DIR *d = opendir(utf8);
+  if (!d) return NULL;
+  struct dirent *项;
+  while ((项 = readdir(d)) != NULL) {
+    if (strcmp(项->d_name, ".") == 0 || strcmp(项->d_name, "..") == 0) continue;
+    char *名 = (char *)malloc(strlen(项->d_name) + 1);
+    if (!名) break;
+    strcpy(名, 项->d_name);
+    if (数 == 容) {
+      容 = 容 ? 容 * 2 : 16;
+      名们 = (char **)realloc(名们, (size_t)容 * sizeof(char *));
+    }
+    名们[数++] = 名;
+  }
+  closedir(d);
+#else
+  /* 裸机上这两个变量没有用处：没有目录可列，也没有名字要收。 */
+  (void)utf8;
+  (void)容;
+  return NULL;
+#endif
+  if (数 > 0) qsort(名们, (size_t)数, sizeof(char *), 比名字);
+  *out_n = 数;
+  /* 空目录要交回一个非 NULL：NULL 是「打不开」，这两种结局不能混成一种。 */
+  if (名们 == NULL) 名们 = (char **)calloc(1, sizeof(char *));
+  return 名们;
 }
 
 /* Two range tables generated from the Unicode corpus by tools/ucd-c.mjs.
@@ -2117,6 +2200,36 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     if (f) fclose(f);
     *out = v_bool(f != NULL);
     free(p);
+    return 1;
+  }
+  /* 列目录：顺序已经由 列目录 排好，这里只把名字搬成语言的值。
+   * 打不开是 R0211（与 read_text 同一类：文件系统没给），空目录不是错。 */
+  if (name_is(name_idx, "read_dir")) {
+    if (nargs != 1) { fail("HMYR-R0101", "read_dir wants one argument"); return 1; }
+    if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_dir wants a path string"); return 1; }
+    char *p = utf16_to_utf8(args[0].s, args[0].slen);
+    uint32_t n = 0;
+    char **名们 = 列目录(p, &n);
+    free(p);
+    if (!名们) { fail("HMYR-R0211", "cannot list that directory"); return 1; }
+    Value v = v_null();
+    v.tag = T_TUPLE;
+    v.ilen = n;
+    v.items = alloc_values(n);
+    for (uint32_t i = 0; i < n; i++) {
+      uint32_t 长 = 0;
+      /* utf8_to_utf16 的内存来自 arena（串存），由 GC 管 —— 不能 free。
+       * 第一版在这里写了 free(u)，那是把 arena 指针交给堆去释放。 */
+      uint16_t *u = utf8_to_utf16(名们[i], strlen(名们[i]), &长);
+      v.items[i] = v_str(u, 长);
+      /* 名字与数组由 列目录 分配，而它定义在 #define malloc→hm_malloc 之前 ——
+       * 于是那几个指针属于系统堆。这里必须用 原free，不能让它走 hm_free：
+       * 两套堆的指针混着释放，症状是 0xC0000374（堆损坏），而错误信息里
+       * 一个字都不会说这件事。 */
+      原free(名们[i]);
+    }
+    原free(名们);
+    *out = v;
     return 1;
   }
   if (name_is(name_idx, "read_text")) {

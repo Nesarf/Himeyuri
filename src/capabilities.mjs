@@ -64,6 +64,12 @@ export const 本机能力 = (options = {}) => ({
   file: {
     read: (p) => fs.readFileSync(p),
     exists: (p) => fs.existsSync(p),
+    // 列一个目录里的名字：只要名字，不要路径；**排好序**，于是两台机器交回同一个顺序。
+    //
+    // 排序放在世界这一侧，不留给调用者：目录顺序是文件系统的心情，而清单要能逐字节比对。
+    // 名字里含目录名（不含 .hmyr 的那种会被调用者自己滤掉），因为「这是不是目录」
+    // 是另一个问题，不该让这一条同时回答两件事。
+    listDir: (p) => fs.readdirSync(p, { withFileTypes: true }).map((e) => e.name).sort(),
     write: (p, buf) => fs.writeFileSync(p, buf),
     // 写一份文本。这一条存在的理由是「谁负责把字变成字节」：
     // 求值器如果自己调 Buffer，宿主依赖那一张表就多一项（test/host-deps.test.mjs 会红）。
@@ -285,7 +291,7 @@ export const 本机能力 = (options = {}) => ({
 const 类表 = {
   "io.file.read_write": [["file", "read"], ["file", "write"]],
   "io.file.exists": [["file", "exists"]],
-  "io.file.directories": [["file", "ensureDir"]],
+  "io.file.directories": [["file", "ensureDir"], ["file", "listDir"]],
   "process.spawn": [["process", "exec"]],
   "process.argv": [["process", "argv"]],
   "process.directory": [["process", "chdir"]],
@@ -336,7 +342,7 @@ export const 空能力 = (记下) => {
     // 一份什么都不做的能力，声明是空的：报告会说它一类都不会。
     // 这正是「拒绝优于过宣称」的那一条 —— 它不假装自己会做什么。
     声明: [],
-    file: 组("file", ["read", "exists", "write", "writeText", "writeBytes", "f64Bytes", "packValue", "readLine", "readLines", "stream", "ensureDir", "remove"]),
+    file: 组("file", ["read", "exists", "write", "writeText", "writeBytes", "f64Bytes", "packValue", "readLine", "readLines", "stream", "ensureDir", "remove", "listDir"]),
     process: 组("process", ["argv", "exec", "chdir", "cwd"]),
     time: 组("time", ["now", "sleep"]),
     env: 组("env", ["home", "temp", "get", "platform"]),

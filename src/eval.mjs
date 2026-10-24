@@ -54,7 +54,7 @@ const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
 // 跑 self/ 那六份真正需要的内置。stage0 模式下只放这几个过去。
 // field_names 不在这一张里：自举层现在还不用它，而这张表的意思是「已经量过的必须项」，
 // 多写一个就把闸门放宽了一格。
-const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "f64_bytes", "is_letter", "is_mark", "len", "nfc", "ord", "pack_value", "print", "print_err", "read_line", "read_lines", "read_text", "record_new", "slice", "str", "to_int", "write_bytes"]);
+const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "f64_bytes", "is_letter", "is_mark", "len", "nfc", "ord", "pack_value", "print", "print_err", "read_dir", "read_line", "read_lines", "read_text", "record_new", "slice", "str", "to_int", "write_bytes"]);
 
 export class Runtime {
   constructor(options = {}) {
@@ -414,7 +414,7 @@ class Scope {
 
 // A builtin that touches the outside world is a capability, and it is checked at the call site against
 // what the calling function declared. Without this, "effects" would only apply to functions we wrote.
-const BUILTIN_EFFECTS = { read_text: "file", read_bytes: "file", write_text: "file", run_program: "process", chdir: "process", argv: "process", file_exists: "file", print_err: "process", thr_spawn: "thread", thr_cancel: "thread" };
+const BUILTIN_EFFECTS = { read_text: "file", read_bytes: "file", read_dir: "file", write_text: "file", run_program: "process", chdir: "process", argv: "process", file_exists: "file", print_err: "process", thr_spawn: "thread", thr_cancel: "thread" };
 
 /** 编码表按需读入并缓存：表是「字符 -> 字节」，从本运行时的解码器推出来的。
  *
@@ -732,6 +732,19 @@ const BUILTINS = {
   file_exists: (rt, args) => {
     const 路径 = String(args[0]);
     try { return rt.cap.file.exists(路径); } catch (err) { return false; }
+  },
+  // 列一个目录：交回名字的元组。排序由能力层保证，不留给调用者 ——
+  // 「每个调用者自己记得排一下」这种约定迟早会被漏掉一处，而漏掉的那一处
+  // 会让清单在两个实现之间不一致，且只在某个文件系统上现形。
+  read_dir: (rt, args) => {
+    const 路径 = String(args[0]);
+    let 名们;
+    try { 名们 = rt.cap.file.listDir(路径); }
+    catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      rt.fail("HMYR-R0211", "cannot list '" + 藏路径(路径) + "'" + 原因);
+    }
+    return 名们;
   },
   // 写一串字节、把双精度拆成字节、把一个值编成 .hmyrb 的一段 ——
   // 这三条是「打包搬进 HMYR」用的，出口都在能力层。

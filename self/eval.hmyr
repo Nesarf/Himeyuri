@@ -424,6 +424,14 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 1 { return 坏("field_names 要一个参数") }
     return 好(field_names(值们[0]))
   }
+  // 列一个目录。名字的顺序由下面那一层排好，这一层只转发 ——
+  // 排序是「两台机器要交回同一个答案」的事，不该在语言这一侧各写一遍。
+  if 名 == "read_dir" {
+    let 欠列 = 要效果(环境, "file", "read_dir")
+    if 欠列 != "" { return 坏(欠列) }
+    if len(值们) != 1 { return 坏("read_dir 要一个参数") }
+    return 好(read_dir(值们[0]))
+  }
   // 读一份文本。与 write_text 配成一对，两边都要 file 效果。
   if 名 == "read_text" {
     let 欠读 = 要效果(环境, "file", "read_text")

@@ -427,6 +427,18 @@ export const 内置表 = {
   file_exists: { 效果: "file", 做: (vm, a) => {
     try { return vm.cap.file.exists(vm.成串(a[0])); } catch (err) { return false; }
   } },
+  // 列目录交回元组（顺序由能力层排好）。写法与 argv 同一条路：
+  // 值现在自己带标签，所以每个名字都要经过 vm.文.由宿主 落到选定的那种底上。
+  read_dir: { 效果: "file", 做: (vm, a) => {
+    const 路径 = vm.成串(a[0]);
+    let 名们;
+    try { 名们 = vm.cap.file.listDir(路径); }
+    catch (err) {
+      const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
+      return vm.坏("HMYR-R0211", "cannot list '" + 藏路径(路径) + "'" + 原因);
+    }
+    return new 类元组(名们.map((x) => vm.文.由宿主(String(x))));
+  } },
   // 它交回的是一个元组，不是 JS 数组：值现在自己带标签，两个求值器之间也是同一套值。
   // 漏掉这一处会让 len(argv()) 报「要一个字符串或元组」——而那正是一次真实的失败。
   argv: { 效果: "process", 做: (vm) => new 类元组((vm.argv || []).map((x) => vm.文.由宿主(String(x)))) },
