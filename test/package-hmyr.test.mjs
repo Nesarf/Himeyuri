@@ -137,6 +137,45 @@ if (有编译器) {
   }
 }
 
+console.log("四、附加一份包外的文件（发布清单走的就是这条）");
+if (有编译器) {
+  const 源们 = fs.readdirSync(path.join(ROOT, "design")).filter((n) => n.endsWith(".txt")).sort();
+  const 附路 = path.join(临, "manifest.json");
+  fs.writeFileSync(附路, '{"name":"himeyuri","digest":"x"}\n', "utf8");
+  const 附包 = path.join(临, "with-manifest.zip");
+  const 附码 = path.join(临, "package.hmyrb");
+  const r3 = spawnSync(exe, [附码, 附包, "design", "--附加", 附路, "manifest.json"], {
+    cwd: ROOT, encoding: "utf8", timeout: 600000,
+    env: { ...process.env, HMYR_STEPS: "40000000000" },
+  });
+  ok("带附加成员打得动", r3.status === 0 && fs.existsSync(附包), String(r3.status) + " " + String(r3.stderr || "").slice(0, 160));
+  if (fs.existsSync(附包)) {
+    const 包 = fs.readFileSync(附包);
+    const 尾位 = 包.length - 22;
+    const 条数 = 包.readUInt16LE(尾位 + 10);
+    ok("成员数是 design 的 .txt 数加一", 条数 === 源们.length + 1, 条数 + " 对 " + (源们.length + 1));
+    let 找到 = null;
+    let at = 包.readUInt32LE(尾位 + 16);
+    for (let i = 0; i < 条数; i++) {
+      const 名长 = 包.readUInt16LE(at + 28);
+      const 名 = 包.subarray(at + 46, at + 46 + 名长).toString("utf8");
+      const 压缩 = 包.readUInt32LE(at + 20);
+      const 偏移 = 包.readUInt32LE(at + 42);
+      const 本名长 = 包.readUInt16LE(偏移 + 26);
+      const 本扩长 = 包.readUInt16LE(偏移 + 28);
+      if (名 === "manifest.json") {
+        const 载起 = 偏移 + 30 + 本名长 + 本扩长;
+        找到 = 包.subarray(载起, 载起 + 压缩);
+      }
+      at += 46 + 名长 + 包.readUInt16LE(at + 30) + 包.readUInt16LE(at + 32);
+    }
+    ok("包里有 manifest.json 这个成员", 找到 !== null);
+    const 原 = fs.readFileSync(附路);
+    ok("它的字节与包外那份相同", 找到 !== null && 找到.length === 原.length && Buffer.compare(找到, 原) === 0,
+      找到 === null ? "没找到" : 找到.length + " 对 " + 原.length);
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 }
 
