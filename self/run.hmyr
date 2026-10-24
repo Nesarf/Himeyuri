@@ -146,19 +146,100 @@ fn 加载多(目录: String, 路们: Int, i: Int, 栈: Int, 已载: Int) effects
 // 有了它们，换掉 src/loader.mjs 才谈得上。
 // 宿主的语句层把 if 与 while 包成 ExprStmt（它把 if 当表达式，语句层再包一层）。
 // 形状要一致就得跟着包 —— 而这只在包装这一层做，解析与求值两条路一个字都不动。
+// 按基数读一串数字：0x 十六进制、0b 二进制、0o 八进制。
+// 十进制仍交给 数到（它认得小数与指数）—— 复用一份比再写一份好。
+// 这里不能走 to_int：它只认整数的写法，'0x1f' 会直接抛 R0208。
+fn 按基读(s: String, 起: Int, 基: Int) -> Int {
+  var 出 = 0
+  var i = 起
+  while i < len(s) {
+    let c = ord(slice(s, i, i + 1))
+    var 值 = c - 48
+    if c >= 97 && c <= 102 { 值 = c - 87 }
+    if c >= 65 && c <= 70 { 值 = c - 55 }
+    出 = 出 * 基 + 值
+    i = i + 1
+  }
+  return 出
+}
+
+fn 数字值(s: String) -> Int {
+  if len(s) >= 2 {
+    let 标 = slice(s, 1, 2)
+    if 标 == "x" || 标 == "X" { return 按基读(s, 2, 16) }
+    if 标 == "b" || 标 == "B" { return 按基读(s, 2, 2) }
+    if 标 == "o" || 标 == "O" { return 按基读(s, 2, 8) }
+  }
+  return 数到(s)
+}
+
+// 把表达式树翻成宿主那边认的形状：Literal 补 value 与 raw，Ident 的 text 改叫 name。
+//
+// 这三件（字面量的值、空 return、Ident 的字段名）是适配器里最后的翻译。把它们挪进 HMYR，
+// 工具那一层就只剩搬运 —— 而「宿主一口吃下去」这句话才算有证据。
+fn 翻表达式(n: Int) {
+  if n.kind == "Literal" {
+    if n.type == "int" {
+      return {kind: "Literal", type: "int", value: 数字值(n.text), raw: n.text, text: n.text, line: n.line, column: n.column}
+    }
+    return {kind: "Literal", type: "string", value: n.text, raw: false, text: n.text, line: n.line, column: n.column}
+  }
+  if n.kind == "Ident" {
+    return {kind: "Ident", name: n.text, text: n.text, line: n.line, column: n.column}
+  }
+  if n.kind == "Binary" {
+    return {kind: "Binary", op: n.op, left: 翻表达式(n.left), right: 翻表达式(n.right), line: n.line, column: n.column}
+  }
+  if n.kind == "Unary" {
+    return {kind: "Unary", op: n.op, operand: 翻表达式(n.operand), line: n.line, column: n.column}
+  }
+  if n.kind == "Call" {
+    return {kind: "Call", callee: 翻表达式(n.callee), args: 翻表达式们(n.args, 0, ()), line: n.line, column: n.column}
+  }
+  if n.kind == "Field" {
+    return {kind: "Field", target: 翻表达式(n.target), name: n.name, line: n.line, column: n.column}
+  }
+  if n.kind == "Index" {
+    return {kind: "Index", target: 翻表达式(n.target), index: 翻表达式(n.index), line: n.line, column: n.column}
+  }
+  if n.kind == "Tuple" {
+    return {kind: "Tuple", items: 翻表达式们(n.items, 0, ()), line: n.line, column: n.column}
+  }
+  return n
+}
+
+fn 翻表达式们(们: Int, i: Int, acc: Int) {
+  if i >= len(们) { return acc }
+  return 翻表达式们(们, i + 1, acc + (翻表达式(们[i]),))
+}
+
+// 语句里的那几个表达式字段也要翻。空 return 干脆不带 value —— 宿主读出来是 undefined，
+// 与它自己的 null 同效；而这一侧本来就没有 null 这个词。
+fn 翻语句(n: Int) {
+  if n.kind == "Let" { return {kind: "Let", name: n.name, value: 翻表达式(n.value), line: n.line, column: n.column} }
+  if n.kind == "Var" { return {kind: "Var", name: n.name, value: 翻表达式(n.value), line: n.line, column: n.column} }
+  if n.kind == "Assign" { return {kind: "Assign", name: n.name, value: 翻表达式(n.value), line: n.line, column: n.column} }
+  if n.kind == "Return" {
+    if n.value.kind == "nil" { return {kind: "Return", line: n.line, column: n.column} }
+    return {kind: "Return", value: 翻表达式(n.value), line: n.line, column: n.column}
+  }
+  if n.kind == "ExprStmt" { return {kind: "ExprStmt", expr: 翻表达式(n.value), line: n.line, column: n.column} }
+  return n
+}
+
 fn 转语句们(语句们: Int, i: Int, acc: Int) {
   if i >= len(语句们) { return acc }
   let n = 语句们[i]
-  var 出 = n
+  var 出 = 翻语句(n)
   // If 与 While 在这一侧还要换字段名：cond 对 condition，then/otherwise/body 要包成 Block。
   // 解析那一层不动（求值器读的还是 cond 与语句元组），只在包装这一层翻。
   if n.kind == "If" {
-    let 内 = {kind: "If", condition: n.cond, then: 包块(n.then, n.line), otherwise: 包块(n.otherwise, n.line), line: n.line, column: n.column}
-    出 = {kind: "ExprStmt", value: 内, line: n.line, column: n.column}
+    let 内 = {kind: "If", condition: 翻表达式(n.cond), then: 包块(n.then, n.line), otherwise: 包块(n.otherwise, n.line), line: n.line, column: n.column}
+    出 = {kind: "ExprStmt", expr: 内, line: n.line, column: n.column}
   }
   if n.kind == "While" {
-    let 内 = {kind: "While", condition: n.cond, body: 包块(n.body, n.line), line: n.line, column: n.column}
-    出 = {kind: "ExprStmt", value: 内, line: n.line, column: n.column}
+    let 内 = {kind: "While", condition: 翻表达式(n.cond), body: 包块(n.body, n.line), line: n.line, column: n.column}
+    出 = {kind: "ExprStmt", expr: 内, line: n.line, column: n.column}
   }
   return 转语句们(语句们, i + 1, acc + (出,))
 }

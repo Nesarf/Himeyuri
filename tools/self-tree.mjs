@@ -49,7 +49,7 @@ const 子对们 = (s, h) => {
     case "Block": return 列(s.statements).map((x, i) => [x, 列(h.statements)[i]]);
     case "Let": case "Var": case "Assign": case "Return":
       return [[s.value, h.value]];
-    case "ExprStmt": return [[s.value, h.expr]];
+    case "ExprStmt": return [[s.expr, h.expr]];
     case "If": return [[s.condition, h.condition]];
     case "While": return [[s.condition, h.condition]];
     case "Binary": return [[s.left, h.left], [s.right, h.right]];
@@ -69,7 +69,7 @@ const 字字段 = {
   Binary: [["op", "op"]],
   Unary: [["op", "op"]],
   Field: [["name", "name"]],
-  Ident: [["text", "name"]],
+  Ident: [["name", "name"]],
   Let: [["name", "name"]],
   Var: [["name", "name"]],
   Assign: [["name", "name"]],
@@ -105,12 +105,11 @@ const 走 = (s, h, 路, 计) => {
     }
   }
   // 字面量：字符串那一侧两边都存解好的值，可以直接比；数字那一侧差一次解析。
-  if (s.kind === "Literal" && s.type === "string" && s.text !== h.value) {
+  if (s.kind === "Literal" && s.type === "string" && s.value !== h.value) {
     return { 路: 路 + "/text", 因: "字符串：self=" + JSON.stringify(s.text) + " 宿主=" + JSON.stringify(h.value) };
   }
   if (s.kind === "Literal" && s.type === "int") {
-    const 己数 = 数值(s.text);
-    if (己数 !== h.value) {
+    if (s.value !== h.value) {
       return { 路: 路 + "/text", 因: "数字：self=" + JSON.stringify(s.text) + " → " + 己数 + " 宿主=" + JSON.stringify(h.value) };
     }
   }

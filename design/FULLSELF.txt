@@ -290,3 +290,25 @@ selfhandoff、selfcompile、hmyrcompile。
 
 又一次被 selfcompile 抓到：run.hmyr 从 43 个函数变成 44（新增 转参数们）。这套件的固定数字
 今天第二次报红，两次都不是它错 —— 它报的正是「规模变了」。
+第十四件（2026-10-24）：最后的翻译搬进 HMYR，适配器归零。
+
+三件翻译从工具搬到包装层（造模块 与它的助手）：
+
+    Literal 的 value/raw   解析字面量文本。十进制走 数到（它认得小数与指数），
+                           0x/0b/0o 走新写的 按基读 —— 不能走 to_int，它只认整数的写法，
+                           '0x1f' 会直接抛 R0208
+    Ident 的 text → name
+    ExprStmt 的 value → expr
+
+另外空 return 不再带 value 字段：宿主读出来是 undefined，与它自己的 null 同效，
+而这一侧本来就没有 null 可写。
+
+搬的时候撞了两次：
+  一、翻表达式 构造 Literal 时漏了 text，而两个工具还在读它 —— 一边报 NaN、一边跑出 null；
+  二、ExprStmt 换了字段而 self-tree 与 self-handoff 都还读 value，一红一停。
+
+现在 tools/self-handoff.mjs 只剩两个动作：registerModule，然后 callFunction。它问的问题也换了：
+不问「适配之后能不能跑」，而问「不做任何适配，宿主一口吃下去能不能跑」。五段程序
+（常数、let 与二元、if、while、十六进制）各自跑出期望值。
+
+九套自举与编译套件全绿。
