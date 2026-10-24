@@ -1,0 +1,324 @@
+// 造一份清单：四个目录的顶层，外加 check-all 里登记的套件。
+//
+// 字段名与 tools/manifest.mjs 一致，于是 self/verify.hmyr 能直接验它 —— 闭环：
+// 生成与核对是同一条规则的两种写法，一条拼出「不含 digest 的那份」，一条把它拆回来。
+//
+// 两处边界写在明处：
+//   一、只列顶层。read_dir 只给名字，不给「这是不是目录」，而 runtime/ucd/ 里还有
+//       一个 .hmyr 要递归才看得到。要补的话，得先有一个能问「是不是目录」的内建。
+//   二、没有 kernel 与 commit 两组。前者要从 src/eval.mjs 里做括号配对，后者要问 git；
+//       两样都不是「读一个文件算个哈希」。verify 不读这两组，所以闭环不受影响。
+//
+// 排版照 JSON.stringify(x, null, 2)：两空格缩进、每个对象各占自己的行。
+// 这一条是 digest 能被外部工具复算的前提 —— 那条规则是「删掉 digest 行、
+// 去掉它前一行的逗号」，而它成立的根据就是「这份文本本来就是那个函数的输出」。
+//
+// 函数体里没有一处裸块：裸块在解释器那边能跑，而字节码后端把它当表达式，
+// 报的是「这一份不认这种表达式：Block」。变量因此都在函数作用域里，各自起名。
+import "./sha256.hmyr"
+import "../json.hmyr"
+
+fn 以头(s: String, 头: String) -> Bool {
+  if len(s) < len(头) { return false }
+  return slice(s, 0, len(头)) == 头
+}
+
+fn 以尾(s: String, 尾: String) -> Bool {
+  if len(s) < len(尾) { return false }
+  return slice(s, len(s) - len(尾), len(s)) == 尾
+}
+
+fn 前16(s: String) -> String { return slice(s, 0, 16) }
+
+fn 去头空(s: String) -> String {
+  var i = 0
+  while i < len(s) && slice(s, i, i + 1) == " " { i = i + 1 }
+  return slice(s, i, len(s))
+}
+
+fn 数fn(文: String) -> Int {
+  let 行们 = split(文, chr(10))
+  var n = 0
+  var i = 0
+  while i < len(行们) {
+    if 以头(行们[i], "fn ") { n = n + 1 }
+    i = i + 1
+  }
+  return n
+}
+
+fn 行数(文: String) -> Int { return len(split(文, chr(10))) }
+
+// 一块一块加行：128 行封一块，最后用 json.hmyr 那个 拼平 折起来。
+// 逐行往一个串上接在这里是平方级 —— 这条教训在这个仓库里已经出现过四次。
+//
+// 换行写在行内（每行后面都带一个），不要在块与块之间去补：拼平 用 + 拼字符串，
+// 块缝里没有位置插那个 chr(10)。这一处与 self/verify.hmyr 里那一处是同一个形状，
+// 而且已经各错过一次 —— 症状都是「某个键与下一个键挤在同一行」，
+// 于是在逐行扫的人眼里那一项就少了一个字段。
+fn 推(块们: Int, 块: String, 块行数: Int, 行: String) {
+  var 新块们 = 块们
+  var 新块 = 块
+  if 块行数 == 0 { 新块 = 行 + chr(10) } else { 新块 = 块 + 行 + chr(10) }
+  let 新数 = 块行数 + 1
+  if 新数 >= 128 {
+    新块们 = 块们 + (新块,)
+    新块 = ""
+    return {块们: 新块们, 块: 新块, 行数: 0}
+  }
+  return {块们: 新块们, 块: 新块, 行数: 新数}
+}
+
+// 一行里第 n 对引号之间（n 从 1 数起）。开引号记位置，闭引号算一对。
+fn 第几对(s: String, n: Int) -> String {
+  var 找第 = 0
+  var 开 = 0 - 1
+  var i = 0
+  while i < len(s) {
+    if slice(s, i, i + 1) == "\"" {
+      if 开 < 0 {
+        开 = i
+      } else {
+        找第 = 找第 + 1
+        if 找第 == n { return slice(s, 开 + 1, i) }
+        开 = 0 - 1
+      }
+    }
+    i = i + 1
+  }
+  return ""
+}
+
+fn 去尾逗号(行: String) -> String {
+  if len(行) == 0 { return 行 }
+  if slice(行, len(行) - 1, len(行)) == "," { return slice(行, 0, len(行) - 1) }
+  return 行
+}
+
+// 一项标准库：四个字段。最后一行带逗号，由调用者在末项上去掉。
+fn 造库项(路: String) effects(file) {
+  let 文 = read_text(路)
+  let 哈 = 前16(sha256(read_bytes(路)))
+  return (
+    "    {",
+    "      \"file\": \"" + 路 + "\",",
+    "      \"functions\": " + str(数fn(文)) + ",",
+    "      \"lines\": " + str(行数(文)) + ",",
+    "      \"sha256\": \"" + 哈 + "\"",
+    "    },"
+  )
+}
+
+fn 造套件项(名: String, 路: String) effects(file) {
+  let 哈 = 前16(sha256(read_bytes(路)))
+  return (
+    "    {",
+    "      \"name\": \"" + 名 + "\",",
+    "      \"path\": \"" + 路 + "\",",
+    "      \"sha256\": \"" + 哈 + "\"",
+    "    },"
+  )
+}
+
+fn 造名项(名: String, 路: String) effects(file) {
+  let 哈 = 前16(sha256(read_bytes(路)))
+  return (
+    "    {",
+    "      \"name\": \"" + 名 + "\",",
+    "      \"sha256\": \"" + 哈 + "\"",
+    "    },"
+  )
+}
+
+fn 主(出路: String) effects(file, process) {
+  var 块们 = ()
+  var 块 = ""
+  var 块行数 = 0
+  var i = 0
+  var k = 0
+
+  let 头们 = (
+    "{",
+    "  \"name\": \"himeyuri\",",
+    "  \"language\": \"HMYR\","
+  )
+  var h = 0
+  while h < len(头们) {
+    let r = 推(块们, 块, 块行数, 头们[h])
+    块们 = r.块们
+    块 = r.块
+    块行数 = r.行数
+    h = h + 1
+  }
+
+  // 一、标准库：runtime/ 顶层的 .hmyr
+  let r1 = 推(块们, 块, 块行数, "  \"standardLibrary\": [")
+  块们 = r1.块们
+  块 = r1.块
+  块行数 = r1.行数
+  let 库名们 = read_dir("runtime")
+  var 库末 = 0 - 1
+  i = 0
+  while i < len(库名们) {
+    if 以尾(库名们[i], ".hmyr") { 库末 = i }
+    i = i + 1
+  }
+  i = 0
+  while i < len(库名们) {
+    if 以尾(库名们[i], ".hmyr") {
+      let 库项们 = 造库项("runtime/" + 库名们[i])
+      k = 0
+      while k < len(库项们) {
+        var 库行 = 库项们[k]
+        if i == 库末 && k == len(库项们) - 1 { 库行 = 去尾逗号(库行) }
+        let r = 推(块们, 块, 块行数, 库行)
+        块们 = r.块们
+        块 = r.块
+        块行数 = r.行数
+        k = k + 1
+      }
+    }
+    i = i + 1
+  }
+  let r2 = 推(块们, 块, 块行数, "  ],")
+  块们 = r2.块们
+  块 = r2.块
+  块行数 = r2.行数
+
+  // 二、套件：从 check-all 那份登记表里抽（名字与路径）
+  let r3 = 推(块们, 块, 块行数, "  \"suites\": [")
+  块们 = r3.块们
+  块 = r3.块
+  块行数 = r3.行数
+  let 表们 = read_text("tools/check-all.mjs")
+  let 表行们 = split(表们, chr(10))
+  var 套数 = 0
+  i = 0
+  while i < len(表行们) {
+    if 以头(去头空(表行们[i]), "[\"") { 套数 = 套数 + 1 }
+    i = i + 1
+  }
+  var 套序 = 0
+  i = 0
+  while i < len(表行们) {
+    let 这行 = 去头空(表行们[i])
+    if 以头(这行, "[\"") {
+      let 套名 = 第几对(这行, 1)
+      let 套路 = 第几对(这行, 2)
+      let 套项们 = 造套件项(套名, 套路)
+      k = 0
+      while k < len(套项们) {
+        var 套行 = 套项们[k]
+        if 套序 == 套数 - 1 && k == len(套项们) - 1 { 套行 = 去尾逗号(套行) }
+        let r = 推(块们, 块, 块行数, 套行)
+        块们 = r.块们
+        块 = r.块
+        块行数 = r.行数
+        k = k + 1
+      }
+      套序 = 套序 + 1
+    }
+    i = i + 1
+  }
+  let r4 = 推(块们, 块, 块行数, "  ],")
+  块们 = r4.块们
+  块 = r4.块
+  块行数 = r4.行数
+
+  // 三、工具：tools/ 顶层的 .mjs
+  let r5 = 推(块们, 块, 块行数, "  \"tools\": [")
+  块们 = r5.块们
+  块 = r5.块
+  块行数 = r5.行数
+  let 具名们 = read_dir("tools")
+  var 具末 = 0 - 1
+  i = 0
+  while i < len(具名们) {
+    if 以尾(具名们[i], ".mjs") { 具末 = i }
+    i = i + 1
+  }
+  i = 0
+  while i < len(具名们) {
+    if 以尾(具名们[i], ".mjs") {
+      let 具项们 = 造名项(具名们[i], "tools/" + 具名们[i])
+      k = 0
+      while k < len(具项们) {
+        var 具行 = 具项们[k]
+        if i == 具末 && k == len(具项们) - 1 { 具行 = 去尾逗号(具行) }
+        let r = 推(块们, 块, 块行数, 具行)
+        块们 = r.块们
+        块 = r.块
+        块行数 = r.行数
+        k = k + 1
+      }
+    }
+    i = i + 1
+  }
+  let r6 = 推(块们, 块, 块行数, "  ],")
+  块们 = r6.块们
+  块 = r6.块
+  块行数 = r6.行数
+
+  // 四、文档：design/ 顶层的 .txt
+  let r7 = 推(块们, 块, 块行数, "  \"documents\": [")
+  块们 = r7.块们
+  块 = r7.块
+  块行数 = r7.行数
+  let 档名们 = read_dir("design")
+  var 档末 = 0 - 1
+  i = 0
+  while i < len(档名们) {
+    if 以尾(档名们[i], ".txt") { 档末 = i }
+    i = i + 1
+  }
+  i = 0
+  while i < len(档名们) {
+    if 以尾(档名们[i], ".txt") {
+      let 档项们 = 造名项(档名们[i], "design/" + 档名们[i])
+      k = 0
+      while k < len(档项们) {
+        var 档行 = 档项们[k]
+        if i == 档末 && k == len(档项们) - 1 { 档行 = 去尾逗号(档行) }
+        let r = 推(块们, 块, 块行数, 档行)
+        块们 = r.块们
+        块 = r.块
+        块行数 = r.行数
+        k = k + 1
+      }
+    }
+    i = i + 1
+  }
+  let r8 = 推(块们, 块, 块行数, "  ]")
+  块们 = r8.块们
+  块 = r8.块
+  块行数 = r8.行数
+
+  if 块行数 > 0 {
+    块们 = 块们 + (块,)
+    块 = ""
+    块行数 = 0
+  }
+  let 带尾 = 拼平(块们, 0, len(块们))
+  // 每行后面那个换行多出来一个：主体不以换行结尾。
+  let 主体 = slice(带尾, 0, len(带尾) - 1)
+  // 不含 digest 的那份 = 主体 + 收尾的 }，这是与 self/verify.hmyr 同一条规则。
+  let 底 = 主体 + chr(10) + "}"
+  let 摘要 = sha256(从文本(底))
+  let 终 = 主体 + "," + chr(10) + "  \"digest\": \"" + 摘要 + "\"" + chr(10) + "}" + chr(10)
+
+  if 出路 == "" {
+    print(终)
+  } else {
+    write_text(出路, 终)
+    print("  已写 " + 出路 + "（" + str(行数(终)) + " 行，digest " + 摘要 + "）" + chr(10))
+  }
+  return 0
+}
+
+fn main() -> Int effects(file, process) {
+  let 参 = argv()
+  if len(参) < 2 {
+    return 主("")
+  }
+  return 主(参[1])
+}

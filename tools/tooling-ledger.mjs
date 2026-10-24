@@ -97,6 +97,13 @@ export const 账本 = [
     说明: "两个方向都在 HMYR 里：stored 与固定 Huffman 的编码与解码，外加动态 Huffman 的解码；多块流；43 KB 解 1.0 秒、436 KB 解 12.9 秒，峰值随输入线性长",
   },
   {
+    名: "清单生成",
+    状态: "搬了第一版",
+    在哪: "self/manifest.hmyr",
+    验收: "manifesthmyr",
+    说明: "四个目录的顶层加 check-all 里登记的一百四十多项，逐项算 sha256，digest 与 JSON.stringify 的字节一致；自家 verify 验自家产物 201 项全对。kernel 与 commit 两组、以及子目录（runtime/ucd）还没搬",
+  },
+  {
     名: "打包发布",
     状态: "搬了第一版",
     在哪: "self/zip.hmyr",
