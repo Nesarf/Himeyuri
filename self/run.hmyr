@@ -157,7 +157,8 @@ fn 按基读(s: String, 起: Int, 基: Int) -> Int {
     var 值 = c - 48
     if c >= 97 && c <= 102 { 值 = c - 87 }
     if c >= 65 && c <= 70 { 值 = c - 55 }
-    出 = 出 * 基 + 值
+    // 下划线是分隔符，不参与计算（宿主那边 0x1_0 读成 16，不是 1）。
+    if c != 95 { 出 = 出 * 基 + 值 }
     i = i + 1
   }
   return 出
@@ -201,6 +202,8 @@ fn 翻表达式(n: Int) {
     // 不转的话，宿主会去找一个叫 false 的名字 —— 报 HMYR-R0104，而那句话听起来像拼写错误。
     if n.text == "true" { return {kind: "Literal", type: "bool", value: true, raw: false, text: n.text, line: 行(n), column: 列(n)} }
     if n.text == "false" { return {kind: "Literal", type: "bool", value: false, raw: false, text: n.text, line: 行(n), column: 列(n)} }
+    // nil 在宿主那边是一个字面量（type "nil"、值 null），不是名字。
+    if n.text == "nil" { return {kind: "Literal", type: "nil", value: (), raw: false, text: n.text, line: 行(n), column: 列(n)} }
     return {kind: "Ident", name: n.text, text: n.text, line: 行(n), column: 列(n)}
   }
   if n.kind == "Binary" {

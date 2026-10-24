@@ -69,6 +69,13 @@ const 新诊断 = () => ({ errors: [], warnings: [], items: [], add() {}, error(
 // 类记录（fields 是一个 Map）与类元组（items）。宿主的 Runtime 只认前一种，
 // 所以走字节码这条路时把形状翻一遍 —— 翻一次，量的是模块树，不随程序规模走。
 const 深转 = (v) => {
+  // nil 在宿主那边是 {type:"nil", value:null}；这一侧没有 null，所以到 JS 这一层才补上。
+  if (v && v.tag === "record" && v.fields && v.fields.get("type") === "nil") {
+    const o = {};
+    for (const [k, x] of v.fields) o[k] = 深转(x);
+    o.value = null;
+    return o;
+  }
   if (v && v.tag === "tuple") return v.items.map(深转);
   if (v && v.tag === "record") {
     const o = {};
