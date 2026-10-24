@@ -4,8 +4,8 @@
 // 生成与核对是同一条规则的两种写法，一条拼出「不含 digest 的那份」，一条把它拆回来。
 //
 // 两处边界写在明处：
-//   一、只列顶层。read_dir 只给名字，不给「这是不是目录」，而 runtime/ucd/ 里还有
-//       一个 .hmyr 要递归才看得到。要补的话，得先有一个能问「是不是目录」的内建。
+//   一、标准库递归（runtime/ucd/ 里还有 blocks.hmyr），工具与文档只列顶层 ——
+//       那两个目录眼下没有子目录，递归对它们只是多绕一圈。
 //   二、没有 kernel 与 commit 两组。前者要从 src/eval.mjs 里做括号配对，后者要问 git；
 //       两样都不是「读一个文件算个哈希」。verify 不读这两组，所以闭环不受影响。
 //
@@ -96,6 +96,36 @@ fn 去尾逗号(行: String) -> String {
 }
 
 // 一项标准库：四个字段。最后一行带逗号，由调用者在末项上去掉。
+// 走一个目录，交回它下面所有文件的相对路径（递归）。
+// 这一层靠 is_dir 分岔 —— read_dir 只给名字，说不了「这是不是一个目录」。
+// 元组相加在这里够用：一层几十项，深度两层。
+fn 走文件(路: String) effects(file) {
+  let 名们 = read_dir(路)
+  var 文们 = ()
+  var 子们 = ()
+  var i = 0
+  while i < len(名们) {
+    if is_dir(路 + "/" + 名们[i]) {
+      子们 = 子们 + (名们[i],)
+    } else {
+      文们 = 文们 + (名们[i],)
+    }
+    i = i + 1
+  }
+  var 出 = 文们
+  i = 0
+  while i < len(子们) {
+    let 下 = 走文件(路 + "/" + 子们[i])
+    var k = 0
+    while k < len(下) {
+      出 = 出 + (子们[i] + "/" + 下[k],)
+      k = k + 1
+    }
+    i = i + 1
+  }
+  return 出
+}
+
 fn 造库项(路: String) effects(file) {
   let 文 = read_text(路)
   let 哈 = 前16(sha256(read_bytes(路)))
@@ -156,7 +186,7 @@ fn 主(出路: String) effects(file, process) {
   块们 = r1.块们
   块 = r1.块
   块行数 = r1.行数
-  let 库名们 = read_dir("runtime")
+  let 库名们 = 走文件("runtime")
   var 库末 = 0 - 1
   i = 0
   while i < len(库名们) {

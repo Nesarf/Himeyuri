@@ -70,6 +70,9 @@ export const 本机能力 = (options = {}) => ({
     // 名字里含目录名（不含 .hmyr 的那种会被调用者自己滤掉），因为「这是不是目录」
     // 是另一个问题，不该让这一条同时回答两件事。
     listDir: (p) => fs.readdirSync(p, { withFileTypes: true }).map((e) => e.name).sort(),
+    // 「这是不是一个目录」。read_dir 只给名字，而递归要走下去就得先问这一句。
+    // 路径不存在时交回 false（与 exists 同一个态度：问不到就是没有）。
+    isDir: (p) => { try { return fs.statSync(p).isDirectory(); } catch (err) { return false; } },
     write: (p, buf) => fs.writeFileSync(p, buf),
     // 写一份文本。这一条存在的理由是「谁负责把字变成字节」：
     // 求值器如果自己调 Buffer，宿主依赖那一张表就多一项（test/host-deps.test.mjs 会红）。
@@ -291,7 +294,7 @@ export const 本机能力 = (options = {}) => ({
 const 类表 = {
   "io.file.read_write": [["file", "read"], ["file", "write"]],
   "io.file.exists": [["file", "exists"]],
-  "io.file.directories": [["file", "ensureDir"], ["file", "listDir"]],
+  "io.file.directories": [["file", "ensureDir"], ["file", "listDir"], ["file", "isDir"]],
   "process.spawn": [["process", "exec"]],
   "process.argv": [["process", "argv"]],
   "process.directory": [["process", "chdir"]],
@@ -342,7 +345,7 @@ export const 空能力 = (记下) => {
     // 一份什么都不做的能力，声明是空的：报告会说它一类都不会。
     // 这正是「拒绝优于过宣称」的那一条 —— 它不假装自己会做什么。
     声明: [],
-    file: 组("file", ["read", "exists", "write", "writeText", "writeBytes", "f64Bytes", "packValue", "readLine", "readLines", "stream", "ensureDir", "remove", "listDir"]),
+    file: 组("file", ["read", "exists", "write", "writeText", "writeBytes", "f64Bytes", "packValue", "readLine", "readLines", "stream", "ensureDir", "remove", "listDir", "isDir"]),
     process: 组("process", ["argv", "exec", "chdir", "cwd"]),
     time: 组("time", ["now", "sleep"]),
     env: 组("env", ["home", "temp", "get", "platform"]),

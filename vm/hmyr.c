@@ -2232,6 +2232,35 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v;
     return 1;
   }
+  /* 这是不是一个目录。问不到就是 false —— 与 file_exists 同一个态度：
+   * 「问不到」与「不是」在调用者眼里通常是同一件事。
+   * 裸机上没有这种东西，一并与 unistd.h 同一个条件。 */
+  if (name_is(name_idx, "is_dir")) {
+    if (nargs != 1) { fail("HMYR-R0101", "is_dir wants one argument"); return 1; }
+    if (args[0].tag != T_STR) { *out = v_bool(0); return 1; }
+    char *p = utf16_to_utf8(args[0].s, args[0].slen);
+    int 是 = 0;
+#if defined(_WIN32)
+    int 宽长 = MultiByteToWideChar(CP_UTF8, 0, p, -1, NULL, 0);
+    if (宽长 > 0) {
+      wchar_t *宽 = (wchar_t *)malloc((size_t)宽长 * sizeof(wchar_t));
+      if (宽) {
+        MultiByteToWideChar(CP_UTF8, 0, p, -1, 宽, 宽长);
+        DWORD 属性 = GetFileAttributesW(宽);
+        是 = (属性 != INVALID_FILE_ATTRIBUTES && (属性 & FILE_ATTRIBUTE_DIRECTORY)) ? 1 : 0;
+        free(宽);
+      }
+    }
+#elif !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+    struct stat 状;
+    if (stat(p, &状) == 0) 是 = S_ISDIR(状.st_mode) ? 1 : 0;
+#else
+    (void)p;
+#endif
+    free(p);
+    *out = v_bool(是);
+    return 1;
+  }
   if (name_is(name_idx, "read_text")) {
     if (nargs < 1) { fail("HMYR-R0101", "read_text wants at least one argument"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_text wants a path string"); return 1; }

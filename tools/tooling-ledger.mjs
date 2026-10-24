@@ -101,7 +101,7 @@ export const 账本 = [
     状态: "搬了第一版",
     在哪: "self/manifest.hmyr",
     验收: "manifesthmyr",
-    说明: "四个目录的顶层加 check-all 里登记的一百四十多项，逐项算 sha256，digest 与 JSON.stringify 的字节一致；自家 verify 验自家产物 201 项全对。kernel 与 commit 两组、以及子目录（runtime/ucd）还没搬",
+    说明: "标准库递归（runtime/ucd 里的 .hmyr 也收）、工具与文档列顶层，加 check-all 里登记的一百四十多项，逐项算 sha256；digest 与 JSON.stringify 的字节一致，自家 verify 验自家产物全对。kernel 与 commit 两组还没搬",
   },
   {
     名: "打包发布",

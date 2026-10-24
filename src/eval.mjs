@@ -54,7 +54,7 @@ const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
 // 跑 self/ 那六份真正需要的内置。stage0 模式下只放这几个过去。
 // field_names 不在这一张里：自举层现在还不用它，而这张表的意思是「已经量过的必须项」，
 // 多写一个就把闸门放宽了一格。
-const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "f64_bytes", "is_letter", "is_mark", "len", "nfc", "ord", "pack_value", "print", "print_err", "read_dir", "read_line", "read_lines", "read_text", "record_new", "slice", "str", "to_int", "write_bytes"]);
+const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "f64_bytes", "is_dir", "is_letter", "is_mark", "len", "nfc", "ord", "pack_value", "print", "print_err", "read_dir", "read_line", "read_lines", "read_text", "record_new", "slice", "str", "to_int", "write_bytes"]);
 
 export class Runtime {
   constructor(options = {}) {
@@ -414,7 +414,7 @@ class Scope {
 
 // A builtin that touches the outside world is a capability, and it is checked at the call site against
 // what the calling function declared. Without this, "effects" would only apply to functions we wrote.
-const BUILTIN_EFFECTS = { read_text: "file", read_bytes: "file", read_dir: "file", write_text: "file", run_program: "process", chdir: "process", argv: "process", file_exists: "file", print_err: "process", thr_spawn: "thread", thr_cancel: "thread" };
+const BUILTIN_EFFECTS = { read_text: "file", read_bytes: "file", read_dir: "file", is_dir: "file", write_text: "file", run_program: "process", chdir: "process", argv: "process", file_exists: "file", print_err: "process", thr_spawn: "thread", thr_cancel: "thread" };
 
 /** 编码表按需读入并缓存：表是「字符 -> 字节」，从本运行时的解码器推出来的。
  *
@@ -745,6 +745,12 @@ const BUILTINS = {
       rt.fail("HMYR-R0211", "cannot list '" + 藏路径(路径) + "'" + 原因);
     }
     return 名们;
+  },
+  // 这是不是一个目录。问不到就交回 false —— 与 file_exists 同一个态度：
+  // 「问不到」与「不是」在调用者眼里通常是同一件事，而多一个错误码只让人多写一段。
+  is_dir: (rt, args) => {
+    const 路径 = String(args[0]);
+    try { return rt.cap.file.isDir(路径); } catch (err) { return false; }
   },
   // 写一串字节、把双精度拆成字节、把一个值编成 .hmyrb 的一段 ——
   // 这三条是「打包搬进 HMYR」用的，出口都在能力层。

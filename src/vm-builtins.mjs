@@ -439,6 +439,10 @@ export const 内置表 = {
     }
     return new 类元组(名们.map((x) => vm.文.由宿主(String(x))));
   } },
+  // 这是不是一个目录。递归要走下去就得先问这一句；问不到就是 false。
+  is_dir: { 效果: "file", 做: (vm, a) => {
+    try { return vm.cap.file.isDir(vm.成串(a[0])); } catch (err) { return false; }
+  } },
   // 它交回的是一个元组，不是 JS 数组：值现在自己带标签，两个求值器之间也是同一套值。
   // 漏掉这一处会让 len(argv()) 报「要一个字符串或元组」——而那正是一次真实的失败。
   argv: { 效果: "process", 做: (vm) => new 类元组((vm.argv || []).map((x) => vm.文.由宿主(String(x)))) },

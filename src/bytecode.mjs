@@ -352,7 +352,7 @@ const 编译函数 = (decl) => {
 // 而用户函数表里也没有它。加内置时要四处一起加：最小求值器、字节码内置表、这一张、
 // 还有自举层 self/eval.hmyr 的调用分派。
 const 内置名 = new Set(["abs", "arena", "argv", "chdir", "chr", "console_codepage", "cwd", "field_get", "field_has",
-  "field_names", "file_exists", "floor", "home_dir", "int", "is_letter", "is_mark", "key_available", "key_push",
+  "field_names", "file_exists", "floor", "home_dir", "int", "is_dir", "is_letter", "is_mark", "key_available", "key_push",
   "key_read", "key_start", "len", "locale_current", "locale_env", "locale_set", "max", "min", "nfc", "now_ms",
   "ord", "print", "print_err", "python_path", "read_bytes", "read_dir", "read_stdin_bytes", "read_stdin_line", "read_text",
   "record_new", "repo_path", "run_program", "slice", "sleep_ms", "split", "str", "temp_path", "term_clear",

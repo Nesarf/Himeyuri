@@ -4,8 +4,8 @@
 //
 //   表达式  十一种   Binary · Call · Field · Ident · If · Index · Literal · Record · Tuple · Unary · While
 //   语句    五种     Assign · ExprStmt · Let · Return · Var
-//   内置    十七个   argv · chr · field_get · field_has · file_exists · is_letter · is_mark · len ·
-//                    nfc · print · print_err · read_dir · read_text · record_new · slice · str · to_int
+//   内置    十八个   argv · chr · field_get · field_has · file_exists · is_dir · is_letter · is_mark ·
+//                    len · nfc · print · print_err · read_dir · read_text · record_new · slice · str · to_int
 //
 // 表外的节点与内置在这里不是「碰巧没实现」，而是抛并说清是哪一种。
 // 那与宿主求值器的态度相反：宿主认得十八种节点，遇到不认的才报 R0110；
@@ -476,12 +476,17 @@ const 内置 = {
     }
     return 名们.map((x) => (rt.码元串 ? 码元.由宿主(String(x)) : String(x)));
   },
+  // 这是不是一个目录。问不到就是 false。
+  is_dir: (rt, a) => {
+    const 路径 = rt.成串(a[0]);
+    try { return rt.cap.file.isDir(路径); } catch (err) { return false; }
+  },
   // 命令行参数也是字符串值，所以它们进语言时同样要落到那种底上。
   argv: (rt) => (rt.argv || []).map((x) => (rt.码元串 ? 码元.由宿主(String(x)) : String(x))),
 };
 
 // 只有这四样碰世界。读文件与问文件在不在属 file，另两个通道属 process。
-const 内置效果 = { read_text: "file", read_bytes: "file", read_dir: "file", read_line: "file", read_lines: "file", write_text: "file", write_bytes: "file", file_exists: "file", argv: "process", print_err: "process", chdir: "process", run_program: "process", thr_spawn: "thread", thr_cancel: "thread" };
+const 内置效果 = { read_text: "file", read_bytes: "file", read_dir: "file", is_dir: "file", read_line: "file", read_lines: "file", write_text: "file", write_bytes: "file", file_exists: "file", argv: "process", print_err: "process", chdir: "process", run_program: "process", thr_spawn: "thread", thr_cancel: "thread" };
 
 class 尾调用 {
   constructor(decl, args, fromEffects) { this.decl = decl; this.args = args; this.fromEffects = fromEffects; }
