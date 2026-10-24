@@ -69,12 +69,19 @@ console.log("五、字节码产物：在，而且不比源旧");
   // 这一条把那个静默的回退变成一句会红的话：改完 self/run.hmyr 忘了重新生成，
   // 桥不会说谎，只是悄悄变慢，而套件该替人记住这件事。
   const 字节路 = path.join(ROOT, "runtime/run.hmyrb");
-  const 源路 = path.join(ROOT, "self/run.hmyr");
+  const 目录 = path.join(ROOT, "self");
   const 在 = fs.existsSync(字节路);
   ok("runtime/run.hmyrb 在", 在);
   if (在) {
-    const 新 = fs.statSync(字节路).mtimeMs >= fs.statSync(源路).mtimeMs;
-    ok("它不比 self/run.hmyr 旧", 新, "旧了就重新生成：node tools/emit-code.mjs self/run.hmyr runtime/run.hmyrb");
+    // 比的是 self/ 下最新的那一份 .hmyr，不只 run.hmyr —— 产物里含着它 import 的全部代码。
+    let 最新 = 0;
+    for (const 名 of fs.readdirSync(目录)) {
+      if (!名.endsWith(".hmyr")) continue;
+      const t = fs.statSync(path.join(目录, 名)).mtimeMs;
+      if (t > 最新) 最新 = t;
+    }
+    const 新 = fs.statSync(字节路).mtimeMs >= 最新;
+    ok("它不比 self/ 下任何 .hmyr 旧", 新, "旧了就重新生成：node tools/emit-code.mjs self/run.hmyr runtime/run.hmyrb");
   }
 }
 

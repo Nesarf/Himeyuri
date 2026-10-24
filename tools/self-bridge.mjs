@@ -24,11 +24,25 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 源路 = path.join(ROOT, "self/run.hmyr");
 const 字节路 = path.join(ROOT, "runtime/run.hmyrb");
 
+// 字节码是不是还新鲜：比的是 self/ 下所有 .hmyr 里最新的那个，而不是只看 run.hmyr。
+// 这条是被咬出来的：改了 chain.hmyr 而 run.hmyr 没动，产物里含着 chain 的代码，
+// 却因为「源没变」被判成新鲜 —— 于是桥拿一份旧字节码跑得很欢。
+function 源最新时间() {
+  let 新 = 0;
+  const 目录 = path.join(ROOT, "self");
+  for (const 名 of fs.readdirSync(目录)) {
+    if (!名.endsWith(".hmyr")) continue;
+    const t = fs.statSync(path.join(目录, 名)).mtimeMs;
+    if (t > 新) 新 = t;
+  }
+  return 新;
+}
+
 let 引导 = null;
 function 取引导() {
   if (引导) return 引导;
-  const 有字节 = fs.existsSync(字节路) && fs.existsSync(源路) &&
-    fs.statSync(字节路).mtimeMs >= fs.statSync(源路).mtimeMs;
+  const 最新 = 源最新时间();
+  const 有字节 = fs.existsSync(字节路) && 最新 > 0 && fs.statSync(字节路).mtimeMs >= 最新;
   if (有字节) {
     // 深度：尾调用之后 tokenize 那条不再吃栈，四千层对「造一棵树」绰绰有余；
     // 再高会撞 JS 栈（这台机器上 12000 就撞过）。

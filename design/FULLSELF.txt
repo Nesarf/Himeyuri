@@ -458,3 +458,22 @@ self-if、self-stmt、self-assign、self-compare、self-agree。它们是「把 
 
 一件该记住的事：改名的代价不只在自举那十套里，还在每一个「把形状钉住」的测试里。今天量到的是
 九个；明天还可能有别的 —— 所以这个量具同时也在当一张回归网。
+第二十二件（2026-10-24）：把 adapter 也算进来 —— 改名漏网的最后一批。
+
+src/adapter.mjs 是「宿主源码 → self 形状」的那一层，它还在产小写 kind（let、bin、err …），
+于是 self 的求值器一吃就报「不认这种语句：let」。把它一并改过来之后：
+
+    adapter              15 项全过
+    adapter-functions    全过
+    adapter-statements   全过
+    self-agree           全过
+
+再加上前一轮修好的六个，改名波及的那十二个测试全部回绿。
+
+顺带改了桥的新鲜度检查。原来只看 self/run.hmyr 的修改时间，而 runtime/run.hmyrb 里含着
+它 import 的全部代码 —— 改了 chain.hmyr 而 run.hmyr 没动时，产物被判成「新鲜」，桥于是
+拿一份旧字节码跑得很欢。现在比的是 self/ 下所有 .hmyr 里最新的那一个，selfbridge 里那条
+断言也照这个口径写。
+
+这一批的教训只有一句：改名这种「一处动、处处看」的改动，靠「我跑了哪些套件」是不够的，
+得靠一个「把所有依赖它的东西都跑一遍」的量具。loader-swap 就是那个量具。

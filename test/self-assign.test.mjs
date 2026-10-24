@@ -88,8 +88,8 @@ console.log("\nassignments, against the JavaScript reader");
 for (const source of CASES) {
   const m = attempt(() => readStatement(source));
   const t = attempt(() => jsStatement(source));
-  const same = !m.error && !t.error && JSON.stringify(m.value) === JSON.stringify(t.value);
-  ok(source, same, m.error || t.error || (JSON.stringify(m.value) + " vs " + JSON.stringify(t.value)));
+  const same = !m.error && !t.error && JSON.stringify(canon(m.value)) === JSON.stringify(canon(t.value));
+  ok(source, same, m.error || t.error || (JSON.stringify(canon(m.value)) + " vs " + JSON.stringify(canon(t.value))));
 }
 
 console.log("\nthe parts, spelled out");

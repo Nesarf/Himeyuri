@@ -88,8 +88,8 @@ console.log("\ncomparison, against the JavaScript parser");
 for (const source of CASES) {
   const m = attempt(() => mine(source));
   const t = attempt(() => theirs(source));
-  const same = !m.error && !t.error && JSON.stringify(m.value) === JSON.stringify(t.value);
-  ok(source, same, m.error || t.error || (JSON.stringify(m.value) + " vs " + JSON.stringify(t.value)));
+  const same = !m.error && !t.error && JSON.stringify(canon(m.value)) === JSON.stringify(canon(t.value));
+  ok(source, same, m.error || t.error || (JSON.stringify(canon(m.value)) + " vs " + JSON.stringify(canon(t.value))));
 }
 
 console.log("\nprecedence, spelled out");

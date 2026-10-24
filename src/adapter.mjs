@@ -20,49 +20,49 @@ import { parse } from "./parser.mjs";
 // 一个字面量转成自举认的那两种之一。
 const 字面量 = (节点) => {
   if (节点.type === "int" || typeof 节点.value === "number") {
-    return { kind: "int", text: String(节点.raw !== undefined ? 节点.raw : 节点.value) };
+    return { kind: "Literal", type: "int", text: String(节点.raw !== undefined ? 节点.raw : 节点.value) };
   }
   // 宿主用的类型名是 "string"，而自举认的是 "str" —— 这个译名差一点就让「字符串」
   // 变成一句「转不了」。而它说出了原因，于是那处错立刻可见，而不是静默地算错。
-  if (节点.type === "str" || 节点.type === "string") return { kind: "str", text: String(节点.value) };
-  return { kind: "err", text: "这一版只转整数与字符串字面量，而这里是 " + String(节点.type) };
+  if (节点.type === "str" || 节点.type === "string") return { kind: "Literal", type: "string", text: String(节点.value) };
+  return { kind: "Error", text: "这一版只转整数与字符串字面量，而这里是 " + String(节点.type) };
 };
 
 const 转 = (节点) => {
-  if (!节点 || typeof 节点 !== "object") return { kind: "err", text: "空节点" };
+  if (!节点 || typeof 节点 !== "object") return { kind: "Error", text: "空节点" };
 
   switch (节点.kind) {
     case "Literal":
       return 字面量(节点);
 
     case "Ident":
-      return { kind: "name", text: String(节点.name) };
+      return { kind: "Ident", text: String(节点.name) };
 
     case "Binary":
-      return { kind: "bin", op: String(节点.op), left: 转(节点.left), right: 转(节点.right) };
+      return { kind: "Binary", op: String(节点.op), left: 转(节点.left), right: 转(节点.right) };
 
     case "Unary":
-      return { kind: "unary", op: String(节点.op), operand: 转(节点.operand) };
+      return { kind: "Unary", op: String(节点.op), operand: 转(节点.operand) };
 
     case "Call":
-      return { kind: "call", callee: 转(节点.callee), args: (节点.args || []).map(转) };
+      return { kind: "Call", callee: 转(节点.callee), args: (节点.args || []).map(转) };
 
     case "Index":
-      return { kind: "index", target: 转(节点.target), index: 转(节点.index) };
+      return { kind: "Index", target: 转(节点.target), index: 转(节点.index) };
 
     case "Field":
-      return { kind: "field", target: 转(节点.target), name: String(节点.name) };
+      return { kind: "Field", target: 转(节点.target), name: String(节点.name) };
 
     case "Tuple":
-      return { kind: "tuple", items: (节点.items || []).map(转) };
+      return { kind: "Tuple", items: (节点.items || []).map(转) };
 
     case "Record":
       // 记录在宿主里是 { fields: [{name, value}] }，而自举认的是同样的形状。
-      return { kind: "record", fields: (节点.fields || []).map((f) => ({ name: String(f.name), value: 转(f.value) })) };
+      return { kind: "Record", fields: (节点.fields || []).map((f) => ({ name: String(f.name), value: 转(f.value) })) };
 
     default:
       // 语句与别的种类：如实说不转，而不是硬塞一个形状进去。
-      return { kind: "err", text: "这一版不转 " + String(节点.kind) };
+      return { kind: "Error", text: "这一版不转 " + String(节点.kind) };
   }
 };
 
@@ -79,7 +79,7 @@ export const expression = (源码) => {
     return null;
   };
   const 目 = 找(语句);
-  if (!目) return { kind: "err", text: "这份源码里没有可转的 return 表达式" };
+  if (!目) return { kind: "Error", text: "这份源码里没有可转的 return 表达式" };
   return 转(目);
 };
 
@@ -106,15 +106,15 @@ const 块 = (节点) => {
 };
 
 const 语句 = (节点) => {
-  if (!节点 || typeof 节点 !== "object") return { kind: "err", text: "空语句" };
+  if (!节点 || typeof 节点 !== "object") return { kind: "Error", text: "空语句" };
 
   switch (节点.kind) {
     case "Let":
     case "Var":
-      return { kind: 节点.kind === "Var" ? "var" : "let", name: String(节点.name), value: 转(节点.value) };
+      return { kind: 节点.kind === "Var" ? "Var" : "Let", name: String(节点.name), value: 转(节点.value) };
 
     case "Assign":
-      return { kind: "assign", name: String(节点.name), value: 转(节点.value) };
+      return { kind: "Assign", name: String(节点.name), value: 转(节点.value) };
 
     case "ExprStmt":
       // 宿主把 if 解成了表达式语句——于是这里的 expr 可能就是 If。
@@ -123,34 +123,34 @@ const 语句 = (节点) => {
       //
       // 这个差别不是错，是两种理解；而把它在这里说清，比在求值时才炸开好。
       if (节点.expr && (节点.expr.kind === "If" || 节点.expr.kind === "While")) return 语句(节点.expr);
-      return { kind: "expr", value: 转(节点.expr) };
+      return { kind: "ExprStmt", value: 转(节点.expr) };
 
     case "Return":
       // 无值的 return 在自举那边是 {kind:"nil"} 而不是 null——
       // 一个空的元组是值，而「没有值」不是一个值。那条规矩在那边守着，于是这里也守。
-      return { kind: "return", value: 节点.value ? 转(节点.value) : { kind: "nil" } };
+      return { kind: "Return", value: 节点.value ? 转(节点.value) : { kind: "nil" } };
 
     case "If":
       // 宿主的字段叫 condition 而不是 cond，而 otherwise 又恰好同名——
       // 猜对一半的代价是：猜对的那一半不会告诉你猜错的那一半。
-      return { kind: "if", cond: 转(节点.condition), then: 块(节点.then), otherwise: 块(节点.otherwise) };
+      return { kind: "If", cond: 转(节点.condition), then: 块(节点.then), otherwise: 块(节点.otherwise) };
 
     case "While":
       // 与 If 一样，条件在 condition 里（而 If 我一开始猜成 cond，踩过一次）。
       // 体在 body 里，是 Block；而 If 那边叫 then。
-      return { kind: "while", cond: 转(节点.condition), body: 块(节点.body) };
+      return { kind: "While", cond: 转(节点.condition), body: 块(节点.body) };
 
     case "Block":
       // 裸的块：它的语句就是这一条「语句」，于是上面用 块() 展开它。
-      return { kind: "err", text: "裸块不该单独出现" };
+      return { kind: "Error", text: "裸块不该单独出现" };
 
     case "DeclStmt":
     case "Fn":
       // 函数声明要一张函数表，而那是另一件事。说清，而不是塞一个假形状进去。
-      return { kind: "err", text: "函数声明不在这一层：那要一张函数表" };
+      return { kind: "Error", text: "函数声明不在这一层：那要一张函数表" };
 
     default:
-      return { kind: "err", text: "这一版不转这种语句：" + String(节点.kind) };
+      return { kind: "Error", text: "这一版不转这种语句：" + String(节点.kind) };
   }
 };
 

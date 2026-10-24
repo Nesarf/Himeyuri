@@ -29,7 +29,7 @@ const 自举 = runUnit(自举层);
 // 并且在失败时把失败也当成一个答案（而不是当成一个数）。
 const 它的 = (源) => {
   const 树 = expression(源);
-  if (树.kind === "err") return { err: 树.text };
+  if (树.kind === "Error") return { err: 树.text };
   const 回 = 自举.callFunction(自举.functions.get("求值"), [树, []], null);
   if (回 && 回.ok === false) return { err: 回.reason || "自举那边报错", value: null };
   return { value: 回 && Object.prototype.hasOwnProperty.call(回, "value") ? 回.value : 回 };
@@ -76,17 +76,17 @@ console.log("二、运算符的优先级在两边一致");
 console.log("三、转不了的东西说清为什么");
 {
   const 树 = expression(例("变([1, 2])"));
-  ok("未知的节点交出 err", 树.kind === "err" || 树.kind === "call", JSON.stringify(树).slice(0, 80));
+  ok("未知的节点交出 err", 树.kind === "Error" || 树.kind === "Call", JSON.stringify(树).slice(0, 80));
   const 语句 = expression("fn main() -> Int {\n  let x = 1\n  return x\n}\n");
   // return x 里的 x 是个名字，而这一版不建环境——它转得出形状，算不出来
-  ok("名字转得出形状", 语句.kind === "name", JSON.stringify(语句));
+  ok("名字转得出形状", 语句.kind === "Ident", JSON.stringify(语句));
 }
 
 console.log("四、这一层只做表达式，而它说得出这句话");
 {
   const 树 = expression("fn main() -> Int {\n  while 1 < 2 { }\n  return 1\n}\n");
   // while 是语句，而 return 1 里没有可转的表达式以外的麻烦——于是这里能得到 int
-  ok("它不会被语句绊住（只取 return 的表达式）", 树.kind === "int" || 树.kind === "err", JSON.stringify(树).slice(0, 60));
+  ok("它不会被语句绊住（只取 return 的表达式）", 树.kind === "Literal" || 树.kind === "Error", JSON.stringify(树).slice(0, 60));
 }
 
 console.log("");
