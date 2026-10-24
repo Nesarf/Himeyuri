@@ -510,3 +510,26 @@ json、color-report）。二十一个全部回绿。
 
 二十一个测试、几次提交、两处误改。这就是一次改名的真实账单 —— 而收账的工具是 loader-swap：
 它不问你「跑了哪些套件」，只把每一个 import 了宿主 loader 的套件都换成桥跑一遍。
+第二十五件（2026-10-24）：换 loader 的量具走到 83 / 95，剩余 11 个全部归类。
+
+tools/loader-swap.mjs 把每个 import 宿主 loader 的套件换成桥跑一遍。数字的来路：
+
+    60 / 95   第一次干净测量（order 与计数修好之后）
+    61 / 95   order 用真实路径
+    74 / 95   语句边界认圆括号（collect 的 paren 深度）
+    83 / 95   词法不再截断 0x1_0（read_based 收下划线）
+
+余下 11 个，四类：
+
+    对照本身，不该换    selfmod · selfbridge
+                        它们比的就是宿主 loader 与 HMYR 加载链
+    数字过期            selfcompile · bootstrap · bytecode
+                        走桥时统计的是另一棵树，固定数字跟不上
+    插桩与深度          stage0eval · minimaleval
+                        前者替换 Runtime.prototype.evalExpr，后者比两条求值路径的深度
+    诊断与形状缺口      modules · selfchain   桥不产生 W0302（重名 helper 的警告）
+                        returntypes · hmyrpack 自举解析层不收返回类型，
+                        于是静态核对拿不到 returns，字节码也多出两个字节
+
+最后一条是这一类里唯一还没修的根：parse_decls 只收名字、参数、语句、效果、行列 ——
+返回类型从来没进过这棵树。它不是桥的错，是自举解析层的边界，而桥只是把它显形了。
