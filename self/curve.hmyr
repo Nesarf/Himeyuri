@@ -7,6 +7,7 @@
 // 公式取自「dbl-2008-hwcd」与「add-2008-hwcd-3」这两套（a = -1 的那一支），
 // 也就是 RFC 8032 与多数实现用的那两条。
 import "./bigint.hmyr"
+import "./sha512.hmyr"
 
 fn d_常量() {
   return 从十六进制("52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3")
@@ -208,6 +209,67 @@ fn 解压(字节们: Int) effects(process) {
   return (x, y, 一(), 模乘(x, y))
 }
 
+// ---- 验签：S*B = R + H(R || A || M) * A ----
+
+// 曲线阶 L = 2^252 + 27742317777372353535851937790883648493。
+fn 阶L() {
+  return 从十六进制("1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed")
+}
+
+// 模 L：减到比 L 小为止。256 位 / 252 位最多十六次减法，便宜。
+fn 模L(a: Int) {
+  var 出 = 抄(a)
+  while 比(出, 阶L()) >= 0 {
+    出 = 减(出, 阶L())
+  }
+  return 出
+}
+
+// 任意长字节串模 L：从最高字节往下，每一步「乘 256 加一字节，再模 L」。
+// Ed25519 的 k 是 SHA-512 的**整个六十四字节**取模 L —— 第一版只取了前 32 字节，
+// 于是每一条合法的签名都被判成不通过。
+fn 模L长(字节们: Int) {
+  var 出 = 零组(16)
+  var i = len(字节们) - 1
+  while i >= 0 {
+    var 进 = to_int(字节们[i])
+    var j = 0
+    while j < 16 {
+      let 和 = 出[j] * 256 + 进
+      设(出, j, 和 % 65536)
+      进 = (和 - 和 % 65536) / 65536
+      j = j + 1
+    }
+    出 = 模L(出)
+    i = i - 1
+  }
+  return 出
+}
+
+// 取一个字节元组的前 n 个。
+fn 前几(字节们: Int, n: Int) {
+  var 出 = ()
+  var i = 0
+  while i < n && i < len(字节们) {
+    出 = 出 + (字节们[i],)
+    i = i + 1
+  }
+  return 出
+}
+
+// 验签：公钥 32 字节、R 32 字节、S 32 字节、消息字节。
+fn 验签(公钥们: Int, R们: Int, S们: Int, 消息: Int) effects(process) {
+  let A = 解压(公钥们)
+  let R点 = 解压(R们)
+  let 哈 = sha512字节(前几(R们, 32) + 前几(公钥们, 32) + 消息)
+  let k = 模L长(哈)
+  let S数 = 从字节们(前几(S们, 32))
+  if 比(S数, 阶L()) >= 0 { return false }
+  let 左 = 转仿射(标量乘(基点(), S数))
+  let 右 = 转仿射(点加(R点, 标量乘(A, k)))
+  return 比(左[0], 右[0]) == 0 && 比(左[1], 右[1]) == 0
+}
+
 // 探针：给一个标量（十六进制），交回「标量乘基点」的仿射 x 与 y；
 // 给 --解压 加 32 字节十六进制，交回解出来的点的 x 与 y。
 fn main() -> Int effects(process) {
@@ -216,6 +278,22 @@ fn main() -> Int effects(process) {
     print("用法：hmyr self/curve.hmyr <标量十六进制>" + chr(10))
     print("      hmyr self/curve.hmyr --解压 <32 字节十六进制>" + chr(10))
     return 2
+  }
+  if 参[1] == "--验" {
+    if len(参) < 5 {
+      print("要三个十六进制串：公钥、签名（R 与 S 各 32 字节）、消息" + chr(10))
+      return 2
+    }
+    let 公钥们 = 解base64十六进制(参[2])
+    let 签 = 解base64十六进制(参[3])
+    let 消 = 解base64十六进制(参[4])
+    let 好 = 验签(公钥们, 前几(签, 32), 前几(从第(签, 32), 32), 消)
+    if 好 {
+      print("通过" + chr(10))
+    } else {
+      print("不通过" + chr(10))
+    }
+    return 0
   }
   if 参[1] == "--解压" {
     if len(参) < 3 {
@@ -232,6 +310,17 @@ fn main() -> Int effects(process) {
   print(成十六进制(点[0]) + chr(10))
   print(成十六进制(点[1]) + chr(10))
   return 0
+}
+
+// 从第 n 个字节开始取到末尾。
+fn 从第(字节们: Int, n: Int) {
+  var 出 = ()
+  var i = n
+  while i < len(字节们) {
+    出 = 出 + (字节们[i],)
+    i = i + 1
+  }
+  return 出
 }
 
 // 十六进制串 → 字节元组（大端写法，两字符一字节）。
