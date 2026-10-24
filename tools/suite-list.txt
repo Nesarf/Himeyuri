@@ -128,6 +128,7 @@ sha256	test/sha256.test.mjs
 verifyhmyr	test/verify-hmyr.test.mjs
 readdir	test/readdir.test.mjs
 isdir	test/isdir.test.mjs
+packagehmyr	test/package-hmyr.test.mjs
 manifesthmyr	test/manifest-hmyr.test.mjs
 manifest	test/manifest.test.mjs
 helper	test/helper.test.mjs

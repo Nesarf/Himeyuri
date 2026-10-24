@@ -141,6 +141,7 @@ const SUITES = [
   ["verifyhmyr", "test/verify-hmyr.test.mjs", "SPEC M7 - a manifest is verified in Himeyuri: every entry's hash, and the entry main is not stolen by the imported self-test"],
   ["readdir", "test/readdir.test.mjs", "SPEC 2.2 - read_dir: names come back sorted, a Chinese name crosses the encoding, and three implementations agree"],
   ["isdir", "test/isdir.test.mjs", "SPEC 2.2 - is_dir: a directory, a file, a Chinese-named directory and a missing path, answered the same by all three"],
+  ["packagehmyr", "test/package-hmyr.test.mjs", "SPEC M7 - a package built in Himeyuri: EOCD, central directory and every member read back by offset, byte for byte against the source"],
   ["manifesthmyr", "test/manifest-hmyr.test.mjs", "SPEC M7 - the manifest built by Himeyuri: valid JSON, a digest that matches the standard indentation, and a loop closed by its own verifier"],
   ["manifest", "test/manifest.test.mjs", "SPEC M7 - the distribution manifest: everything it lists actually exists, and the minimal set is exactly fifteen"],
   ["helper", "test/helper.test.mjs", "SPEC M7 - the assistant: a code explains itself, a word searches the meanings, and a miss still hands back the list"],
