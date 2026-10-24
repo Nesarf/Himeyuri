@@ -1,0 +1,149 @@
+// Ed25519 的曲线运算：twisted Edwards 曲线 -x^2 + y^2 = 1 + d x^2 y^2。
+//
+// 用扩展坐标 (X, Y, Z, T)，其中 x = X/Z、y = Y/Z、T = XY/Z。
+// 为什么不用仿射：仿射一次点加要两次求逆（各 0.3 秒），而一次标量乘有 255 次倍点 ——
+// 那就是几分钟。扩展坐标里点加与倍点都只有乘与加减，求逆只在最后转回仿射时做一次。
+//
+// 公式取自「dbl-2008-hwcd」与「add-2008-hwcd-3」这两套（a = -1 的那一支），
+// 也就是 RFC 8032 与多数实现用的那两条。
+import "./bigint.hmyr"
+
+fn d_常量() {
+  return 从十六进制("52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3")
+}
+
+// k = 2d，点加公式里的常数。
+fn 二d() {
+  let d = d_常量()
+  return 模加(d, d)
+}
+
+fn 基点() {
+  let x = 从十六进制("216936d3cd6e53fec0a4e231fdd6dc5c692cc7609525a7b2c9562d608f25d51a")
+  let y = 从十六进制("6666666666666666666666666666666666666666666666666666666666666658")
+  // Z = 1，所以 T = x*y/Z = x*y。T 不是另算的常数，它是从 x 与 y 推出来的。
+  return (x, y, 一(), 模乘(x, y))
+}
+
+fn 单位元() {
+  return (零组(16), 一(), 一(), 零组(16))
+}
+
+fn 抄(a: Int) {
+  let 组 = 零组(16)
+  var i = 0
+  while i < 16 {
+    设(组, i, a[i])
+    i = i + 1
+  }
+  return 组
+}
+
+fn 规约(a: Int) {
+  var 出 = 抄(a)
+  while 出[15] >= 32768 {
+    设(出, 15, 出[15] - 32768)
+    var 进 = 19
+    var j = 0
+    while 进 > 0 && j < 16 {
+      let 和 = 出[j] + 进
+      设(出, j, 和 % 65536)
+      进 = (和 - 和 % 65536) / 65536
+      j = j + 1
+    }
+  }
+  if 比(出, 模数()) >= 0 { 出 = 减(出, 模数()) }
+  return 出
+}
+
+fn 模加(a: Int, b: Int) {
+  let 组 = 零组(16)
+  var 进 = 0
+  var i = 0
+  while i < 16 {
+    let 和 = a[i] + b[i] + 进
+    设(组, i, 和 % 65536)
+    进 = (和 - 和 % 65536) / 65536
+    i = i + 1
+  }
+  return 规约(组)
+}
+
+fn 模减(a: Int, b: Int) {
+  return 规约(加(加(a, 模数()), 减(零组(16), b)))
+}
+
+// 倍点（dbl-2008-hwcd，a = -1）。
+fn 倍点(p: Int) {
+  let X1 = p[0]
+  let Y1 = p[1]
+  let Z1 = p[2]
+  let A = 模乘(X1, X1)
+  let B = 模乘(Y1, Y1)
+  let C = 模乘(模加(Z1, Z1), Z1)
+  // D = a*A，而 a = -1，所以 D = -A。
+  let D = 模减(零组(16), A)
+  let E = 模减(模减(模乘(模加(X1, Y1), 模加(X1, Y1)), A), B)
+  let G = 模加(D, B)
+  let F = 模减(G, C)
+  let H = 模减(D, B)
+  return (模乘(E, F), 模乘(G, H), 模乘(F, G), 模乘(E, H))
+}
+
+// 点加（add-2008-hwcd-3）：常数是 2d。
+fn 点加(p1: Int, p2: Int) {
+  let X1 = p1[0]
+  let Y1 = p1[1]
+  let Z1 = p1[2]
+  let T1 = p1[3]
+  let X2 = p2[0]
+  let Y2 = p2[1]
+  let Z2 = p2[2]
+  let T2 = p2[3]
+  let A = 模乘(模减(Y1, X1), 模减(Y2, X2))
+  let B = 模乘(模加(Y1, X1), 模加(Y2, X2))
+  let C = 模乘(模乘(T1, 二d()), T2)
+  let D = 模乘(模乘(Z1, 模加(Z2, Z2)), Z2)
+  let E = 模减(B, A)
+  let F = 模减(D, C)
+  let G = 模加(D, C)
+  let H = 模加(B, A)
+  return (模乘(E, F), 模乘(G, H), 模乘(F, G), 模乘(E, H))
+}
+
+fn 倍点三次(p: Int) {
+  return 倍点(倍点(倍点(p)))
+}
+
+// 标量乘：从最高位往下，每步倍点，该位是一就再加一次。
+fn 标量乘(点: Int, 标: Int) {
+  var 出 = 单位元()
+  var 位 = 254
+  while 位 >= 0 {
+    出 = 倍点(出)
+    if 取位(标, 位) == 1 {
+      出 = 点加(出, 点)
+    }
+    位 = 位 - 1
+  }
+  return 出
+}
+
+// 扩展坐标 → 仿射：x = X/Z、y = Y/Z。只在这里求一次逆。
+fn 转仿射(p: Int) {
+  let 逆 = 求逆(p[2])
+  return (模乘(p[0], 逆), 模乘(p[1], 逆))
+}
+
+// 探针：给一个标量（十六进制），交回「标量乘基点」的仿射 x 与 y。
+fn main() -> Int effects(process) {
+  let 参 = argv()
+  if len(参) < 2 {
+    print("用法：hmyr self/curve.hmyr <标量十六进制>" + chr(10))
+    return 2
+  }
+  let 点 = 转仿射(标量乘(基点(), 从十六进制(参[1])))
+  print(成十六进制(点[0]) + chr(10))
+  print(成十六进制(点[1]) + chr(10))
+  return 0
+}

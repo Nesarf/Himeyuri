@@ -132,6 +132,7 @@ packagehmyr	test/package-hmyr.test.mjs
 crc	test/crc.test.mjs
 releasehmyr	test/release-hmyr.test.mjs
 bigint	test/bigint.test.mjs
+curve	test/curve.test.mjs
 manifesthmyr	test/manifest-hmyr.test.mjs
 manifest	test/manifest.test.mjs
 helper	test/helper.test.mjs
