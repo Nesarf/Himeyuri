@@ -34,9 +34,9 @@ console.log("复合值：数组是元组，对象是键值对的元组");
 console.log("空白与错处");
 {
   ok("前后空白不影响结果", probe("  { " + String.fromCharCode(34) + "k" + String.fromCharCode(34) + " : " + String.fromCharCode(34) + "v" + String.fromCharCode(34) + " }  ").value.kind === "o");
-  ok("写坏的文档给 err，不猜", probe("{").value.kind === "Error", JSON.stringify(probe("{").value));
-  ok("不认识的字符给 err", probe("@").value.kind === "Error");
-  ok("数组没有闭合给 err", probe("[1, 2").value.kind === "Error");
+  ok("写坏的文档给 err，不猜", probe("{").value.kind === "err", JSON.stringify(probe("{").value));
+  ok("不认识的字符给 err", probe("@").value.kind === "err");
+  ok("数组没有闭合给 err", probe("[1, 2").value.kind === "err");
 }
 console.log("拿一份真报告来读：颜色桥写过的那种形状");
 {

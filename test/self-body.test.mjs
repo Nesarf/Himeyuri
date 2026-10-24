@@ -56,7 +56,7 @@ const readBody = (source) => {
 function jsShape(node) {
   if (!node) return [];
   if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
-  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", text: node.raw };
+  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", type: "int", text: node.raw };
   if (node.kind === "Ident") return { kind: "Ident", text: node.name };
   return { kind: "other:" + node.kind };
 }

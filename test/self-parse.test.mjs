@@ -51,7 +51,7 @@ ok("it parses", loaded.ok, loaded.ok ? "" : loaded.errors.join("; "));
 function jsShape(node) {
   if (!node) return null;
   if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
-  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", text: node.raw };
+  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", type: "int", text: node.raw };
   if (node.kind === "Ident") return { kind: "Ident", text: node.name };
   if (node.kind === "Unary") return { kind: "Unary", op: node.op, operand: jsShape(node.operand) };
   return { kind: "other:" + node.kind };

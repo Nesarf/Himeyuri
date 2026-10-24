@@ -59,7 +59,7 @@ const parseCall = (name, args) => parseRt.callFunction(parseRt.functions.get(nam
 function jsShape(node) {
   if (!node) return null;
   if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
-  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", text: node.raw };
+  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", type: "int", text: node.raw };
   if (node.kind === "Ident") return { kind: "Ident", text: node.name };
   return { kind: "other:" + node.kind };
 }
@@ -103,7 +103,7 @@ console.log("\nwhat it refuses to guess");
   ok("an empty token stream is refused, not guessed", !empty.error && empty.value.node.kind === "Error", empty.error || JSON.stringify(empty.value));
 }
 {
-  const unbalanced = attempt(() => call("chain", [[{ kind: "punct", text: "(" }, { kind: "int", text: "1" }]]));
+  const unbalanced = attempt(() => call("chain", [[{ kind: "punct", text: "(", line: 1, column: 1 }, { kind: "int", text: "1", line: 1, column: 2 }]]));
   ok("a missing closing bracket stops at the right place", !unbalanced.error && unbalanced.value.next === 2, unbalanced.error || JSON.stringify(unbalanced.value));
 }
 
