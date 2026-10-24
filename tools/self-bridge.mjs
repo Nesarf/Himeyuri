@@ -124,7 +124,10 @@ export function loadUnit(entry, options = {}) {
   const 路径们 = Array.from(树.路径们 || []);
   Array.from(树.模块们).forEach((m, i) => {
     const 原 = 路径们[i] || (相对 + "#" + i);
-    const 键 = String(原).startsWith("./") ? String(原).slice(2) : String(原);
+    // 加载器用的是 /（HMYR 里没有反斜杠），而调用方拿 path.join / path.resolve 得到的是本机形式。
+    // order 与 modules 的键都用本机形式，这样 indexOf(path.join(...)) 才找得到。
+    let 键 = String(原).startsWith("./") ? String(原).slice(2) : String(原);
+    键 = 键.split("/").join(path.sep);
     modules.set(键, m);
     order.push(键);
   });
@@ -142,6 +145,20 @@ export function loadUnit(entry, options = {}) {
         });
       } else {
         声明过.set(d.name, 键);
+      }
+    }
+  }
+  // 非路径的 import：加载器跳过它（那是包管理器的事），但那句话要说出来 —— 宿主用的是 W0301。
+  for (const 键 of order) {
+    for (const imp of Array.from(modules.get(键).imports || [])) {
+      const p = String((imp && imp.path) || "");
+      if (!p) continue;
+      const 算路径 = p.startsWith("./") || p.startsWith("../") || /^[A-Za-z]:[\\/]/.test(p) || path.isAbsolute(p);
+      if (!算路径) {
+        诊断.items.push({
+          code: "HMYR-W0301",
+          message: "import of '" + p + "' is not a path; the package manager will own that",
+        });
       }
     }
   }
