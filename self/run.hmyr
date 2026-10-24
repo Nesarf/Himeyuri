@@ -103,6 +103,58 @@ fn 只解析(源码: String) -> String {
   return "ok 1"
 }
 
+// ---- 只做「加载」：把宿主 loader 的三条承诺在这里也对齐 ----
+//
+// 宿主 loader 的文件头写着三件事：import 真的加载本地文件、同一个文件只加载一次、
+// 循环引用被拒（HMYR-E0301）。这里一条一条照做，另外补上「引的文件不在就报错」
+// （宿主是 HMYR-E0302，不是跳过 —— 跳过是启动器对可选引用的另一件事）。
+//
+// 顺序取**后序**：先读完它的依赖，再把自己记进来。宿主 visit 里 push 的位置就在
+// 递归之后，所以两边的 order 逐项相同 —— 这件事可量，量具是 tools/self-load.mjs。
+fn 加载走(目录: String, 相对: String, 栈: Int, 已载: Int) effects(file) {
+  let 路 = 拼路径(目录, 相对)
+  if 含路(已载, 路, 0) { return {已载: 已载, 错: ""} }
+  if 含路(栈, 路, 0) { return {已载: 已载, 错: "E0301 " + 路} }
+  if file_exists(路) == false { return {已载: 已载, 错: "E0302 " + 路} }
+  let 源码 = read_text(路, "utf8")
+  let 子 = 加载多(目录部分(路), 找导入们(源码), 0, 栈 + (路,), 已载)
+  var 已 = 子.已载
+  var 错 = 子.错
+  if 错 == "" {
+    let 形状 = 只解析(源码)
+    if len(形状) < 2 || slice(形状, 0, 2) != "ok" { 错 = "E0100 " + 路 }
+  }
+  if 错 == "" { 已 = 已 + (路,) }
+  return {已载: 已, 错: 错}
+}
+
+fn 加载多(目录: String, 路们: Int, i: Int, 栈: Int, 已载: Int) effects(file) {
+  if i >= len(路们) { return {已载: 已载, 错: ""} }
+  let r = 加载走(目录, 路们[i], 栈, 已载)
+  if r.错 != "" { return {已载: r.已载, 错: r.错} }
+  return 加载多(目录, 路们, i + 1, 栈, r.已载)
+}
+
+// 给一个入口（相对当前目录），交回 "ok <文件数>" 或 "错 <码> <路径>"。
+fn 只加载(入口: String) -> String effects(file) {
+  let r = 加载走(".", 入口, (), ())
+  if r.错 != "" { return "错 " + r.错 }
+  return "ok " + str(len(r.已载))
+}
+
+// 加载顺序，一行一个（相对当前目录的写法）。量具靠它逐项比宿主 loader 的 order。
+fn 加载序(入口: String) -> String effects(file) {
+  let r = 加载走(".", 入口, (), ())
+  if r.错 != "" { return "错 " + r.错 }
+  var 出 = ""
+  var i = 0
+  while i < len(r.已载) {
+    出 = 出 + r.已载[i] + chr(10)
+    i = i + 1
+  }
+  return 出
+}
+
 // 按名字挑一个函数；没有就叫第一个（调试单个函数时方便）。
 fn 选函数从(们: Int, 名: String, i: Int) {
   if i >= len(们) { return () }

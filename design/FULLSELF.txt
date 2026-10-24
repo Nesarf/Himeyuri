@@ -92,6 +92,27 @@ test/*.mjs 那 14850 行不计入，因为验收是验收，不是产品的一�
 把诊断装成宿主 loader 那个形状」。所以第一段还差一件事：把 self/ 的加载链包成一个与
 src/loader.mjs 同形状的东西。那件事做完，这个数才量得出来。
 
+第三件（2026-10-24）：模块加载的**语义**也量了。self/run.hmyr 的 加载走 照宿主 loader
+文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 E0301；
+另外引的文件不在就报 E0302（宿主也是这个码）。顺序取后序，于是 order 逐项相同。
+
+判据是两件事：四棵真实 import 树（sign、release、package、verify）的 order 逐项一致；
+以及两个构造出来的场景 —— 缺一个 import、两个文件互相 import —— 两边报同一个码。
+量具 tools/self-load.mjs，挂进 check-all 叫 selfmod（约二十八秒）。
+
+于是「加载」这一层有两半都对齐了：认不认得（selfload，27 / 27），以及按什么规矩加载
+（selfmod，order 与错误码）。还差的一半是**树的形状**：
+宿主 loader 交出的 ast 是 subset-parse 那一套（Module、Import、Fn、Block、Literal …，
+带 line 与 column），而 self/chain.hmyr 交出的节点是另一套（num、str、name、bin、call、
+field、index、tuple、record、unary —— 小写单字、不带位置、也没有声明与语句层）。
+两套名字不同、字段不同、层次也不同。
+
+所以「换掉 src/loader.mjs」真正的门槛在 ast，不在加载逻辑：要么让 self 那边产出
+subset-parse 的形状，要么让宿主这一侧接受两种形状。在那之前，「多少套能换」这个数
+只能算到「只用 loadUnit 的 ok」为止 —— 而验收里的套件几乎没有这样用的，它们都要
+runUnit，也就都要树。这一段的工作量比上面两件加起来大，且它是一个形状问题，
+不是一批 bug。
+
 六、这条路线不算欠账的部分
 --------------------------------------------------------------------
 
