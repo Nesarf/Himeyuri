@@ -9,6 +9,23 @@ import { lex } from "../src/lexer.mjs";
 import { parse } from "../src/parser.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const canon = (v) => {
+  if (Array.isArray(v)) return v.map(canon);
+  if (v && typeof v === "object") {
+    if (v.kind === "Ident") return { kind: "Ident", name: v.name !== undefined ? v.name : v.text };
+    if (v.kind === "Literal") {
+      const 原 = v.value !== undefined ? v.value : (v.text !== undefined ? v.text : v.raw);
+      return { kind: "Literal", type: v.type, value: v.type === "int" ? Number(原) : 原 };
+    }
+    const o = {};
+    for (const key of Object.keys(v)) {
+      if (key === "line" || key === "column" || key === "raw" || key === "text") continue;
+      o[key] = canon(v[key]);
+    }
+    return o;
+  }
+  return v;
+};
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
@@ -33,10 +50,10 @@ ok("it parses", loaded.ok, loaded.ok ? "" : loaded.errors.join("; "));
 /** The JavaScript tree, reduced to the three shapes the small parser knows. */
 function jsShape(node) {
   if (!node) return null;
-  if (node.kind === "Binary") return { kind: "bin", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
-  if (node.kind === "Literal" && node.type === "int") return { kind: "num", text: node.raw };
-  if (node.kind === "Ident") return { kind: "name", text: node.name };
-  if (node.kind === "Unary") return { kind: "unary", op: node.op, operand: jsShape(node.operand) };
+  if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
+  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", text: node.raw };
+  if (node.kind === "Ident") return { kind: "Ident", text: node.name };
+  if (node.kind === "Unary") return { kind: "Unary", op: node.op, operand: jsShape(node.operand) };
   return { kind: "other:" + node.kind };
 }
 
@@ -78,11 +95,11 @@ for (const source of CASES) {
 console.log("\nprecedence and association, spelled out");
 {
   const tree = myShape("1 + 2 * 3").node;
-  ok("multiplication binds tighter", tree.kind === "bin" && tree.op === "+" && tree.right.op === "*");
+  ok("multiplication binds tighter", tree.kind === "Binary" && tree.op === "+" && tree.right.op === "*");
 }
 {
   const tree = myShape("a - b - c").node;
-  ok("subtraction is left-associative", tree.kind === "bin" && tree.op === "-" && tree.left.op === "-" && tree.left.left.kind === "name" && tree.left.left.text === "a");
+  ok("subtraction is left-associative", tree.kind === "Binary" && tree.op === "-" && tree.left.op === "-" && tree.left.left.kind === "Ident" && tree.left.left.text === "a");
 }
 {
   const tree = myShape("(1 + 2) * 3").node;
@@ -90,7 +107,7 @@ console.log("\nprecedence and association, spelled out");
 }
 {
   const tree = myShape("((7))").node;
-  ok("redundant brackets leave the shape alone", tree.kind === "num" && tree.text === "7");
+  ok("redundant brackets leave the shape alone", tree.kind === "Literal" && tree.text === "7");
 }
 
 console.log("\nthe depth is arranged, not lucky");
@@ -99,7 +116,7 @@ console.log("\nthe depth is arranged, not lucky");
   // additions - is a matter of the tail loops, not of nesting.
   const long = Array.from({ length: 200 }, (_, i) => String(i)).join(" + ");
   const mine = myShape(long);
-  ok("two hundred additions in one expression parse", mine && mine.node.kind === "bin", mine ? mine.node.kind : "none");
+  ok("two hundred additions in one expression parse", mine && mine.node.kind === "Binary", mine ? mine.node.kind : "none");
   let theirs = null;
   try { theirs = jsExpr(long).node; } catch (e) { theirs = { error: String(e.message) }; }
   ok("and the shape matches the JavaScript one", JSON.stringify(mine.node) === JSON.stringify(theirs), JSON.stringify(theirs).slice(0, 80));
@@ -107,13 +124,13 @@ console.log("\nthe depth is arranged, not lucky");
 {
   const deep = "(".repeat(60) + "1" + ")".repeat(60);
   const mine = myShape(deep);
-  ok("sixty nested brackets parse", mine && mine.node.kind === "num" && mine.node.text === "1", mine ? JSON.stringify(mine.node).slice(0, 60) : "none");
+  ok("sixty nested brackets parse", mine && mine.node.kind === "Literal" && mine.node.text === "1", mine ? JSON.stringify(mine.node).slice(0, 60) : "none");
 }
 
 console.log("\nwhat it does not do, said out loud");
 {
   const tree = myShape("-1").node;
-  ok("a unary minus is not understood yet, and is reported as such", tree.kind === "err", JSON.stringify(tree));
+  ok("a unary minus is not understood yet, and is reported as such", tree.kind === "Error", JSON.stringify(tree));
 }
 {
   const mine = myShape("1 + 2");

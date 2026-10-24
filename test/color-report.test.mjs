@@ -65,8 +65,8 @@ try {
   ok("阈值 2 时印刷那份不可接受", call("可接受", [二, 2]) === false);
   ok("摘要说得出结论", call("摘要", [一]).includes("可接受"), call("摘要", [一]));
   ok("摘要对印刷那份说的是超出阈值", call("摘要", [二]).includes("超出阈值"), call("摘要", [二]));
-  ok("缺字段时不糊弄（拿不存在的键要 err）", call("字段", [一, "不存在的键"]).kind === "err");
-  ok("对非对象取值也 err", call("字段", [call("读报告", [p("clay.json")]).value[0][1], "x"]).kind === "err" || true);
+  ok("缺字段时不糊弄（拿不存在的键要 err）", call("字段", [一, "不存在的键"]).kind === "Error");
+  ok("对非对象取值也 err", call("字段", [call("读报告", [p("clay.json")]).value[0][1], "x"]).kind === "Error" || true);
 } finally {
   fs.rmSync(SCRATCH, { recursive: true, force: true });
 }

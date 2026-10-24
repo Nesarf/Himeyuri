@@ -11,6 +11,23 @@ import { parse } from "../src/parser.mjs";
 import { loadUnit, runUnit } from "../src/loader.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const canon = (v) => {
+  if (Array.isArray(v)) return v.map(canon);
+  if (v && typeof v === "object") {
+    if (v.kind === "Ident") return { kind: "Ident", name: v.name !== undefined ? v.name : v.text };
+    if (v.kind === "Literal") {
+      const 原 = v.value !== undefined ? v.value : (v.text !== undefined ? v.text : v.raw);
+      return { kind: "Literal", type: v.type, value: v.type === "int" ? Number(原) : 原 };
+    }
+    const o = {};
+    for (const key of Object.keys(v)) {
+      if (key === "line" || key === "column" || key === "raw" || key === "text") continue;
+      o[key] = canon(v[key]);
+    }
+    return o;
+  }
+  return v;
+};
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
@@ -38,9 +55,9 @@ const readBody = (source) => {
 /** The JavaScript statement, reduced to the shapes the Himeyuri reader produces. */
 function jsShape(node) {
   if (!node) return [];
-  if (node.kind === "Binary") return { kind: "bin", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
-  if (node.kind === "Literal" && node.type === "int") return { kind: "num", text: node.raw };
-  if (node.kind === "Ident") return { kind: "name", text: node.name };
+  if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
+  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", text: node.raw };
+  if (node.kind === "Ident") return { kind: "Ident", text: node.name };
   return { kind: "other:" + node.kind };
 }
 function jsBody(source) {
@@ -50,11 +67,11 @@ function jsBody(source) {
   const body = ast.decls[0].body;
   if (!body) return [];
   return body.statements.map((s) => {
-    if (s.kind === "Let") return { kind: "let", name: s.name, value: jsShape(s.value) };
-    if (s.kind === "Var") return { kind: "var", name: s.name, value: jsShape(s.value) };
+    if (s.kind === "Let") return { kind: "Let", name: s.name, value: jsShape(s.value) };
+    if (s.kind === "Var") return { kind: "Var", name: s.name, value: jsShape(s.value) };
     // 无值的 return 用 nil 节点（与自举那一侧一致）。
-    if (s.kind === "Return") return { kind: "return", value: s.value ? jsShape(s.value) : { kind: "nil" } };
-    if (s.kind === "ExprStmt") return { kind: "expr", value: jsShape(s.expr) };
+    if (s.kind === "Return") return { kind: "Return", value: s.value ? jsShape(s.value) : { kind: "nil" } };
+    if (s.kind === "ExprStmt") return { kind: "ExprStmt", value: jsShape(s.expr) };
     return { kind: "other:" + s.kind };
   });
 }
@@ -81,28 +98,28 @@ console.log("\nwhat it still cannot read, said plainly");
   // 这些不是脚手架的毛病，而是链的子集边界：self/chain.hmyr 眼下只认 + - * / % 与括号。
   // 每一条都把“当前会读成什么”写下来，于是补链的时候有对照。
   const assign = readBody("fn f() {\n  var n = 7\n  n = n + 1\n  return n\n}\n");
-  ok("an assignment now comes through as an assignment", assign.list.length === 3 && assign.list[1].kind === "assign" && assign.list[1].name === "n",
+  ok("an assignment now comes through as an assignment", assign.list.length === 3 && assign.list[1].kind === "Assign" && assign.list[1].name === "n",
     JSON.stringify(assign.list));
 
   const record = readBody("fn f() {\n  let r = {name: \"x\", gain: -3}\n  return r\n}\n");
-  ok("a record now comes through as a record", record.list[0].value.kind === "record" && record.list[0].value.fields.length === 2, JSON.stringify(record.list[0]));
+  ok("a record now comes through as a record", record.list[0].value.kind === "Record" && record.list[0].value.fields.length === 2, JSON.stringify(record.list[0]));
 
   const tuple = readBody("fn f() {\n  let t = (10, 20)\n  return t\n}\n");
-  ok("a tuple now comes through as a tuple", tuple.list[0].value.kind === "tuple" && tuple.list[0].value.items.length === 2, JSON.stringify(tuple.list[0]));
+  ok("a tuple now comes through as a tuple", tuple.list[0].value.kind === "Tuple" && tuple.list[0].value.items.length === 2, JSON.stringify(tuple.list[0]));
 
   const call = readBody("fn f() {\n  print(t[1])\n}\n");
-  ok("a call now comes through as a call whose argument is a subscript", call.list[0].value.kind === "call" && call.list[0].value.args[0].kind === "index", JSON.stringify(call.list[0]));
+  ok("a call now comes through as a call whose argument is a subscript", call.list[0].value.kind === "Call" && call.list[0].value.args[0].kind === "Index", JSON.stringify(call.list[0]));
 
   const branch = readBody("fn f() {\n  if a { return 1 }\n  return 2\n}\n");
-  ok("if now comes through as an if", branch.list[0].kind === "if" && branch.list[0].then.length === 1, JSON.stringify(branch.list[0]));
+  ok("if now comes through as an if", branch.list[0].kind === "If" && branch.list[0].then.length === 1, JSON.stringify(branch.list[0]));
 }
 
 console.log("\nthe parts of a body");
 {
   const body = readBody("fn f() {\n  let x = 1\n  return x\n}\n");
   ok("two statements come out", body.list.length === 2, JSON.stringify(body.list));
-  ok("the first is a binding with its name", body.list[0].kind === "let" && body.list[0].name === "x");
-  ok("the second is a return carrying the name", body.list[1].kind === "return" && body.list[1].value.kind === "name");
+  ok("the first is a binding with its name", body.list[0].kind === "Let" && body.list[0].name === "x");
+  ok("the second is a return carrying the name", body.list[1].kind === "Return" && body.list[1].value.kind === "Ident");
   ok("and the body is marked as found", body.found === true);
 }
 {

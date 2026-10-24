@@ -39,8 +39,8 @@ console.log("一、解析层认 while");
   const tokens = 词法.callFunction(词法.functions.get("scan_lines"), [源], null);
   const 一 = 语法.callFunction(语法.functions.get("parse_statement"), [tokens], null);
   ok("parse_statement 交回一个节点", 一 && 一.node, JSON.stringify(一).slice(0, 100));
-  ok("种类是 while", 一 && 一.node.kind === "while", JSON.stringify(一 && 一.node && 一.node.kind));
-  ok("带条件", 一 && 一.node.cond && 一.node.cond.kind === "bin", JSON.stringify(一 && 一.node && 一.node.cond).slice(0, 80));
+  ok("种类是 while", 一 && 一.node.kind === "While", JSON.stringify(一 && 一.node && 一.node.kind));
+  ok("带条件", 一 && 一.node.cond && 一.node.cond.kind === "Binary", JSON.stringify(一 && 一.node && 一.node.cond).slice(0, 80));
   ok("带体，而体里有一条语句", 一 && Array.isArray(一.node.body) && 一.node.body.length === 1, JSON.stringify(一 && 一.node && 一.node.body).slice(0, 80));
 }
 

@@ -12,6 +12,23 @@ import { parse } from "../src/parser.mjs";
 import { loadUnit, runUnit } from "../src/loader.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const canon = (v) => {
+  if (Array.isArray(v)) return v.map(canon);
+  if (v && typeof v === "object") {
+    if (v.kind === "Ident") return { kind: "Ident", name: v.name !== undefined ? v.name : v.text };
+    if (v.kind === "Literal") {
+      const 原 = v.value !== undefined ? v.value : (v.text !== undefined ? v.text : v.raw);
+      return { kind: "Literal", type: v.type, value: v.type === "int" ? Number(原) : 原 };
+    }
+    const o = {};
+    for (const key of Object.keys(v)) {
+      if (key === "line" || key === "column" || key === "raw" || key === "text") continue;
+      o[key] = canon(v[key]);
+    }
+    return o;
+  }
+  return v;
+};
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
@@ -41,9 +58,9 @@ const parseCall = (name, args) => parseRt.callFunction(parseRt.functions.get(nam
 /** The JavaScript tree, reduced to the shapes the small pieces produce. */
 function jsShape(node) {
   if (!node) return null;
-  if (node.kind === "Binary") return { kind: "bin", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
-  if (node.kind === "Literal" && node.type === "int") return { kind: "num", text: node.raw };
-  if (node.kind === "Ident") return { kind: "name", text: node.name };
+  if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
+  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", text: node.raw };
+  if (node.kind === "Ident") return { kind: "Ident", text: node.name };
   return { kind: "other:" + node.kind };
 }
 function jsExpr(source) {
@@ -83,7 +100,7 @@ console.log("\nthe token shape the parser relies on");
 console.log("\nwhat it refuses to guess");
 {
   const empty = attempt(() => call("chain", [[]]));
-  ok("an empty token stream is refused, not guessed", !empty.error && empty.value.node.kind === "err", empty.error || JSON.stringify(empty.value));
+  ok("an empty token stream is refused, not guessed", !empty.error && empty.value.node.kind === "Error", empty.error || JSON.stringify(empty.value));
 }
 {
   const unbalanced = attempt(() => call("chain", [[{ kind: "punct", text: "(" }, { kind: "int", text: "1" }]]));
