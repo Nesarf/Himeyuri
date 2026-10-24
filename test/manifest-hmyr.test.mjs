@@ -54,6 +54,12 @@ if (!process.env.HMYR_HEAVY) {
     if (对象) {
       ok("四组都在", Array.isArray(对象.standardLibrary) && Array.isArray(对象.suites) &&
         Array.isArray(对象.tools) && Array.isArray(对象.documents), Object.keys(对象).join(","));
+      // kernel 与 commit 两组：前者从源码里数、从文档里抽，后者读 .git。
+      ok("kernel.builtins 是个像样的数", Number(对象.kernel && 对象.kernel.builtins) > 40,
+        String(对象.kernel && 对象.kernel.builtins));
+      ok("kernel.minimalSet 是十五项", Array.isArray(对象.kernel && 对象.kernel.minimalSet) &&
+       对象.kernel.minimalSet.length === 15, String((对象.kernel && 对象.kernel.minimalSet || []).length));
+      ok("commit 是七位短哈希", /^[0-9a-f]{7}$/.test(String(对象.commit || "")), String(对象.commit));
       ok("套件有一百多项", (对象.suites || []).length > 100, String((对象.suites || []).length));
       const 十六 = /^[0-9a-f]{16}$/;
       const 全 = [...(对象.standardLibrary || []), ...(对象.suites || []), ...(对象.tools || []), ...(对象.documents || [])];

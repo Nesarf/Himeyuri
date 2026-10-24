@@ -154,6 +154,151 @@ fn 短路哈希() effects(file) {
   return "unknown"
 }
 
+fn 缩进数(s: String) -> Int {
+  var i = 0
+  while i < len(s) && slice(s, i, i + 1) == " " { i = i + 1 }
+  return i
+}
+
+fn 是名字首(s: String) -> Bool {
+  if len(s) == 0 { return false }
+  let c = ord(slice(s, 0, 1))
+  return c >= 97 && c <= 122 || c == 95
+}
+
+fn 含冒号(s: String) -> Bool { return len(split(s, ":")) > 1 }
+
+fn 含子串(s: String, 片: String) -> Bool {
+  if len(片) > len(s) { return false }
+  var i = 0
+  while i + len(片) <= len(s) {
+    if slice(s, i, i + len(片)) == 片 { return true }
+    i = i + 1
+  }
+  return false
+}
+
+fn 行号含(s: String, 片: String) -> Int {
+  let 行们 = split(s, chr(10))
+  var i = 0
+  while i < len(行们) {
+    if 含子串(行们[i], 片) { return i }
+    i = i + 1
+  }
+  return 0 - 1
+}
+
+// 从 src/eval.mjs 里数 BUILTINS 块里的键：块从「const BUILTINS = {」开始，
+// 到缩进为零的 } 结束；块里每个两空格缩进、以名字首字符开头、带冒号的行算一个键。
+// 这不是解析器，是一处「够用的括号配对」——数出来的是声明，不是求值。
+fn 内置数() effects(file) {
+  let 行们 = split(read_text("src/eval.mjs"), chr(10))
+  var 在内 = false
+  var n = 0
+  var i = 0
+  while i < len(行们) {
+    let 行 = 行们[i]
+    if 在内 {
+      if 以头(行, "}") {
+        在内 = false
+      } else {
+        let 净 = 去头空(行)
+        // 缩进必须恰好两格：函数体里那些四格缩进的行也带冒号（三元表达式的冒号），
+        // 只判「含冒号」会把它们一起数进去 —— 复刻一遍就能看见 120 对 66。
+        if 缩进数(行) == 2 && 是名字首(净) && 含冒号(净) { n = n + 1 }
+      }
+    } else {
+      if 以头(行, "const BUILTINS = {") { 在内 = true }
+    }
+    i = i + 1
+  }
+  return n
+}
+
+// 一行里所有 [a-z0-9_] 的词。
+fn 抽标识符(行: String) {
+  var 出 = ()
+  var 词 = ""
+  var i = 0
+  while i < len(行) {
+    let c = ord(slice(行, i, i + 1))
+    if (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c == 95 {
+      词 = 词 + slice(行, i, i + 1)
+    } else {
+      if len(词) > 0 {
+        出 = 出 + (词,)
+        词 = ""
+      }
+    }
+    i = i + 1
+  }
+  if len(词) > 0 { 出 = 出 + (词,) }
+  return 出
+}
+
+fn 已在(集: Int, 词: String) -> Bool {
+  var i = 0
+  while i < len(集) {
+    if 集[i] == 词 { return true }
+    i = i + 1
+  }
+  return false
+}
+
+// 插入排序：十五项的规模，写它比想「要不要建一个更聪明的」便宜。
+fn 排好(集: Int) {
+  var 出 = ()
+  var i = 0
+  while i < len(集) {
+    var 位 = len(出)
+    var k = 0
+    while k < len(出) {
+      if 集[i] < 出[k] {
+        位 = k
+        k = len(出)
+      } else {
+        k = k + 1
+      }
+    }
+    var 新 = ()
+    var j = 0
+    while j < len(出) + 1 {
+      if j == 位 { 新 = 新 + (集[i],) } else if j < 位 { 新 = 新 + (出[j],) } else { 新 = 新 + (出[j - 1],) }
+      j = j + 1
+    }
+    出 = 新
+    i = i + 1
+  }
+  return 出
+}
+
+// design/RUNTIME.txt 里「最小的内置集」那一节：从它那行往下，到「小库该有什么」为止，
+// 四个空格缩进的行里所有标识符（去掉 file / process / thread 三个效果名）。
+fn 最小集() effects(file) {
+  let 文 = read_text("design/RUNTIME.txt")
+  let 行们 = split(文, chr(10))
+  let 起 = 行号含(文, "最小的内置集")
+  if 起 < 0 { return () }
+  var 集 = ()
+  var i = 起
+  while i < len(行们) {
+    let 行 = 行们[i]
+    if 含子串(行, "小库该有什么") { i = len(行们) } else if 以头(行, "    ") {
+      let 词们 = 抽标识符(行)
+      var k = 0
+      while k < len(词们) {
+        let 词 = 词们[k]
+        if 词 != "file" && 词 != "process" && 词 != "thread" {
+          if 已在(集, 词) == false { 集 = 集 + (词,) }
+        }
+        k = k + 1
+      }
+    }
+    i = i + 1
+  }
+  return 排好(集)
+}
+
 fn 造库项(路: String) effects(file) {
   let 文 = read_text(路)
   let 哈 = 前16(sha256(read_bytes(路)))
@@ -210,7 +355,41 @@ fn 主(出路: String) effects(file, process) {
     h = h + 1
   }
 
-  // 一、标准库：runtime/ 顶层的 .hmyr
+  // kernel 那一组。minimalSet 展开成多行 —— 与 JSON.stringify(x, null, 2) 的字节
+  // 保持一致，因为 digest 的可复算性就建立在这个「同样一份字节」上。
+  let rk0 = 推(块们, 块, 块行数, "  \"kernel\": {")
+  块们 = rk0.块们
+  块 = rk0.块
+  块行数 = rk0.行数
+  let rk1 = 推(块们, 块, 块行数, "    \"builtins\": " + str(内置数()) + ",")
+  块们 = rk1.块们
+  块 = rk1.块
+  块行数 = rk1.行数
+  let rk2 = 推(块们, 块, 块行数, "    \"minimalSet\": [")
+  块们 = rk2.块们
+  块 = rk2.块
+  块行数 = rk2.行数
+  let 集 = 最小集()
+  var 集序 = 0
+  while 集序 < len(集) {
+    var 集行 = "      \"" + 集[集序] + "\""
+    if 集序 < len(集) - 1 { 集行 = 集行 + "," }
+    let r = 推(块们, 块, 块行数, 集行)
+    块们 = r.块们
+    块 = r.块
+    块行数 = r.行数
+    集序 = 集序 + 1
+  }
+  let rk3 = 推(块们, 块, 块行数, "    ]")
+  块们 = rk3.块们
+  块 = rk3.块
+  块行数 = rk3.行数
+  let rk4 = 推(块们, 块, 块行数, "  },")
+  块们 = rk4.块们
+  块 = rk4.块
+  块行数 = rk4.行数
+
+  // 一、标准库：runtime/ 递归（ucd 里还有一个 .hmyr）
   let r1 = 推(块们, 块, 块行数, "  \"standardLibrary\": [")
   块们 = r1.块们
   块 = r1.块
