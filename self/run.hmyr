@@ -111,6 +111,16 @@ fn 只解析(源码: String) -> String {
 //
 // 顺序取**后序**：先读完它的依赖，再把自己记进来。宿主 visit 里 push 的位置就在
 // 递归之后，所以两边的 order 逐项相同 —— 这件事可量，量具是 tools/self-load.mjs。
+// 这一条 import 是不是一个「路径」：宿主那边只有 ./、../、盘符与绝对路径才算文件，
+// 其余的（例如 import "某个包"）留给包管理器，记一笔 W0301 就过去了，不算缺文件。
+fn 是路径(s: String) -> Bool {
+  if len(s) >= 2 && slice(s, 0, 2) == "./" { return true }
+  if len(s) >= 3 && slice(s, 0, 3) == "../" { return true }
+  if len(s) >= 2 && slice(s, 1, 2) == ":" { return true }
+  if len(s) >= 1 && slice(s, 0, 1) == "/" { return true }
+  return false
+}
+
 fn 加载走(目录: String, 相对: String, 栈: Int, 已载: Int) effects(file) {
   let 路 = 拼路径(目录, 相对)
   if 含路(已载, 路, 0) { return {已载: 已载, 错: ""} }
@@ -130,6 +140,8 @@ fn 加载走(目录: String, 相对: String, 栈: Int, 已载: Int) effects(file
 
 fn 加载多(目录: String, 路们: Int, i: Int, 栈: Int, 已载: Int) effects(file) {
   if i >= len(路们) { return {已载: 已载, 错: ""} }
+  // 非路径的 import 不是文件，跳过 —— 报 E0302 会把「包」当成「缺文件」。
+  if 是路径(路们[i]) == false { return 加载多(目录, 路们, i + 1, 栈, 已载) }
   let r = 加载走(目录, 路们[i], 栈, 已载)
   if r.错 != "" { return {已载: r.已载, 错: r.错} }
   return 加载多(目录, 路们, i + 1, 栈, r.已载)
