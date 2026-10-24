@@ -10,9 +10,13 @@
 // 实测：design/ 的 28 个文件（269128 字节）打成 272262 字节的包，
 // Expand-Archive 解得开、28 个一个不少、抽查 ARRAY.txt 的 SHA-256 与原件相同。
 //
-// 边界：整棵仓库会撞步数上限。runtime/ucd/ 里躺着几 MB 的语料，而瓶颈是
-// 逐成员的 CRC32 与「块们 = 块们 + (...)」这个元组累加（几百个成员就是平方级）。
-// 两样都能修，属于下一版；第二参数「只收哪一个目录」就是为验结构留的。
+// 压缩（--压，方法 8）：只对小文件开，阈值 8192 字节，写在 zip.hmyr 的 成员 里。
+// 实测 examples/ 的 7 个文件：不压 4298 字节，压了 3411 字节，0.8 秒。
+// 但整份 design（269 KB）会撞 C 那台二十亿步的上限 —— 固定压 的常数太大。
+// 所以这个开关在，发布流程里暂时不开它。
+//
+// 边界：整棵仓库的收集也一样会撞限，因为 runtime/ucd/ 里躺着几 MB 的语料。
+// 第二参数「只收哪一个目录」就是为验结构留的。
 import "./zip.hmyr"
 import "./manifest.hmyr"
 
@@ -28,7 +32,7 @@ fn 收一件(路们: Int, 目录: String, 名们: Int) {
 
 // 名字要带自己的前缀：合并程序是「先到者赢」，而 manifest.hmyr 里也有一个 主。
 // 撞名不会报错 —— 只会安静地跑成另一个工具。这一条与 zip.hmyr 文件头那句同源。
-fn 打包(包路: String, 只收: String) effects(file, process) {
+fn 打包(包路: String, 只收: String, 要压: Bool) effects(file, process) {
   // 要收的目录。默认这两层；给了第三个参数就只收那一个 —— 后者用来验结构，
   // 因为整棵仓库的规模下，CRC32 与「成员累加」会把步数上限撞掉（这一版还没优化）。
   var 目录们 = ("design", "runtime")
@@ -52,7 +56,7 @@ fn 打包(包路: String, 只收: String) effects(file, process) {
   var 总原始 = 0
   var k = 0
   while k < len(路们) {
-    let 一 = 成员(路们[k], 正规名(路们[k]), false, 偏移)
+    let 一 = 成员(路们[k], 正规名(路们[k]), 要压, 偏移)
     块们 = 块们 + (一.块,)
     心们 = 心们 + (一.中心,)
     偏移 = 偏移 + len(一.块)
@@ -73,6 +77,12 @@ fn main() -> Int effects(file, process) {
     print("用法：hmyr self/package.hmyr <包.zip>" + chr(10))
     return 2
   }
-  if len(参) > 2 { return 打包(参[1], 参[2]) }
-  return 打包(参[1], "")
+  var 要压 = false
+  var i = 0
+  while i < len(参) {
+    if 参[i] == "--压" { 要压 = true }
+    i = i + 1
+  }
+  if len(参) > 2 && 参[2] != "--压" { return 打包(参[1], 参[2], 要压) }
+  return 打包(参[1], "", 要压)
 }
