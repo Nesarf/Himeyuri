@@ -664,6 +664,8 @@ fn 求值(节点: Int, 环境: Int) -> Int {
     // 这两个词是语言的关键字，不可能是用户起的名字，所以先认它们没有歧义。
     if 节点.text == "true" { return 好(1 == 1) }
     if 节点.text == "false" { return 好(1 == 2) }
+    // nil 同理：宿主把那两个字当关键字，自举这一层得自己认回来。
+    if 节点.text == "nil" { return 好(()) }
     let r = 查找(环境, 节点.text)
     if r.found == false { return 坏("没有这个名字：" + 节点.text) }
     return 好(r.value)

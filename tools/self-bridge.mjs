@@ -85,7 +85,11 @@ export function 引导走法() {
 
 export function loadUnit(entry, options = {}) {
   const 诊断 = 新诊断();
-  const 相对 = path.relative(ROOT, path.resolve(entry)).split("\\").join("/");
+  // 仓库下的文件用相对路径（与 order 的说法一致）；仓库外的用绝对路径 ——
+  // 测试常把临时文件交进来，那些不在 ROOT 下，转成 ../ 反而让加载器读不到。
+  const 绝对 = path.resolve(entry);
+  const 可能相对 = path.relative(ROOT, 绝对).split("\\").join("/");
+  const 相对 = (可能相对.startsWith("..") || path.isAbsolute(可能相对)) ? 绝对.split(path.sep).join("/") : 可能相对;
   let 树 = null;
   try {
     树 = 深转(取引导().调("造整棵", [相对]));
