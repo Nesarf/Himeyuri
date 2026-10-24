@@ -232,6 +232,45 @@ fn 模乘(a: Int, b: Int) {
   return 模约简(乘(a, b))
 }
 
+fn 一() {
+  let 组 = 零组(16)
+  设(组, 0, 1)
+  return 组
+}
+
+// 取第 n 位（0 是最低位）。n 从 0 数到 254。
+fn 取位(a: Int, n: Int) -> Int {
+  let 字 = (n - n % 16) / 16
+  var 倍 = 1
+  var i = 0
+  while i < n % 16 {
+    倍 = 倍 * 2
+    i = i + 1
+  }
+  let v = a[字]
+  // 先整除掉低 位 个位，再看奇偶 —— 少了最后那个模二，取出来的就不是「位」而是「剩下的数」。
+  return ((v - v % 倍) / 倍) % 2
+}
+
+// 模幂：255 位的指数，从最高位往下「平方、必要时再乘」。
+// 这是求逆的全部内容 —— 费马小定理说 a 的 p 减一次方等于一，于是 p 减二次方就是逆。
+fn 模幂(底: Int, 指: Int) {
+  var 出 = 一()
+  var 位 = 254
+  while 位 >= 0 {
+    出 = 模乘(出, 出)
+    if 取位(指, 位) == 1 {
+      出 = 模乘(出, 底)
+    }
+    位 = 位 - 1
+  }
+  return 出
+}
+
+fn 求逆(a: Int) {
+  return 模幂(a, 减(模数(), 从数(2)))
+}
+
 fn 半字节(n: Int) -> String {
   return slice("0123456789abcdef", n, n + 1)
 }
@@ -311,6 +350,7 @@ fn main() -> Int effects(process) {
   print(成十六进制(高半(积)) + chr(10))
   print(str(比(a, b)) + chr(10))
   print(成十六进制(模乘(a, b)) + chr(10))
+  print(成十六进制(求逆(a)) + chr(10))
   return 0
 }
 
