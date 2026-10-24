@@ -25,10 +25,13 @@ import { parse } from "./parser.mjs";
 // 为什么要它：一层函数调用在宿主那边要过好几帧栈，于是递归只能到九百多层。
 // 而尾递归（f(n, acc) = f(n-1, ...) 这种）本来不需要保留任何东西——
 // 于是那种形状可以跑到任意深，而不必换掉整个求值器。
-class TailCall extends Error {
+// 这里故意不继承 Error：尾调用是被当作控制流用的，一秒能发生几十万次，
+// 而 new Error 的代价几乎全在抓栈上（实测 codeseval 那一套 148 秒里有 104 秒
+// 花在这个构造函数里）。instanceof 判断照旧有效，栈本来也没人看。
+class TailCall {
   // 带着抛出处的效果集：效果检查是「被调者不能比调用者多」，
   // 而换函数之后「调用者」就变了——那个集合必须跟着换，否则尾调用会变成一条绕过检查的路。
-  constructor(decl, args, fromEffects) { super("tail"); this.decl = decl; this.args = args; this.fromEffects = fromEffects; }
+  constructor(decl, args, fromEffects) { this.decl = decl; this.args = args; this.fromEffects = fromEffects; }
 }
 
 class Return extends Error { constructor(value) { super("return"); this.value = value; } }
