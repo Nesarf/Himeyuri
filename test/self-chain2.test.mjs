@@ -82,9 +82,9 @@ for (const source of EXPRESSIONS) {
   const viaString = attempt(() => parseCall("parse", [source]).node);
   const viaJs = attempt(() => jsExpr(source));
 
-  ok("tokens -> tree: " + source, !viaString.error && JSON.stringify(viaChain.value) === JSON.stringify(viaString.value),
+  ok("tokens -> tree: " + source, !viaString.error && JSON.stringify(canon(viaChain.value)) === JSON.stringify(canon(viaString.value)),
     viaString.error || (JSON.stringify(viaChain.value) + " vs " + JSON.stringify(viaString.value)));
-  ok("tokens -> tree matches JavaScript: " + source, !viaJs.error && JSON.stringify(viaChain.value) === JSON.stringify(viaJs.value),
+  ok("tokens -> tree matches JavaScript: " + source, !viaJs.error && JSON.stringify(canon(viaChain.value)) === JSON.stringify(canon(viaJs.value)),
     viaJs.error || (JSON.stringify(viaChain.value) + " vs " + JSON.stringify(viaJs.value)));
 }
 

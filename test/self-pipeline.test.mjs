@@ -104,7 +104,7 @@ for (const line of LINES) {
     JSON.stringify(mine.leaves) === JSON.stringify(leafTexts(theirs.shape)),
     JSON.stringify(mine.leaves) + " vs " + JSON.stringify(leafTexts(theirs.shape)));
   ok("same shape as the JavaScript tree: " + mine.expression,
-    JSON.stringify(call("parse", [mine.expression]).node) === JSON.stringify(theirs.shape),
+    JSON.stringify(canon(call("parse", [mine.expression]).node)) === JSON.stringify(canon(theirs.shape)),
     JSON.stringify(call("parse", [mine.expression]).node) + " vs " + JSON.stringify(theirs.shape));
 }
 

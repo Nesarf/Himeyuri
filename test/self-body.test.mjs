@@ -88,7 +88,7 @@ console.log("\nbody by body, against the JavaScript reader");
 for (const source of BODIES) {
   const mine = attempt(() => readBody(source));
   const theirs = attempt(() => jsBody(source));
-  const same = !mine.error && !theirs.error && JSON.stringify(mine.value.list) === JSON.stringify(theirs.value);
+  const same = !mine.error && !theirs.error && JSON.stringify(canon(mine.value.list)) === JSON.stringify(canon(theirs.value));
   ok(source.split("\n")[0] + " (" + (theirs.value ? theirs.value.length : "-") + " statement(s))", same,
     mine.error || theirs.error || (JSON.stringify(mine.value.list) + " vs " + JSON.stringify(theirs.value)));
 }

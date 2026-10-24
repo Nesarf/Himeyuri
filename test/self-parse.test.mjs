@@ -88,7 +88,7 @@ console.log("\nit agrees with the JavaScript parser, shape by shape");
 for (const source of CASES) {
   const mine = myShape(source);
   const theirs = jsExpr(source);
-  const same = JSON.stringify(mine.node) === JSON.stringify(theirs.node);
+  const same = JSON.stringify(canon(mine.node)) === JSON.stringify(canon(theirs.node));
   ok(source, same, same ? "" : JSON.stringify(mine.node) + " vs " + JSON.stringify(theirs.node));
 }
 
@@ -119,7 +119,7 @@ console.log("\nthe depth is arranged, not lucky");
   ok("two hundred additions in one expression parse", mine && mine.node.kind === "Binary", mine ? mine.node.kind : "none");
   let theirs = null;
   try { theirs = jsExpr(long).node; } catch (e) { theirs = { error: String(e.message) }; }
-  ok("and the shape matches the JavaScript one", JSON.stringify(mine.node) === JSON.stringify(theirs), JSON.stringify(theirs).slice(0, 80));
+  ok("and the shape matches the JavaScript one", JSON.stringify(canon(mine.node)) === JSON.stringify(canon(theirs)), JSON.stringify(theirs).slice(0, 80));
 }
 {
   const deep = "(".repeat(60) + "1" + ")".repeat(60);
