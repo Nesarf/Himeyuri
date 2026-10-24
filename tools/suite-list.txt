@@ -139,6 +139,7 @@ sign	test/sign.test.mjs
 selfcov	tools/self-coverage.mjs
 selfload	tools/self-loader.mjs
 selfmod	tools/self-load.mjs
+selfpos	tools/self-positions.mjs
 manifesthmyr	test/manifest-hmyr.test.mjs
 manifest	test/manifest.test.mjs
 helper	test/helper.test.mjs

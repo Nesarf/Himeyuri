@@ -208,13 +208,45 @@ fn tokenize(s: String, at: Int, acc: Int, keep_lines: Bool) {
   return tokenize(s, got.next, acc + ({kind: "punct", text: got.text, at: i},), keep_lines)
 }
 
+// 给每个 token 补上行列。token 本来就带着字符偏移（at），所以这一遍只做一次线性扫描：
+// 从上一个 token 的位置走到这一个的位置，遇到换行就翻页。
+//
+// 为什么要位置：诊断要能说「第 3 行第 7 列」，而宿主的解析器（subset-parse）交出的每个
+// 节点都带 line 与 column。self 这一侧以前只有 at，等于只能给字符偏移 —— 那对读的人
+// 没有意义。位置从词法这一层带上，后面的节点才有东西可抄。
+fn 补位置(tokens: Int, 源码: String) {
+  var 出 = ()
+  var 行 = 1
+  var 列 = 1
+  var 看过 = 0
+  var i = 0
+  while i < len(tokens) {
+    let t = tokens[i]
+    let at = to_int(t.at)
+    var 走 = 看过
+    while 走 < at && 走 < len(源码) {
+      if 源码[走] == chr(10) {
+        行 = 行 + 1
+        列 = 1
+      } else {
+        列 = 列 + 1
+      }
+      走 = 走 + 1
+    }
+    看过 = 走
+    出 = 出 + ({kind: t.kind, text: t.text, at: at, line: 行, column: 列},)
+    i = i + 1
+  }
+  return 出
+}
+
 fn scan(text: String) {
-  return tokenize(text, 0, (), false)
+  return 补位置(tokenize(text, 0, (), false), text)
 }
 
 // 保留换行的入口：语句边界由此而来。旧入口保持原样，六处既有对拍不受影响。
 fn scan_lines(text: String) {
-  return tokenize(text, 0, (), true)
+  return 补位置(tokenize(text, 0, (), true), text)
 }
 
 fn main() -> Int {

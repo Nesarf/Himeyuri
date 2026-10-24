@@ -154,6 +154,7 @@ const SUITES = [
   ["selfcov", "tools/self-coverage.mjs", "FULLSELF - the evaluator written in HMYR agrees with the host on fourteen programs"],
   ["selfload", "tools/self-loader.mjs", "FULLSELF - the loading half: the lexer and parser written in HMYR accept the same 27 real files the host loader accepts"],
   ["selfmod", "tools/self-load.mjs", "FULLSELF - module loading semantics: four real import trees give the same order, and a missing import or a cycle is refused with the same code as the host loader"],
+  ["selfpos", "tools/self-positions.mjs", "FULLSELF - the lexer's positions: six samples agree with the host lexer token for token on text, line and column"],
   ["manifesthmyr", "test/manifest-hmyr.test.mjs", "SPEC M7 - the manifest built by Himeyuri: valid JSON, a digest that matches the standard indentation, and a loop closed by its own verifier"],
   ["manifest", "test/manifest.test.mjs", "SPEC M7 - the distribution manifest: everything it lists actually exists, and the minimal set is exactly fifteen"],
   ["helper", "test/helper.test.mjs", "SPEC M7 - the assistant: a code explains itself, a word searches the meanings, and a miss still hands back the list"],
