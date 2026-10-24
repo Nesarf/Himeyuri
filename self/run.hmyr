@@ -80,6 +80,29 @@ fn 跑程序文字(源码: String) -> String {
   return str(r.value)
 }
 
+// 只走「切词 + 搭树」这两步，不求值。
+//
+// 为什么需要它：宿主那边的 loader 也会先做同样两件事，做完才谈得上求值。比「整段程序
+// 跑对了」更早的一层，是「这段源码认得下来」。所以这个入口交回的是形状而不是值：
+// 认得就 "ok <函数个数>"，认不得就 "错：<为什么>"。
+//
+// import 行先剥掉（去导入）：那不是语法的一部分，而是加载器的事；两边都不该因为
+// 「文件里有一行 import」就把树搭歪。
+fn 只解析(源码: String) -> String {
+  let 净 = 去导入(源码)
+  if 行首是声明(净) {
+    let tokens = scan_lines(净)
+    let 全部 = parse_decls(tokens)
+    if len(全部.fns) == 0 { return "错：没有认出任何 fn 声明" }
+    return "ok " + str(len(全部.fns))
+  }
+  let 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
+  let tokens = scan_lines(有壳)
+  let 体 = parse_body(tokens)
+  if 体.found == false { return "错：找不到函数体" }
+  return "ok 1"
+}
+
 // 按名字挑一个函数；没有就叫第一个（调试单个函数时方便）。
 fn 选函数从(们: Int, 名: String, i: Int) {
   if i >= len(们) { return () }

@@ -137,6 +137,7 @@ sha512	test/sha512.test.mjs
 ssh	test/ssh.test.mjs
 sign	test/sign.test.mjs
 selfcov	tools/self-coverage.mjs
+selfload	tools/self-loader.mjs
 manifesthmyr	test/manifest-hmyr.test.mjs
 manifest	test/manifest.test.mjs
 helper	test/helper.test.mjs
