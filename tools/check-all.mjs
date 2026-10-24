@@ -155,6 +155,7 @@ const SUITES = [
   ["selfload", "tools/self-loader.mjs", "FULLSELF - the loading half: the lexer and parser written in HMYR accept the same 27 real files the host loader accepts"],
   ["selfmod", "tools/self-load.mjs", "FULLSELF - module loading semantics: four real import trees give the same order, and a missing import or a cycle is refused with the same code as the host loader"],
   ["selfpos", "tools/self-positions.mjs", "FULLSELF - the lexer's positions: six samples agree with the host lexer token for token on text, line and column"],
+  ["selfbridge", "tools/self-bridge-check.mjs", "FULLSELF - the bridge: loadUnit replaced by HMYR's own loader agrees with the host loader on acceptance, function names, import order and the refusal of a missing file"],
   ["selfnodes", "tools/self-nodes.mjs", "FULLSELF - nodes and declarations: every node the HMYR parser produces sits where the host tree has one, and Module/Fn/Block match the host field for field, in six samples"],
   ["selftree", "tools/self-tree.mjs", "FULLSELF - a lockstep walk: the Module built by HMYR and the host ast are compared node by node over eight samples including imports and literals, and the walk stops at the first mismatch"],
   ["selfhandoff", "tools/self-handoff.mjs", "FULLSELF - the handoff: a Module built by HMYR is handed straight to the host Runtime, registerModule then callFunction with no adapter at all, and five programs produce the expected value"],

@@ -140,6 +140,7 @@ selfcov	tools/self-coverage.mjs
 selfload	tools/self-loader.mjs
 selfmod	tools/self-load.mjs
 selfpos	tools/self-positions.mjs
+selfbridge	tools/self-bridge-check.mjs
 selfnodes	tools/self-nodes.mjs
 selftree	tools/self-tree.mjs
 selfhandoff	tools/self-handoff.mjs
