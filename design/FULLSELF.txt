@@ -493,3 +493,20 @@ tools/loader-swap.mjs 的第一次完整测量：95 个套件 import 了宿主 l
 顺带记一笔失误：提交那批改动时 git add -A 正在跑的 swap/ 目录一起收进了仓库，104 个临时副本。
 已经 git rm --cached，swap/ 也进了 .gitignore。造临时目录的量具，该在第一次跑之前就让它被忽略，
 而不是跑完之后。
+第二十四件（2026-10-24）：第二批清完 —— 改名波及的测试一共二十一个。
+
+前后两批：第一批十二个（chain3、chain4、chain5、eval、if、stmt、assign、compare、agree，
+以及 adapter 那三件），第二批九个（chain2、body、parse、pipeline、sig、stmt-eval、while、
+json、color-report）。二十一个全部回绿。
+
+其中三处值得单独记：
+
+    一、canon 这件事。self 的节点带 line/column，而 JS 侧的归约不带；「形状已经一致」要靠一个
+        剥位置的函数说出来。它一开始只在两三个文件里，后来才铺到全部 —— 铺开之后，红的地方
+        才从「两棵树糊在一起」变成「缺的是 type 这个字段」。
+    二、json 与 color-report 我改错过。它们比的是 JSON 库自己的 err 记录（业务数据），
+        不是 AST 节点。改名扫过整个文件的 kind 时，会把「同名但不同意思」的一起扫掉。
+    三、self-while 最后一条看的是源码文本（种 == "while"），不看值 —— 所以它是最后一个倒下的。
+
+二十一个测试、几次提交、两处误改。这就是一次改名的真实账单 —— 而收账的工具是 loader-swap：
+它不问你「跑了哪些套件」，只把每一个 import 了宿主 loader 的套件都换成桥跑一遍。
