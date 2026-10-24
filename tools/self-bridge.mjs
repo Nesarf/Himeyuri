@@ -109,11 +109,13 @@ export function loadUnit(entry, options = {}) {
     // 那样一来「环」与「桥坏了」就分不出来，而调用方正是靠这个码决定怎么办。
     const 错 = String(树 && 树.错 ? 树.错 : "");
     const m = /^(E\d{4})\s+(.*)$/.exec(错);
-    if (m) {
-      诊断.errors.push({ code: "HMYR-" + m[1], message: 错, file: m[2] });
-    } else {
-      诊断.errors.push({ code: "HMYR-SELF", message: 错 || "造整棵没有交回结果" });
-    }
+    // 宿主的 diagnostics.error() 是两处都放：errors 给「有没有错」，items 给「有哪几条」。
+    // 只写一处的话，读另一处的人就会看到「没有错」。
+    const 条 = m
+      ? { code: "HMYR-" + m[1], message: 错, file: m[2] }
+      : { code: "HMYR-SELF", message: 错 || "造整棵没有交回结果" };
+    诊断.errors.push(条);
+    诊断.items.push(条);
     return { ok: false, order: [], modules: new Map(), diagnostics: 诊断 };
   }
   // order 用真实路径（与宿主 loader 同一个说法）。加载器交回的路径带 "./" 前缀，去掉。
