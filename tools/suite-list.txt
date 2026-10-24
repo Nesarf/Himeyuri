@@ -141,6 +141,7 @@ selfload	tools/self-loader.mjs
 selfmod	tools/self-load.mjs
 selfpos	tools/self-positions.mjs
 selfnodes	tools/self-nodes.mjs
+selftree	tools/self-tree.mjs
 manifesthmyr	test/manifest-hmyr.test.mjs
 manifest	test/manifest.test.mjs
 helper	test/helper.test.mjs

@@ -144,8 +144,20 @@ fn 加载多(目录: String, 路们: Int, i: Int, 栈: Int, 已载: Int) effects
 // 这两个函数只做包装，不动解析：解析仍是 parse_decls 与 parse_body 干的活。
 // 包一层不是为了好看：Module、Fn、Block 是宿主 loader 与 runUnit 认得的那三种东西，
 // 有了它们，换掉 src/loader.mjs 才谈得上。
+// 宿主的语句层把 if 与 while 包成 ExprStmt（它把 if 当表达式，语句层再包一层）。
+// 形状要一致就得跟着包 —— 而这只在包装这一层做，解析与求值两条路一个字都不动。
+fn 转语句们(语句们: Int, i: Int, acc: Int) {
+  if i >= len(语句们) { return acc }
+  let n = 语句们[i]
+  var 出 = n
+  if n.kind == "if" || n.kind == "while" {
+    出 = {kind: "expr", value: n, line: n.line, column: n.column}
+  }
+  return 转语句们(语句们, i + 1, acc + (出,))
+}
+
 fn 包块(语句们: Int, 行: Int) {
-  return {kind: "Block", statements: 语句们, line: 行}
+  return {kind: "Block", statements: 转语句们(语句们, 0, ()), line: 行}
 }
 
 fn 包声明(声明们: Int, i: Int, acc: Int) {
