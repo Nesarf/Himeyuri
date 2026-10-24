@@ -5,3 +5,6 @@ dist/
 *.pfx
 password.txt
 .tmp-*/
+
+# loader-swap 的临时副本：每次跑完它会自己删，但跑到一半时别让 git 收进来
+swap/
