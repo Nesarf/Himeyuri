@@ -100,6 +100,40 @@ console.log("四、点解压：32 字节还原成曲线上的点");
   }
 }
 
+console.log("五、验签：签名方程自己说了算");
+{
+  const 验 = (pub, sig, msg) => {
+    const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/curve.hmyr", "--验", pub, sig, msg], {
+      cwd: ROOT, encoding: "utf8", timeout: 300000,
+      env: { ...process.env, HMYR_STEPS: "20000000000" },
+    });
+    if (r.status !== 0) return { 坏: String(r.stderr || "").slice(0, 140) };
+    const 出 = String(r.stdout || "");
+    return { 通过: 出.indexOf("通过") >= 0 && 出.indexOf("不通过") < 0 };
+  };
+  // 一、RFC 8032 的测试向量 2：消息只有一个字节 0x72。这是外部判据，不是自己跟自己比。
+  const rfc = 验(
+    "3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+    "92a009a9f0d4cab8720e820b5f642540a2b27b5416503f8fb3762223ebdb69da085ac1e43e15996e458f3613d0f11d8c387b2eaeb4302aeeb00d291612bb0c00",
+    "72",
+  );
+  ok("RFC 8032 的向量 2 验得过", rfc.通过 === true, rfc.坏);
+  // 二、现场造的一对密钥签下的一条消息，公钥、签名、消息三样都写死在这里。
+  const 现场 = 验(
+    "dde199fc5366ce6255b8fb126cc362bcdea9e6b0d29065bc2d1b68b2a2ca521f",
+    "5e28c459c9567c6e91dba1e224b650dc160f25c7f4752edfa6613102ef49b0078b01ba31c1fb46a75bcbb6c19a7dca217b8c2ebbce3f683f0fe9ba2ba2f3cb0b",
+    "68696d65797572692d7665726966792d70726f6265",
+  );
+  ok("现场样本验得过", 现场.通过 === true, 现场.坏);
+  // 三、把签名里 S 的一个字节改掉：判据必须说「不通过」，否则前两条通过不算数。
+  const 改坏 = 验(
+    "dde199fc5366ce6255b8fb126cc362bcdea9e6b0d29065bc2d1b68b2a2ca521f",
+    "5e28c459c9567c6e91dba1e224b650dc160f25c7f4752edfa6613102ef49b0078b01ba31c1fb46a7ffcbb6c19a7dca217b8c2ebbce3f683f0fe9ba2ba2f3cb0b",
+    "68696d65797572692d7665726966792d70726f6265",
+  );
+  ok("改一个字节就不通过", 改坏.通过 === false, 改坏.坏);
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
