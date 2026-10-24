@@ -237,3 +237,21 @@ Yunooka 能把它压到多薄，就是这条路线的最终刻度。
 解析用**原始** token 流，只有「行首是不是声明」那一个判断看剥过的文本。
 
 判据：八段样本整棵树逐节点相同（走了 9、11、8、8、16、12、11、7 个节点）。
+第十一件（2026-10-24）：门前的试推。把 造模块 交出的 Module 直接交给宿主的 Runtime：
+registerModule 一次就收（它只读 decls 里的 kind 与 name），callFunction 则在第一句就停 ——
+"cannot execute a statement of kind return"。
+
+差的东西是一层形状适配，清单很短：
+
+    kind 的大小写        let 对 Let、return 对 Return、expr 对 ExprStmt …
+    Literal 的三件套     type/value/raw —— 这一侧只有 text，数字还要解析成值
+    If 的 then/otherwise 要包成 Block（宿主的 execBlock 读 block.statements）
+    Return 的空值       要用 null（这一侧是 nil 节点）
+    params              要从名字变成 {name, fallback}
+
+补上这层适配之后，五段程序（常数、let 与二元、if 分支、while 累加、十六进制）都由宿主的
+求值器跑出正确的值。量具 tools/self-handoff.mjs，挂进 check-all 叫 selfhandoff。
+
+要说明的是：这层适配写在工具里，是验证用的，不是产品代码。它证明的是「两边差一层翻译」，
+而不是「已经换成功了」。真正的换法要么让 self 直接产出宿主那套名字，要么让宿主接受两种形状。
+今天量到的是：翻译的清单就是上面那五条，没有隐蔽的第六类。
