@@ -48,6 +48,17 @@ const 样本 = [
   ["if 与 return", "fn main() -> Int {\n  let a = 5\n  if a > 3 {\n    return 9\n  }\n  return 0\n}\n"],
   ["while", "fn main() -> Int {\n  var i = 0\n  while i < 4 {\n    i = i + 1\n  }\n  return i\n}\n"],
   ["函数调用", "fn add(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  return add(20, 22)\n}\n"],
+  // 下面这批是「语言本身的形状」：字符串、元组、记录、下标、逻辑、一元、嵌套。
+  // 求值器的调用只认内置，所以样本里不放自定义函数调用。
+  ["字符串比较", 'fn main() -> Int {\n  if "ab" == "ab" {\n    return 1\n  }\n  return 0\n}\n'],
+  ["字符串长度", 'fn main() -> Int {\n  return len("abcde")\n}\n'],
+  ["元组与下标", "fn main() -> Int {\n  let t = (10, 20, 30)\n  return t[1]\n}\n"],
+  ["记录字段", "fn main() -> Int {\n  let r = {a: 3, b: 4}\n  return r.a + r.b\n}\n"],
+  ["逻辑短路", "fn main() -> Int {\n  if 1 < 2 && 3 > 2 {\n    return 5\n  }\n  return 0\n}\n"],
+  ["一元负号", "fn main() -> Int {\n  return 0 - (0 - 7)\n}\n"],
+  ["嵌套 if", "fn main() -> Int {\n  let a = 2\n  if a > 1 {\n    if a > 2 {\n      return 3\n    }\n    return 2\n  }\n  return 1\n}\n"],
+  ["while 里套 if", "fn main() -> Int {\n  var i = 0\n  var s = 0\n  while i < 5 {\n    if i > 2 {\n      s = s + i\n    }\n    i = i + 1\n  }\n  return s\n}\n"],
+  ["十六进制与下划线", "fn main() -> Int {\n  return 0x1_0\n}\n"],
 ];
 
 console.log("一、字节码那台能跑自己的解释器吗");

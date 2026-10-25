@@ -638,6 +638,32 @@ fn 小数到(s: String) -> Int {
 // 三件都要处理：整数、小数、指数。早先这一层把所有字面量都交给 to_int，
 // 于是 1.5 报「不是整数字面量」；只补小数之后，1e3 还是被切成 1 与 e3。
 // 现在先看有没有指数，有就拆成「尾数乘十的幂」，尾数再走小数那一条。
+// 按基数读一串数字：0x 十六进制、0b 二进制、0o 八进制。下划线是分隔符，不参与计算。
+// 十进制仍交给 数到（它认得小数与指数）—— 复用一份比再写一份好。
+// 这一对原先只写在包装层（run.hmyr），于是「造树」那条路认得 0x1_0，而求值器那条路不认得。
+fn 按基读(s: String, 起: Int, 基: Int) -> Int {
+  var 出 = 0
+  var i = 起
+  while i < len(s) {
+    let c = ord(slice(s, i, i + 1))
+    var 值 = c - 48
+    if c >= 97 && c <= 102 { 值 = c - 87 }
+    if c >= 65 && c <= 70 { 值 = c - 55 }
+    if c != 95 { 出 = 出 * 基 + 值 }
+    i = i + 1
+  }
+  return 出
+}
+
+fn 数字值(s: String) -> Int {
+  if len(s) >= 2 {
+    let 标 = slice(s, 1, 2)
+    if 标 == "x" || 标 == "X" { return 按基读(s, 2, 16) }
+    if 标 == "b" || 标 == "B" { return 按基读(s, 2, 2) }
+    if 标 == "o" || 标 == "O" { return 按基读(s, 2, 8) }
+  }
+  return 数到(s)
+}
 fn 数到(s: String) -> Int {
   let 指 = 指数位置(s)
   if 指 >= 0 {
@@ -652,7 +678,7 @@ fn 数到(s: String) -> Int {
 fn 求值(节点: Int, 环境: Int) -> Int {
   let 种 = 节点.kind
   if 种 == "int" { return 好(to_int(节点.text)) }
-  if 种 == "Literal" && 节点.type == "int" { return 好(数到(节点.text)) }
+  if 种 == "Literal" && 节点.type == "int" { return 好(数字值(节点.text)) }
   if 种 == "Literal" && 节点.type == "string" { return 好(节点.text) }
   // nil：这门语言没有 null，空元组就是它。而求值器要认得出 {kind: "nil"} 这种节点，
   // 因为 stmt.hmyr 用它在「return 不带值」时占位。

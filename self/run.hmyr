@@ -158,34 +158,6 @@ fn 加载多(目录: String, 路们: Int, i: Int, 栈: Int, 已载: Int) effects
 // 有了它们，换掉 src/loader.mjs 才谈得上。
 // 宿主的语句层把 if 与 while 包成 ExprStmt（它把 if 当表达式，语句层再包一层）。
 // 形状要一致就得跟着包 —— 而这只在包装这一层做，解析与求值两条路一个字都不动。
-// 按基数读一串数字：0x 十六进制、0b 二进制、0o 八进制。
-// 十进制仍交给 数到（它认得小数与指数）—— 复用一份比再写一份好。
-// 这里不能走 to_int：它只认整数的写法，'0x1f' 会直接抛 R0208。
-fn 按基读(s: String, 起: Int, 基: Int) -> Int {
-  var 出 = 0
-  var i = 起
-  while i < len(s) {
-    let c = ord(slice(s, i, i + 1))
-    var 值 = c - 48
-    if c >= 97 && c <= 102 { 值 = c - 87 }
-    if c >= 65 && c <= 70 { 值 = c - 55 }
-    // 下划线是分隔符，不参与计算（宿主那边 0x1_0 读成 16，不是 1）。
-    if c != 95 { 出 = 出 * 基 + 值 }
-    i = i + 1
-  }
-  return 出
-}
-
-fn 数字值(s: String) -> Int {
-  if len(s) >= 2 {
-    let 标 = slice(s, 1, 2)
-    if 标 == "x" || 标 == "X" { return 按基读(s, 2, 16) }
-    if 标 == "b" || 标 == "B" { return 按基读(s, 2, 2) }
-    if 标 == "o" || 标 == "O" { return 按基读(s, 2, 8) }
-  }
-  return 数到(s)
-}
-
 // 位置的安全读法：语法错的节点本来就可能没有位置（越界时连 token 都没有）。
 // 这里缺就填 0，而不是让一次缺字段把整棵树造失败 —— 诊断要的是「尽力说清」，不是「全有或全无」。
 fn 行(n: Int) -> Int {
@@ -197,6 +169,8 @@ fn 列(n: Int) -> Int {
   if field_has(n, "column") { return n.column }
   return 0
 }
+// 按基读 与 数字值 在 eval.hmyr：求值器那条路也要认 0x1_0，所以它们住在那儿，
+// 这一层通过 import 直接用（这里的 翻表达式 仍在调 数字值）。
 
 // 把表达式树翻成宿主那边认的形状：Literal 补 value 与 raw，Ident 的 text 改叫 name。
 //
