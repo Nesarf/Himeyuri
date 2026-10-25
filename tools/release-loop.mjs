@@ -8,15 +8,17 @@
 // 为什么需要它：releasehmyr 与 verifyhmyr 两套的「真跑」都挂在 HMYR_HEAVY 之后，
 // 而常规全量从不设那个变量。于是「真发一次」这条路上，只有手动跑过的人知道它通不通。
 //
-// 它比那两套多验三条：
+// 它比那两套多验四条：
 //   一、包里那份 manifest.json 与包外那份逐字节相同
 //       （release.hmyr 的注释写着「包内外是同一批字节」，但此前没有验收读过这句话）
 //   二、每一个成员与仓库里的源文件逐字节相同
 //       （packagehmyr 做过这件事，但那是对它自己造的包，不是对一次真发）
 //   三、拿解出来的包当根，用 HMYR 自己的 verifier 验包里那份清单
 //       —— 这才是「别人拿到这个包」的场景：清单里的路径是相对的，包就是根
+//   四、从解出来的目录里起一次启动器，跑一个例子程序
+//       —— 清单上说字节对得上，不等于这些字节能跑起来
 //
-// 一次四分钟上下：造清单与验清单各一百秒，两头都在给两百多个文件算 sha256。
+// 一次三分钟上下：造清单与验清单各一百秒，两头都在给两百多个文件算 sha256。
 // 所以它不进 check-all，位置是发布之前。
 //
 //   node tools/release-loop.mjs [tag]
@@ -130,6 +132,20 @@ try {
   ok("每一项都对得上", /不对 0 项/.test(验出) && /缺 0 项/.test(验出), 验出.trim().split("\n")[0] || "");
   ok("整份的 digest 也对得上", 验出.includes("digest 对得上"), "");
   ok("它自己说了通过", 验出.includes("通过"), 验出.trim().slice(-40));
+
+  console.log("六、解出来的包能自己跑");
+  // 第五节的清单只说明「字节对得上」，不说明「这些字节能跑」。
+  // 这一节从解出来的目录里起一次启动器：它 import 的是包里的 src/，
+  // 读的是包里的 runtime/，与仓库那份无关。
+  const 样例 = "examples/arith.hmyr";
+  const 跑一次 = (根) => spawnSync(process.execPath, [path.join(根, "bin/hmyr.mjs"), "--compile", path.join(根, 样例)], {
+    cwd: 根, encoding: "utf8", timeout: 300000, env: 大步数, maxBuffer: 8 * 1024 * 1024,
+  });
+  const 仓跑 = 跑一次(ROOT);
+  const 包跑 = 跑一次(解);
+  ok("仓库里跑得动", 仓跑.status === 0, String(仓跑.status) + " " + String(仓跑.stderr || "").slice(0, 200));
+  ok("从包里跑得动", 包跑.status === 0, String(包跑.status) + " " + String(包跑.stderr || "").slice(0, 200));
+  ok("两处输出相同", 仓跑.stdout === 包跑.stdout, JSON.stringify((包跑.stdout || "").slice(0, 60)));
 
   console.log("");
   console.log("  这一次发布：成员 " + 条数 + " 个 · 源与成员相同的 " + 同 + " 个 · 清单 250 项级别");
