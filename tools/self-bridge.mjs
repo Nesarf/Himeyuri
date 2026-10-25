@@ -12,6 +12,7 @@
 //
 // 从「读 .hmyr 文件、搭出树」这一步起，做主的已经是 HMYR 自己：递归、去重、环拒绝、后序。
 import fs from "node:fs";
+import { 是码元序列, 成宿主 } from "../src/units.mjs";
 import { 是源码 } from "./file-kind.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -71,6 +72,12 @@ const 新诊断 = () => ({ errors: [], warnings: [], items: [], add() {}, error(
 // 类记录（fields 是一个 Map）与类元组（items）。宿主的 Runtime 只认前一种，
 // 所以走字节码这条路时把形状翻一遍 —— 翻一次，量的是模块树，不随程序规模走。
 const 深转 = (v) => {
+  // 字符串默认住在码元序列里（00c0552 之后）。桥必须把它们折回宿主串 ——
+  // 不折的话，宿主看到的 kind 是 {0:70,1:110}，而那个东西永远不等于 "Fn"，
+  // 于是「函数名一模一样」拿到空列表、Runtime 在 params 上撞 undefined。
+  // 这一条是 2026-10-26 才补的：字符串换底那次，这一层没跟上，
+  // 而它一直藏在「产物旧 → 退回解释器」后面，直到产物被重新生成才露出来。
+  if (是码元序列(v)) return 成宿主(v);
   // nil 在宿主那边是 {type:"nil", value:null}；这一侧没有 null，所以到 JS 这一层才补上。
   if (v && v.tag === "record" && v.fields && v.fields.get("type") === "nil") {
     const o = {};
