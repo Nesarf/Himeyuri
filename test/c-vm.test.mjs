@@ -894,7 +894,8 @@ console.log("二十四、回收：同一个程序开着回收，峰值降下来"
     const m = /peak (\d+)/.exec(String(r.stderr));
     return { 峰: m ? Number(m[1]) : -1, 出: String(r.stdout).trim(), 码: r.status };
   };
-  const 甲 = 读峰({});
+  // 默认是开的（2026-10-25 改），所以「不开」那一份要显式说 0。
+  const 甲 = 读峰({ HMYR_GC: "0" });
   const 乙 = 读峰({ HMYR_GC: "1" });
   ok("两次都跑对了", 甲.码 === 0 && 乙.码 === 0 && 甲.出 === 乙.出, JSON.stringify([甲, 乙]));
   ok("开着回收时峰值不到一半", 乙.峰 > 0 && 甲.峰 > 0 && 乙.峰 * 2 < 甲.峰,

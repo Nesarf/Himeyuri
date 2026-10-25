@@ -3891,10 +3891,13 @@ int main(int argc, char **argv) {
   }
   for (int i = 0; i < TRACE_N; i++) g_trace[i].op = 255;
   if (getenv("HMYR_MEM")) atexit(堆账报一下);
-  /* 回收：默认关。HMYR_GC=1 打开，阈值默认三十二兆（HMYR_GC_BYTES 改）。
+  /* 回收：默认开，HMYR_GC=0 关掉。阈值默认三十二兆（HMYR_GC_BYTES 改）。
+   * 为什么改默认：实测同一份自编译，关着峰值 279.3 兆、开着 151.2 兆，
+   * 而耗时几乎一样（12.8 秒对 12.6 秒）。原来那句「一次运行很短，GC 是另一件工作」
+   * 在峰值上已经站不住 —— 二百五十六兆的界线只剩四十兆余量。
    * 板子上不编这一块，那几个变量也不在 —— 所以这一段只给桌面。 */
 #if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
-  g_gc开 = getenv("HMYR_GC") != NULL;
+  { const char *gc = getenv("HMYR_GC"); g_gc开 = (gc == NULL) || !(gc[0] == 48 && gc[1] == 0); }
   g_gc日志 = getenv("HMYR_GC_LOG") != NULL;
   {
     const char *gb = getenv("HMYR_GC_BYTES");
