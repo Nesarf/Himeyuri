@@ -19,19 +19,35 @@ const 要全部 = 参数.includes("--all");
 const 要总图 = 参数.includes("--map");
 const 目标 = 参数.find((a) => !a.startsWith("--"));
 
-// ---- 一、self/ 里谁 import 谁 ----
-const self文件们 = fs.readdirSync(path.join(ROOT, "self")).filter((f) => f.endsWith(".hmyr")).sort();
-const self依赖 = new Map(); // 文件 → 它 import 的文件（仓库相对路径）
-for (const 名 of self文件们) {
-  const 路 = "self/" + 名;
+// ---- 一、.hmyr 之间谁 import 谁（全仓，不只 self/）----
+// 只看 self/ 会漏：json.hmyr 被 manifest.hmyr 用、lib/json.hmyr 被 lsp.hmyr 用 ——
+// 而改 json.hmyr 会波及 manifest 那一串套件。所以扫描范围是整棵树。
+const 跳过 = new Set(["node_modules", ".git", "dist", "swap", ".tmp-index", ".tmp-sign"]);
+const hmyr们 = [];
+const 走目录 = (相对) => {
+  const 全 = path.join(ROOT, 相对);
+  let 项们;
+  try { 项们 = fs.readdirSync(全, { withFileTypes: true }); } catch { return; }
+  for (const 项 of 项们) {
+    if (跳过.has(项.name)) continue;
+    const 子 = 相对 ? 相对 + "/" + 项.name : 项.name;
+    if (项.isDirectory()) 走目录(子);
+    else if (项.name.endsWith(".hmyr")) hmyr们.push(子);
+  }
+};
+走目录("");
+hmyr们.sort();
+
+const self依赖 = new Map(); // 文件（仓库相对路径）→ 它 import 的文件
+for (const 路 of hmyr们) {
   const 源 = fs.readFileSync(path.join(ROOT, 路), "utf8");
   const 依赖 = [];
+  const 本目录 = path.posix.dirname(路);
   for (const m of 源.matchAll(/^import\s+"([^"]+)"/gm)) {
     const 原 = m[1];
-    const 解 = 原.startsWith("./") || 原.startsWith("../")
-      ? path.posix.normalize(path.posix.join("self", 原))
-      : null;
-    if (解 && fs.existsSync(path.join(ROOT, 解))) 依赖.push(解);
+    if (!原.startsWith("./") && !原.startsWith("../")) continue;
+    const 解 = path.posix.normalize(path.posix.join(本目录 === "." ? "" : 本目录, 原));
+    if (fs.existsSync(path.join(ROOT, 解))) 依赖.push(解);
   }
   self依赖.set(路, 依赖);
 }
@@ -62,9 +78,36 @@ for (const [名, 脚本] of 清单) {
   套件.push({ 名, 脚本, 载入, src: src们 });
 }
 
+// ---- 二半、src 模块之间谁 import 谁 ----
+// 为什么要有这一段：查 src/parser.mjs 时，只算「直接 import 它的套件」会漏掉一批 ——
+// src/loader.mjs 自己也 import parser，而那几个套件只 import loader。改 parser 会波及它们，
+// 它们却不在答案里。所以 src 这一侧也要走一遍闭包。
+const src文件们 = fs.readdirSync(path.join(ROOT, "src")).filter((f) => f.endsWith(".mjs")).sort();
+const src依赖 = new Map(); // src/xxx.mjs → 它 import 的 src 文件
+for (const 名 of src文件们) {
+  const 路 = "src/" + 名;
+  const 源 = fs.readFileSync(path.join(ROOT, 路), "utf8");
+  const 依赖 = [];
+  for (const m of 源.matchAll(/from\s+"\.\/([^"]+\.mjs)"/g)) {
+    const 解 = "src/" + m[1];
+    if (fs.existsSync(path.join(ROOT, 解))) 依赖.push(解);
+  }
+  src依赖.set(路, 依赖);
+}
+const src上游 = (路) => {
+  const 见过 = new Set();
+  const 走 = (x) => {
+    for (const [子, 依] of src依赖) {
+      if (依.includes(x) && !见过.has(子)) { 见过.add(子); 走(子); }
+    }
+  };
+  走(路);
+  return 见过;
+};
+
 // ---- 三、总图 ----
 if (要总图) {
-  console.log("工程地图 · " + self文件们.length + " 份 .hmyr · " + 套件.length + " 个套件");
+  console.log("工程地图 · " + hmyr们.length + " 份 .hmyr · " + 套件.length + " 个套件");
   console.log("");
   console.log("一、谁被 import（左边是被用的，右边是用它的）");
   const 被用 = new Map();
@@ -77,7 +120,7 @@ if (要总图) {
   for (const [被, 用们] of [...被用].sort((a, b) => b[1].length - a[1].length)) {
     console.log("  " + 被.padEnd(24) + " ← " + 用们.join(" "));
   }
-  const 孤立 = self文件们.filter((f) => !被用.has("self/" + f));
+  const 孤立 = hmyr们.filter((f) => !被用.has(f));
   if (孤立.length) console.log("  （没人 import 的入口：" + 孤立.join(" ") + "）");
   console.log("");
   console.log("二、每个套件加载的 .hmyr（只列前三个；单个文件的完整答案用单文件模式查）");
@@ -99,17 +142,20 @@ const 目标键 = 目标.split("\\").join("/");
 
 // ---- 四、答一个文件 ----
 const 是src = 目标键.startsWith("src/");
+// src 模块也要走闭包：改 parser 会波及 import loader 的套件，而它们没直接 import parser。
+const src链 = 是src ? new Set([目标键, ...src上游(目标键)]) : new Set();
 const 目标链 = 是src ? new Set() : new Set([目标键, ...上游(目标键)]);
 
 const 直接 = [];
 const 间接 = [];
 const 无关 = [];
 for (const s of 套件) {
-  const 载了 = [...目标链].some((f) => s.载入.has(f));
   const 载了本体 = s.载入.has(目标键);
-  const 用src = 是src && s.src.has(目标键);
-  if (载了本体 || 用src) 直接.push(s.名);
-  else if (载了) 间接.push(s.名);
+  const 用src本体 = 是src && s.src.has(目标键);
+  const 载了 = [...目标链].some((f) => s.载入.has(f));
+  const 用src间 = 是src && !用src本体 && [...src链].some((f) => s.src.has(f));
+  if (载了本体 || 用src本体) 直接.push(s.名);
+  else if (载了 || 用src间) 间接.push(s.名);
   else 无关.push(s.名);
 }
 
