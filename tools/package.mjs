@@ -37,7 +37,11 @@ const 走 = (dir) => {
     if (e.isDirectory()) 走(path.join(dir, e.name));
     // 图标也收：包体上要看得见它是什么。PNG 只从 assets/ 收 ——
     // 别处的图片是素材，不是发布物，而「哪一种东西算发布物」正是这一层要回答的。
-    else if (/\.(mjs|hmyr|txt|md)$/.test(e.name)) 收.push(p);
+    // 收哪些后缀：两套名字都要认（design/FILETYPE.txt 第七节）。
+    // 只认旧的，改名之后 runtime/ 下的 .hmoca 与 .hmoks 会被这一行静静滤掉 ——
+    // 症状是「包里少了文件」，而包照样打得出来、退出码照样是零、清单照样说「全对」。
+    // 这一处是 package 那一套报「缺 2 项」时揪出来的：缺的正好是仅有的两份 .hmoca。
+    else if (/\.(mjs|hmyr|hmoca|hmyrb|hmoks|hmtn|txt|md)$/.test(e.name)) 收.push(p);
     else if (dir === "assets" && /\.png$/.test(e.name)) 收.push(p);
   }
 };
