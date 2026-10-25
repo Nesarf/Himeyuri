@@ -36,7 +36,7 @@ try {
     fs.writeFileSync(p, 内容, "utf8");
     return p;
   };
-  const 真件 = "runtime/text.hmyr";
+  const 真件 = "runtime/text.hmoca";
   const { createHash } = await import("node:crypto");
   const 哈 = (p) => createHash("sha256").update(fs.readFileSync(path.join(ROOT, p))).digest("hex").slice(0, 16);
   const 列表 = (哈希) => {

@@ -17,7 +17,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const rt = runUnit(loadUnit(path.join(ROOT, "pixel.hmyr")));
+const rt = runUnit(loadUnit(path.join(ROOT, "pixel.hmoca")));
 const call = (name, args) => {
   const fn = rt.functions.get(name);
   if (!fn) throw new Error("没有这个函数：" + name);

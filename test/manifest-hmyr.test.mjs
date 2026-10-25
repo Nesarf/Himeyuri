@@ -18,7 +18,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 console.log("一、源码读得动、编得过");
-const 源路 = path.join(ROOT, "self/manifest.hmyr");
+const 源路 = path.join(ROOT, "self/manifest.hmoca");
 ok("self/manifest.hmyr 在", fs.existsSync(源路));
 const 层 = loadUnit(源路);
 ok("加载没有诊断", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
@@ -41,7 +41,7 @@ if (!process.env.HMYR_HEAVY) {
   console.log("二、真跑一次：清单能被标准 JSON 读，digest 与标准缩进自洽");
   const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-manifest-"));
   const 出路 = path.join(临, "m.json");
-  const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/manifest.hmyr", 出路], {
+  const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/manifest.hmoca", 出路], {
     cwd: ROOT, encoding: "utf8", timeout: 600000,
     env: { ...process.env, HMYR_STEPS: "4000000000" },
   });

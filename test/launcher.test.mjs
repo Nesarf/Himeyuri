@@ -23,45 +23,45 @@ const 写 = (名, 内容) => { const p = path.join(临, 名); fs.writeFileSync(p
 try {
   console.log("正常跑");
   {
-    const r = 启动([path.join(ROOT, "examples/hello.hmyr")]);
+    const r = 启动([path.join(ROOT, "examples/hello.hmoca")]);
     ok("退出码零", r.status === 0, String(r.status));
     ok("算出 5", String(r.stdout).trim() === "5", JSON.stringify(String(r.stdout).trim()));
   }
   {
-    const p = 写("branch.hmyr", "let n = 7\nif n > 3 { return 1 }\nreturn 0\n");
+    const p = 写("branch.hmoca", "let n = 7\nif n > 3 { return 1 }\nreturn 0\n");
     const r = 启动([p]);
     ok("带分支的程序也能跑", String(r.stdout).trim() === "1", JSON.stringify(String(r.stdout).trim()));
   }
   {
     // 标量换成自家那两套：算术走 f64，字符串走码元序列。
     // 它能跑、答案不变，而代价写在 design/F64.txt 里 —— 所以它是一个能开的门，不是默认。
-    const r = 启动(["--own-scalars", path.join(ROOT, "examples/hello.hmyr")]);
+    const r = 启动(["--own-scalars", path.join(ROOT, "examples/hello.hmoca")]);
     ok("--own-scalars 也算出 5", r.status === 0 && String(r.stdout).trim() === "5", String(r.status) + " " + JSON.stringify(String(r.stdout).trim()));
     ok("--own-scalars 不把开关算进 argv", !String(r.stderr).includes("--own-scalars"));
   }
   {
     // 标准库那一份的验收：它在自举层上跑，所以这一条同时是「自举层认得它用的东西」的证据。
-    const r = 启动([path.join(ROOT, "conformance/lib-strings.hmyr")]);
+    const r = 启动([path.join(ROOT, "conformance/lib-strings.hmoca")]);
     ok("字符串库三十二条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
   }
   {
     // 数值库那一份：它用到小数，所以这一条同时钉住「自举层能解析小数字面量」。
-    const r = 启动([path.join(ROOT, "conformance/lib-numbers.hmyr")]);
+    const r = 启动([path.join(ROOT, "conformance/lib-numbers.hmoca")]);
     ok("数值库二十六条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
   }
   {
     // 元组库那一份：排序在不可变的元组上只能造一串新元组，
     // 这一条同时钉住「元组类型能进参数表」（那一处前一格刚修）。
-    const r = 启动([path.join(ROOT, "conformance/lib-tuples.hmyr")]);
+    const r = 启动([path.join(ROOT, "conformance/lib-tuples.hmoca")]);
     ok("元组库二十五条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
   }
   {
     // 表库那一份：它靠 field_names 把一条记录摊开，所以这一条同时钉住那个内置
     // 在三处都转发了（这一格之前，自举层连 record_new 都没转发）。
-    const r = 启动([path.join(ROOT, "conformance/lib-tables.hmyr")]);
+    const r = 启动([path.join(ROOT, "conformance/lib-tables.hmoca")]);
     ok("表库二十条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
   }
@@ -69,7 +69,7 @@ try {
     // 出口可替换：print 写到一个由调用方给的地方。第一个用法是标准流（默认），
     // 第二个就是这个文件；第三个会是管道或 socket，而语言侧一行都不用改。
     const 出 = path.join(临, "out.txt");
-    const r = 启动(["--out", 出, path.join(ROOT, "examples/hello.hmyr")]);
+    const r = 启动(["--out", 出, path.join(ROOT, "examples/hello.hmoca")]);
     ok("--out 把输出写进文件", r.status === 0 && String(fs.readFileSync(出, "utf8")).trim() === "5",
       String(r.status) + " " + JSON.stringify(String(fs.existsSync(出) ? fs.readFileSync(出, "utf8") : "(没有文件)")));
     ok("--out 之后标准流是空的", String(r.stdout).trim() === "", JSON.stringify(String(r.stdout).trim()));
@@ -79,14 +79,14 @@ try {
     // 帧那一份：长度前缀 + 类型字节 + 载荷，小端。规矩来自 oak-barrels 的协议第 3 节。
     // 它只 import protocol.hmyr，而 protocol 内部又 import 了 tuples ——
     // 于是这一条同时钉住「间接 import 会被跟随」（自举的加载器曾经不跟）。
-    const r = 启动([path.join(ROOT, "conformance/lib-protocol.hmyr")]);
+    const r = 启动([path.join(ROOT, "conformance/lib-protocol.hmoca")]);
     ok("帧库十九条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
   }
   {
     // 目标程序看得见自己的 argv：这一条同时钉住「print 与 argv 都在自举层的分派里」
     // （这两支都是后来补的，补之前程序连一句话都说不出）。
-    const 程 = path.join(临, "argv.hmyr");
+    const 程 = path.join(临, "argv.hmoca");
     // argv 要 process 效果，所以这个程序声明它 —— 声明之后才谈得上「看得到自己的参数」。
     fs.writeFileSync(程, 'fn main() -> Int effects(process) {\n  let a = argv()\n  print(str(len(a)))\n  return 0\n}\n', "utf8");
     const r = 启动([程, "甲", "乙"]);
@@ -99,7 +99,7 @@ try {
     // 效果声明现在在自举那一层也认了：这个程序声明 effects(process, file)，
     // 由启动器跑通，写出去再读回来。它同时是「效果被收进函数表」的证据。
     const 出 = path.join(临, "write-text.txt");
-    const r = 启动([path.join(ROOT, "conformance/write-text.hmyr"), 出]);
+    const r = 启动([path.join(ROOT, "conformance/write-text.hmoca"), 出]);
     ok("声明了效果的程序由启动器跑通（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
     ok("而它真的写出了那个文件", fs.existsSync(出) && fs.readFileSync(出, "utf8") === "写着玩的",
@@ -108,13 +108,13 @@ try {
   {
     // JSON 那一份：解析与生成，二十八字断言。它压的是「没有类型反射」这件事 ——
     // 于是每个值都带一条类标记，那是库能成立的前提。
-    const r = 启动([path.join(ROOT, "conformance/lib-json.hmyr")]);
+    const r = 启动([path.join(ROOT, "conformance/lib-json.hmoca")]);
     ok("JSON 库二十八条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",
       String(r.status) + " " + JSON.stringify(String(r.stdout).trim()) + " " + JSON.stringify(String(r.stderr).slice(0, 80)));
   }
   console.log("边界");
   {
-    const r = 启动([path.join(临, "nope.hmyr")]);
+    const r = 启动([path.join(临, "nope.hmoca")]);
     ok("缺文件时退出码 1", r.status === 1, String(r.status));
     ok("并给出编号 R0211", String(r.stderr).includes("HMYR-R0211"), JSON.stringify(String(r.stderr).slice(0, 60)));
   }
@@ -124,7 +124,7 @@ try {
     ok("并给出用法", String(r.stderr).includes("用法"), JSON.stringify(String(r.stderr).slice(0, 40)));
   }
   {
-    const p = 写("bad.hmyr", "let a = \nreturn a\n");
+    const p = 写("bad.hmoca", "let a = \nreturn a\n");
     const r = 启动([p]);
     ok("语法坏的程序不崩（有输出）", r.status === 0 || r.status === 1, String(r.status));
     ok("而且说的是「错：」", String(r.stdout).includes("错：") || String(r.stderr).includes("错"), JSON.stringify((String(r.stdout) + String(r.stderr)).slice(0, 80)));
@@ -132,7 +132,7 @@ try {
   console.log("证据：目标程序确实经过自举的求值器");
   {
     // 记录这一种节点自举还造不出来，而宿主是支持的。它的错误出现，就说明跑的是自举那层。
-    const p = 写("record.hmyr", "let r = {a: 1}\nreturn r.a\n");
+    const p = 写("record.hmoca", "let r = {a: 1}\nreturn r.a\n");
     const r = 启动([p]);
     const 全部 = String(r.stdout) + String(r.stderr);
     // 记录那一格补上之后，这段程序应当跑得通，而且结果是 1 —— 这同样是「跑的是自举那层」的证据。
@@ -146,18 +146,18 @@ console.log("模块加载：import 进来的函数能调");
 {
   const 模块目录 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-mod-");
   try {
-    fs.writeFileSync(path.join(模块目录, "helper.hmyr"), "fn helper() -> Int {\n  return 9\n}\n", "utf8");
-    fs.writeFileSync(path.join(模块目录, "main.hmyr"), 'import "./helper.hmyr"\n\nfn main() -> Int {\n  return helper() + 1\n}\n', "utf8");
-    const r = 启动([path.join(模块目录, "main.hmyr")]);
+    fs.writeFileSync(path.join(模块目录, "helper.hmoca"), "fn helper() -> Int {\n  return 9\n}\n", "utf8");
+    fs.writeFileSync(path.join(模块目录, "main.hmoca"), 'import "./helper.hmoca"\n\nfn main() -> Int {\n  return helper() + 1\n}\n', "utf8");
+    const r = 启动([path.join(模块目录, "main.hmoca")]);
     ok("import 进来的函数能调，算出 10", String(r.stdout).trim() === "10", JSON.stringify(String(r.stdout).trim()));
     // 环状 import：A 引 B、B 引 A，不该挂死
-    fs.writeFileSync(path.join(模块目录, "a.hmyr"), 'import "./b.hmyr"\nfn a() -> Int {\n  return 1\n}\n', "utf8");
-    fs.writeFileSync(path.join(模块目录, "b.hmyr"), 'import "./a.hmyr"\nfn main() -> Int {\n  return 2\n}\n', "utf8");
-    const r2 = 启动([path.join(模块目录, "a.hmyr")]);
+    fs.writeFileSync(path.join(模块目录, "a.hmoca"), 'import "./b.hmoca"\nfn a() -> Int {\n  return 1\n}\n', "utf8");
+    fs.writeFileSync(path.join(模块目录, "b.hmoca"), 'import "./a.hmoca"\nfn main() -> Int {\n  return 2\n}\n', "utf8");
+    const r2 = 启动([path.join(模块目录, "a.hmoca")]);
     ok("环状 import 不挂死（读过的不再读）", r2.status === 0 && String(r2.stdout).trim().length > 0, JSON.stringify(String(r2.stdout).trim()));
     // import 一个不存在的文件：跳过，不该崩
-    fs.writeFileSync(path.join(模块目录, "miss.hmyr"), 'import "./nope.hmyr"\nfn main() -> Int {\n  return 4\n}\n', "utf8");
-    const r3 = 启动([path.join(模块目录, "miss.hmyr")]);
+    fs.writeFileSync(path.join(模块目录, "miss.hmoca"), 'import "./nope.hmoca"\nfn main() -> Int {\n  return 4\n}\n', "utf8");
+    const r3 = 启动([path.join(模块目录, "miss.hmoca")]);
     ok("import 不存在的文件时跳过，照样跑 main", String(r3.stdout).trim() === "4", JSON.stringify(String(r3.stdout).trim()));
   } finally {
     fs.rmSync(模块目录, { recursive: true, force: true });
@@ -183,18 +183,18 @@ console.log("默认那份最小求值器，与 --host-eval 那条做同一件事
   const 目录 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-min-launch-");
   try {
     const 用 = (args) => spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), ...args], { encoding: "utf8" });
-    const 目标 = path.join(ROOT, "examples/hello.hmyr");
+    const 目标 = path.join(ROOT, "examples/hello.hmoca");
     const 默认 = 用([目标]);
     const 宿主 = 用(["--host-eval", 目标]);
     ok("hello 两边都算出 5", String(默认.stdout).trim() === "5" && String(宿主.stdout).trim() === "5", JSON.stringify(String(宿主.stdout).trim()));
     ok("退出码一样", 默认.status === 宿主.status, 默认.status + " 对 " + 宿主.status);
-    const 缺 = 用([path.join(目录, "nope.hmyr")]);
+    const 缺 = 用([path.join(目录, "nope.hmoca")]);
     ok("缺文件时默认那条也给退出码 1", 缺.status === 1, String(缺.status));
     ok("并给出编号 R0211", String(缺.stderr).includes("HMYR-R0211"), JSON.stringify(String(缺.stderr).slice(0, 50)));
     // 开关自己不该被当成目标文件：它被剔掉了，于是 argv[1] 仍是目标。
     ok("开关没有被当成目标文件", !String(缺.stderr).includes("--host-eval"), String(缺.stderr).slice(0, 60));
     // 带 while 的也算一件：最小那份不是只认得 hello。
-    const w = path.join(目录, "w.hmyr");
+    const w = path.join(目录, "w.hmoca");
     fs.writeFileSync(w, "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n", "utf8");
     ok("while 那条默认也给 3", String(用([w]).stdout).trim() === "3", JSON.stringify(String(用([w]).stdout).trim()));
     ok("while 那条 --host-eval 也给 3", String(用(["--host-eval", w]).stdout).trim() === "3");

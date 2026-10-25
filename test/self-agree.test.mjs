@@ -19,7 +19,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 自举 = runUnit(loadUnit(path.join(ROOT, "self/eval.hmyr")));
+const 自举 = runUnit(loadUnit(path.join(ROOT, "self/eval.hmoca")));
 const 宿主的 = (源) => {
   // 包一层：宿主那颗求值器在少数路径上会直接抛，而让它抛到测试外面，
   // 报出来的是一段栈而不是「哪一例坏了」。

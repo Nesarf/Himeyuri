@@ -61,7 +61,7 @@ const 写 = (名, 内容) => {
 
 // 与 c-vm 那一套同一个形状：同一份字节码，JS 那台跑内存里的，C 那台跑文件里的。
 const 两侧跑 = (源码, 名字) => {
-  const 源路 = path.join(临, 名字 + ".hmyr");
+  const 源路 = path.join(临, 名字 + ".hmoca");
   fs.writeFileSync(源路, 源码, "utf8");
   const unit = loadUnit(源路);
   if (!unit.ok) return { js: "", c: "", 错: "加载失败" };
@@ -69,14 +69,14 @@ const 两侧跑 = (源码, 名字) => {
   let js出 = "";
   const vm = new 虚拟机(程序, { capabilities: 本机能力(), write: (s) => { js出 += s; } });
   const jsr = vm.调用("main", [], null);
-  const 码路 = path.join(临, 名字 + ".hmyrb");
+  const 码路 = path.join(临, 名字 + ".hmoks");
   fs.writeFileSync(码路, 写程序(程序));
   const c = spawnSync(exe, [码路], { encoding: "utf8", timeout: 120000 });
   return { js: js出, c: String(c.stdout || ""), js码: jsr.ok ? jsr.值 : null, c码: c.status, c错: String(c.stderr || "") };
 };
 
 // 两个任务：一个是求和，一个验隔离（worker 里的 x 从 100 起）。
-const 求和任务 = 写("sum.hmyr", [
+const 求和任务 = 写("sum.hmoca", [
   "fn 工作() -> Int {",
   "  var i = 0",
   "  var s = 0",
@@ -88,7 +88,7 @@ const 求和任务 = 写("sum.hmyr", [
   "}",
   "",
 ].join("\n"));
-const 隔离任务 = 写("iso.hmyr", [
+const 隔离任务 = 写("iso.hmoca", [
   "fn 工作() -> Int {",
   "  var x = 100",
   "  x = x + 1",

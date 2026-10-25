@@ -24,7 +24,7 @@ const 造 = (项数) => JSON.stringify({
   language: "HMYR",
   kernel: { builtins: 64, minimalSet: ["print", "len"] },
   standardLibrary: Array.from({ length: 项数 }, (_, i) => ({
-    file: "runtime/x" + i + ".hmyr",
+    file: "runtime/x" + i + ".hmoca",
     functions: 1,
     lines: 2,
     sha256: "0123456789abcdef",
@@ -35,7 +35,7 @@ const 造 = (项数) => JSON.stringify({
   digest: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
 }, null, 2) + "\n";
 
-const 层 = loadUnit(path.join(ROOT, "self/verify.hmyr"));
+const 层 = loadUnit(path.join(ROOT, "self/verify.hmoca"));
 if (!层.ok) {
   for (const e of 层.diagnostics.errors.slice(0, 4)) console.error(e.code + " " + e.message);
   process.exit(1);

@@ -20,7 +20,7 @@ const 次数 = (() => {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 5;
 })();
 
-const 样本 = path.join(ROOT, "bootstrap/pack.hmyrb");
+const 样本 = path.join(ROOT, "bootstrap/pack.hmtn");
 const 数据 = fs.readFileSync(样本);
 fs.mkdirSync(临, { recursive: true });
 
@@ -32,9 +32,9 @@ const 编码 = (源, 出) => {
     process.exit(2);
   }
 };
-编码(path.join(ROOT, "bench/deflate-firstbyte-array.hmyr"), path.join(临, "firstbyte-array.hmyrb"));
-编码(path.join(ROOT, "bench/deflate-firstbyte-tuple.hmyr"), path.join(临, "firstbyte-tuple.hmyrb"));
-编码(path.join(ROOT, "self/deflate.hmyr"), path.join(临, "threebyte-array.hmyrb"));
+编码(path.join(ROOT, "bench/deflate-firstbyte-array.hmoca"), path.join(临, "firstbyte-array.hmoks"));
+编码(path.join(ROOT, "bench/deflate-firstbyte-tuple.hmoca"), path.join(临, "firstbyte-tuple.hmoks"));
+编码(path.join(ROOT, "self/deflate.hmoca"), path.join(临, "threebyte-array.hmoks"));
 
 const 清场 = () => spawnSync("taskkill", ["/IM", "hmyr-bench.exe", "/F"], { encoding: "utf8" });
 
@@ -73,9 +73,9 @@ const 统计 = (秒们) => {
 };
 
 const 两份 = [
-  ["首字节桶 · 元组（256）", path.join(临, "firstbyte-tuple.hmyrb")],
-  ["首字节桶 · 数组（256）", path.join(临, "firstbyte-array.hmyrb")],
-  ["三字节桶 · 数组（4096）", path.join(临, "threebyte-array.hmyrb")],
+  ["首字节桶 · 元组（256）", path.join(临, "firstbyte-tuple.hmoks")],
+  ["首字节桶 · 数组（256）", path.join(临, "firstbyte-array.hmoks")],
+  ["三字节桶 · 数组（4096）", path.join(临, "threebyte-array.hmoks")],
 ];
 
 console.log("样本 " + 数据.length + " 字节，各跑 " + 次数 + " 次");

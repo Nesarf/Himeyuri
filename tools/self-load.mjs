@@ -21,7 +21,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "self/run.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/run.hmoca"));
 if (!unit.ok) {
   console.log("self/run.hmyr 加载失败：" + JSON.stringify((unit.diagnostics.errors || []).slice(0, 2).map((e) => e.code)));
   process.exit(1);
@@ -43,7 +43,7 @@ const 归一 = (p) => {
 const 相对仓 = (p) => 归一(path.relative(ROOT, p));
 
 console.log("一、order：四棵真实的 import 树，逐项比");
-for (const 入口 of ["self/sign.hmyr", "self/release.hmyr", "self/package.hmyr", "self/verify.hmyr"]) {
+for (const 入口 of ["self/sign.hmoca", "self/release.hmoca", "self/package.hmoca", "self/verify.hmoca"]) {
   const 宿主 = loadUnit(path.join(ROOT, 入口));
   const 自己 = 调("加载序", [入口]).trim().split(/\r?\n/).filter(Boolean).map(归一).sort();
   const 那边 = 宿主.order.map(相对仓).sort();
@@ -55,8 +55,8 @@ for (const 入口 of ["self/sign.hmyr", "self/release.hmyr", "self/package.hmyr"
 console.log("二、缺失的 import：两边都要说 E0302");
 {
   const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-load-"));
-  const 甲 = path.join(临, "a.hmyr");
-  fs.writeFileSync(甲, 'import "./b.hmyr"\nfn main() -> Int {\n  return 1\n}\n', "utf8");
+  const 甲 = path.join(临, "a.hmoca");
+  fs.writeFileSync(甲, 'import "./b.hmoca"\nfn main() -> Int {\n  return 1\n}\n', "utf8");
   const 宿主 = loadUnit(甲);
   const 宿主码 = (宿主.diagnostics.errors || []).map((e) => e.code);
   const 自己 = 调("只加载", [归一(path.relative(ROOT, 甲))]).trim();
@@ -70,10 +70,10 @@ console.log("三、循环引用：两边都要说 E0301");
   const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-load-"));
   const 子 = path.join(临, "sub");
   fs.mkdirSync(子);
-  const 甲 = path.join(子, "a.hmyr");
-  const 乙 = path.join(子, "b.hmyr");
-  fs.writeFileSync(甲, 'import "./b.hmyr"\nfn main() -> Int {\n  return 1\n}\n', "utf8");
-  fs.writeFileSync(乙, 'import "./a.hmyr"\nfn other() -> Int {\n  return 2\n}\n', "utf8");
+  const 甲 = path.join(子, "a.hmoca");
+  const 乙 = path.join(子, "b.hmoca");
+  fs.writeFileSync(甲, 'import "./b.hmoca"\nfn main() -> Int {\n  return 1\n}\n', "utf8");
+  fs.writeFileSync(乙, 'import "./a.hmoca"\nfn other() -> Int {\n  return 2\n}\n', "utf8");
   const 宿主 = loadUnit(甲);
   const 宿主码 = (宿主.diagnostics.errors || []).map((e) => e.code);
   const 自己 = 调("只加载", [归一(path.relative(ROOT, 甲))]).trim();

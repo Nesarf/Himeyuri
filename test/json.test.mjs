@@ -10,7 +10,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const rt = runUnit(loadUnit(path.join(ROOT, "json.hmyr")));
+const rt = runUnit(loadUnit(path.join(ROOT, "json.hmoca")));
 const 解析 = (s) => rt.callFunction(rt.functions.get("解析"), [s], null);
 const probe = (s) => { const r = 解析(s); return { value: r[0], next: r[1] }; };
 

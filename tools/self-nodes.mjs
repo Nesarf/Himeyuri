@@ -16,7 +16,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "self/run.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/run.hmoca"));
 if (!unit.ok) {
   console.log("self/run.hmyr 加载失败：" + JSON.stringify((unit.diagnostics.errors || []).slice(0, 2).map((e) => e.code)));
   process.exit(1);

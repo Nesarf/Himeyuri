@@ -12,7 +12,7 @@ import { 写程序 } from "../src/code-file.mjs";
 
 const [入口, 输出] = process.argv.slice(2);
 if (!入口 || !输出) {
-  console.error("用法：node tools/emit-code.mjs 入口.hmyr 输出.hmyrb");
+  console.error("用法：node tools/emit-code.mjs 入口.hmyr 输出.hmoks");
   process.exit(2);
 }
 const unit = loadUnit(path.resolve(入口));

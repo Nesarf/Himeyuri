@@ -16,7 +16,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "self/run.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/run.hmoca"));
 if (!unit.ok) {
   console.log("self/run.hmyr 加载失败：" + JSON.stringify((unit.diagnostics.errors || []).slice(0, 2).map((e) => e.code)));
   process.exit(1);
@@ -144,7 +144,7 @@ const 样本 = [
   ["if 与赋值", "fn main() -> Int {\n  var a = 1\n  a = a + 1\n  if a > 0 {\n    return 1\n  }\n  return 0\n}\n"],
   ["while 与赋值", "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n"],
   ["字符串与十六进制", 'fn main() -> Int {\n  let s = "a\\nb"\n  let n = 0x1f + 2\n  return n\n}\n'],
-  ["带 import 的文件", 'import "./examples/twice.hmyr"\nimport "./design/TOUR.txt"\nfn main() -> Int {\n  return 1\n}\n'],
+  ["带 import 的文件", 'import "./examples/twice.hmoca"\nimport "./design/TOUR.txt"\nfn main() -> Int {\n  return 1\n}\n'],
 ];
 
 console.log("一、并排走一遍，看第一处对不上的在哪里");

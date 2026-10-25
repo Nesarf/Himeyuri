@@ -13,7 +13,7 @@ import { loadUnit, runUnit } from "../src/loader.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ESC = String.fromCharCode(27);
 
-const rt = runUnit(loadUnit(path.join(ROOT, "shell-run.hmyr")));
+const rt = runUnit(loadUnit(path.join(ROOT, "shell-run.hmoca")));
 rt.write = (s) => process.stdout.write(s);
 
 process.stdout.write(ESC + "[?25l");           // 藏光标，别让它闪

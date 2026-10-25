@@ -20,7 +20,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 源路 = path.join(ROOT, "self/ucd-nfc.hmyr");
+const 源路 = path.join(ROOT, "self/ucd-nfc.hmoca");
 const 现成 = path.join(ROOT, "vm/ucd-nfc.h");
 const 语料 = path.join(ROOT, "data/ucd");
 

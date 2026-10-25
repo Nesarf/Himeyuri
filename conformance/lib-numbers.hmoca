@@ -1,4 +1,4 @@
-import "../lib/numbers.hmyr"
+import "../lib/numbers.hmoca"
 
 // 一条断言：通过了交回 0，不通过交回它的编号。
 fn 检(好: Bool, 号: Int) -> Int {

@@ -32,7 +32,7 @@ const 造清单 = ({ 坏 = false, 缺 = false, 坏摘要 = false, 无摘要 = fa
     language: "HMYR",
     kernel: { builtins: 64, minimalSet: ["print", "len"] },
     standardLibrary: [
-      { file: "runtime/text.hmyr", functions: 5, lines: 120, sha256: 哈("runtime/text.hmyr") },
+      { file: "runtime/text.hmoca", functions: 5, lines: 120, sha256: 哈("runtime/text.hmoca") },
     ],
     suites: [
       { name: "bitops", path: "test/bitops.test.mjs", sha256: 哈("test/bitops.test.mjs") },
@@ -55,11 +55,11 @@ const 造清单 = ({ 坏 = false, 缺 = false, 坏摘要 = false, 无摘要 = fa
 const 写出 = (名, 文) => { const p = path.join(临, 名); fs.writeFileSync(p, 文, "utf8"); return p; };
 
 console.log("一、源码读得动");
-const 源路 = path.join(ROOT, "self/verify.hmyr");
+const 源路 = path.join(ROOT, "self/verify.hmoca");
 ok("self/verify.hmyr 在", fs.existsSync(源路));
 const 层 = loadUnit(源路);
 ok("加载没有诊断", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
-ok("它 import 了 sha256（入口抢位那个错的前提）", fs.readFileSync(源路, "utf8").includes('import "./sha256.hmyr"'));
+ok("它 import 了 sha256（入口抢位那个错的前提）", fs.readFileSync(源路, "utf8").includes('import "./sha256.hmoca"'));
 
 const 跑 = (清单路) => {
   const 出 = [], 错 = [];

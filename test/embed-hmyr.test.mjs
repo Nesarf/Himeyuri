@@ -24,7 +24,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 console.log("一、嵌入器的源码读得动");
-const 源路 = path.join(ROOT, "self/embed.hmyr");
+const 源路 = path.join(ROOT, "self/embed.hmoca");
 ok("self/embed.hmyr 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
@@ -38,7 +38,7 @@ console.log("二、读字节那一格在四处都有");
     ["src/minimal-eval.mjs", fs.readFileSync(path.join(ROOT, "src/minimal-eval.mjs"), "utf8")],
     ["src/vm-builtins.mjs", fs.readFileSync(path.join(ROOT, "src/vm-builtins.mjs"), "utf8")],
     ["src/bytecode.mjs", fs.readFileSync(path.join(ROOT, "src/bytecode.mjs"), "utf8")],
-    ["self/eval.hmyr", fs.readFileSync(path.join(ROOT, "self/eval.hmyr"), "utf8")],
+    ["self/eval.hmoca", fs.readFileSync(path.join(ROOT, "self/eval.hmoca"), "utf8")],
     ["vm/hmyr.c", fs.readFileSync(path.join(ROOT, "vm/hmyr.c"), "utf8")],
   ];
   for (const [名, 文] of 源) ok(名 + " 认识 read_bytes", 文.includes("read_bytes"), "");
@@ -56,10 +56,10 @@ if (!有编译器) {
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
-    const 码路 = path.join(临, "embed.hmyrb");
+    const 码路 = path.join(临, "embed.hmoks");
     fs.writeFileSync(码路, 写程序(程序));
     const 出 = path.join(临, "pack.c");
-    const r = spawnSync(exe, [码路, path.join(ROOT, "bootstrap/pack.hmyrb"), 出, "pack_hmyrb"], {
+    const r = spawnSync(exe, [码路, path.join(ROOT, "bootstrap/pack.hmtn"), 出, "pack_hmyrb"], {
       cwd: ROOT, encoding: "utf8", timeout: 300000,
       env: { ...process.env, HMYR_STEPS: "2000000000" },
     });
@@ -67,7 +67,7 @@ if (!有编译器) {
     if (fs.existsSync(出)) {
       const 文 = fs.readFileSync(出, "utf8");
       const 行们 = 文.split("\n");
-      const 字节 = fs.statSync(path.join(ROOT, "bootstrap/pack.hmyrb")).size;
+      const 字节 = fs.statSync(path.join(ROOT, "bootstrap/pack.hmtn")).size;
       ok("生成的行数在三千上下", 行们.length > 3000 && 行们.length < 4000, String(行们.length));
       ok("首行写着字节数", 行们[0].includes(String(字节) + " 字节"), JSON.stringify(行们[0]));
       ok("数组从 HMYRB 的魔数开始", (行们[2] || "").trim().startsWith("0x48, 0x4d, 0x59, 0x52, 0x42"), JSON.stringify((行们[2] || "").slice(0, 60)));

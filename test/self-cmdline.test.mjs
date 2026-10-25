@@ -23,7 +23,7 @@ const 启动 = (args) => spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.
 
 const 写 = (名, 内容) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
 
-const 好程序 = 写("好.hmyr", "fn main() -> Int {\n  return 7 * 6\n}\n");
+const 好程序 = 写("好.hmoca", "fn main() -> Int {\n  return 7 * 6\n}\n");
 
 console.log("一、成功时：答案在 stdout，stderr 是空的");
 {
@@ -43,7 +43,7 @@ console.log("二、不带参数时：用法在 stderr，stdout 是空的");
 
 console.log("三、目标不存在时：编号在 stderr，stdout 是空的");
 {
-  const r = 启动([path.join(临, "不存在.hmyr")]);
+  const r = 启动([path.join(临, "不存在.hmoca")]);
   ok("退出码 1", r.status === 1, String(r.status));
   ok("编号在 stderr", String(r.stderr).includes("HMYR-R0211"), JSON.stringify(String(r.stderr).slice(0, 60)));
   ok("stdout 干干净净", String(r.stdout) === "", JSON.stringify(String(r.stdout).slice(0, 40)));
@@ -63,8 +63,8 @@ console.log("四、两条通道真的分开（重定向时不会串味）");
 
 console.log("五、import 进来的也照旧");
 {
-  const 库 = 写("库.hmyr", "fn triple(x: Int) -> Int {\n  return x * 3\n}\n");
-  const 主 = 写("主.hmyr", 'import "./库.hmyr"\n\nfn main() -> Int {\n  return triple(14)\n}\n');
+  const 库 = 写("库.hmoca", "fn triple(x: Int) -> Int {\n  return x * 3\n}\n");
+  const 主 = 写("主.hmoca", 'import "./库.hmoca"\n\nfn main() -> Int {\n  return triple(14)\n}\n');
   const r = 启动([主]);
   ok("算得出 42", String(r.stdout).trim() === "42", JSON.stringify(String(r.stdout).trim()));
   ok("而 stderr 仍然干净", String(r.stderr) === "", JSON.stringify(String(r.stderr).slice(0, 40)));

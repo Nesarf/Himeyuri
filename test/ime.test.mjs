@@ -15,10 +15,10 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "ime.hmyr"));
+const unit = loadUnit(path.join(ROOT, "ime.hmoca"));
 ok("输入法那一层加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
-rt.registerModule(loadUnit(path.join(ROOT, "shell.hmyr")).modules.values().next().value);
+rt.registerModule(loadUnit(path.join(ROOT, "shell.hmoca")).modules.values().next().value);
 const call = (name, args) => {
   const fn = rt.functions.get(name);
   if (!fn) throw new Error("没有这个函数：" + name);

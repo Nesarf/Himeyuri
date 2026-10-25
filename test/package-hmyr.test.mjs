@@ -18,7 +18,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 console.log("一、源码读得动、编得过");
-const 源路 = path.join(ROOT, "self/package.hmyr");
+const 源路 = path.join(ROOT, "self/package.hmoca");
 ok("self/package.hmyr 在", fs.existsSync(源路));
 const 层 = loadUnit(源路);
 ok("加载没有诊断", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
@@ -41,8 +41,8 @@ if (!有编译器) {
   ok("C 那台编得出来", c.status === 0, String(c.stderr || "").slice(0, 160));
 
   if (c.status === 0) {
-    const 码路 = path.join(临, "package.hmyrb");
-    const e = spawnSync("node", ["tools/emit-code.mjs", "self/package.hmyr", 码路], { cwd: ROOT, encoding: "utf8" });
+    const 码路 = path.join(临, "package.hmoks");
+    const e = spawnSync("node", ["tools/emit-code.mjs", "self/package.hmoca", 码路], { cwd: ROOT, encoding: "utf8" });
     ok("字节码落盘（三份源码合成一份）", e.status === 0 && fs.existsSync(码路), String(e.stderr || "").slice(0, 200));
 
     if (e.status === 0) {
@@ -99,7 +99,7 @@ if (!有编译器) {
 if (有编译器) {
   const 全路 = path.join(临, "all.zip");
   // 字节码是上一节生成的（同一个文件名）。这里只用它，不再生成一遍。
-  const 全码路 = path.join(临, "package.hmyrb");
+  const 全码路 = path.join(临, "package.hmoks");
   ok("上一节烘好的字节码还在", fs.existsSync(全码路), 全码路);
   // 用 spawnSync 而不是命令行：PowerShell 那边的引号层会把参数嚼掉一次，
   // 症状是「cannot open <包里那个名字>」—— 看起来像打包失败，其实是参数顺序被打乱。
@@ -114,7 +114,7 @@ if (有编译器) {
     const 条数 = 包.readUInt16LE(尾位 + 10);
     ok("条目数超过两百", 条数 > 200, String(条数));
     // 抽查三个成员，按偏移取回、与源文件逐字节比。
-    const 想要 = ["src/eval.mjs", "design/TOOLING.txt", "self/zip.hmyr"];
+    const 想要 = ["src/eval.mjs", "design/TOOLING.txt", "self/zip.hmoca"];
     let 找到 = 0;
     let at = 包.readUInt32LE(尾位 + 16);
     for (let i = 0; i < 条数; i++) {
@@ -143,7 +143,7 @@ if (有编译器) {
   const 附路 = path.join(临, "manifest.json");
   fs.writeFileSync(附路, '{"name":"himeyuri","digest":"x"}\n', "utf8");
   const 附包 = path.join(临, "with-manifest.zip");
-  const 附码 = path.join(临, "package.hmyrb");
+  const 附码 = path.join(临, "package.hmoks");
   const r3 = spawnSync(exe, [附码, 附包, "design", "--附加", 附路, "manifest.json"], {
     cwd: ROOT, encoding: "utf8", timeout: 600000,
     env: { ...process.env, HMYR_STEPS: "40000000000" },

@@ -10,7 +10,7 @@ import { loadUnit as 宿主载 } from "../src/loader.mjs";
 import { loadUnit as 桥载 } from "./self-bridge.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const 样本 = ["locale.hmyr", "color.hmyr", "json.hmyr", "self/run.hmyr", "examples/demo.hmyr"];
+const 样本 = ["locale.hmoca", "color.hmoca", "json.hmoca", "self/run.hmoca", "examples/demo.hmoca"];
 
 const 计时 = (fn, 次数 = 3) => {
   const 各次 = [];
@@ -25,7 +25,7 @@ const 计时 = (fn, 次数 = 3) => {
 };
 
 // 引导：桥的第一次加载把 self/run.hmyr 的六份读完，之后复用。单独量它。
-const 引导 = 计时(() => { 桥载(path.join(ROOT, "self/run.hmyr")); }, 1);
+const 引导 = 计时(() => { 桥载(path.join(ROOT, "self/run.hmoca")); }, 1);
 console.log("桥的引导（一次性）   " + 引导.toFixed(0) + " ms");
 console.log("");
 console.log("样本                    宿主 loader     桥        倍数");

@@ -16,14 +16,14 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const 种子 = path.join(ROOT, "bootstrap/pack.hmyrb");
+const 种子 = path.join(ROOT, "bootstrap/pack.hmtn");
 const 头路 = path.join(ROOT, "vm/pack_seed.h");
 const 符号 = "hmyr_pack_seed";
 
 const 头 = [
   "/* HMYR 的种子，编成字节数组。",
   " *",
-  " * 由 tools/gen-pack-seed.mjs 从 bootstrap/pack.hmyrb 生成，别手改 ——",
+  " * 由 tools/gen-pack-seed.mjs 从 bootstrap/pack.hmtn 生成，别手改 ——",
   " * 改了它，生成器下一次就会把它改回去。",
   " *",
   " * 它让 hmyr 这个可执行文件自带编译器：一份 .hmyr 进来，先用这份种子编成字节码，",
@@ -44,7 +44,7 @@ const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", e
 if (编.status !== 0) { console.error("exe 编不出来：\n" + String(编.stderr).slice(0, 400)); process.exit(1); }
 
 const 主体 = path.join(临, "body.h");
-const 跑 = spawnSync(exe, [path.join(ROOT, "self/embed.hmyr"), 种子, 主体, 符号], {
+const 跑 = spawnSync(exe, [path.join(ROOT, "self/embed.hmoca"), 种子, 主体, 符号], {
   encoding: "utf8", timeout: 300000,
   env: { ...process.env, HMYR_STEPS: "4000000000" },
 });

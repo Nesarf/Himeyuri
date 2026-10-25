@@ -107,7 +107,7 @@ console.log("\ncanonical form: how it was written does not matter");
 }
 
 console.log("\nthe KPB pieces survive a formatting round trip");
-for (const name of ["piece.hmyr", "etude.hmyr"]) {
+for (const name of ["piece.hmoca", "etude.hmoca"]) {
   const file = path.join(ROOT, "kpb", name);
   const source = fs.readFileSync(file, "utf8");
   const printed = format(source, { quiet: true }).text;

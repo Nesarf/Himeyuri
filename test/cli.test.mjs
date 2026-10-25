@@ -1,6 +1,6 @@
 // C 那台机器的启动器：一条命令，从源码到运行，路上没有 JavaScript。
 //
-// 这一套问的是「独立化」那一句里最具体的一块：`hmyr 程序.hmyr` 能不能成。
+// 这一套问的是「独立化」那一句里最具体的一块：`hmyr 程序.hmoca` 能不能成。
 // 两步都由这台机器做 —— 种子把它编成字节码，编出来的那一份由这台机器跑。
 //
 // 与 c-vm 那一套的分工：那一套比的是「两台机器同一个答案」，这一套比的是
@@ -44,7 +44,7 @@ if (!fs.existsSync(exe)) {
   process.exit(1);
 }
 
-const 种子 = path.join(ROOT, "bootstrap/pack.hmyrb");
+const 种子 = path.join(ROOT, "bootstrap/pack.hmtn");
 const 跑 = (参数们, 选项 = {}) => {
   const r = spawnSync(exe, 参数们, {
     encoding: "utf8",
@@ -57,7 +57,7 @@ const 跑 = (参数们, 选项 = {}) => {
 
 console.log("一、一份源码跑起来，输出对");
 {
-  const r = 跑([path.join(ROOT, "examples/twice.hmyr")], { env: { HMYR_SEED: 种子 } });
+  const r = 跑([path.join(ROOT, "examples/twice.hmoca")], { env: { HMYR_SEED: 种子 } });
   ok("退出码是 0", r.码 === 0, String(r.码) + " " + r.错.slice(0, 200));
   ok("算对了那一行", r.出.includes("hi 42 琥珀音"), JSON.stringify(r.出.slice(0, 120)));
   // 编译那一段的「N 个块」不该落在用户程序的输出里 —— 它改道去了标准错误。
@@ -66,7 +66,7 @@ console.log("一、一份源码跑起来，输出对");
 
 console.log("二、程序看到的参数：第一个是源文件自己");
 {
-  const 源 = path.join(临, "argv-probe.hmyr");
+  const 源 = path.join(临, "argv-probe.hmoca");
   fs.writeFileSync(源, [
     "fn main() -> Int {",
     "  var i = 0",
@@ -86,7 +86,7 @@ console.log("二、程序看到的参数：第一个是源文件自己");
 
 console.log("三、退出码是程序返回的那个数");
 {
-  const 源 = path.join(临, "seven.hmyr");
+  const 源 = path.join(临, "seven.hmoca");
   fs.writeFileSync(源, "fn main() -> Int {\n  return 7\n}\n", "utf8");
   const r = 跑([源], { env: { HMYR_SEED: 种子 } });
   ok("返回 7 就退 7", r.码 === 7, String(r.码) + " " + r.错.slice(0, 160));
@@ -94,7 +94,7 @@ console.log("三、退出码是程序返回的那个数");
 
 console.log("四、源码编不过时，明说，而且不跑半成品");
 {
-  const 源 = path.join(临, "broken.hmyr");
+  const 源 = path.join(临, "broken.hmoca");
   fs.writeFileSync(源, "fn main() -> Int {\n  return (1 +\n}\n", "utf8");
   const r = 跑([源], { env: { HMYR_SEED: 种子 } });
   ok("退出码非零", r.码 !== 0, String(r.码));
@@ -106,9 +106,9 @@ console.log("五、找不到种子时说得出话，而不是装作跑过了");
 {
   const 空目录 = path.join(临, "nowhere");
   fs.mkdirSync(空目录, { recursive: true });
-  const r = 跑([path.join(ROOT, "examples/twice.hmyr")], {
+  const r = 跑([path.join(ROOT, "examples/twice.hmoca")], {
     cwd: 空目录,
-    env: { HMYR_SEED: path.join(空目录, "no-such-seed.hmyrb") },
+    env: { HMYR_SEED: path.join(空目录, "no-such-seed.hmoks") },
   });
   ok("退出码是 2", r.码 === 2, String(r.码));
   ok("消息里说了种子这件事", r.错.includes("no seed"), JSON.stringify(r.错.slice(0, 200)));
@@ -116,8 +116,8 @@ console.log("五、找不到种子时说得出话，而不是装作跑过了");
 
 console.log("六、给字节码时还是老路，一个字都没变");
 {
-  const 码路 = path.join(临, "twice.hmyrb");
-  const emit = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "examples/twice.hmyr"), 码路], { encoding: "utf8" });
+  const 码路 = path.join(临, "twice.hmoks");
+  const emit = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "examples/twice.hmoca"), 码路], { encoding: "utf8" });
   ok("JS 那一侧编得出来", emit.status === 0 && fs.existsSync(码路), String(emit.stderr).slice(0, 200));
   const r = 跑([码路]);
   ok("直接跑字节码，输出一样", r.码 === 0 && r.出.includes("hi 42 琥珀音"), JSON.stringify(r.出.slice(0, 120)));
@@ -125,7 +125,7 @@ console.log("六、给字节码时还是老路，一个字都没变");
 
 console.log("七、临时那一份可以留下来查");
 {
-  const r = 跑([path.join(ROOT, "examples/twice.hmyr")], { env: { HMYR_SEED: 种子, HMYR_KEEP: "1" } });
+  const r = 跑([path.join(ROOT, "examples/twice.hmoca")], { env: { HMYR_SEED: 种子, HMYR_KEEP: "1" } });
   const m = /HMYR_KEEP kept (.+)$/m.exec(r.错);
   const 留 = m ? m[1].trim() : "";
   ok("说了留在哪儿", 留 !== "", JSON.stringify(r.错.slice(-120)));
@@ -143,7 +143,7 @@ console.log("八、两条启动器对同一份源给同一个答案");
 {
   // 一条走自举层解释（bin/hmyr.mjs），一条走种子编译（这个可执行文件）。
   // 两条路对同一份源码说出两种答案，是最难查的那一类错 —— 所以这一条要钉住。
-  const 源 = path.join(临, "arith.hmyr");
+  const 源 = path.join(临, "arith.hmoca");
   fs.writeFileSync(源, [
     "fn main() -> Int {",
     '  print(str(abs(0 - 7)) + " " + str(min(3, 9, 2)) + " " + str(floor(2.7)) + "\\n")',

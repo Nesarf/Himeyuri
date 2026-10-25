@@ -10,7 +10,7 @@
  *
  *   一、字节码从哪来。板子上没有文件系统，所以字节码用 objcopy 打成一个
  *       对象文件链进映像，符号名由文件名决定：program.hmyrb 进来之后就是
- *       _binary_program_hmyrb_start 与 _binary_program_hmyrb_end。
+ *       _binary_program_hmoks_start 与 _binary_program_hmoks_end。
  *       没打进来的时候它是弱符号，落成空指针 —— 于是映像照样链得过，
  *       跑起来会报「读不到文件」，而不是在链接这一步失败。
  *
@@ -32,8 +32,8 @@ size_t 板子出口长(void);
 const uint8_t *板子出口(void);
 
 /* 打进来的字节码。弱声明，理由见文件头第一条。 */
-extern const uint8_t _binary_program_hmyrb_start[] __attribute__((weak));
-extern const uint8_t _binary_program_hmyrb_end[] __attribute__((weak));
+extern const uint8_t _binary_program_hmoks_start[] __attribute__((weak));
+extern const uint8_t _binary_program_hmoks_end[] __attribute__((weak));
 
 /* 往串口发一个字节。板子上由 port/uart.c 给强定义把它顶掉；
  * 这一份是「还没接线」时的退路：字节被丢掉，但记着丢了多少，
@@ -52,9 +52,9 @@ __attribute__((weak)) void 板子吐字节(uint8_t 字节) {
 size_t 板子吐过(void) { return g_吐过; }
 
 int main(void) {
-  const uint8_t *码起 = _binary_program_hmyrb_start;
+  const uint8_t *码起 = _binary_program_hmoks_start;
   size_t 长 = 0;
-  if (码起) 长 = (size_t)(_binary_program_hmyrb_end - _binary_program_hmyrb_start);
+  if (码起) 长 = (size_t)(_binary_program_hmoks_end - _binary_program_hmoks_start);
 
   /* 装平台口，然后把字节码交出去。之后这台机器与「它跑在哪」无关。 */
   板子装上(码起, 长);

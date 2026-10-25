@@ -13,7 +13,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "self/eval.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/eval.hmoca"));
 ok("求值器加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
 const 跑 = (语句们) => rt.callFunction(rt.functions.get("跑程序"), [语句们], null);

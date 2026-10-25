@@ -22,8 +22,8 @@
 // 这条 —— 清单不是任何目录里的文件，但解包的人应当随手拿到它。清单不列自己（造它的时候
 // 它还不存在），所以包内包外是同一批字节，不存在「哪一份算数」的问题。
 // 实测 v-test 那次：287 个源文件加清单一份，288 个成员，解出来的清单与包外那份 sha256 相同。
-import "./zip.hmyr"
-import "./manifest.hmyr"
+import "./zip.hmoca"
+import "./manifest.hmoca"
 
 fn 收一件(路们: Int, 目录: String, 名们: Int) {
   var 出 = 路们
@@ -76,8 +76,8 @@ fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String, �
     var j = 0
     while j < len(语名们) {
       var 要 = false
-      if 以尾(语名们[j], ".hmyr") || 以尾(语名们[j], ".hmoca") { 要 = true }
-      if 以尾(语名们[j], ".hmyrb") || 以尾(语名们[j], ".hmoks") || 以尾(语名们[j], ".hmtn") { 要 = true }
+      if 以尾(语名们[j], ".hmoca") || 以尾(语名们[j], ".hmoca") { 要 = true }
+      if 以尾(语名们[j], ".hmoks") || 以尾(语名们[j], ".hmoks") || 以尾(语名们[j], ".hmtn") { 要 = true }
       if 要 { 路们 = 收一件(路们, "runtime", (语名们[j],)) }
       j = j + 1
     }

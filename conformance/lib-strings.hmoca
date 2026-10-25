@@ -1,4 +1,4 @@
-import "../lib/strings.hmyr"
+import "../lib/strings.hmoca"
 
 // 一条断言：通过了交回 0，不通过交回它的编号。
 // 编号而不是布尔，是为了在启动器上跑的时候，失败能说出是哪一条。

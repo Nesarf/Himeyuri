@@ -33,7 +33,7 @@ const made = spawnSync(PY, ["-c",
   "img.save(r'" + p("in.png") + "', icc_profile=b)\n"], { encoding: "utf8" });
 ok("带 ICC 的测试图已造出", made.status === 0 && fs.existsSync(p("in.png")), String(made.stderr || "").slice(0, 120));
 
-const rt = runUnit(loadUnit(path.join(ROOT, "color.hmyr")));
+const rt = runUnit(loadUnit(path.join(ROOT, "color.hmoca")));
 const call = (name, args) => {
   const fn = rt.functions.get(name);
   if (!fn) throw new Error("没有这个函数：" + name);

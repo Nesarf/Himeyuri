@@ -16,7 +16,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "term.hmyr"));
+const unit = loadUnit(path.join(ROOT, "term.hmoca"));
 ok("终端模块加载", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
 const call = (name, args) => {
@@ -67,7 +67,7 @@ console.log("\n可注入：同一帧既能进终端，也能进字符串");
   const { ast } = parse(lex(src, { diagnostics: d }).tokens, { diagnostics: d });
   const errs = d.items.filter((x) => x.s === "error");
   ok("那段小程序本身解析得动", errs.length === 0, errs.map((x) => x.c).join(","));
-  const 求值器 = runUnit(loadUnit(path.join(ROOT, "term.hmyr")));
+  const 求值器 = runUnit(loadUnit(path.join(ROOT, "term.hmoca")));
   let buffer = "";
   求值器.write = (s) => { buffer += s; };
   求值器.registerModule(ast);          // 把模块函数与这段 main 放进同一个求值器

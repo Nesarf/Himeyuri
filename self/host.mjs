@@ -17,7 +17,7 @@ import { parse } from "../src/parser.mjs";
 const LINES_PER_PIECE = 100;
 
 export function loadScanner() {
-  const file = path.join(path.dirname(fileURLToPath(import.meta.url)), "scan.hmyr");
+  const file = path.join(path.dirname(fileURLToPath(import.meta.url)), "scan.hmoca");
   const source = fs.readFileSync(file, "utf8");
   const diagnostics = { items: [], errors: [], warnings: [], add(s, c, m, l, col) { this.items.push({ severity: s, code: c, message: m, line: l, column: col }); if (s === "error") this.errors.push(this.items[this.items.length - 1]); }, error(c, m, l, col) { this.add("error", c, m, l, col); }, warn(c, m, l, col) { this.add("warning", c, m, l, col); } };
   const { ast } = parse(lex(source, {}).tokens, { diagnostics });

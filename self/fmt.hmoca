@@ -12,7 +12,7 @@
 // 用法：hmyr self/fmt.hmyr < 源.hmyr        （整文件，写到标准输出）
 //       hmyr self/fmt.hmyr --expr < 表达式.txt
 
-import "./parse.hmyr"
+import "./parse.hmoca"
 
 fn 去首尾(行: String) -> String {
   var 起 = 0

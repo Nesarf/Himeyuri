@@ -11,8 +11,8 @@
 //
 // 进度走 stderr（每五十项一行）：长跑时能看出它在动，而 stdout 只留结论。
 
-import "./sha256.hmyr"
-import "../json.hmyr"
+import "./sha256.hmoca"
+import "../json.hmoca"
 
 fn 前16(十六: String) -> String {
   return slice(十六, 0, 16)

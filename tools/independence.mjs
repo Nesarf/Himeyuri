@@ -21,7 +21,7 @@ const 报 = (名, 值) => 行们.push([名, 值]);
 
 // 一、种子：它是一份能跑的东西，而不是一份记录。
 {
-  const 路 = path.join(ROOT, "bootstrap/pack.hmyrb");
+  const 路 = path.join(ROOT, "bootstrap/pack.hmtn");
   const 在 = fs.existsSync(路);
   const 魔数 = 在 ? fs.readFileSync(路).subarray(0, 5).toString("latin1") : "";
   const 字节 = 在 ? fs.statSync(路).size : 0;

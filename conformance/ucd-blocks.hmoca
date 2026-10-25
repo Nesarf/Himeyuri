@@ -1,4 +1,4 @@
-import "../runtime/ucd/blocks.hmyr"
+import "../runtime/ucd/blocks.hmoca"
 
 fn main() -> Int {
   if 块名(65) != "Basic Latin" {

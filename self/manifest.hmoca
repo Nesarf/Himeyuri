@@ -15,8 +15,8 @@
 //
 // 函数体里没有一处裸块：裸块在解释器那边能跑，而字节码后端把它当表达式，
 // 报的是「这一份不认这种表达式：Block」。变量因此都在函数作用域里，各自起名。
-import "./sha256.hmyr"
-import "../json.hmyr"
+import "./sha256.hmoca"
+import "../json.hmoca"
 
 fn 以头(s: String, 头: String) -> Bool {
   if len(s) < len(头) { return false }
@@ -398,12 +398,12 @@ fn 主(出路: String) effects(file, process) {
   var 库末 = 0 - 1
   i = 0
   while i < len(库名们) {
-    if 以尾(库名们[i], ".hmyr") || 以尾(库名们[i], ".hmoca") { 库末 = i }
+    if 以尾(库名们[i], ".hmoca") || 以尾(库名们[i], ".hmoca") { 库末 = i }
     i = i + 1
   }
   i = 0
   while i < len(库名们) {
-    if 以尾(库名们[i], ".hmyr") || 以尾(库名们[i], ".hmoca") {
+    if 以尾(库名们[i], ".hmoca") || 以尾(库名们[i], ".hmoca") {
       let 库项们 = 造库项("runtime/" + 库名们[i])
       k = 0
       while k < len(库项们) {

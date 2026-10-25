@@ -53,7 +53,7 @@ const 量 = (目标, options = {}) => {
     return 原块.call(this, n, s, e);
   };
   try {
-    const 层 = loadUnit(path.join(ROOT, "self/run.hmyr"));
+    const 层 = loadUnit(path.join(ROOT, "self/run.hmoca"));
     const rt = runUnit(层, options);
     let 出 = "";
     rt.write = (t) => { 出 += t; };
@@ -70,32 +70,32 @@ const 量 = (目标, options = {}) => {
 
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-evalmin-"));
 try {
-  fs.writeFileSync(path.join(临, "w.hmyr"), "var i = 0\nwhile i < 3 {\n  i = i + 1\n}\nreturn i\n");
-  fs.writeFileSync(path.join(临, "f.hmyr"), "fn 加(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  let s = \"abc\"\n  return 加(len(s), 2)\n}\n");
-  fs.writeFileSync(path.join(临, "bad.hmyr"), "let a = \nreturn a\n");
-  fs.writeFileSync(path.join(临, "rec.hmyr"), "let r = {a: 1}\nreturn r.a\n");
+  fs.writeFileSync(path.join(临, "w.hmoca"), "var i = 0\nwhile i < 3 {\n  i = i + 1\n}\nreturn i\n");
+  fs.writeFileSync(path.join(临, "f.hmoca"), "fn 加(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  let s = \"abc\"\n  return 加(len(s), 2)\n}\n");
+  fs.writeFileSync(path.join(临, "bad.hmoca"), "let a = \nreturn a\n");
+  fs.writeFileSync(path.join(临, "rec.hmoca"), "let r = {a: 1}\nreturn r.a\n");
   const 模块 = path.join(临, "mod");
   fs.mkdirSync(模块, { recursive: true });
-  fs.writeFileSync(path.join(模块, "lib.hmyr"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
-  fs.writeFileSync(path.join(模块, "main.hmyr"), "import \"./lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
+  fs.writeFileSync(path.join(模块, "lib.hmoca"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
+  fs.writeFileSync(path.join(模块, "main.hmoca"), "import \"./lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
 
   const 全部语句 = new Set(), 全部表达式 = new Set(), 全部内置 = new Set();
   const 收 = (r) => { r.语句.forEach((x) => 全部语句.add(x)); r.表达式.forEach((x) => 全部表达式.add(x)); r.内置.forEach((x) => 全部内置.add(x)); return r; };
 
   console.log("一、七条路径，各自的答案先对");
-  const hello = 收(量(path.join(ROOT, "examples/hello.hmyr")));
+  const hello = 收(量(path.join(ROOT, "examples/hello.hmoca")));
   ok("hello 给五", hello.码 === 0 && hello.出.trim() === "5", hello.码 + " / " + JSON.stringify(hello.出.trim()));
-  const 循环 = 收(量(path.join(临, "w.hmyr")));
+  const 循环 = 收(量(path.join(临, "w.hmoca")));
   ok("while 那个给三", 循环.码 === 0 && 循环.出.trim() === "3", 循环.码 + " / " + JSON.stringify(循环.出.trim()));
-  const 函数 = 收(量(path.join(临, "f.hmyr")));
+  const 函数 = 收(量(path.join(临, "f.hmoca")));
   ok("函数那个给五", 函数.码 === 0 && 函数.出.trim() === "5", 函数.码 + " / " + JSON.stringify(函数.出.trim()));
-  const 记录 = 收(量(path.join(临, "rec.hmyr")));
+  const 记录 = 收(量(path.join(临, "rec.hmoca")));
   ok("记录那个给一", 记录.码 === 0 && 记录.出.trim() === "1", 记录.码 + " / " + JSON.stringify(记录.出.trim()));
-  const 缺 = 收(量(path.join(临, "nope.hmyr")));
+  const 缺 = 收(量(path.join(临, "nope.hmoca")));
   ok("目标不存在给退出码 1", 缺.码 === 1, String(缺.码));
-  const 坏 = 收(量(path.join(临, "bad.hmyr")));
+  const 坏 = 收(量(path.join(临, "bad.hmoca")));
   ok("目标语法坏时也说得出话（有退出码）", 坏.码 === 0 || 坏.码 === 1, String(坏.码));
-  const 引 = 收(量(path.join(模块, "main.hmyr")));
+  const 引 = 收(量(path.join(模块, "main.hmoca")));
   ok("import 那个给四十二", 引.码 === 0 && 引.出.trim() === "42", 引.码 + " / " + JSON.stringify(引.出.trim()));
 
   console.log("二、表达式：十一种（宿主有十八种，用不到的那几种不在表里）");
@@ -135,12 +135,12 @@ try {
 
   console.log("六、stage0 模式下同一批路径仍然全对（表不是写在纸上给人点头的）");
   {
-    const 三 = [["hello", path.join(ROOT, "examples/hello.hmyr"), "5"], ["while", path.join(临, "w.hmyr"), "3"], ["函数", path.join(临, "f.hmyr"), "5"]];
+    const 三 = [["hello", path.join(ROOT, "examples/hello.hmoca"), "5"], ["while", path.join(临, "w.hmoca"), "3"], ["函数", path.join(临, "f.hmoca"), "5"]];
     for (const [名, 目标, 应] of 三) {
       const r = 量(目标, { stage0: true });
       ok(名 + " 在 stage0 下给 " + 应, r.码 === 0 && r.出.trim() === 应, r.码 + " / " + JSON.stringify(r.出.trim()));
     }
-    const 引二 = 量(path.join(模块, "main.hmyr"), { stage0: true });
+    const 引二 = 量(path.join(模块, "main.hmoca"), { stage0: true });
     ok("import 那个在 stage0 下给四十二", 引二.码 === 0 && 引二.出.trim() === "42", 引二.码 + " / " + JSON.stringify(引二.出.trim()));
   }
 
@@ -153,7 +153,7 @@ try {
       const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
       return parse(lex(source).tokens, { diagnostics: d });
     };
-    const 文件 = path.join(临, "m.hmyr");
+    const 文件 = path.join(临, "m.hmoca");
     fs.writeFileSync(文件, "fn f(n: Int) -> Int {\n  return match n { 1 => 2 }\n}\nfn main() -> Int {\n  return f(1)\n}\n");
     const rt = runUnit(loadUnit(文件, { reader: 宿主读 }), { stage0: true });
     rt.write = () => {};

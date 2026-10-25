@@ -15,8 +15,8 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const rt = runUnit(loadUnit(path.join(ROOT, "shell-builtins.hmyr")));
-rt.registerModule(loadUnit(path.join(ROOT, "term.hmyr")).modules.values().next().value);
+const rt = runUnit(loadUnit(path.join(ROOT, "shell-builtins.hmoca")));
+rt.registerModule(loadUnit(path.join(ROOT, "term.hmoca")).modules.values().next().value);
 const call = (name, args) => {
   const fn = rt.functions.get(name);
   if (!fn) throw new Error("没有这个函数：" + name);
@@ -75,8 +75,8 @@ try {
     const { ast } = parse(lex(src, { diagnostics: d }).tokens, { diagnostics: d });
     const errs = d.items.filter((x) => x.s === "error");
     ok("那段小程序本身解析得动", errs.length === 0, errs.map((x) => x.c).join(","));
-    const 求值器 = runUnit(loadUnit(path.join(ROOT, "shell-builtins.hmyr")));
-    求值器.registerModule(loadUnit(path.join(ROOT, "term.hmyr")).modules.values().next().value);
+    const 求值器 = runUnit(loadUnit(path.join(ROOT, "shell-builtins.hmoca")));
+    求值器.registerModule(loadUnit(path.join(ROOT, "term.hmoca")).modules.values().next().value);
     求值器.write = () => {};
     求值器.registerModule(ast);
     let 被拒 = null;

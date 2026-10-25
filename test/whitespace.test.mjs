@@ -17,7 +17,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "whitespace.hmyr"));
+const unit = loadUnit(path.join(ROOT, "whitespace.hmoca"));
 ok("空白规范化那一层加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
 const 规 = (s) => {

@@ -36,7 +36,7 @@ console.log("  一、起得来吗");
 查(Number(process.versions.node.split(".")[0]) >= 20, "Node 20 以上（现在是 " + process.versions.node + "）",
   "这一份用纯 ESM，没有构建、没有依赖——就靠它。", "要");
 查(fs.existsSync(path.join(ROOT, "bin/hmyr.mjs")), "启动器 bin/hmyr.mjs",
-  "跑一个 .hmyr 文件用它：node bin/hmyr.mjs 你的文件.hmyr", "要");
+  "跑一个 .hmyr 文件用它：node bin/hmyr.mjs 你的文件.hmoca", "要");
 查(fs.existsSync(path.join(ROOT, "src/eval.mjs")), "宿主的求值器",
   "语言跑在这一层上；将来会换成自举那一层（见 design/SELFRUN.txt）。", "要");
 
@@ -69,7 +69,7 @@ console.log("  三、能用什么（都是可选的）");
 
 console.log("");
 console.log("  四、接下来");
-console.log("     想跑一段看看：   node bin/hmyr.mjs examples/hello.hmyr");
+console.log("     想跑一段看看：   node bin/hmyr.mjs examples/hello.hmoca");
 console.log("     想读这门语言：   design/TOUR.txt（给人读的，不是给做的人读的）");
 console.log("     想知道它装了什么：node tools/manifest.mjs");
 console.log("     遇到错误编号：   node tools/helper.mjs HMYR-R0110");

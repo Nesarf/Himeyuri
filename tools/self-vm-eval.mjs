@@ -15,7 +15,7 @@ import { loadUnit, runUnit } from "../src/loader.mjs";
 import * as 单位 from "../src/units.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const 字节路 = path.join(ROOT, "runtime/run.hmyrb");
+const 字节路 = path.join(ROOT, "runtime/run.hmoks");
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label + (detail ? "  " + detail : "")); }
@@ -23,7 +23,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 if (!fs.existsSync(字节路)) {
-  console.log("没有 runtime/run.hmyrb —— 先跑 node tools/emit-code.mjs self/run.hmyr runtime/run.hmyrb");
+  console.log("没有 runtime/run.hmyrb —— 先跑 node tools/emit-code.mjs self/run.hmyr runtime/run.hmoks");
   process.exit(1);
 }
 
@@ -38,7 +38,7 @@ const 调 = (名, 参) => {
 };
 
 // 2. 宿主那台：同一份 run.hmyr，但由宿主求值器执行
-const 宿主 = runUnit(loadUnit(path.join(ROOT, "self/run.hmyr")), { stepLimit: 40000000000 });
+const 宿主 = runUnit(loadUnit(path.join(ROOT, "self/run.hmoca")), { stepLimit: 40000000000 });
 const 宿主调 = (名, 参) => {
   try { return { value: 宿主.callFunction(宿主.functions.get(名), 参, null) }; }
   catch (e) { return { err: String(e && e.message).slice(0, 80) }; }

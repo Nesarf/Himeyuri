@@ -30,7 +30,7 @@ const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-compiler-"));
 
 // HMYR 那台编译器：跑 self/compile.hmyr，拿它交出来的函数表。
 const 编 = (() => {
-  const rt = runUnit(loadUnit(path.join(ROOT, "self/compile.hmyr")), { stage0: true, stepLimit: 300000000 });
+  const rt = runUnit(loadUnit(path.join(ROOT, "self/compile.hmoca")), { stage0: true, stepLimit: 300000000 });
   const 编源码 = rt.functions.get("编源码");
   const 转值 = (v) => {
     if (Array.isArray(v)) return new 类元组(v.map(转值));
@@ -65,7 +65,7 @@ const 编 = (() => {
 
 // JS 那台编译器：走加载器与 src/bytecode.mjs。
 const 编JS = (源码) => {
-  const p = path.join(临, "j" + Math.random().toString(36).slice(2) + ".hmyr");
+  const p = path.join(临, "j" + Math.random().toString(36).slice(2) + ".hmoca");
   fs.writeFileSync(p, 源码, "utf8");
   const unit = loadUnit(p);
   if (!unit.ok) return { 错: "加载失败 " + JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)) };
@@ -118,10 +118,10 @@ console.log("二、HMYR 编译器编出来的字节码也能由 C 那台机器�
   const a = 编(源码);
   ok("子集里的程序编得出来", !a.错, a.错 || "");
   // 真实一点的那个：examples/twice.hmyr 有两个函数、print、字符串拼接与中文。
-  const 真 = 编(fs.readFileSync(path.join(ROOT, "examples/twice.hmyr"), "utf8"));
+  const 真 = 编(fs.readFileSync(path.join(ROOT, "examples/twice.hmoca"), "utf8"));
   ok("examples/twice.hmyr 也编得出来", !真.错, 真.错 || "");
   if (!a.错) {
-    const 码路 = path.join(临, "by-hmyr.hmyrb");
+    const 码路 = path.join(临, "by-hmyr.hmoks");
     fs.writeFileSync(码路, 写程序(a.程序));
     // C 那台若这台机器上没有，就明说跳过 —— 那不是这门语言的问题。
     const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
@@ -136,7 +136,7 @@ console.log("二、HMYR 编译器编出来的字节码也能由 C 那台机器�
         ok("C 那台跑出同一个答案（退出码 1）", r.status === 1, String(r.status) + " " + String(r.stderr).slice(0, 100));
         // 真实那个例子：HMYR 编译、C 执行，输出要与 JS 编译、JS 执行的一模一样。
         if (!真.错) {
-          const 真码 = path.join(临, "twice-hmyr.hmyrb");
+          const 真码 = path.join(临, "twice-hmyr.hmoks");
           fs.writeFileSync(真码, 写程序(真.程序));
           const r2 = spawnSync(exe, [真码], { encoding: "utf8", timeout: 60000 });
           ok("真实例子在 C 上跑出 hi 42 琥珀音", String(r2.stdout || "").includes("hi 42 琥珀音"),
@@ -158,7 +158,7 @@ console.log("四、自编译：HMYR 编出的编译器，跑起来还能编");
   // 这一节是「编译器搬进 HMYR」的硬证据：
   // 用 self/compile.hmyr 去编 self/compile.hmyr 自己（连它的 import 链一起），
   // 产物跑起来的输出，与原来那份编译器的自测输出相同。
-  const unit = loadUnit(path.join(ROOT, "self/compile.hmyr"));
+  const unit = loadUnit(path.join(ROOT, "self/compile.hmoca"));
   ok("self/compile.hmyr 读得进", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
   if (unit.ok) {
     let 源码 = "";
@@ -166,7 +166,7 @@ console.log("四、自编译：HMYR 编出的编译器，跑起来还能编");
     const 自编 = 编(源码);
     ok("它能编出自己（含 import 链）", !自编.错, 自编.错 || "");
     if (!自编.错) {
-      const 码路 = path.join(临, "selfcompiled.hmyrb");
+      const 码路 = path.join(临, "selfcompiled.hmoks");
       fs.writeFileSync(码路, 写程序(自编.程序));
       const 函数数 = 自编.程序.函数们.size;
       ok("产物里有几十个函数（" + 函数数 + " 个）", 函数数 > 50, String(函数数));

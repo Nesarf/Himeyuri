@@ -2,7 +2,7 @@
 // front end end to end.
 //
 // The chain is assembled the only way it can be without a module system: one evaluator, three files
-// loaded into it, so pipeline.hmyr's calls to scan() and parse() resolve to the other two files'
+// loaded into it, so pipeline.hmoca's calls to scan() and parse() resolve to the other two files'
 // functions. If that stops being true - a name shadowed, a file split - this test says so.
 import fs from "node:fs";
 import path from "node:path";
@@ -47,7 +47,7 @@ function loadAll(files) {
   return { ok: true, rt };
 }
 
-const loaded = loadAll(["self/lex.hmyr", "self/parse.hmyr", "self/pipeline.hmyr"]);
+const loaded = loadAll(["self/lex.hmoca", "self/parse.hmoca", "self/pipeline.hmoca"]);
 console.log("three files, one evaluator");
 ok("they all load", loaded.ok, loaded.ok ? "" : loaded.errors.join("; "));
 ok("scan() is there, from the lexer file", loaded.ok && loaded.rt.functions.has("scan"));

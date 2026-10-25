@@ -41,7 +41,7 @@ function emitValue(value, depth) {
 
 const isMain = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
 if (isMain) {
-  const file = process.argv[2] || path.join(path.dirname(fileURLToPath(import.meta.url)), "piece.hmyr");
+  const file = process.argv[2] || path.join(path.dirname(fileURLToPath(import.meta.url)), "piece.hmoca");
   const loaded = loadPiece(file);
   if (!loaded.ok) {
     for (const d of loaded.diagnostics.items) console.error("  " + d.severity + " " + d.code + "  " + d.message);

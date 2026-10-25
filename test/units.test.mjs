@@ -122,7 +122,7 @@ console.log("四、已经接到最小求值器上：打开开关，十六条与�
   try {
     for (const 源 of 案子) {
       const 文 = "fn main() -> Int {\n  return " + 源 + "\n}\n";
-      const p = path.join(临, "case.hmyr");
+      const p = path.join(临, "case.hmoca");
       fs.writeFileSync(p, 文);
       const r = run(文);
       const 甲 = r.diagnostics.errors.length ? "错:" + r.diagnostics.errors[0].code : 描述(r.value);
@@ -168,7 +168,7 @@ console.log("五、字节码那边也打开同一个开关，三条路仍然一�
   try {
     for (const 源 of 案子) {
       const 文 = "fn main() -> Int {\n  return " + 源 + "\n}\n";
-      const p = path.join(临2, "case.hmyr");
+      const p = path.join(临2, "case.hmoca");
       fs.writeFileSync(p, 文);
       const r = run(文);
       const 甲 = r.diagnostics.errors.length ? "错:" + r.diagnostics.errors[0].code : 描述(r.value);
@@ -197,7 +197,7 @@ console.log("五、字节码那边也打开同一个开关，三条路仍然一�
   {
     const 临三 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-units-default-");
     try {
-      const p = path.join(临三, "默认.hmyr");
+      const p = path.join(临三, "默认.hmoca");
       fs.writeFileSync(p, "fn main() -> Int {\n  return \"abc\"\n}\n");
       const 层 = loadUnit(p);
       const vm = 跑字节码(层, { write: () => {}, capabilities: 本机能力(), argv: ["hmyr", p] });

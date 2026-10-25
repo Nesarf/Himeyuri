@@ -15,7 +15,7 @@ const ok = (label, condition, detail = "") => {
 };
 const attempt = (fn) => { try { return { value: fn() }; } catch (e) { return { error: (e.code || "") + " " + e.message }; } };
 
-const unit = loadUnit(path.join(ROOT, "self/chain.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/chain.hmoca"));
 ok("the chain loads", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
 const call = (name, args) => {

@@ -27,7 +27,7 @@ const 工厂 = { 元组: (项) => new 类元组(项), 记录: (字段) => new �
 
 // 编译一份源码成一个程序对象。
 const 编 = (源码) => {
-  const p = path.join(临, "m" + Math.random().toString(36).slice(2) + ".hmyr");
+  const p = path.join(临, "m" + Math.random().toString(36).slice(2) + ".hmoca");
   fs.writeFileSync(p, 源码, "utf8");
   const unit = loadUnit(p);
   if (!unit.ok) throw new Error("加载失败：" + JSON.stringify(unit.diagnostics.errors.slice(0, 2)));

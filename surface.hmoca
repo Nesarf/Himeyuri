@@ -8,8 +8,8 @@
 //
 // 依赖写清楚：画布、换行、贴行都来自 term.hmyr。
 
-import "./term.hmyr"
-import "./task.hmyr"
+import "./term.hmoca"
+import "./task.hmoca"
 
 fn 新表面(名: String, 行: Int, 列: Int) -> Int {
   return {name: 名, rows: 行, cols: 列, x: 0, y: 0, owner: -1, 布: 空画布(行, 列)}

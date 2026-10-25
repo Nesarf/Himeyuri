@@ -21,7 +21,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 function loadLexer() {
-  const file = path.join(ROOT, "self/lex.hmyr");
+  const file = path.join(ROOT, "self/lex.hmoca");
   const source = fs.readFileSync(file, "utf8");
   const diagnostics = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
   const { ast } = parse(lex(source, {}).tokens, { diagnostics });

@@ -13,10 +13,10 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "parallel.hmyr"));
+const unit = loadUnit(path.join(ROOT, "parallel.hmoca"));
 ok("并行那一层加载得动（这一句顺带确认没有半加载）", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
-rt.registerModule(loadUnit(path.join(ROOT, "json.hmyr")).modules.values().next().value);
+rt.registerModule(loadUnit(path.join(ROOT, "json.hmoca")).modules.values().next().value);
 const call = (name, args) => {
   const fn = rt.functions.get(name);
   if (!fn) throw new Error("没有这个函数：" + name);

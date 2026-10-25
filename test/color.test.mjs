@@ -36,7 +36,7 @@ const made = spawnSync(PY, ["-c",
   "img.save(r'" + p("in.png") + "')\n"], { encoding: "utf8" });
 ok("测试图已造出", made.status === 0 && fs.existsSync(p("in.png")), String(made.stderr || "").slice(0, 120));
 
-const unit = loadUnit(path.join(ROOT, "color.hmyr"));
+const unit = loadUnit(path.join(ROOT, "color.hmoca"));
 ok("色彩模块加载", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
 const call = (name, args) => {

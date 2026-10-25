@@ -20,12 +20,12 @@ const write = (name, text) => { const f = path.join(SCRATCH, name); fs.writeFile
 
 try {
   console.log("a module and what it imports");
-  const beta = write("beta.hmyr", "fn beta() -> Int { return 2 }\nfn shared() -> Int { return 1 }\n");
-  const alpha = write("alpha.hmyr", 'import "./beta.hmyr"\n\nfn alpha() -> Int { return beta() }\nfn shared() -> Int { return 9 }\n');
+  const beta = write("beta.hmoca", "fn beta() -> Int { return 2 }\nfn shared() -> Int { return 1 }\n");
+  const alpha = write("alpha.hmoca", 'import "./beta.hmoca"\n\nfn alpha() -> Int { return beta() }\nfn shared() -> Int { return 9 }\n');
   {
     const unit = loadUnit(alpha);
     ok("it loads", unit.ok, unit.diagnostics.items.map((d) => d.code + " " + d.message).join("; "));
-    ok("the imported file comes before the importer", unit.order.length === 2 && path.basename(unit.order[0]) === "beta.hmyr", describeUnit(unit));
+    ok("the imported file comes before the importer", unit.order.length === 2 && path.basename(unit.order[0]) === "beta.hmoca", describeUnit(unit));
     ok("and both are there", unit.order.length === 2, describeUnit(unit));
   }
   {
@@ -44,11 +44,11 @@ try {
   }
 
   console.log("\nloaded once, however many times it is asked for");
-  const gamma = write("gamma.hmyr", 'import "./beta.hmyr"\n\nfn gamma() -> Int { return beta() }\n');
-  const root = write("root.hmyr", 'import "./alpha.hmyr"\nimport "./gamma.hmyr"\n\nfn root() -> Int { return alpha() + gamma() }\n');
+  const gamma = write("gamma.hmoca", 'import "./beta.hmoca"\n\nfn gamma() -> Int { return beta() }\n');
+  const root = write("root.hmoca", 'import "./alpha.hmoca"\nimport "./gamma.hmoca"\n\nfn root() -> Int { return alpha() + gamma() }\n');
   {
     const unit = loadUnit(root);
-    const betaCount = unit.order.filter((f) => path.basename(f) === "beta.hmyr").length;
+    const betaCount = unit.order.filter((f) => path.basename(f) === "beta.hmoca").length;
     ok("a file imported by two others is loaded once", betaCount === 1, describeUnit(unit));
     ok("and appears after both of its importers' needs are known", unit.order.indexOf(beta) < unit.order.indexOf(gamma), describeUnit(unit));
     // beta and alpha really do both declare shared, so one warning is right; what must not happen is the
@@ -58,8 +58,8 @@ try {
   }
 
   console.log("\ncircular imports are refused");
-  const left = write("left.hmyr", 'import "./right.hmyr"\n\nfn left() -> Int { return 1 }\n');
-  const right = write("right.hmyr", 'import "./left.hmyr"\n\nfn right() -> Int { return 2 }\n');
+  const left = write("left.hmoca", 'import "./right.hmoca"\n\nfn left() -> Int { return 1 }\n');
+  const right = write("right.hmoca", 'import "./left.hmoca"\n\nfn right() -> Int { return 2 }\n');
   {
     const unit = loadUnit(left);
     ok("a cycle is an error", codes(unit).includes("HMYR-E0301"), codes(unit).join(","));
@@ -70,12 +70,12 @@ try {
 
   console.log("\nwhat it refuses to guess about");
   {
-    const missing = write("missing.hmyr", 'import "./nowhere.hmyr"\n\nfn missing() -> Int { return 0 }\n');
+    const missing = write("missing.hmoca", 'import "./nowhere.hmoca"\n\nfn missing() -> Int { return 0 }\n');
     const unit = loadUnit(missing);
     ok("a missing file is an error", codes(unit).includes("HMYR-E0302"), codes(unit).join(","));
   }
   {
-    const pkg = write("pkg.hmyr", 'import "std/io"\n\nfn pkg() -> Int { return 0 }\n');
+    const pkg = write("pkg.hmoca", 'import "std/io"\n\nfn pkg() -> Int { return 0 }\n');
     const unit = loadUnit(pkg);
     ok("a package import is noted, not guessed at", codes(unit).includes("HMYR-W0301"), codes(unit).join(","));
     ok("and it is not an error yet", unit.ok, codes(unit).join(","));
@@ -87,12 +87,12 @@ try {
     // report that when they are loaded as one unit - which is the finding that made step one necessary.
     // chain.hmyr now declares its dependency on lex.hmyr, so the no-dependency case has to be a file
     // that genuinely has none.
-    const unit = loadUnit(path.join(ROOT, "kpb/piece.hmyr"));
+    const unit = loadUnit(path.join(ROOT, "kpb/piece.hmoca"));
     ok("a file with no imports loads on its own", unit.ok, codes(unit).join(","));
     ok("and brings nothing else with it", unit.order.length === 1, describeUnit(unit));
-    const chained = loadUnit(path.join(ROOT, "self/chain.hmyr"));
+    const chained = loadUnit(path.join(ROOT, "self/chain.hmoca"));
     ok("a file that declares a dependency brings it along", chained.order.length === 2 &&
-      chained.order.some((f) => f.endsWith("lex.hmyr")), describeUnit(chained));
+      chained.order.some((f) => f.endsWith("lex.hmoca")), describeUnit(chained));
   }
 } finally {
   fs.rmSync(SCRATCH, { recursive: true, force: true });

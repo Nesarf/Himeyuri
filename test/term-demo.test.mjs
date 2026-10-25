@@ -13,8 +13,8 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const rt = runUnit(loadUnit(path.join(ROOT, "term.hmyr")));
-rt.registerModule(loadUnit(path.join(ROOT, "glyphs.hmyr")).modules.values().next().value);
+const rt = runUnit(loadUnit(path.join(ROOT, "term.hmoca")));
+rt.registerModule(loadUnit(path.join(ROOT, "glyphs.hmoca")).modules.values().next().value);
 const call = (name, args) => {
   const fn = rt.functions.get(name);
   if (!fn) throw new Error("没有这个函数：" + name);
@@ -61,7 +61,7 @@ console.log("按键让它提前收手");
 
 console.log("示例文件本身也是可解析的 Himeyuri");
 {
-  const unit = loadUnit(path.join(ROOT, "examples/demo.hmyr"));
+  const unit = loadUnit(path.join(ROOT, "examples/demo.hmoca"));
   ok("examples/demo.hmyr 加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 }
 

@@ -20,9 +20,9 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 字节路 = path.join(ROOT, "runtime/fmt.hmyrb");
+const 字节路 = path.join(ROOT, "runtime/fmt.hmoks");
 if (!fs.existsSync(字节路)) {
-  console.log("没有 runtime/fmt.hmyrb —— 先跑 node tools/emit-code.mjs self/fmt.hmyr runtime/fmt.hmyrb");
+  console.log("没有 runtime/fmt.hmyrb —— 先跑 node tools/emit-code.mjs self/fmt.hmyr runtime/fmt.hmoks");
   process.exit(1);
 }
 
@@ -35,7 +35,7 @@ const vm调 = (源) => {
 };
 
 // 宿主那一位：同一份 self/fmt.hmyr，由宿主求值器执行
-const 宿主 = runUnit(loadUnit(path.join(ROOT, "self/fmt.hmyr")), { stepLimit: 400000000 });
+const 宿主 = runUnit(loadUnit(path.join(ROOT, "self/fmt.hmoca")), { stepLimit: 400000000 });
 const 宿主调 = (源) => {
   try { return 宿主.callFunction(宿主.functions.get("整文件"), [源], null); }
   catch { return null; }

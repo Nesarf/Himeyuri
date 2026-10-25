@@ -9,8 +9,8 @@ import { loadUnit, runUnit } from "../src/loader.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ESC = String.fromCharCode(27);
 
-const rt = runUnit(loadUnit(path.join(ROOT, "term.hmyr")));
-for (const name of ["glyphs.hmyr", "examples/demo.hmyr"]) {
+const rt = runUnit(loadUnit(path.join(ROOT, "term.hmoca")));
+for (const name of ["glyphs.hmoca", "examples/demo.hmoca"]) {
   rt.registerModule(loadUnit(path.join(ROOT, name)).modules.values().next().value);
 }
 

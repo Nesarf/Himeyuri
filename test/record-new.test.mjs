@@ -71,7 +71,7 @@ console.log("field_names：字段名的列表");
 
 console.log("自举那边也能造记录了");
 {
-  const rt2 = runUnit(loadUnit(path.join(ROOT, "self/run.hmyr")));
+  const rt2 = runUnit(loadUnit(path.join(ROOT, "self/run.hmoca")));
   const 跑程序 = (s) => rt2.callFunction(rt2.functions.get("跑程序文字"), [s], null);
   ok("造记录并取字段", 跑程序("let r = {a: 1, b: 2}\nreturn r.a + r.b") === "3",
     JSON.stringify(跑程序("let r = {a: 1, b: 2}\nreturn r.a + r.b")));

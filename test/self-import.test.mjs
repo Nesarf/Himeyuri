@@ -15,18 +15,18 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 层 = loadUnit(path.join(ROOT, "self/run.hmyr"));
+const 层 = loadUnit(path.join(ROOT, "self/run.hmoca"));
 ok("自举那一层加载得动", 层.ok, 层.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const 自举 = runUnit(层);
 const 认 = (源) => 自举.callFunction(自举.functions.get("找导入们"), [源], null);
 
 console.log("一、认得出");
 {
-  ok("一行 import", JSON.stringify(认('import "./a.hmyr"\n')) === JSON.stringify(["./a.hmyr"]), JSON.stringify(认('import "./a.hmyr"\n')));
-  const 两 = 认('import "./a.hmyr"\nimport "./b.hmyr"\n');
-  ok("两行 import，按顺序", JSON.stringify(两) === JSON.stringify(["./a.hmyr", "./b.hmyr"]), JSON.stringify(两));
-  ok("缩进的也算", JSON.stringify(认('  import "./c.hmyr"\n')) === JSON.stringify(["./c.hmyr"]));
-  ok("tab 缩进的也算", JSON.stringify(认('\timport "./d.hmyr"\n')) === JSON.stringify(["./d.hmyr"]));
+  ok("一行 import", JSON.stringify(认('import "./a.hmoca"\n')) === JSON.stringify(["./a.hmoca"]), JSON.stringify(认('import "./a.hmoca"\n')));
+  const 两 = 认('import "./a.hmoca"\nimport "./b.hmoca"\n');
+  ok("两行 import，按顺序", JSON.stringify(两) === JSON.stringify(["./a.hmoca", "./b.hmoca"]), JSON.stringify(两));
+  ok("缩进的也算", JSON.stringify(认('  import "./c.hmoca"\n')) === JSON.stringify(["./c.hmoca"]));
+  ok("tab 缩进的也算", JSON.stringify(认('\timport "./d.hmoca"\n')) === JSON.stringify(["./d.hmoca"]));
 }
 
 console.log("二、认不出的当没有");
@@ -34,15 +34,15 @@ console.log("二、认不出的当没有");
   ok("没有 import 就是空", JSON.stringify(认("fn main() -> Int {\n  return 1\n}\n")) === "[]");
   ok("空源码是空", JSON.stringify(认("")) === "[]");
   // 注释里的 import 不算：注释是给人看的，不是给解析器看的。
-  ok("注释里的不算", JSON.stringify(认('// import "./假.hmyr"\n')) === "[]", JSON.stringify(认('// import "./假.hmyr"\n')));
-  ok("拼错的也不算", JSON.stringify(认('importx "./a.hmyr"\n')) === "[]");
+  ok("注释里的不算", JSON.stringify(认('// import "./假.hmoca"\n')) === "[]", JSON.stringify(认('// import "./假.hmoca"\n')));
+  ok("拼错的也不算", JSON.stringify(认('importx "./a.hmoca"\n')) === "[]");
   ok("没有引号的也不算", JSON.stringify(认("import ./a.hmyr\n")) === "[]");
 }
 
 console.log("三、顺序按出现");
 {
-  const 序 = 认('import "./z.hmyr"\nimport "./a.hmyr"\nimport "./m.hmyr"\n');
-  ok("不是排序，是出现顺序", JSON.stringify(序) === JSON.stringify(["./z.hmyr", "./a.hmyr", "./m.hmyr"]), JSON.stringify(序));
+  const 序 = 认('import "./z.hmoca"\nimport "./a.hmoca"\nimport "./m.hmoca"\n');
+  ok("不是排序，是出现顺序", JSON.stringify(序) === JSON.stringify(["./z.hmoca", "./a.hmoca", "./m.hmoca"]), JSON.stringify(序));
 }
 
 console.log("");

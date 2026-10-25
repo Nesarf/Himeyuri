@@ -54,7 +54,7 @@ console.log("\nwhat it folds: identifiers are normalised");
 
 console.log("\nthe bootstrapped lexer now folds the same way");
 {
-  const unit = loadUnit(path.join(ROOT, "self/lex.hmyr"));
+  const unit = loadUnit(path.join(ROOT, "self/lex.hmoca"));
   ok("自举词法加载", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
   const rt = runUnit(unit);
   const scan = (s) => rt.callFunction(rt.functions.get("scan"), [s], null);

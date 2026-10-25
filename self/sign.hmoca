@@ -2,8 +2,8 @@
 //
 // 这是发布链的最后一跳：manifest.json 与 manifest.json.sig 都由 HMYR 自己验，
 // 不需要 ssh-keygen，也不需要 node。
-import "./ssh.hmyr"
-import "./curve.hmyr"
+import "./ssh.hmoca"
+import "./curve.hmoca"
 
 fn 验文件(签名路: String, 消息路: String) -> Bool effects(file, process) {
   let 解 = 解签名(read_text(签名路))

@@ -204,7 +204,7 @@ C 版虚拟机：那台不是 JS 的机器
   调 hmyr_运行，最后把出口一个字节一个字节地交给串口。它与 board-check.c
   共用 port/arm-port.c 的平台口，所以「接上了」这件事只验一次，两条路都算数。
   字节码不靠文件系统：objcopy 把 program.hmyrb 打成一个对象文件，符号名由
-  文件名给（_binary_program_hmyrb_start 与 _end），段名约定成 .program。
+  文件名给（_binary_program_hmoks_start 与 _end），段名约定成 .program。
   链接脚本里那句 KEEP(*(.program)) 是必需的 —— board-main.c 对它是弱引用，
   而弱引用拦不住 --gc-sections；少了那一句，映像照样链得过、照样烧得进，
   跑起来却报「读不到文件」。这一条踩过一次，记在这里。

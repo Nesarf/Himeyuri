@@ -24,7 +24,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 const 编一份 = (名) => {
-  const u = loadUnit(path.join(ROOT, "self", 名 + ".hmyr"));
+  const u = loadUnit(path.join(ROOT, "self", 名 + ".hmoca"));
   if (!u.ok) return null;
   return 写程序(合并程序(u.order.map((f) => 编译模块(u.modules.get(f))), 编译模块(u.modules.get(u.order[u.order.length - 1]))));
 };
@@ -47,8 +47,8 @@ if (!有编译器) {
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0 && 压码 && 解码) {
-    const 压路 = path.join(临, "deflate.hmyrb");
-    const 解路 = path.join(临, "inflate.hmyrb");
+    const 压路 = path.join(临, "deflate.hmoks");
+    const 解路 = path.join(临, "inflate.hmoks");
     fs.writeFileSync(压路, 压码);
     fs.writeFileSync(解路, 解码);
     const 压 = (参) => spawnSync(exe, [压路, ...参], { encoding: "utf8", timeout: 600000, env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" } });
@@ -69,7 +69,7 @@ if (!有编译器) {
     }
 
     console.log("三、四 KB 样本：自家压、自家解");
-    const 全 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmyrb"));
+    const 全 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmtn"));
     const 样本 = 全.subarray(0, 4096);
     const 样本路 = path.join(临, "sample.bin");
     fs.writeFileSync(样本路, 样本);

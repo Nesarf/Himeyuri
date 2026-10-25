@@ -11,8 +11,8 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const rt = runUnit(loadUnit(path.join(ROOT, "shell.hmyr")));
-rt.registerModule(loadUnit(path.join(ROOT, "term.hmyr")).modules.values().next().value);
+const rt = runUnit(loadUnit(path.join(ROOT, "shell.hmoca")));
+rt.registerModule(loadUnit(path.join(ROOT, "term.hmoca")).modules.values().next().value);
 const call = (name, args) => {
   const fn = rt.functions.get(name);
   if (!fn) throw new Error("没有这个函数：" + name);

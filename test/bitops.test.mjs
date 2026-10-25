@@ -16,7 +16,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 console.log("一、源码读得动");
-const 源路 = path.join(ROOT, "self/bitops.hmyr");
+const 源路 = path.join(ROOT, "self/bitops.hmoca");
 ok("self/bitops.hmyr 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
@@ -33,7 +33,7 @@ if (!有编译器) {
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
-    const 码路 = path.join(临, "bitops.hmyrb");
+    const 码路 = path.join(临, "bitops.hmoks");
     fs.writeFileSync(码路, 写程序(合并程序(unit.order.map((f) => 编译模块(unit.modules.get(f))), 编译模块(unit.modules.get(unit.order[unit.order.length - 1])))));
     const r = spawnSync(exe, [码路], { encoding: "utf8", timeout: 300000 });
     const 出 = String(r.stdout || "").trim().split("\n");

@@ -19,7 +19,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 console.log("一、工具的源码读得动");
-const 源路 = path.join(ROOT, "self/zip.hmyr");
+const 源路 = path.join(ROOT, "self/zip.hmoca");
 ok("self/zip.hmyr 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
@@ -37,14 +37,14 @@ if (!有编译器) {
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
-    const 码路 = path.join(临, "zip.hmyrb");
+    const 码路 = path.join(临, "zip.hmoks");
     fs.writeFileSync(码路, 写程序(程序));
     // 三个成员：一个带子目录、两个在根。
     // 三个成员：两个在根、一个带子目录。
     const 成员 = [
       path.join(ROOT, "src/eval.mjs"),
       path.join(ROOT, "LICENSE"),
-      path.join(ROOT, "examples/twice.hmyr"),
+      path.join(ROOT, "examples/twice.hmoca"),
     ].filter((p) => fs.existsSync(p)).map((p) => path.relative(ROOT, p));
     const 包路 = path.join(临, "multi.zip");
     const r = spawnSync(exe, [码路, "--多", 包路, ...成员], {

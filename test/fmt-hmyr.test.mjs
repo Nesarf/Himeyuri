@@ -23,7 +23,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 console.log("一、格式化器的源码读得动");
-const 源路 = path.join(ROOT, "self/fmt.hmyr");
+const 源路 = path.join(ROOT, "self/fmt.hmoca");
 ok("self/fmt.hmyr 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
@@ -51,7 +51,7 @@ if (!有编译器) {
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
-    const 码路 = path.join(临, "fmt.hmyrb");
+    const 码路 = path.join(临, "fmt.hmoks");
     fs.writeFileSync(码路, 写程序(程序));
     const 跑 = (输入) => spawnSync(exe, [码路, "--expr"], {
       input: 输入 + "\n", encoding: "utf8", timeout: 120000,
@@ -81,8 +81,8 @@ if (!有编译器) {
   if (c.status === 0) {
     const { loadUnit } = await import("../src/loader.mjs");
     const fs2 = fs;
-    const 码2 = path.join(临, "fmt2.hmyrb");
-    const 源路 = path.join(ROOT, "self/fmt.hmyr");
+    const 码2 = path.join(临, "fmt2.hmoks");
+    const 源路 = path.join(ROOT, "self/fmt.hmoca");
     const u0 = loadUnit(源路);
     const 份们 = u0.order.map((文件) => 编译模块(u0.modules.get(文件)));
     fs2.writeFileSync(码2, 写程序(合并程序(份们, 份们[份们.length - 1])));
@@ -91,11 +91,11 @@ if (!有编译器) {
       env: { ...process.env, HMYR_STEPS: "2000000000" },
     });
     for (const 名 of ["lex", "chain", "stmt", "body", "compile", "pack"]) {
-      const 源 = fs2.readFileSync(path.join(ROOT, "self", 名 + ".hmyr"), "utf8");
+      const 源 = fs2.readFileSync(path.join(ROOT, "self", 名 + ".hmoca"), "utf8");
       const a = 跑全(源);
       const b = 跑全(String(a.stdout || ""));
       const 幂等 = String(a.stdout || "") === String(b.stdout || "");
-      const 出 = path.join(临, 名 + ".hmyr");
+      const 出 = path.join(临, 名 + ".hmoca");
       fs2.writeFileSync(出, String(a.stdout || ""), "utf8");
       const u = loadUnit(出);
       ok(名 + ".hmyr 缩进之后编得动", u.ok, JSON.stringify(u.diagnostics.errors.slice(0, 1).map((e) => e.code)));

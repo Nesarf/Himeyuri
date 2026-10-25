@@ -85,16 +85,16 @@ console.log("三、跑几条真实路径时，那十项全局没有一项是虚�
   const os = await import("node:os");
   const 临时 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-hostcov-"));
   const 目标们 = [
-    path.join(ROOT, "examples/hello.hmyr"),
-    (() => { const p = path.join(临时, "w.hmyr"); fs.writeFileSync(p, "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n"); return p; })(),
-    (() => { const p = path.join(临时, "r.hmyr"); fs.writeFileSync(p, "fn main() -> Int {\n  let r = {a: 1}\n  return r.a\n}\n"); return p; })(),
+    path.join(ROOT, "examples/hello.hmoca"),
+    (() => { const p = path.join(临时, "w.hmoca"); fs.writeFileSync(p, "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n"); return p; })(),
+    (() => { const p = path.join(临时, "r.hmoca"); fs.writeFileSync(p, "fn main() -> Int {\n  let r = {a: 1}\n  return r.a\n}\n"); return p; })(),
     (() => {
-      const p = path.join(临时, "mod/main.hmyr"); fs.mkdirSync(path.join(临时, "mod"), { recursive: true });
-      fs.writeFileSync(path.join(临时, "mod/lib.hmyr"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
+      const p = path.join(临时, "mod/main.hmoca"); fs.mkdirSync(path.join(临时, "mod"), { recursive: true });
+      fs.writeFileSync(path.join(临时, "mod/lib.hmoca"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
       fs.writeFileSync(p, "import \"./lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
       return p;
     })(),
-    path.join(临时, "nope.hmyr"),
+    path.join(临时, "nope.hmoca"),
     // 第六条：把「目标程序自己」存成 UTF-16LE 带 BOM。
     //
     // 为什么要这么绕：read_text 的显式编码与 UTF-16 那两条分支才用 TextDecoder，
@@ -104,7 +104,7 @@ console.log("三、跑几条真实路径时，那十项全局没有一项是虚�
     // 它解码出来之后语法层会报错（自举的 lexer 不认这段），但那不影响这一节要问的事：
     // TextDecoder 已经被执行过了。程序返回 0，因为「错：」是正常输出。
     (() => {
-      const p = path.join(临时, "prog16.hmyr");
+      const p = path.join(临时, "prog16.hmoca");
       const 文 = "fn main() -> Int {\n  return 6 * 7\n}\n";
       fs.writeFileSync(p, Buffer.concat([Buffer.from([0xFF, 0xFE]), Buffer.from(文, "utf16le")]));
       return p;
@@ -115,7 +115,7 @@ console.log("三、跑几条真实路径时，那十项全局没有一项是虚�
       const r = spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), 目标], {
         encoding: "utf8", env: { ...process.env, NODE_V8_COVERAGE: 临时 },
       });
-      if (r.status !== 0 && !目标.endsWith("nope.hmyr")) { failed++; console.log("  不通过  某条路径没跑成：" + 目标); }
+      if (r.status !== 0 && !目标.endsWith("nope.hmoca")) { failed++; console.log("  不通过  某条路径没跑成：" + 目标); }
     }
     // 合并覆盖记录。判断以「函数」为单位，不做全文减法——
     // 第一次写成「全文减去未执行的片段」时，某个函数在一条路执行、在另一条路未执行，

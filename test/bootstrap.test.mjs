@@ -50,7 +50,7 @@ console.log("一、Stage 0 是五份：loader、子集那两层、诊断，与�
 
 console.log("二、它读进来自举那一层：六份，一百二十三条声明");
 {
-  const u = loadUnit(path.join(ROOT, "self/run.hmyr"));
+  const u = loadUnit(path.join(ROOT, "self/run.hmoca"));
   ok("loadUnit 读得动", u.ok, JSON.stringify(u.diagnostics.errors.map((e) => e.code)));
   ok("带进六份文件", u.modules.size === 6, String(u.modules.size));
   let 声明 = 0;
@@ -69,7 +69,7 @@ console.log("三、求值不在 Stage 0 里（两份账都不在）");
     ok(文 + " 里没有 evalExpr / execStatement 之类", !字.includes("evalExpr") && !字.includes("execStatement"), "出现求值器符号");
   }
   // 而求值器确实在 self/ 里——那才是「怎么算」的答案所在。
-  const 求值 = fs.readFileSync(path.join(ROOT, "self/eval.hmyr"), "utf8");
+  const 求值 = fs.readFileSync(path.join(ROOT, "self/eval.hmoca"), "utf8");
   ok("求值器在 self/eval.hmyr 里", 求值.includes("fn 求值(") && 求值.includes("fn 执行("), "在");
 }
 

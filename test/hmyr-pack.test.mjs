@@ -47,13 +47,13 @@ const 程序们 = [
 console.log("一、两位打包者对同一份源码交出同样的字节");
 {
   for (const [标, 源码] of 程序们) {
-    const 源路 = path.join(临, "p.hmyr");
+    const 源路 = path.join(临, "p.hmoca");
     fs.writeFileSync(源路, 源码, "utf8");
     const unit = loadUnit(源路);
     if (!unit.ok) { ok(标, false, "加载失败"); continue; }
     const js字节 = 写程序(合并程序(unit.order.map((f) => 编译模块(unit.modules.get(f)))));
     // HMYR 那位：跑 self/pack.hmyr 的编译与打包两段，拿它交回的字节元组。
-    const rt = runUnit(loadUnit(path.join(ROOT, "self/pack.hmyr")), { stage0: true, stepLimit: 400000000 });
+    const rt = runUnit(loadUnit(path.join(ROOT, "self/pack.hmoca")), { stage0: true, stepLimit: 400000000 });
     const 编源码 = rt.functions.get("编源码");
     const 打包 = rt.functions.get("打包");
     const 编r = rt.callFunction(编源码, [源码], null);
@@ -68,13 +68,13 @@ console.log("一、两位打包者对同一份源码交出同样的字节");
 
 console.log("二、编译出来的东西跑得动（字节相同之外，还要答案对）");
 {
-  const rt = runUnit(loadUnit(path.join(ROOT, "self/pack.hmyr")), { stage0: true, stepLimit: 400000000 });
+  const rt = runUnit(loadUnit(path.join(ROOT, "self/pack.hmoca")), { stage0: true, stepLimit: 400000000 });
   const 源码 = 程序们[3][1];
   const 编r = rt.callFunction(rt.functions.get("编源码"), [源码], null);
   ok("while 那份编得出来", !编r || 编r.ok !== false, 编r ? 编r.错 : "");
   if (编r && 编r.ok !== false) {
     const 包r = rt.callFunction(rt.functions.get("打包"), [编r.函数们], null);
-    const 码路 = path.join(临, "run.hmyrb");
+    const 码路 = path.join(临, "run.hmoks");
     fs.writeFileSync(码路, 拍平(包r));
     // 读回来跑：main 返回 4。
     const p = 读程序(fs.readFileSync(码路), null);
@@ -93,15 +93,15 @@ console.log("三、C 那台也交得出同一份字节");
     const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
     if (c.status === 0) {
-      const 源路 = path.join(临, "r.hmyr");
+      const 源路 = path.join(临, "r.hmoca");
       fs.writeFileSync(源路, 程序们[0][1], "utf8");
       // pack.hmyr 自己编成字节码，再由 C 那台执行它 —— 中间没有 JavaScript。
       // 编这一份要走 tools/emit-code.mjs：入口文件的 main 才算 main，
       // 否则会是 import 链里某个自测的 main（lex.hmyr 那个返回词数 19，看起来像个错误码）。
-      const 码路 = path.join(临, "pack.hmyrb");
-      const 编r = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/pack.hmyr"), 码路], { encoding: "utf8" });
+      const 码路 = path.join(临, "pack.hmoks");
+      const 编r = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/pack.hmoca"), 码路], { encoding: "utf8" });
       ok("pack.hmyr 编得成字节码", 编r.status === 0, String(编r.stderr).slice(0, 160));
-      const 出路 = path.join(临, "out.hmyrb");
+      const 出路 = path.join(临, "out.hmoks");
       const r = spawnSync(exe, [码路, 出路, 源路], { encoding: "utf8", timeout: 300000, env: { ...process.env, HMYR_STEPS: "2000000000" } });
       ok("C 跑 packer 写出了一个文件", r.status === 0 && fs.existsSync(出路), String(r.status) + " " + String(r.stderr).slice(0, 160));
       if (fs.existsSync(出路)) {
@@ -132,15 +132,15 @@ console.log("四、自举的固定点：HMYR 编出来的编译器，重编自�
     if (c.status !== 0) {
       ok("C 那台编得出来", false, String(c.stderr).slice(0, 160));
     } else {
-      const 链 = ["self/lex.hmyr", "self/chain.hmyr", "self/stmt.hmyr", "self/body.hmyr", "self/compile.hmyr", "self/pack.hmyr"].map((p) => path.join(ROOT, p));
-      const 种子 = path.join(临, "seed.hmyrb");
+      const 链 = ["self/lex.hmoca", "self/chain.hmoca", "self/stmt.hmoca", "self/body.hmoca", "self/compile.hmoca", "self/pack.hmoca"].map((p) => path.join(ROOT, p));
+      const 种子 = path.join(临, "seed.hmoks");
       // 第一步只能借一次 JS：编出第一版。
-      const 编 = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/pack.hmyr"), 种子], { encoding: "utf8" });
+      const 编 = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/pack.hmoca"), 种子], { encoding: "utf8" });
       ok("第一版（借一次 JS）编出来了", 编.status === 0 && fs.existsSync(种子), String(编.stderr).slice(0, 120));
       if (fs.existsSync(种子)) {
         const 跑 = (码路, 出路) => spawnSync(exe, [码路, 出路, ...链], { encoding: "utf8", timeout: 600000, env: { ...process.env, HMYR_STEPS: "4000000000" } });
-        const 二 = path.join(临, "v2.hmyrb");
-        const 三 = path.join(临, "v3.hmyrb");
+        const 二 = path.join(临, "v2.hmoks");
+        const 三 = path.join(临, "v3.hmoks");
         const r2 = 跑(种子, 二);
         ok("第二版由第一版编出来", r2.status === 0 && fs.existsSync(二), String(r2.status) + " " + String(r2.stderr).slice(0, 140));
         if (fs.existsSync(二)) {

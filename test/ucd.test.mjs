@@ -41,7 +41,7 @@ console.log("一、生成器跑得动，摘要说得对");
 
 console.log("二、生成出来的表是一份 HMYR 源码，能被读进并求值");
 {
-  const 表 = fs.readFileSync(path.join(ROOT, "runtime/ucd/blocks.hmyr"), "utf8");
+  const 表 = fs.readFileSync(path.join(ROOT, "runtime/ucd/blocks.hmoca"), "utf8");
   // 判据只看代码行：块表每一行都拖着一段注释，而注释里写着「为什么不用复合条件」，
   // 那句话本身就带着那两个字面。第一版没有剥注释，于是断言抓到的正是它自己。
   const 代码 = 表.split("\n").filter((l) => !l.trim().startsWith("//")).join("\n");
@@ -52,7 +52,7 @@ console.log("二、生成出来的表是一份 HMYR 源码，能被读进并求�
   ok("代码里没有复合条件（自举那一层读不进那两个写法）", !去串.includes("&&") && !去串.includes(" and "));
   ok("表的行数与块数同量级", 表.split("\n").length > 1000, String(表.split("\n").length));
 
-  const 程序 = path.join(ROOT, "conformance/ucd-blocks.hmyr");
+  const 程序 = path.join(ROOT, "conformance/ucd-blocks.hmoca");
   const 层 = loadUnit(程序);
   ok("conformance/ucd-blocks.hmyr 读得进", 层.ok, JSON.stringify(层.diagnostics.errors.slice(0, 2).map((e) => e.code)));
   if (层.ok) {

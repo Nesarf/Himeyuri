@@ -1,4 +1,4 @@
-import "./chain.hmyr"
+import "./chain.hmoca"
 
 // 用 Himeyuri 写的第六件：语句级解析。
 //

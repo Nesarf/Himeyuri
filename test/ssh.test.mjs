@@ -20,7 +20,7 @@ const 样本 = "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZKif3Awo5M1VeQW/gVza
 const 公钥blob = "0000000b7373682d656432353531390000002064a89fdc0c28e4cd557905bf815cda9f25be9842ef39615854f30a48a1e819a7";
 const 签名blob = "0000000b7373682d6564323535313900000040c6d965f49de37e474f78ae9447bdc14b7740d8f65e1bf4bf526aa0b746e286c02cd188c5f6a1c4cbfd1732504d7fe9f75c7f3a0f6db0e07f68a458806ccc1b01";
 
-const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/ssh.hmyr", 样本], {
+const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/ssh.hmoca", 样本], {
   cwd: ROOT, encoding: "utf8", timeout: 300000,
 });
 ok("解析跑得动", r.status === 0, String(r.stderr || "").slice(0, 160));

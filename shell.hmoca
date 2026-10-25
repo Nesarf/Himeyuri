@@ -1,4 +1,4 @@
-import "./term.hmyr"
+import "./term.hmoca"
 
 // shell 的行编辑与历史。
 //

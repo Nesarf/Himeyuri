@@ -11,8 +11,8 @@
 //
 // 这一版只做「解出来」：把四段取出来、看到里面是什么。验签要等 Ed25519 的点解压
 // 与标量模 L —— 那是下一层。
-import "./sha512.hmyr"
-import "./bigint.hmyr"
+import "./sha512.hmoca"
+import "./bigint.hmoca"
 
 fn 值(c: Int) -> Int {
   if c >= 65 && c <= 90 { return c - 65 }

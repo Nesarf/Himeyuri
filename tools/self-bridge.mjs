@@ -23,8 +23,8 @@ import { 虚拟机 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const 源路 = path.join(ROOT, "self/run.hmyr");
-const 字节路 = path.join(ROOT, "runtime/run.hmyrb");
+const 源路 = path.join(ROOT, "self/run.hmoca");
+const 字节路 = path.join(ROOT, "runtime/run.hmoks");
 
 // 字节码是不是还新鲜：比的是 self/ 下所有 .hmyr 里最新的那个，而不是只看 run.hmyr。
 // 这条是被咬出来的：改了 chain.hmyr 而 run.hmyr 没动，产物里含着 chain 的代码，

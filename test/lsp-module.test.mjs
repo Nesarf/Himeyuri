@@ -20,8 +20,8 @@ const ok = (label, condition, detail = "") => {
 
 // 临时目录留在非系统盘。
 const 临 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-lspmod-");
-const 别路 = path.join(临, "other.hmyr");
-const 基路 = path.join(临, "base.hmyr");
+const 别路 = path.join(临, "other.hmoca");
+const 基路 = path.join(临, "base.hmoca");
 fs.writeFileSync(别路, "fn 别的(a: Int) -> Int {\n  return a\n}\n");
 fs.writeFileSync(基路, "import \"./other.hmyr\"\n\nfn 本地的() -> Int {\n  return 别的(1)\n}\n");
 const 基址 = pathToFileURL(基路).href;
@@ -80,7 +80,7 @@ console.log("二、import 里的名字跳到那个文件");
 {
   const r = 答.get(2) && 答.get(2).result;
   ok("答了一个位置", !!r && !!r.uri, JSON.stringify(r).slice(0, 120));
-  ok("指向 other.hmyr", r && r.uri === 别址, r ? r.uri : "（没有）");
+  ok("指向 other.hmoca", r && r.uri === 别址, r ? r.uri : "（没有）");
   ok("行号是那份文件里的声明行（零基 0）", r && r.range && r.range.start.line === 0, r && r.range ? String(r.range.start.line) : "（没有）");
 }
 
@@ -106,8 +106,8 @@ console.log("四、自举那一份也跳得过去");
     const 编r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得动", 编r.status === 0, String(编r.stderr || "").slice(0, 120));
 
-    const 码路 = path.join(临二, "lsp.hmyrb");
-    const 码r = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/lsp.hmyr"), 码路], { encoding: "utf8" });
+    const 码路 = path.join(临二, "lsp.hmoks");
+    const 码r = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/lsp.hmoca"), 码路], { encoding: "utf8" });
     ok("self/lsp.hmyr 编得出字节码", 码r.status === 0 && fs.existsSync(码路), String(码r.stderr || "").slice(0, 160));
 
     const 自 = spawnSync(exe, [码路], { input: Buffer.concat(消息们.map(装框)), encoding: "buffer", timeout: 120000 });
@@ -116,7 +116,7 @@ console.log("四、自举那一份也跳得过去");
       String(自.status) + " " + String(自.stderr || "").slice(0, 120));
 
     const b = 自答.get(2) && 自答.get(2).result;
-    ok("自举从 import 里跳到了 other.hmyr", !!b && b.uri === 别址, b ? b.uri : "（没有）");
+    ok("自举从 import 里跳到了 other.hmoca", !!b && b.uri === 别址, b ? b.uri : "（没有）");
     ok("自举那边的行号也是那份文件里的声明行", b && b.range && b.range.start.line === 0,
       b && b.range ? String(b.range.start.line) : "（没有）");
 

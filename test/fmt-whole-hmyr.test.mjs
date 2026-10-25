@@ -19,7 +19,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 自举 = runUnit(loadUnit(path.join(ROOT, "self/fmt.hmyr")), { stepLimit: 400000000 });
+const 自举 = runUnit(loadUnit(path.join(ROOT, "self/fmt.hmoca")), { stepLimit: 400000000 });
 const 自举整 = (源) => {
   try { return String(自举.callFunction(自举.functions.get("整文件"), [源], null)).trim(); }
   catch (e) { return "抛错：" + String(e && e.message).slice(0, 80); }
@@ -27,7 +27,7 @@ const 自举整 = (源) => {
 const 读 = (路) => fs.readFileSync(path.join(ROOT, 路), "utf8");
 
 console.log("一、没有注释的文件：两边逐字节相同");
-for (const 路 of ["examples/arith.hmyr", "examples/over.hmyr", "examples/twice.hmyr"]) {
+for (const 路 of ["examples/arith.hmoca", "examples/over.hmoca", "examples/twice.hmoca"]) {
   const 源 = 读(路);
   const 乙 = format(源, { quiet: true }).text;
   const 甲 = 自举整(源);
@@ -36,7 +36,7 @@ for (const 路 of ["examples/arith.hmyr", "examples/over.hmyr", "examples/twice.
 
 console.log("二、有注释的文件：自举那一份把注释留下，宿主那一份按设计丢弃");
 {
-  const 路 = "examples/demo.hmyr";
+  const 路 = "examples/demo.hmoca";
   const 源 = 读(路);
   const 甲 = 自举整(源);
   const 乙r = format(源, { quiet: true });
@@ -51,7 +51,7 @@ console.log("二、有注释的文件：自举那一份把注释留下，宿主�
 
 console.log("三、行尾的 carriage return 不会漏进输出");
 {
-  const 源 = 读("conformance/lib-strings.hmyr"); // 这份文件本身是 CRLF
+  const 源 = 读("conformance/lib-strings.hmoca"); // 这份文件本身是 CRLF
   ok("输入确实是 CRLF", 源.includes("\r\n"));
   const 甲 = 自举整(源);
   ok("输出里没有 CR", !甲.includes("\r"), 甲.includes("\r") ? "第一处 CR 在第 " + (甲.split("\n").findIndex((l) => l.includes("\r")) + 1) + " 行" : "");

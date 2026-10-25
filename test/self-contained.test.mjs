@@ -26,7 +26,7 @@ console.log("一、内置种子的头文件在，而且它就是那份种子");
   ok("vm/pack_seed.h 在", fs.existsSync(头路));
   if (fs.existsSync(头路)) {
     const 头 = fs.readFileSync(头路, "utf8");
-    const 种子 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmyrb"));
+    const 种子 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmtn"));
     ok("数组名字对得上", 头.includes("hmyr_pack_seed[]"), "");
     ok("长度写着种子的字节数", 头.includes("hmyr_pack_seed_len = " + 种子.length + ";"), "");
     ok("开头四个字节是魔数", /0x48, 0x4d, 0x59, 0x52, 0x42/.test(头), "");
@@ -48,7 +48,7 @@ if (!有编译器) {
   ok("C 那台编得出来（带着内置种子）", c.status === 0, String(c.stderr).slice(0, 160));
   ok("那个目录里没有 bootstrap/", !fs.existsSync(path.join(临, "bootstrap")), "");
   if (c.status === 0) {
-    const 源 = path.join(ROOT, "examples/twice.hmyr");
+    const 源 = path.join(ROOT, "examples/twice.hmoca");
     const r = spawnSync(exe, [源], {
       cwd: 临, encoding: "utf8", timeout: 300000,
       env: { ...process.env, HMYR_STEPS: "4000000000" },
@@ -60,7 +60,7 @@ if (!有编译器) {
     console.log("三、它跑的就是它自己编出来的那一段");
     {
       // 显式两步：先用内置种子编出一份字节码，再跑那份字节码 —— 输出必须一样。
-      const 码 = path.join(临, "twice.hmyrb");
+      const 码 = path.join(临, "twice.hmoks");
       const 编 = spawnSync(exe, [源], {
         cwd: 临, encoding: "utf8", timeout: 300000,
         env: { ...process.env, HMYR_STEPS: "4000000000", HMYR_KEEP: "0" },
@@ -68,7 +68,7 @@ if (!有编译器) {
       // HMYR_KEEP 只影响保留临时字节码；那一条路不适合直接拿，所以这里只做「同一份源码跑两遍」。
       const 再 = spawnSync(exe, [源], { cwd: 临, encoding: "utf8", timeout: 300000, env: { ...process.env, HMYR_STEPS: "4000000000" } });
       ok("同一份源码跑两遍输出相同", String(r.stdout) === String(再.stdout) && r.status === 再.status, JSON.stringify(String(再.stdout || "")));
-      ok("没有留下种子临时文件", fs.readdirSync(临).every((名) => !名.endsWith(".seed.hmyrb")), fs.readdirSync(临).join(" "));
+      ok("没有留下种子临时文件", fs.readdirSync(临).every((名) => !名.endsWith(".seed.hmoks")), fs.readdirSync(临).join(" "));
     }
 
     console.log("四、与 node 那一面的编译执行逐字节相同");

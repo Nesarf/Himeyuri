@@ -31,7 +31,7 @@ const 源码 = [
   "}",
   "",
 ].join("\n");
-const 源路 = path.join(临, "hello.hmyr");
+const 源路 = path.join(临, "hello.hmoca");
 fs.writeFileSync(源路, 源码, "utf8");
 
 // 管道的名字：Windows 走 \\.\pipe\，别的机器上是一个 socket 路径。

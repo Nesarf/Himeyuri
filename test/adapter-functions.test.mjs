@@ -18,7 +18,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 自举层 = loadUnit(path.join(ROOT, "self/eval.hmyr"));
+const 自举层 = loadUnit(path.join(ROOT, "self/eval.hmoca"));
 const 自举 = runUnit(自举层);
 const 宿主的 = (源) => run(源, {}).value;
 const 那边的 = (源) => {

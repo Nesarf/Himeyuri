@@ -16,11 +16,11 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 自举层 = loadUnit(path.join(ROOT, "self/eval.hmyr"));
+const 自举层 = loadUnit(path.join(ROOT, "self/eval.hmoca"));
 const 自举 = runUnit(自举层);
-const 语句层 = loadUnit(path.join(ROOT, "self/stmt.hmyr"));
+const 语句层 = loadUnit(path.join(ROOT, "self/stmt.hmoca"));
 const 语法 = runUnit(语句层);
-const 词法 = runUnit(loadUnit(path.join(ROOT, "self/lex.hmyr")));
+const 词法 = runUnit(loadUnit(path.join(ROOT, "self/lex.hmoca")));
 
 const 宿主的 = (源) => run(源, {}).value;
 const 那边的 = (源) => {
@@ -64,7 +64,7 @@ console.log("三、那一道闸还在");
 {
   // 一百万次的上限在 执行反复 里。这里不真的跑一百万次——
   // 那一句只确认它写在那儿，而真实跑一次的成本不值得。
-  const e = fs.readFileSync(path.join(ROOT, "self/eval.hmyr"), "utf8");
+  const e = fs.readFileSync(path.join(ROOT, "self/eval.hmoca"), "utf8");
   ok("执行反复 里有百万次那道闸", e.includes("一百万次"), e.includes("一百万次") ? "在" : "不在");
   ok("而它在 while 那一路里", e.includes('种 == "While"') && e.includes("执行反复"), "在");
 }

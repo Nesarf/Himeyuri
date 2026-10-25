@@ -1,4 +1,4 @@
-// 种子认得哪些内置：把 bootstrap/pack.hmyrb 的常量池扫一遍，与内置表求差。
+// 种子认得哪些内置：把 bootstrap/pack.hmtn 的常量池扫一遍，与内置表求差。
 //
 // 为什么要量这件事：种子里那些名字不是 ASCII 存的，而是 UTF-16 码元。所以
 // grep、strings、node -e "b.includes('split')" 全都看不见它们 —— 我一开始就是这么
@@ -27,7 +27,7 @@ const 内置 = [...new Set([...宿主源.slice(起, 止).matchAll(/^ {2}([a-zA-Z
 
 // 二、种子里的词表：按 UTF-16 扫连续的可打印 ASCII 码元。
 // 两种对齐都扫 —— 字节码不是按二字节对齐写的，错位一次就整片看不见。
-const 字节 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmyrb"));
+const 字节 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmtn"));
 const 词 = new Set();
 for (const 对齐 of [0, 1]) {
   let 当前 = "";
@@ -46,7 +46,7 @@ for (const 对齐 of [0, 1]) {
 const 认得 = 内置.filter((n) => 词.has(n));
 const 缺 = 内置.filter((n) => !词.has(n));
 
-console.log("种子认得哪些内置（bootstrap/pack.hmyrb）");
+console.log("种子认得哪些内置（bootstrap/pack.hmtn）");
 console.log("  种子字节 " + 字节.length);
 console.log("  抽出的词 " + 词.size + " 个");
 console.log("  内置共   " + 内置.length + " 个");

@@ -10,7 +10,7 @@ import { 本机能力 } from "file:///D:/himeyuri/src/capabilities.mjs";
 import { loadUnit as 桥载 } from "file:///D:/himeyuri/tools/self-bridge.mjs";
 
 const ROOT = "D:/himeyuri";
-const vm = new 虚拟机(读程序(fs.readFileSync(path.join(ROOT, "runtime/run.hmyrb"))), {
+const vm = new 虚拟机(读程序(fs.readFileSync(path.join(ROOT, "runtime/run.hmoks"))), {
   capabilities: 本机能力(), stepLimit: 40000000000, maxDepth: 4000,
 });
 
@@ -27,9 +27,9 @@ const 计时 = (fn, 次数 = 3) => {
 };
 
 // 先热一次（vm 的引导）
-vm.调用("造整棵", ["examples/demo.hmyr"], null);
+vm.调用("造整棵", ["examples/demo.hmoca"], null);
 
-for (const 名 of ["locale.hmyr", "json.hmyr", "self/run.hmyr"]) {
+for (const 名 of ["locale.hmoca", "json.hmoca", "self/run.hmoca"]) {
   const 裸 = 计时(() => vm.调用("造整棵", [名], null));
   const 全 = 计时(() => 桥载(path.join(ROOT, 名)));
   const 包 = 全 - 裸;

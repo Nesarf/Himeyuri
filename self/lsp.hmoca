@@ -11,8 +11,8 @@
 //
 // 用法：hmyr self/lsp.hmyr
 
-import "../lib/json.hmyr"
-import "./sig.hmyr"
+import "../lib/json.hmoca"
+import "./sig.hmoca"
 
 fn 是长度行(行: String) -> Bool {
   if len(行) < 16 { return false }

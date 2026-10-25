@@ -2,7 +2,7 @@
 //
 // 这一套问的是这个项目最重要的一句承诺：从某个版本起，重建它不再需要 JavaScript。
 //
-// 怎么做到的：bootstrap/pack.hmyrb 是一版**固定点** —— 它由自己编出来，而它再编一次
+// 怎么做到的：bootstrap/pack.hmtn 是一版**固定点** —— 它由自己编出来，而它再编一次
 // 还是同样的字节。所以它一边是产物，一边是工具：拿它当编译器使，喂给它 self/ 的六份源码，
 // 出来的东西与它自己逐字节相同。
 //
@@ -24,11 +24,11 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 种子路 = path.join(ROOT, "bootstrap/pack.hmyrb");
+const 种子路 = path.join(ROOT, "bootstrap/pack.hmtn");
 
 console.log("一、种子在仓库里，而且它是一份能跑的东西");
 {
-  ok("bootstrap/pack.hmyrb 在", fs.existsSync(种子路));
+  ok("bootstrap/pack.hmtn 在", fs.existsSync(种子路));
   if (fs.existsSync(种子路)) {
     const 字节 = fs.readFileSync(种子路);
     ok("它是个 .hmyrb（开头是魔数）", 字节.slice(0, 5).toString("latin1") === "HMYRB", JSON.stringify(字节.slice(0, 5).toString("latin1")));
@@ -54,8 +54,8 @@ console.log("二、gcc 加上种子，重建出种子自己（这条路里没有
       const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
       ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
       if (c.status !== 0) break 第一;
-      const 链 = ["lex", "chain", "stmt", "body", "compile", "pack"].map((n) => path.join(ROOT, "self", n + ".hmyr"));
-      const 出 = path.join(临, "rebuilt.hmyrb");
+      const 链 = ["lex", "chain", "stmt", "body", "compile", "pack"].map((n) => path.join(ROOT, "self", n + ".hmoca"));
+      const 出 = path.join(临, "rebuilt.hmoks");
       // 注意：这里只有 exe 与源码，没有任何 node 参与。
       const r = spawnSync(exe, [种子路, 出, ...链], { encoding: "utf8", timeout: 900000, env: { ...process.env, HMYR_STEPS: "4000000000", HMYR_GC: "1" } });
       ok("种子跑得起来，编出了东西", r.status === 0 && fs.existsSync(出), String(r.status) + " " + String(r.stderr).slice(0, 160));
@@ -64,7 +64,7 @@ console.log("二、gcc 加上种子，重建出种子自己（这条路里没有
         const 同 = 甲.length === 乙.length && Buffer.compare(甲, 乙) === 0;
         ok("重建出来的字节与种子完全相同（" + 甲.length + " 字节）", 同, 同 ? "" : 甲.length + " 对 " + 乙.length);
         // 再走一遍：用刚重建出来的那一份当编译器，还要得到同样的字节。
-        const 二 = path.join(临, "rebuilt2.hmyrb");
+        const 二 = path.join(临, "rebuilt2.hmoks");
         const r2 = spawnSync(exe, [出, 二, ...链], { encoding: "utf8", timeout: 900000, env: { ...process.env, HMYR_STEPS: "4000000000", HMYR_GC: "1" } });
         if (r2.status === 0 && fs.existsSync(二)) {
           const 丙 = fs.readFileSync(二);
@@ -93,15 +93,15 @@ console.log("三、种子跑得动真实程序（它不只是能重建自己）"
     const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     if (c.status === 0) {
       // 用种子造一份「跑程序的自举层」：种子本身就是编译器，编出来的是 run.hmyr 那条链。
-      const 链 = ["lex", "chain", "stmt", "body", "eval", "run"].map((n) => path.join(ROOT, "self", n + ".hmyr"));
-      const 层 = path.join(临, "self.hmyrb");
+      const 链 = ["lex", "chain", "stmt", "body", "eval", "run"].map((n) => path.join(ROOT, "self", n + ".hmoca"));
+      const 层 = path.join(临, "self.hmoks");
       // 这一节编的是 eval 与 run 那条链，单份 eval.hmyr 有五百三十八行，
       // 而它是「一份一份编」里最大的一份 —— 不开回收时峰值已经贴着四吉的上限。
       // 所以这里开回收、并且把上限放开：回收不改变答案，只改变账。
       const r = spawnSync(exe, [种子路, 层, ...链], { encoding: "utf8", timeout: 900000, env: { ...process.env, HMYR_STEPS: "4000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" } });
       ok("种子编出了跑程序那一层", r.status === 0 && fs.existsSync(层), String(r.status) + " " + String(r.stderr).slice(0, 160));
       if (fs.existsSync(层)) {
-        const 例 = path.join(ROOT, "examples/twice.hmyr");
+        const 例 = path.join(ROOT, "examples/twice.hmoca");
         const 跑 = spawnSync(exe, [层, 例], { encoding: "utf8", timeout: 300000, env: { ...process.env, HMYR_STEPS: "2000000000" } });
         ok("它跑出示例程序该有的输出", String(跑.stdout || "").includes("hi 42 琥珀音"), String(跑.status) + " " + JSON.stringify(String(跑.stdout || "").slice(0, 60)));
       }

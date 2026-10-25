@@ -51,7 +51,7 @@ const 宿主树 = (源) => {
 console.log("一、六份源码：两棵树相同（形状与位置）");
 let 函数总数 = 0, 节点总数 = 0;
 for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
-  const 源 = fs.readFileSync(path.join(ROOT, "self", 名 + ".hmyr"), "utf8");
+  const 源 = fs.readFileSync(path.join(ROOT, "self", 名 + ".hmoca"), "utf8");
   const 主 = 宿主树(源);
   let 子 = null, 错 = "";
   try { 子 = 子集解(切(源)).ast; } catch (e) { 错 = e.message; }
@@ -69,7 +69,7 @@ ok("合计 13076 个节点", 节点总数 === 13076, String(节点总数));
 console.log("二、位置是逐个对过的，不是大致对");
 {
   // 深比较已经含位置，这一条只是把「位置本身被比了」说成一句可以读的话。
-  const 源 = fs.readFileSync(path.join(ROOT, "self", "chain.hmyr"), "utf8");
+  const 源 = fs.readFileSync(path.join(ROOT, "self", "chain.hmoca"), "utf8");
   const 主 = 摊(宿主树(源)), 子 = 摊(子集解(切(源)).ast);
   const 差 = 主.filter((a, k) => !子[k] || a.line !== 子[k].line || a.column !== 子[k].column);
   // Module 自己不带位置（宿主也不带），于是拿第一个带位置的节点来核。

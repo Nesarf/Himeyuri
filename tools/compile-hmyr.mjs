@@ -16,12 +16,12 @@ import { 类元组, 类记录 } from "../src/vm.mjs";
 
 const [入口, 输出] = process.argv.slice(2);
 if (!入口 || !输出) {
-  console.error("用法：node tools/compile-hmyr.mjs 入口.hmyr 输出.hmyrb");
+  console.error("用法：node tools/compile-hmyr.mjs 入口.hmyr 输出.hmoks");
   process.exit(2);
 }
 
 const 根 = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "..");
-const rt = runUnit(loadUnit(path.join(根, "self/compile.hmyr")), { stage0: true, stepLimit: 300000000 });
+const rt = runUnit(loadUnit(path.join(根, "self/compile.hmoca")), { stage0: true, stepLimit: 300000000 });
 const 编源码 = rt.functions.get("编源码");
 
 // 源码要按 import 链拼起来再交给编译器：它只认「一份源码」，

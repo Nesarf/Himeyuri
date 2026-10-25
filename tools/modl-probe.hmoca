@@ -2,7 +2,7 @@
 //
 // 输入是 sha512("abc") 的六十四字节 —— 那一段已经被 sha512 套件用四份样本验过，
 // 所以这里量到的差异只能来自 模L长。
-import "../self/curve.hmyr"
+import "../self/curve.hmoca"
 
 fn main() -> Int effects(process) {
   let 哈 = sha512字节((97, 98, 99))

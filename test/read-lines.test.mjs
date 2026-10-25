@@ -44,9 +44,9 @@ console.log("一、一行一行往下读，偏移自己接");
     "  return 0",
     "}",
   ].join("\n");
-  const 源路 = path.join(临, "walk.hmyr");
+  const 源路 = path.join(临, "walk.hmoca");
   fs.writeFileSync(源路, 源码, "utf8");
-  const 码路 = path.join(临, "walk.hmyrb");
+  const 码路 = path.join(临, "walk.hmoks");
   const 编 = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), 源路, 码路], { encoding: "utf8" });
   ok("走读的那个程序编得出来", 编.status === 0, String(编.stderr).slice(0, 140));
   if (fs.existsSync(码路)) {
@@ -83,9 +83,9 @@ console.log("二、在真正的程序里按行读（两台机器）");
     "  return 0",
     "}",
   ].join("\n");
-  const 源路 = path.join(临, "count.hmyr");
+  const 源路 = path.join(临, "count.hmoca");
   fs.writeFileSync(源路, 源码, "utf8");
-  const 码路 = path.join(临, "count.hmyrb");
+  const 码路 = path.join(临, "count.hmoks");
   const 编 = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), 源路, 码路], { encoding: "utf8" });
   ok("这个程序编得出来", 编.status === 0, String(编.stderr).slice(0, 140));
   if (fs.existsSync(码路)) {
@@ -120,9 +120,9 @@ console.log("三、空文件与末尾换行");
     "  return 0",
     "}",
   ].join("\n");
-  const 源路 = path.join(临, "empty.hmyr");
+  const 源路 = path.join(临, "empty.hmoca");
   fs.writeFileSync(源路, 源码, "utf8");
-  const 码路 = path.join(临, "empty.hmyrb");
+  const 码路 = path.join(临, "empty.hmoks");
   const 编 = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), 源路, 码路], { encoding: "utf8" });
   if (编.status === 0) {
     const 跑 = spawnSync(process.execPath, [path.join(ROOT, "tools/run-bytecode.mjs"), 码路], { encoding: "utf8" });

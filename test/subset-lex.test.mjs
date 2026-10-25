@@ -28,7 +28,7 @@ const 简 = (tokens) => tokens.map((t) => t.type + ":" + JSON.stringify(t.value)
 console.log("一、六份源码：与宿主逐个 token 相同（含行号与列号）");
 let 总数 = 0;
 for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
-  const 源 = fs.readFileSync(path.join(ROOT, "self", 名 + ".hmyr"), "utf8");
+  const 源 = fs.readFileSync(path.join(ROOT, "self", 名 + ".hmoca"), "utf8");
   const 主 = 简(lex(源).tokens);
   let 子 = null, 错 = "";
   try { 子 = 简(切(源)); } catch (e) { 错 = e.message; }

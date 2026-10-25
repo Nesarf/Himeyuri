@@ -53,7 +53,7 @@ function session(messages) {
   });
 }
 
-const uri = "file:///virtual/etude.hmyr";
+const uri = "file:///virtual/etude.hmoca";
 console.log("a session, the way an editor has one");
 const replies = await session([
   { jsonrpc: "2.0", id: 1, method: "initialize", params: { capabilities: {} } },

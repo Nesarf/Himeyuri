@@ -14,7 +14,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "surface.hmyr"));
+const unit = loadUnit(path.join(ROOT, "surface.hmoca"));
 ok("表面那一层加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
 const call = (name, args) => {
@@ -155,7 +155,7 @@ console.log("图像：把像素布导出的 PNG 交给 native 后端");
     'const { loadUnit, runUnit } = await import("' + new URL("src/loader.mjs", 仓根).href + '");',
     'const { lex } = await import("' + new URL("src/lexer.mjs", 仓根).href + '");',
     'const { parse } = await import("' + new URL("src/parser.mjs", 仓根).href + '");',
-    'const rt = runUnit(loadUnit("' + 仓根斜 + 'pixel.hmyr"));',
+    'const rt = runUnit(loadUnit("' + 仓根斜 + 'pixel.hmoca"));',
     'const d = { items: [], errors: [], warnings: [], add(){}, error(){}, warn(){} };',
     'const src = "fn main() -> Int effects(process, file) {\\n  let 布 = 填矩形(新布(16, 10), 2, 2, 8, 5, 11141120)\\n  let 果 = 导出(布, \\"E:/DaShaoHuo/cache/tmp/surface-img.txt\\", \\"E:/DaShaoHuo/cache/tmp/surface-img.png\\")\\n  print(果.text)\\n  return 0\\n}\\n";',
     'const { ast } = parse(lex(src, { diagnostics: d }).tokens, { diagnostics: d });',

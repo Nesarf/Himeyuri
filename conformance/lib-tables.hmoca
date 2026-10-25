@@ -1,4 +1,4 @@
-import "../lib/tables.hmyr"
+import "../lib/tables.hmoca"
 
 fn 检(好: Bool, 号: Int) -> Int {
   if 好 {

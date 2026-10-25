@@ -15,7 +15,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "term.hmyr"));
+const unit = loadUnit(path.join(ROOT, "term.hmoca"));
 ok("终端那一层加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
 const call = (name, args) => {

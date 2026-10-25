@@ -23,7 +23,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 console.log("一、工具的源码读得动");
-const 源路 = path.join(ROOT, "self/zip.hmyr");
+const 源路 = path.join(ROOT, "self/zip.hmoca");
 ok("self/zip.hmyr 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
@@ -42,9 +42,9 @@ if (!有编译器) {
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
-    const 码路 = path.join(临, "zip.hmyrb");
+    const 码路 = path.join(临, "zip.hmoks");
     fs.writeFileSync(码路, 写程序(程序));
-    const 成员 = path.join(ROOT, "examples/twice.hmyr");
+    const 成员 = path.join(ROOT, "examples/twice.hmoca");
     const 包路 = path.join(临, "twice.zip");
     const r = spawnSync(exe, [码路, 成员, 包路], { encoding: "utf8", timeout: 300000, env: { ...process.env, HMYR_STEPS: "4000000000" } });
     ok("包写得动", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 200));
@@ -60,7 +60,7 @@ if (!有编译器) {
       ok("本地签名是 50 4b 03 04", 包.subarray(0, 4).toString("hex") === "504b0304", 包.subarray(0, 4).toString("hex"));
       ok("方法字段是 0（stored）", 包.readUInt16LE(8) === 0, String(包.readUInt16LE(8)));
       ok("压缩后大小与原始大小都等于原文件", 包.readUInt32LE(18) === 原.length && 包.readUInt32LE(22) === 原.length, 包.readUInt32LE(18) + "/" + 包.readUInt32LE(22) + " 对 " + 原.length);
-      ok("成员名是文件最后一段", 名 === "twice.hmyr", JSON.stringify(名));
+      ok("成员名是文件最后一段", 名 === "twice.hmoca", JSON.stringify(名));
       ok("CRC 与 node 的 crc32 一致", 包.readUInt32LE(14) === zlib.crc32(原), 包.readUInt32LE(14) + " 对 " + zlib.crc32(原));
 
       console.log("二·五、deflate 成员：方法 8，压缩后能被 zlib 解回原样");
@@ -96,7 +96,7 @@ if (!有编译器) {
       {
         // 这一节量的是「换表之后能处理多大」：逐位异或那一版对 43 KB 会卡到分钟级，
         // 而 43 KB 是仓库里最小的真实文件（种子）。
-        const 大 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmyrb"));
+        const 大 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmtn"));
         const 大入 = path.join(临, "big.bin");
         const 大包 = path.join(临, "big.zip");
         fs.writeFileSync(大入, 大);

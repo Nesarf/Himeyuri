@@ -18,7 +18,7 @@ const ok = (label, condition, detail = "") => {
 
 console.log("一、同一个文件，两边都认得（self/lex.hmyr）");
 {
-  const 路 = path.join(ROOT, "self/lex.hmyr");
+  const 路 = path.join(ROOT, "self/lex.hmoca");
   const 宿 = 宿主载(路);
   const 桥 = 桥载(路);
   ok("两边都说 ok", 宿.ok === true && 桥.ok === true, JSON.stringify([宿.ok, 桥.ok]));
@@ -32,7 +32,7 @@ console.log("一、同一个文件，两边都认得（self/lex.hmyr）");
 
 console.log("二、桥加载的 Module 能跑（lex 的 scan 认得出 token）");
 {
-  const 桥 = 桥载(path.join(ROOT, "self/lex.hmyr"));
+  const 桥 = 桥载(path.join(ROOT, "self/lex.hmoca"));
   const rt = 桥跑(桥, { stepLimit: 20000000 });
   let 数 = -1;
   try { 数 = Array.from(rt.callFunction(rt.functions.get("scan"), ["let x = 1"], null)).length; } catch { 数 = -1; }
@@ -42,9 +42,9 @@ console.log("二、桥加载的 Module 能跑（lex 的 scan 认得出 token）"
 console.log("三、整棵 import 树：顺序与宿主一致（临时两文件工程）");
 {
   const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-bridge-"));
-  fs.writeFileSync(path.join(临, "lib.hmyr"), "fn double(x: Int) -> Int {\n  return x * 2\n}\n", "utf8");
-  fs.writeFileSync(path.join(临, "main.hmyr"), 'import "./lib.hmyr"\nfn main() -> Int {\n  return double(21)\n}\n', "utf8");
-  const 入口 = path.join(临, "main.hmyr");
+  fs.writeFileSync(path.join(临, "lib.hmoca"), "fn double(x: Int) -> Int {\n  return x * 2\n}\n", "utf8");
+  fs.writeFileSync(path.join(临, "main.hmoca"), 'import "./lib.hmoca"\nfn main() -> Int {\n  return double(21)\n}\n', "utf8");
+  const 入口 = path.join(临, "main.hmoca");
   const 宿 = 宿主载(入口);
   const 桥 = 桥载(入口);
   ok("两边都说 ok", 宿.ok === true && 桥.ok === true, JSON.stringify([宿.ok, 桥.ok]));
@@ -58,7 +58,7 @@ console.log("三、整棵 import 树：顺序与宿主一致（临时两文件�
 
 console.log("四、找不到的文件：如实说，不装作认得");
 {
-  const 桥 = 桥载(path.join(ROOT, "self", "no-such-file.hmyr"));
+  const 桥 = 桥载(path.join(ROOT, "self", "no-such-file.hmoca"));
   ok("ok 是 false", 桥.ok === false);
   ok("诊断里有一条", (桥.diagnostics.errors || []).length > 0, JSON.stringify((桥.diagnostics.errors || []).map((e) => e.code)));
 }
@@ -72,11 +72,11 @@ console.log("五、字节码产物：在，而且不比它的链旧");
   // 比的是「这条链」，不是整个 self/：产物里含的是 run.hmyr 与它 import 的那些，
   // 而 self/ 下还有 release、package、lsp 之类与它无关的文件。
   // 早先按整个目录比，于是改一份无关的 self 文件就误报一次 —— 那是判定过宽，不是产物旧。
-  const 字节路 = path.join(ROOT, "runtime/run.hmyrb");
+  const 字节路 = path.join(ROOT, "runtime/run.hmoks");
   const 在 = fs.existsSync(字节路);
   ok("runtime/run.hmyrb 在", 在);
   if (在) {
-    const 层 = 宿主载(path.join(ROOT, "self/run.hmyr"));
+    const 层 = 宿主载(path.join(ROOT, "self/run.hmoca"));
     ok("run.hmyr 的链读得动", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
     let 最新 = 0;
     for (const 份 of 层.order) {
@@ -85,7 +85,7 @@ console.log("五、字节码产物：在，而且不比它的链旧");
     }
     const 新 = fs.statSync(字节路).mtimeMs >= 最新;
     ok("它不比这条链（" + 层.order.length + " 份）里任何一份旧", 新,
-      "旧了就重新生成：node tools/emit-code.mjs self/run.hmyr runtime/run.hmyrb");
+      "旧了就重新生成：node tools/emit-code.mjs self/run.hmyr runtime/run.hmoks");
   }
 }
 

@@ -28,7 +28,7 @@ const 源 = [
   "}",
   "",
 ].join("\n");
-const 地址 = "file:///tmp/probe.hmyr";
+const 地址 = "file:///tmp/probe.hmoca";
 
 const 消息们 = [
   { jsonrpc: "2.0", id: 1, method: "initialize", params: {} },
@@ -77,8 +77,8 @@ const exe = path.join(临, "hmyr.exe");
 const 编r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
 ok("C 那台编得动", 编r.status === 0, String(编r.stderr || "").slice(0, 120));
 
-const 码路 = path.join(临, "lsp.hmyrb");
-const 码r = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/lsp.hmyr"), 码路], { encoding: "utf8" });
+const 码路 = path.join(临, "lsp.hmoks");
+const 码r = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/lsp.hmoca"), 码路], { encoding: "utf8" });
 ok("self/lsp.hmyr 编得出字节码", 码r.status === 0 && fs.existsSync(码路), String(码r.stderr || "").slice(0, 120));
 
 console.log("一、宿主那一份的应答");

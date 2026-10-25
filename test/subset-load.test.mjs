@@ -41,8 +41,8 @@ const 短 = (f) => path.basename(f);
 
 console.log("一、self/run.hmyr：默认那条与宿主那条，模块与声明都相同");
 {
-  const 默认 = loadUnit(path.join(ROOT, "self/run.hmyr"));
-  const 宿主 = loadUnit(path.join(ROOT, "self/run.hmyr"), { reader: 宿主读 });
+  const 默认 = loadUnit(path.join(ROOT, "self/run.hmoca"));
+  const 宿主 = loadUnit(path.join(ROOT, "self/run.hmoca"), { reader: 宿主读 });
   ok("两条都读得动", 默认.ok && 宿主.ok, JSON.stringify(宿主.diagnostics.errors.map((e) => e.code)));
   ok("模块顺序相同", JSON.stringify(默认.order.map(短)) === JSON.stringify(宿主.order.map(短)), 宿主.order.map(短).join(" "));
   const 名序 = (u) => u.order.map((f) => u.modules.get(f).decls.map((d) => d.kind + ":" + d.name).join(",")).join(" | ");
@@ -52,8 +52,8 @@ console.log("一、self/run.hmyr：默认那条与宿主那条，模块与声明
 
 console.log("二、跑起来之后，函数表也是同一批名字");
 {
-  const 默认 = runUnit(loadUnit(path.join(ROOT, "self/run.hmyr")));
-  const 宿主 = runUnit(loadUnit(path.join(ROOT, "self/run.hmyr"), { reader: 宿主读 }));
+  const 默认 = runUnit(loadUnit(path.join(ROOT, "self/run.hmoca")));
+  const 宿主 = runUnit(loadUnit(path.join(ROOT, "self/run.hmoca"), { reader: 宿主读 }));
   const 名们 = (rt) => [...rt.functions.keys()].sort();
   ok("函数个数相同", 名们(默认).length === 名们(宿主).length, 名们(默认).length + " 对 " + 名们(宿主).length);
   ok("函数名逐个相同", JSON.stringify(名们(默认)) === JSON.stringify(名们(宿主)));
@@ -66,8 +66,8 @@ console.log("三、一个真工程：入口 import 另一件，两条路算同�
 {
   const 目录 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-subset-load-"));
   try {
-    fs.writeFileSync(path.join(目录, "lib.hmyr"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
-    const 入口 = path.join(目录, "main.hmyr");
+    fs.writeFileSync(path.join(目录, "lib.hmoca"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
+    const 入口 = path.join(目录, "main.hmoca");
     fs.writeFileSync(入口, "import \"./lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
     const 默认单 = loadUnit(入口);
     const 宿主单 = loadUnit(入口, { reader: 宿主读 });
@@ -75,7 +75,7 @@ console.log("三、一个真工程：入口 import 另一件，两条路算同�
     ok("两条路都给四十二", 算(runUnit(默认单)) === 42 && 算(runUnit(宿主单)) === 42, 算(runUnit(默认单)) + " 对 " + 算(runUnit(宿主单)));
     const 序 = (u) => JSON.stringify(u.order.map(短));
     ok("被 import 的那一件排在入口之前（两条路都如此）",
-      JSON.stringify(["lib.hmyr", "main.hmyr"]) === 序(默认单) && 序(默认单) === 序(宿主单), 序(默认单));
+      JSON.stringify(["lib.hmoca", "main.hmoca"]) === 序(默认单) && 序(默认单) === 序(宿主单), 序(默认单));
   } finally {
     fs.rmSync(目录, { recursive: true, force: true });
   }
@@ -85,7 +85,7 @@ console.log("四、默认那条不静默：它不认的构造直接抛，而不�
 {
   const 目录 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-subset-refuse-"));
   try {
-    const 文件 = path.join(目录, "t.hmyr");
+    const 文件 = path.join(目录, "t.hmoca");
     fs.writeFileSync(文件, "type T = Int\n");
     let 错 = "";
     try { loadUnit(文件); } catch (e) { 错 = e.message; }

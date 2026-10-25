@@ -32,7 +32,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-socket-"));
-const 源路 = path.join(临, "hello.hmyr");
+const 源路 = path.join(临, "hello.hmoca");
 // 返回值用 7，不用 0：0 与「退出码是 0」读起来会混，而这两件事这里要分开验。
 fs.writeFileSync(源路, [
   "fn main() -> Int {",

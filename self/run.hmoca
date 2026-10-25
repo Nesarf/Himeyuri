@@ -10,11 +10,11 @@
 //   ・这一版的求值器只认十二种节点里已经实现的部分（记录还不支持）
 //   ・调用只认 len 与 str 两个纯函数；打印由这里做，因为这里才该动世界
 
-import "./lex.hmyr"
-import "./chain.hmyr"
-import "./stmt.hmyr"
-import "./body.hmyr"
-import "./eval.hmyr"
+import "./lex.hmoca"
+import "./chain.hmoca"
+import "./stmt.hmoca"
+import "./body.hmoca"
+import "./eval.hmoca"
 
 // 跑一段源码，交回结果文字。语法层的错不必在这里单独拦：eval 认识 {kind: "Error"}
 // 那一种节点，会把它原样带上来（实测如此，所以这里少一层分支）。
@@ -318,7 +318,7 @@ fn 导入节点们(tokens: Int, i: Int, acc: Int) {
   let t = tokens[i]
   if t.kind == "ident" && t.text == "import" && i + 1 < len(tokens) && tokens[i + 1].kind == "string" {
     let s = tokens[i + 1]
-    // import "x.hmyr" rev N —— 不写就是 0（这一侧用 0 表示「不提要求」）。
+    // import "x.hmoca" rev N —— 不写就是 0（这一侧用 0 表示「不提要求」）。
     var 版 = 0
     if i + 2 < len(tokens) && tokens[i + 2].kind == "ident" && tokens[i + 2].text == "rev" {
       if i + 3 < len(tokens) && tokens[i + 3].kind == "int" { 版 = to_int(tokens[i + 3].text) } else { 版 = 0 - 1 }
@@ -571,7 +571,7 @@ fn 读多从(目录: String, 路们: Int, i: Int, 已读: Int, 源码们: Int) e
 
 // 一个文件路径的目录部分：最后一个分隔符之前的那一段。没有分隔符就是 "."。
 // 这个函数存在的理由是一处真的错：早先 读一棵 把子模块的 import 也按**顶层目录**拼，
-// 于是 lib/protocol.hmyr 里那句 import "./tuples.hmyr" 被拼成了 conformance/tuples.hmyr，
+// 于是 lib/protocol.hmyr 里那句 import "./tuples.hmoca" 被拼成了 conformance/tuples.hmyr，
 // 文件不在就按「可选引用」跳过 —— 症状是目标程序运行时报「没有这个函数：子段」。
 fn 目录部分(路: String) -> String {
   let i = 最后一个分隔从(路, 0, 0 - 1)

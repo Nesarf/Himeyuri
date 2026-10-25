@@ -36,12 +36,12 @@ const ok = (label, condition, detail = "") => {
 const attempt = (fn) => { try { return { value: fn() }; } catch (e) { return { error: (e.code || "") + " " + e.message }; } };
 
 console.log("the loader brings the whole dependency chain in");
-const unit = loadUnit(path.join(ROOT, "self/stmt.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/stmt.hmoca"));
 ok("it loads", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 ok("three files arrive: lexer, chain, statements",
-  unit.order.length === 3 && unit.order.some((f) => f.endsWith("lex.hmyr")) && unit.order.some((f) => f.endsWith("chain.hmyr")),
+  unit.order.length === 3 && unit.order.some((f) => f.endsWith("lex.hmoca")) && unit.order.some((f) => f.endsWith("chain.hmoca")),
   unit.order.map((f) => path.basename(f)).join(", "));
-ok("the dependency order puts the dependency first", unit.order.findIndex((f) => f.endsWith("lex.hmyr")) < unit.order.findIndex((f) => f.endsWith("chain.hmyr")));
+ok("the dependency order puts the dependency first", unit.order.findIndex((f) => f.endsWith("lex.hmoca")) < unit.order.findIndex((f) => f.endsWith("chain.hmoca")));
 
 const rt = runUnit(unit);
 const call = (name, args) => rt.callFunction(rt.functions.get(name), args, null);

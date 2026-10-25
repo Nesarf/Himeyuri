@@ -23,7 +23,7 @@ console.log("the scanner written in Himeyuri loads and runs");
 }
 
 console.log("\nit finds what the JavaScript reflector finds");
-const AGREEMENT = ["kpb/piece.hmyr", "kpb/etude.hmyr", "self/scan.hmyr"];
+const AGREEMENT = ["kpb/piece.hmoca", "kpb/etude.hmoca", "self/scan.hmoca"];
 for (const rel of AGREEMENT) {
   const file = path.join(ROOT, rel);
   const mine = scanFile(file);

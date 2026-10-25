@@ -1,4 +1,4 @@
-import "./shell.hmyr"
+import "./shell.hmoca"
 
 // 输入法的预编辑：一个「字」还没定下来之前，它不该进缓冲区。
 //

@@ -20,7 +20,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 层 = loadUnit(path.join(ROOT, "self/run.hmyr"));
+const 层 = loadUnit(path.join(ROOT, "self/run.hmoca"));
 
 console.log("一、六份 self/ 全部编译通过");
 {
@@ -50,12 +50,12 @@ console.log("二、六条真实路径：两条执行路径给同一个答案");
 {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-vm-"));
   const 写 = (名, 文) => { const p = path.join(临, 名); fs.writeFileSync(p, 文); return p; };
-  写("w.hmyr", "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n");
-  写("r.hmyr", "fn main() -> Int {\n  let r = {a: 1}\n  return r.a\n}\n");
-  写("bad.hmyr", "let a = \nreturn a\n");
+  写("w.hmoca", "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n");
+  写("r.hmoca", "fn main() -> Int {\n  let r = {a: 1}\n  return r.a\n}\n");
+  写("bad.hmoca", "let a = \nreturn a\n");
   fs.mkdirSync(path.join(临, "mod"), { recursive: true });
-  fs.writeFileSync(path.join(临, "mod/lib.hmyr"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
-  写("mod/main.hmyr", "import \"./lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
+  fs.writeFileSync(path.join(临, "mod/lib.hmoca"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
+  写("mod/main.hmoca", "import \"./lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
 
   const 跑 = (目标, 用字节码) => {
     const 出 = { w: "", e: "" };
@@ -77,10 +77,10 @@ console.log("二、六条真实路径：两条执行路径给同一个答案");
   };
 
   const 例们 = [
-    ["hello", path.join(ROOT, "examples/hello.hmyr"), "5"],
-    ["while 与赋值", path.join(临, "w.hmyr"), "3"],
-    ["记录", path.join(临, "r.hmyr"), "1"],
-    ["import 一件库", path.join(临, "mod/main.hmyr"), "42"],
+    ["hello", path.join(ROOT, "examples/hello.hmoca"), "5"],
+    ["while 与赋值", path.join(临, "w.hmoca"), "3"],
+    ["记录", path.join(临, "r.hmoca"), "1"],
+    ["import 一件库", path.join(临, "mod/main.hmoca"), "42"],
   ];
   for (const [名, 目标, 应] of 例们) {
     const 小 = 跑(目标, false), 大 = 跑(目标, true);
@@ -88,7 +88,7 @@ console.log("二、六条真实路径：两条执行路径给同一个答案");
       "最小 " + 小.码 + " " + JSON.stringify(小.出) + " · 字节码 " + 大.码 + " " + JSON.stringify(大.出) + (大.错 ? "  " + 大.错 : ""));
   }
   // 两条边界：缺文件与语法坏的目标。它们要的是一致，不是某个具体值。
-  for (const [名, 目标] of [["目标不存在", path.join(临, "nope.hmyr")], ["语法坏的目标", path.join(临, "bad.hmyr")]]) {
+  for (const [名, 目标] of [["目标不存在", path.join(临, "nope.hmoca")], ["语法坏的目标", path.join(临, "bad.hmoca")]]) {
     const 小 = 跑(目标, false), 大 = 跑(目标, true);
     ok(名 + "：两边退出码相同", 小.码 === 大.码, "最小 " + 小.码 + " · 字节码 " + 大.码);
     ok(名 + "：两边输出相同", 小.出 === 大.出, JSON.stringify(小.出) + " 对 " + JSON.stringify(大.出));
@@ -127,7 +127,7 @@ console.log("四、错误编号也照旧");
   // 一个函数里除零：两条路都报 R0120，且都不给出一个值。
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-vm-err-"));
   try {
-    const p = path.join(临, "z.hmyr");
+    const p = path.join(临, "z.hmoca");
     fs.writeFileSync(p, "fn main() -> Int {\n  return 1 / 0\n}\n");
     const 跑 = (用字节码) => {
       let 错 = "";

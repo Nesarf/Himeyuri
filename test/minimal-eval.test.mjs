@@ -61,21 +61,21 @@ try {
   {
     const 模 = path.join(临, "mod");
     fs.mkdirSync(模, { recursive: true });
-    fs.writeFileSync(path.join(模, "lib.hmyr"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
-    写("hello.hmyr", "fn main() -> Int {\n  return 5\n}\n");
-    写("loop.hmyr", "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n");
-    写("fn.hmyr", "fn 加(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  let s = \"abc\"\n  return 加(len(s), 2)\n}\n");
-    写("rec.hmyr", "fn main() -> Int {\n  let r = {a: 1}\n  return r.a\n}\n");
-    写("imp.hmyr", "import \"./mod/lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
-    写("text.hmyr", "fn main() -> String {\n  return slice(\"hello world\", 0, 5) + str(len(\"ab\"))\n}\n");
-    写("tuple.hmyr", "fn main() -> Int {\n  let t = (1, 2) + (3,)\n  return len(t) + t[0]\n}\n");
-    写("nested.hmyr", "fn 外(n: Int) -> Int {\n  let f = if n > 2 { 1 } else { 2 }\n  return f + n\n}\nfn main() -> Int {\n  return 外(3)\n}\n");
-    for (const f of ["hello", "loop", "fn", "rec", "imp", "text", "tuple", "nested"]) 同(f + ".hmyr", path.join(临, f + ".hmyr"));
+    fs.writeFileSync(path.join(模, "lib.hmoca"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
+    写("hello.hmoca", "fn main() -> Int {\n  return 5\n}\n");
+    写("loop.hmoca", "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n");
+    写("fn.hmoca", "fn 加(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  let s = \"abc\"\n  return 加(len(s), 2)\n}\n");
+    写("rec.hmoca", "fn main() -> Int {\n  let r = {a: 1}\n  return r.a\n}\n");
+    写("imp.hmoca", "import \"./mod/lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
+    写("text.hmoca", "fn main() -> String {\n  return slice(\"hello world\", 0, 5) + str(len(\"ab\"))\n}\n");
+    写("tuple.hmoca", "fn main() -> Int {\n  let t = (1, 2) + (3,)\n  return len(t) + t[0]\n}\n");
+    写("nested.hmoca", "fn 外(n: Int) -> Int {\n  let f = if n > 2 { 1 } else { 2 }\n  return f + n\n}\nfn main() -> Int {\n  return 外(3)\n}\n");
+    for (const f of ["hello", "loop", "fn", "rec", "imp", "text", "tuple", "nested"]) 同(f + ".hmoca", path.join(临, f + ".hmoca"));
   }
 
   console.log("二、尾递归：一万层两路都给同一个数（TCO 是真的）");
   {
-    const 入口 = 写("tail.hmyr", "fn 数(n: Int) -> Int {\n  if n <= 0 { return 0 }\n  return 数(n - 1)\n}\nfn main() -> Int {\n  return 数(10000)\n}\n");
+    const 入口 = 写("tail.hmoca", "fn 数(n: Int) -> Int {\n  if n <= 0 { return 0 }\n  return 数(n - 1)\n}\nfn main() -> Int {\n  return 数(10000)\n}\n");
     const r = 同("一万层尾递归", 入口);
     ok("两边都算完而不是撞深度", r.主.码 === 0, r.主.码 + " " + JSON.stringify(r.主.出));
   }
@@ -85,7 +85,7 @@ try {
     // 这一节比上面那批硬：它跑的源码是 self/run.hmyr 里的 跑（表达式求值），
     // 那条路上要经过自举的切词、搭树与求值三层。两个宿主求值器在这条路上给出同一个字符串，
     // 才算「它们对这门语言的理解一致」——而不是各算各的加法。
-    const 层 = loadUnit(path.join(ROOT, "self/run.hmyr"));
+    const 层 = loadUnit(path.join(ROOT, "self/run.hmoca"));
     const 宿主 = runUnit(层);
     宿主.write = () => {};
     宿主.writeErr = () => {};
@@ -118,7 +118,7 @@ console.log("三、错误路径：同一个编号");
     ["没声明效果就调 read_text", "fn 读() -> String {\n  return read_text(\"nope.txt\")\n}\nfn main() -> String {\n  return 读()\n}\n", "HMYR-R0201"],
   ];
   for (const [名, 文, 码] of 编号例) {
-    const 入口 = 写(名.replace(/[^a-z]/gi, "x") + ".hmyr", 文);
+    const 入口 = 写(名.replace(/[^a-z]/gi, "x") + ".hmoca", 文);
     const 主 = 跑(入口, false), 小 = 跑(入口, true);
     ok(名 + "：两路都报 " + 码, String(主.错).includes(码) && String(小.错).includes(码), "宿主 " + JSON.stringify(主.错.slice(0, 60)) + " · 最小 " + JSON.stringify(小.错.slice(0, 60)));
     ok(名 + "：两边都没有给出一个值", 主.出 === "" && 小.出 === "", 主.出 + " / " + 小.出);
@@ -126,7 +126,7 @@ console.log("三、错误路径：同一个编号");
 
   console.log("四、表外的东西：这一份抛，而宿主给 R0110，两边都不给值");
   {
-    const 入口 = 写("match.hmyr", "fn f(n: Int) -> Int {\n  return match n { 1 => 2 }\n}\nfn main() -> Int {\n  return f(1)\n}\n");
+    const 入口 = 写("match.hmoca", "fn f(n: Int) -> Int {\n  return match n { 1 => 2 }\n}\nfn main() -> Int {\n  return f(1)\n}\n");
     // 子集 parser 不认 match，所以这条要走宿主的读法才拿得到 Match 节点。
     const { lex } = await import("../src/lexer.mjs");
     const { parse } = await import("../src/parser.mjs");

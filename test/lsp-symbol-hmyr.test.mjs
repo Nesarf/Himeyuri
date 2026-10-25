@@ -26,7 +26,7 @@ const 源 = [
   "}",
   "",
 ].join("\n");
-const 地址 = "file:///tmp/probe.hmyr";
+const 地址 = "file:///tmp/probe.hmoca";
 
 const 消息们 = [
   { jsonrpc: "2.0", id: 1, method: "initialize", params: {} },
@@ -75,8 +75,8 @@ const exe = path.join(临, "hmyr.exe");
 const 编r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
 ok("C 那台编得动", 编r.status === 0, String(编r.stderr || "").slice(0, 120));
 
-const 码路 = path.join(临, "lsp.hmyrb");
-const 码r = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/lsp.hmyr"), 码路], { encoding: "utf8" });
+const 码路 = path.join(临, "lsp.hmoks");
+const 码r = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/lsp.hmoca"), 码路], { encoding: "utf8" });
 ok("self/lsp.hmyr 编得出字节码", 码r.status === 0 && fs.existsSync(码路), String(码r.stderr || "").slice(0, 120));
 
 console.log("一、宿主那一份的应答");
@@ -117,7 +117,7 @@ console.log("四、正文里有中文时，Content-Length 数的仍是字节");
   // 中文标识符按 UTF-8 是三个字节，而字符串长度数的是码元 —— 两边只有在全 ASCII 时才相等。
   // 这一条不直接看长度数字，而是看「能不能把应答完整拆出来」：长度算错时 JSON 会被截断。
   const 中文源 = "fn 一甲(a: Int) -> Int {\n  return a\n}\n";
-  const 中文地址 = "file:///tmp/zhongwen.hmyr";
+  const 中文地址 = "file:///tmp/zhongwen.hmoca";
   const 中文消息 = [
     { jsonrpc: "2.0", id: 11, method: "initialize", params: {} },
     { jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: 中文地址, languageId: "hmyr", version: 1, text: 中文源 } } },

@@ -17,7 +17,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 自举 = runUnit(loadUnit(path.join(ROOT, "self/run.hmyr")), { maxDepth: 20000, stepLimit: 3000000000 });
+const 自举 = runUnit(loadUnit(path.join(ROOT, "self/run.hmoca")), { maxDepth: 20000, stepLimit: 3000000000 });
 const 算名 = (路) => Array.from(自举.callFunction(自举.functions.get("函数名们"), [fs.readFileSync(路, "utf8")], null));
 const 宿名 = (路) => {
   const 宿 = loadUnit(路);
@@ -33,7 +33,7 @@ console.log("一、六份，默认栈下，名字与顺序都与宿主一致");
   // 数字随规模走，这一条是它自己的注释里写着的。
   const 期 = { lex: 27, chain: 27, stmt: 10, body: 23, eval: 40, run: 53 };
   for (const 名 of Object.keys(期)) {
-    const 路 = path.join(ROOT, "self", 名 + ".hmyr");
+    const 路 = path.join(ROOT, "self", 名 + ".hmoca");
     const 甲 = 算名(路);
     const 乙 = 宿名(路);
     ok(名 + ".hmyr 认出 " + 期[名] + " 个", 甲.length === 期[名], String(甲.length));

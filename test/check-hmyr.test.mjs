@@ -26,7 +26,7 @@ const 有编译器 = (() => {
 })();
 
 console.log("一、调度器的源码读得动");
-const 源路 = path.join(ROOT, "self/check.hmyr");
+const 源路 = path.join(ROOT, "self/check.hmoca");
 ok("self/check.hmyr 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
@@ -56,7 +56,7 @@ if (!有编译器) {
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
-    const 码路 = path.join(临, "check.hmyrb");
+    const 码路 = path.join(临, "check.hmoks");
     fs.writeFileSync(码路, 写程序(程序));
     const 小清单 = path.join(临, "list.txt");
     fs.writeFileSync(小清单, "lexer\ttest/lexer.test.mjs\nparser\ttest/parser.test.mjs\neval\ttest/eval.test.mjs\n", "utf8");

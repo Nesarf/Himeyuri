@@ -41,8 +41,8 @@ const 无损 = bridge(CLAY, "clay.png", "clay.json");
 const 印刷 = bridge(SWOP, "swop.png", "swop.json");
 ok("两份报告都出得来", 无损.status === 0 && 印刷.status === 0, String(无损.stderr || 印刷.stderr || "").slice(0, 120));
 
-const rt = runUnit(loadUnit(path.join(ROOT, "json.hmyr")));
-rt.registerModule(loadUnit(path.join(ROOT, "color-report.hmyr")).modules.values().next().value);
+const rt = runUnit(loadUnit(path.join(ROOT, "json.hmoca")));
+rt.registerModule(loadUnit(path.join(ROOT, "color-report.hmoca")).modules.values().next().value);
 const call = (name, args) => {
   const fn = rt.functions.get(name);
   if (!fn) throw new Error("没有这个函数：" + name);

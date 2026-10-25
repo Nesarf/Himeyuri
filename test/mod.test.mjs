@@ -35,10 +35,10 @@ const 造 = (名, 标题, 标记, 歌长, 序列, 样本长) => {
 };
 const 过程目录 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/mod-");
 
-const unit = loadUnit(path.join(ROOT, "mod.hmyr"));
+const unit = loadUnit(path.join(ROOT, "mod.hmoca"));
 ok("MOD 那一层加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
-rt.registerModule(loadUnit(path.join(ROOT, "shell.hmyr")).modules.values().next().value);
+rt.registerModule(loadUnit(path.join(ROOT, "shell.hmoca")).modules.values().next().value);
 const call = (name, args) => {
   const fn = rt.functions.get(name);
   if (!fn) throw new Error("没有这个函数：" + name);

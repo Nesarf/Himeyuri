@@ -1,4 +1,4 @@
-import "./lex.hmyr"
+import "./lex.hmoca"
 
 // 用 Himeyuri 写的第七件：函数声明的签名。
 //

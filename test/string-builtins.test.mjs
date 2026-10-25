@@ -16,7 +16,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const rt = runUnit(loadUnit(path.join(ROOT, "term.hmyr")));   // 借它拿一个求值器
+const rt = runUnit(loadUnit(path.join(ROOT, "term.hmoca")));   // 借它拿一个求值器
 const 跑 = (body) => {
   const src = "fn main() -> Int { print(" + body + ") return 0 }\n";
   const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };

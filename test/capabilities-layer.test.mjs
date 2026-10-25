@@ -39,7 +39,7 @@ const 记账能力 = () => {
         exists: 包("file", "exists", (p) => fs.existsSync(p)),
         write: 包("file", "write", (p, buf) => fs.writeFileSync(p, buf)),
       },
-      process: { argv: 包("process", "argv", () => ["hmyr", "x.hmyr"]), exec: 包("process", "exec", () => ({ status: 0 })), chdir: 包("process", "chdir", () => {}), cwd: 包("process", "cwd", () => process.cwd()) },
+      process: { argv: 包("process", "argv", () => ["hmyr", "x.hmoca"]), exec: 包("process", "exec", () => ({ status: 0 })), chdir: 包("process", "chdir", () => {}), cwd: 包("process", "cwd", () => process.cwd()) },
       time: { now: 包("time", "now", () => 1700000000000), sleep: 包("time", "sleep", () => 1) },
       env: { home: 包("env", "home", () => os.homedir()), temp: 包("env", "temp", () => os.tmpdir()) },
       path: { join: 包("path", "join", (...p) => path.join(...p)), resolve: 包("path", "resolve", (...p) => path.resolve(...p)), dirname: 包("path", "dirname", (p) => path.dirname(p)), basename: 包("path", "basename", (p) => path.basename(p)) },
@@ -115,14 +115,14 @@ console.log("四、换一份能力实现，同一段程序仍然给出同一个�
 {
   const { loadUnit } = await import("../src/loader.mjs");
   const { 最小运行 } = await import("../src/minimal-eval.mjs");
-  const 层 = loadUnit(path.join(ROOT, "self/run.hmyr"));
+  const 层 = loadUnit(path.join(ROOT, "self/run.hmoca"));
 
   const 跑一次 = (cap) => {
     const rt = 最小运行(层, { capabilities: cap });
     let 出 = "";
     rt.write = (t) => { 出 += t; };
     rt.writeErr = () => {};
-    rt.argv = ["hmyr", path.join(ROOT, "examples/hello.hmyr")];
+    rt.argv = ["hmyr", path.join(ROOT, "examples/hello.hmoca")];
     const 码 = rt.callFunction(rt.functions.get("命令行入口"), [], null);
     return { 码, 出: 出.trim() };
   };
@@ -147,7 +147,7 @@ console.log("五、宿主求值器里的文件内置也走能力层");
   const { loadUnit, runUnit } = await import("../src/loader.mjs");
   const 目录 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-cap-host-"));
   try {
-    const 入口 = path.join(目录, "read.hmyr");
+    const 入口 = path.join(目录, "read.hmoca");
     // main 声明 file 效果才能读：没声明就调 read_text 会撞 R0201，那是另一套钉着的事。
     fs.writeFileSync(入口, "fn main() -> String effects(file) {\n  return read_text(\"SPEC.txt\")\n}\n");
     const 记 = 记账能力();

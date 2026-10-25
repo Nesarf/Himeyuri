@@ -142,7 +142,7 @@ console.log("一、五十七条：三条执行路给同一个答案");
   const 细节 = [];
   for (const [源, 类] of 案子) {
     const 文 = 外壳(源);
-    const p = path.join(临, "case.hmyr");
+    const p = path.join(临, "case.hmoca");
     fs.writeFileSync(p, 文);
     const 甲 = 约(宿主跑(文)), 乙 = 约(最小跑(p)), 丙 = 约(字节码跑(p));
     const 同 = 甲 === 乙 && 乙 === 丙;
@@ -165,7 +165,7 @@ console.log("一·二、算术只有一处实现：默认是自家那一条，�
   try {
     for (const [源, 类] of 案子) {
       const 文 = 外壳(源);
-      const p = path.join(临, "case2.hmyr");
+      const p = path.join(临, "case2.hmoca");
       fs.writeFileSync(p, 文);
       const 甲 = 约(宿主跑(文)), 乙 = 约(最小跑(p)), 丙 = 约(字节码跑(p));
       if (!(甲 === 乙 && 乙 === 丙)) { 分叉++; 细节.push(类 + " " + 源 + " -> " + 甲 + " / " + 乙 + " / " + 丙); }

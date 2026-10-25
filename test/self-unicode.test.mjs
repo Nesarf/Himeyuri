@@ -19,7 +19,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "self/lex.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/lex.hmoca"));
 ok("the bootstrapped lexer loads", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
 const scan = (s) => rt.callFunction(rt.functions.get("scan"), [s], null);

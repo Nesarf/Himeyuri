@@ -37,9 +37,9 @@ const ok = (label, condition, detail = "") => {
 const attempt = (fn) => { try { return { value: fn() }; } catch (e) { return { error: (e.code || "") + " " + e.message }; } };
 
 console.log("the loader brings the tokenizer in with the chain");
-const unit = loadUnit(path.join(ROOT, "self/chain.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/chain.hmoca"));
 ok("it loads", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
-ok("the dependency was followed", unit.order.length === 2 && unit.order.some((f) => f.endsWith("lex.hmyr")),
+ok("the dependency was followed", unit.order.length === 2 && unit.order.some((f) => f.endsWith("lex.hmoca")),
   unit.order.map((f) => path.basename(f)).join(", "));
 {
   const conflicts = unit.diagnostics.items.filter((d) => d.code === "HMYR-W0302");
@@ -51,7 +51,7 @@ const chainRt = runUnit(unit);
 const call = (name, args) => chainRt.callFunction(chainRt.functions.get(name), args, null);
 
 // the string-based parser lives in its own evaluator on purpose
-const parseUnit = loadUnit(path.join(ROOT, "self/parse.hmyr"));
+const parseUnit = loadUnit(path.join(ROOT, "self/parse.hmoca"));
 const parseRt = runUnit(parseUnit);
 const parseCall = (name, args) => parseRt.callFunction(parseRt.functions.get(name), args, null);
 

@@ -28,7 +28,7 @@ const 走求值器 = (源) => {
 };
 
 const 走加载器 = (源) => {
-  const p = path.join(临, "m" + (序++) + ".hmyr");
+  const p = path.join(临, "m" + (序++) + ".hmoca");
   fs.writeFileSync(p, 源, "utf8");
   const 层 = loadUnit(p);
   if (!层.ok) {

@@ -18,7 +18,7 @@ const 布尔样本 = ["1 < 2", "2 == 2", "1 + 2 == 3", "!true", "7 > 3"];
 
 const 包成程序 = (类型, 表达式) => "fn main() -> " + 类型 + " {\n  return " + 表达式 + "\n}\n";
 
-const unit = loadUnit(path.join(ROOT, "self/run.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/run.hmoca"));
 if (!unit.ok) {
   console.log("self/run.hmyr 加载失败：" + JSON.stringify((unit.diagnostics.errors || []).slice(0, 2).map((e) => e.code)));
   process.exit(1);

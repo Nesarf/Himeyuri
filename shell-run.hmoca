@@ -6,9 +6,9 @@
 //
 // 依赖写清楚：提示行的渲染要用 term 的清屏与光标定位。
 
-import "./term.hmyr"
-import "./shell.hmyr"
-import "./shell-builtins.hmyr"
+import "./term.hmoca"
+import "./shell.hmoca"
+import "./shell-builtins.hmoca"
 
 fn 提示符() -> String {
   return "> "

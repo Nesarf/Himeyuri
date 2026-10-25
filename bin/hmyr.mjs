@@ -72,7 +72,7 @@ const 子集读 = (source) => 子集解(切(source));
 
 let 层;
 try {
-  层 = loadUnit(path.join(ROOT, "self/run.hmyr"), { reader: 子集读 });
+  层 = loadUnit(path.join(ROOT, "self/run.hmoca"), { reader: 子集读 });
 } catch (e) {
   // 子集那一层是抛而不是记诊断，于是这里接住它，把它写成与「读不进来」同一种输出。
   // 一个会露出栈的启动器，对读它的人没有用处。

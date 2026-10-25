@@ -140,10 +140,10 @@ if (gcc) {
   {
     const 板 = path.join(临, "board");
     fs.mkdirSync(板, { recursive: true });
-    const 码 = path.join(板, "program.hmyrb");
+    const 码 = path.join(板, "program.hmoks");
     const objcopy = 前缀 + (process.platform === "win32" ? "objcopy.exe" : "objcopy");
     const 字节码进程 = spawnSync(process.execPath,
-      [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "examples/twice.hmyr"), 码], { encoding: "utf8" });
+      [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "examples/twice.hmoca"), 码], { encoding: "utf8" });
     if (字节码进程.status !== 0) {
       console.error("板子那一份的字节码没编出来：\n" + String(字节码进程.stderr).slice(0, 500));
       process.exit(1);
@@ -153,7 +153,7 @@ if (gcc) {
     // 里声明的名字对不上 —— 症状是弱声明落空，链接照样过，上电却说读不到文件。
     const 打 = spawnSync(objcopy, ["-I", "binary", "-O", "elf32-littlearm", "-B", "arm",
       "--rename-section", ".data=.program,alloc,load,readonly,data,contents",
-      "program.hmyrb", "program.o"], { encoding: "utf8", cwd: 板 });
+      "program.hmoks", "program.o"], { encoding: "utf8", cwd: 板 });
     if (打.status !== 0) {
       console.error("字节码没打进对象文件：\n" + String(打.stderr).slice(0, 500));
       process.exit(1);
@@ -198,7 +198,7 @@ if (gcc) {
     // 所以这一条问的是链接脚本，不是编译器。
     const nm = 前缀 + (process.platform === "win32" ? "nm.exe" : "nm");
     const 符 = String(spawnSync(nm, [板映像], { encoding: "utf8" }).stdout || "");
-    const 有码 = /_binary_program_hmyrb_start/.test(符);
+    const 有码 = /_binary_program_hmoks_start/.test(符);
     console.log("——");
     console.log("板子侧的映像（入口是 port/board-main.c，字节码编在里面）：");
     console.log("  板子 ROM " + 板量.flash + " 字节（" + (板量.flash / 1024).toFixed(1) + " KB）");

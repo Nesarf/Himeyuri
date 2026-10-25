@@ -18,7 +18,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 console.log("一、源码读得动、编得过");
-const 源路 = path.join(ROOT, "self/release.hmyr");
+const 源路 = path.join(ROOT, "self/release.hmoca");
 ok("self/release.hmyr 在", fs.existsSync(源路));
 const 层 = loadUnit(源路);
 ok("加载没有诊断", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
@@ -42,7 +42,7 @@ if (!process.env.HMYR_HEAVY) {
 } else {
   console.log("二、真跑一次：三样产物都要在");
   const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-release-"));
-  const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/release.hmyr", "v0.0.1", 临], {
+  const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/release.hmoca", "v0.0.1", 临], {
     cwd: ROOT, encoding: "utf8", timeout: 600000,
     env: { ...process.env, HMYR_STEPS: "4000000000" },
   });

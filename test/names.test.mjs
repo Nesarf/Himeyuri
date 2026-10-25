@@ -36,7 +36,7 @@ const 源码 = [
 
 console.log("一、同一个程序的两个名字，宿主那侧都读得进");
 {
-  const 甲 = path.join(临, "a.hmyr");
+  const 甲 = path.join(临, "a.hmoca");
   const 乙 = path.join(临, "b.hmoca");
   fs.writeFileSync(甲, 源码, "utf8");
   fs.writeFileSync(乙, 源码, "utf8");
@@ -63,13 +63,13 @@ if (!有编译器) {
     ok("vm/hmyr.c 编得出来", r.status === 0, String(r.stderr).slice(0, 200));
   }
 
-  const unit = loadUnit(path.join(临, "a.hmyr"));
+  const unit = loadUnit(path.join(临, "a.hmoca"));
   const 程序 = 合并程序(unit.order.map((f) => 编译模块(unit.modules.get(f))));
   const 字节 = 写程序(程序);
 
   console.log("二、字节码的两个名字，C 那台都跑得对");
   {
-    const 甲 = path.join(临, "p.hmyrb");
+    const 甲 = path.join(临, "p.hmoks");
     const 乙 = path.join(临, "p.hmoks");
     fs.writeFileSync(甲, 字节);
     fs.writeFileSync(乙, 字节);
@@ -91,7 +91,7 @@ if (!有编译器) {
   console.log("四、种子换个名字（.hmtn）也认得");
   {
     const 种子 = path.join(临, "pack.hmtn");
-    fs.copyFileSync(path.join(ROOT, "bootstrap/pack.hmyrb"), 种子);
+    fs.copyFileSync(path.join(ROOT, "bootstrap/pack.hmtn"), 种子);
     const 源路 = path.join(临, "d.hmoca");
     fs.writeFileSync(源路, 源码, "utf8");
     const r = spawnSync(exe, [源路], {

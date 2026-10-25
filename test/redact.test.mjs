@@ -39,21 +39,21 @@ console.log("一、开关本身");
 console.log("二、启动器两条路都生效");
 {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-redact-"));
-  const 缺 = path.join(临, "没有这个.hmyr");
+  const 缺 = path.join(临, "没有这个.hmoca");
   const 启动 = (args, env) => spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), ...args],
     { encoding: "utf8", env: { ...process.env, ...(env || {}) } });
   try {
     const 甲 = 启动([缺]);
-    ok("默认时消息里带着那个路径", String(甲.stderr).includes("没有这个.hmyr"), JSON.stringify(String(甲.stderr).slice(0, 80)));
+    ok("默认时消息里带着那个路径", String(甲.stderr).includes("没有这个.hmoca"), JSON.stringify(String(甲.stderr).slice(0, 80)));
     ok("默认时编号照旧", String(甲.stderr).includes("HMYR-R0211"));
 
     const 乙 = 启动(["--redact", 缺]);
-    ok("--redact 之后路径不见了", !String(乙.stderr).includes("没有这个.hmyr"), JSON.stringify(String(乙.stderr).slice(0, 80)));
+    ok("--redact 之后路径不见了", !String(乙.stderr).includes("没有这个.hmoca"), JSON.stringify(String(乙.stderr).slice(0, 80)));
     ok("--redact 之后占位符在", String(乙.stderr).includes("<path>"));
     ok("--redact 之后编号还在", String(乙.stderr).includes("HMYR-R0211"));
 
     const 丙 = 启动([缺], { HMYR_REDACT: "1" });
-    ok("环境变量也能开", String(丙.stderr).includes("<path>") && !String(丙.stderr).includes("没有这个.hmyr"));
+    ok("环境变量也能开", String(丙.stderr).includes("<path>") && !String(丙.stderr).includes("没有这个.hmoca"));
     ok("环境变量开着时，退出码仍是失败", 丙.status === 1, String(丙.status));
   } finally {
     fs.rmSync(临, { recursive: true, force: true });

@@ -13,7 +13,7 @@ import { 是源码 } from "./file-kind.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const unit = loadUnit(path.join(ROOT, "self/run.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/run.hmoca"));
 if (!unit.ok) {
   console.log("self/run.hmyr 加载失败：" + JSON.stringify((unit.diagnostics.errors || []).slice(0, 2).map((e) => e.code)));
   process.exit(1);
@@ -34,7 +34,7 @@ const 全部 = process.argv.includes("--全部");
 const 根目录 = fs.readdirSync(ROOT).filter((n) => 是源码(n)).sort();
 const 自助名单 = 全部
   ? fs.readdirSync(path.join(ROOT, "self")).filter((n) => 是源码(n)).sort()
-  : ["lex.hmyr", "chain.hmyr", "stmt.hmyr", "body.hmyr", "eval.hmyr", "run.hmyr"];
+  : ["lex.hmoca", "chain.hmoca", "stmt.hmoca", "body.hmoca", "eval.hmoca", "run.hmoca"];
 const 文件们 = [
   ...根目录.map((n) => path.join(ROOT, n)),
   ...自助名单.map((n) => path.join(ROOT, "self", n)),

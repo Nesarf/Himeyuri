@@ -74,7 +74,7 @@ function 读包(包) {
 
 try {
   console.log("一、HMYR 真发一次");
-  const 发 = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/release.hmyr", 标, 临], {
+  const 发 = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/release.hmoca", 标, 临], {
     cwd: ROOT, encoding: "utf8", timeout: 900000, env: 大步数, maxBuffer: 32 * 1024 * 1024,
   });
   ok("发布跑得动", 发.status === 0, String(发.status) + " " + String(发.stderr || "").slice(0, 200));
@@ -124,7 +124,7 @@ try {
 
   console.log("五、拿包当根，用 HMYR 自己验包里那份清单");
   const 验 = spawnSync(process.execPath,
-    [path.join(ROOT, "bin/hmyr.mjs"), "--compile", path.join(ROOT, "self/verify.hmyr"), "manifest.json"], {
+    [path.join(ROOT, "bin/hmyr.mjs"), "--compile", path.join(ROOT, "self/verify.hmoca"), "manifest.json"], {
       cwd: 解, encoding: "utf8", timeout: 900000, env: 大步数, maxBuffer: 32 * 1024 * 1024,
     });
   const 验出 = String(验.stdout || "");
@@ -137,7 +137,7 @@ try {
   // 第五节的清单只说明「字节对得上」，不说明「这些字节能跑」。
   // 这一节从解出来的目录里起一次启动器：它 import 的是包里的 src/，
   // 读的是包里的 runtime/，与仓库那份无关。
-  const 样例 = "examples/arith.hmyr";
+  const 样例 = "examples/arith.hmoca";
   const 跑一次 = (根) => spawnSync(process.execPath, [path.join(根, "bin/hmyr.mjs"), "--compile", path.join(根, 样例)], {
     cwd: 根, encoding: "utf8", timeout: 300000, env: 大步数, maxBuffer: 8 * 1024 * 1024,
   });

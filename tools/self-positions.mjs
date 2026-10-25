@@ -18,7 +18,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "self/lex.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/lex.hmoca"));
 if (!unit.ok) {
   console.log("self/lex.hmyr 加载失败：" + JSON.stringify((unit.diagnostics.errors || []).slice(0, 2).map((e) => e.code)));
   process.exit(1);

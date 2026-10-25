@@ -21,7 +21,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 源路 = path.join(ROOT, "self/ucd-case.hmyr");
+const 源路 = path.join(ROOT, "self/ucd-case.hmoca");
 const 现成 = path.join(ROOT, "vm/ucd-case.h");
 const 语料 = path.join(ROOT, "data/ucd");
 

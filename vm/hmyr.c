@@ -3985,15 +3985,15 @@ static void 临时路径(char *buf, size_t cap) {
   if (!dir || !*dir) dir = ".";
   /* 名字里带线程号：两个线程同时要一份临时文件时，光有 pid 会撞成同一个名字 ——
    * 一个在写、另一个在读，症状是访问违例而不是「文件读不到」。 */
-  snprintf(buf, cap, "%s\\hmyr-%ld-%lu.hmyrb", dir, (long)_getpid(), (unsigned long)GetCurrentThreadId());
+  snprintf(buf, cap, "%s\\hmyr-%ld-%lu.hmoks", dir, (long)_getpid(), (unsigned long)GetCurrentThreadId());
 #elif defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
   const char *dir = getenv("TMPDIR");
   if (!dir || !*dir) dir = "/tmp";
-  snprintf(buf, cap, "%s/hmyr.hmyrb", dir);
+  snprintf(buf, cap, "%s/hmyr.hmoks", dir);
 #else
   const char *dir = getenv("TMPDIR");
   if (!dir || !*dir) dir = "/tmp";
-  snprintf(buf, cap, "%s/hmyr-%ld.hmyrb", dir, (long)getpid());
+  snprintf(buf, cap, "%s/hmyr-%ld.hmoks", dir, (long)getpid());
 #endif
 }
 
@@ -4006,8 +4006,8 @@ static 线程局部 char g_种子临时[1024];
 static int 写种子临时(char *buf, size_t cap) {
   临时路径(buf, cap);
   size_t n = strlen(buf);
-  if (n > 6 && strcmp(buf + n - 6, ".hmyrb") == 0) {
-    snprintf(buf + n - 6, cap - (n - 6), ".seed.hmyrb");
+  if (n > 6 && strcmp(buf + n - 6, ".hmoks") == 0) {
+    snprintf(buf + n - 6, cap - (n - 6), ".seed.hmtn");
   }
   FILE *f = 开文件(buf, "wb");
   if (!f) return 0;
@@ -4042,12 +4042,12 @@ static int 找种子(char *buf, size_t cap, const char *argv0) {
   for (char *p = 目录; *p; p++) if (*p == '/' || *p == '\\') 切 = p;
   if (切) {
     *切 = 0;
-    snprintf(buf, cap, "%s%cbootstrap%cpack.hmyrb", 目录, '\\', '\\');
+    snprintf(buf, cap, "%s%cbootstrap%cpack.hmtn", 目录, '\\', '\\');
     if (文件在(buf)) return 1;
-    snprintf(buf, cap, "%s%c..%cbootstrap%cpack.hmyrb", 目录, '\\', '\\', '\\');
+    snprintf(buf, cap, "%s%c..%cbootstrap%cpack.hmtn", 目录, '\\', '\\', '\\');
     if (文件在(buf)) return 1;
   }
-  snprintf(buf, cap, "bootstrap%cpack.hmyrb", '\\');
+  snprintf(buf, cap, "bootstrap%cpack.hmtn", '\\');
   if (文件在(buf)) return 1;
   return 0;
 }
@@ -4208,7 +4208,7 @@ static int 线程起(const char *源码, const char *入口) {
   c->号 = g_下一个线程号++;
   snprintf(c->入口, sizeof c->入口, "%s", 入口);
   临时路径(c->源码路径, sizeof c->源码路径);
-  snprintf(c->产物路径, sizeof c->产物路径, "%s.hmyrb", c->源码路径);
+  snprintf(c->产物路径, sizeof c->产物路径, "%s.hmoks", c->源码路径);
   f = 开文件(c->源码路径, "wb");
   if (!f) { free(c); return -1; }
   fwrite(源码, 1, strlen(源码), f);

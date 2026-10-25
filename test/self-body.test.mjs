@@ -35,10 +35,10 @@ const ok = (label, condition, detail = "") => {
 };
 const attempt = (fn) => { try { return { value: fn() }; } catch (e) { return { error: (e.code || "") + " " + e.message }; } };
 
-const unit = loadUnit(path.join(ROOT, "self/body.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/body.hmoca"));
 ok("the body reader loads", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 ok("the loader brought the whole chain: lexer, chain, statements, body",
-  ["lex.hmyr", "chain.hmyr", "stmt.hmyr", "body.hmyr"].every((f) => unit.order.some((x) => x.endsWith(f))),
+  ["lex.hmoca", "chain.hmoca", "stmt.hmoca", "body.hmoca"].every((f) => unit.order.some((x) => x.endsWith(f))),
   unit.order.map((f) => path.basename(f)).join(", "));
 
 const rt = runUnit(unit);

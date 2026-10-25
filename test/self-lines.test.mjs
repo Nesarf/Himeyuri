@@ -17,7 +17,7 @@ const ok = (label, condition, detail = "") => {
 };
 const attempt = (fn) => { try { return { value: fn() }; } catch (e) { return { error: (e.code || "") + " " + e.message }; } };
 
-const unit = loadUnit(path.join(ROOT, "self/lex.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/lex.hmoca"));
 ok("the tokenizer loads", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const rt = runUnit(unit);
 const call = (name, args) => {

@@ -191,7 +191,7 @@ export const 主 = () => {
   // 先生成表，再把行数写进摘要 —— 顺序反了的话，摘要里的那一项是上一趟的。
   摘要.全码点表行数 = 生成全码点表();
   fs.writeFileSync(path.join(产物目录, "summary.json"), JSON.stringify(摘要, null, 2) + "\n", "utf8");
-  fs.writeFileSync(path.join(产物目录, "blocks.hmyr"), 生成块函数(), "utf8");
+  fs.writeFileSync(path.join(产物目录, "blocks.hmoca"), 生成块函数(), "utf8");
   return 摘要;
 };
 
@@ -199,5 +199,5 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToP
   const 摘要 = 主();
   console.log("字符数据 " + 摘要.字符数据行数 + " 行");
   console.log("块 " + 摘要.块数 + " 个，脚本 " + 摘要.脚本数 + " 个");
-  console.log("产出 runtime/ucd/summary.json 与 runtime/ucd/blocks.hmyr");
+  console.log("产出 runtime/ucd/summary.json 与 runtime/ucd/blocks.hmoca");
 }

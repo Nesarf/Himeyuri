@@ -21,7 +21,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 const 验 = (签名路, 消息路) => {
-  const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/sign.hmyr", 签名路, 消息路], {
+  const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/sign.hmoca", 签名路, 消息路], {
     cwd: ROOT, encoding: "utf8", timeout: 300000,
     env: { ...process.env, HMYR_STEPS: "20000000000" },
   });

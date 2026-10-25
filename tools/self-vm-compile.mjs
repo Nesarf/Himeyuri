@@ -21,9 +21,9 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 字节路 = path.join(ROOT, "runtime/pack.hmyrb");
+const 字节路 = path.join(ROOT, "runtime/pack.hmoks");
 if (!fs.existsSync(字节路)) {
-  console.log("没有 runtime/pack.hmyrb —— 先跑 node tools/emit-code.mjs self/pack.hmyr runtime/pack.hmyrb");
+  console.log("没有 runtime/pack.hmyrb —— 先跑 node tools/emit-code.mjs self/pack.hmyr runtime/pack.hmoks");
   process.exit(1);
 }
 
@@ -73,7 +73,7 @@ for (const [标, 源] of 样本) {
   // JS 那一位：走宿主 loader 把源码读成树，再编译合并写字节
   const 临 = path.join(ROOT, ".tmp-vmc");
   fs.mkdirSync(临, { recursive: true });
-  const 源路 = path.join(临, "p.hmyr");
+  const 源路 = path.join(临, "p.hmoca");
   fs.writeFileSync(源路, 源, "utf8");
   const u = loadUnit(源路);
   fs.rmSync(临, { recursive: true, force: true });
@@ -86,9 +86,9 @@ for (const [标, 源] of 样本) {
 
 console.log("三、验签也在虚拟机上跑");
 {
-  const 签路 = path.join(ROOT, "runtime/sign.hmyrb");
+  const 签路 = path.join(ROOT, "runtime/sign.hmoks");
   if (!fs.existsSync(签路)) {
-    ok("runtime/sign.hmyrb 在", false, "先跑 node tools/emit-code.mjs self/sign.hmyr runtime/sign.hmyrb");
+    ok("runtime/sign.hmyrb 在", false, "先跑 node tools/emit-code.mjs self/sign.hmyr runtime/sign.hmoks");
   } else {
     const 签vm = new 虚拟机(读程序(fs.readFileSync(签路)), {
       capabilities: 本机能力(), stepLimit: 40000000000, maxDepth: 4000,

@@ -55,7 +55,7 @@ const 走语句 = (s) => {
 };
 
 for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
-  const 源 = fs.readFileSync(path.join(ROOT, "self", 名 + ".hmyr"), "utf8");
+  const 源 = fs.readFileSync(path.join(ROOT, "self", 名 + ".hmoca"), "utf8");
   const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
   const { ast } = parse(lex(源, { diagnostics: d }).tokens, { diagnostics: d });
   for (const decl of ast.decls) {

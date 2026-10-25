@@ -23,7 +23,7 @@ import os from "node:os";
 import path from "node:path";
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-types-"));
 const 查 = (源码) => {
-  const 路 = path.join(临, "t.hmyr");
+  const 路 = path.join(临, "t.hmoca");
   fs.writeFileSync(路, 源码, "utf8");
   const unit = loadUnit(路);
   if (!unit.ok) return { 加载错: unit.diagnostics.errors.map((e) => e.code) };

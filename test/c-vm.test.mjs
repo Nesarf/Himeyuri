@@ -54,7 +54,7 @@ if (!fs.existsSync(exe)) {
 
 // 同一份源码：JS 那台跑内存里的字节码，C 那台跑文件里的字节码。
 const 两侧跑 = (源码, 名字, 环境) => {
-  const 源路 = path.join(临, 名字 + ".hmyr");
+  const 源路 = path.join(临, 名字 + ".hmoca");
   fs.writeFileSync(源路, 源码, "utf8");
   const unit = loadUnit(源路);
   if (!unit.ok) return { 错: "加载失败 " + JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)) };
@@ -67,7 +67,7 @@ const 两侧跑 = (源码, 名字, 环境) => {
   });
   const jsr = vm.调用("main", [], null);
 
-  const 码路 = path.join(临, 名字 + ".hmyrb");
+  const 码路 = path.join(临, 名字 + ".hmoks");
   fs.writeFileSync(码路, 写程序(程序));
   const c = spawnSync(exe, [码路], {
     encoding: "utf8",
@@ -82,7 +82,7 @@ const 两侧跑 = (源码, 名字, 环境) => {
 
 console.log("一、算数、递归、字符串、元组、记录");
 {
-  const 源码 = fs.readFileSync(path.join(ROOT, "examples/arith.hmyr"), "utf8");
+  const 源码 = fs.readFileSync(path.join(ROOT, "examples/arith.hmoca"), "utf8");
   const r = 两侧跑(源码, "arith");
   ok("两台机器输出一样", r.js === r.c, JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
   ok("输出里有算对的那个数", r.c.includes("42"), JSON.stringify(r.c));
@@ -135,11 +135,11 @@ console.log("三、字符串上的东西");
 
 console.log("四、坏文件要被拒绝，而不是跑出怪结果");
 {
-  const 坏 = path.join(临, "bad.hmyrb");
+  const 坏 = path.join(临, "bad.hmoks");
   fs.writeFileSync(坏, Buffer.from([1, 2, 3, 4, 5, 6, 7, 8]));
   const r = spawnSync(exe, [坏], { encoding: "utf8" });
   ok("不是 .hmyrb 就拒绝", r.status !== 0, String(r.status));
-  const 空 = path.join(临, "empty.hmyrb");
+  const 空 = path.join(临, "empty.hmoks");
   fs.writeFileSync(空, Buffer.alloc(0));
   const r2 = spawnSync(exe, [空], { encoding: "utf8" });
   ok("空文件也拒绝", r2.status !== 0, String(r2.status));
@@ -150,9 +150,9 @@ console.log("五、自举层本身：HMYR 写的解释器，跑在 C 机器上")
   // 这一条是这一套存在的理由。self/run.hmyr 是「HMYR 写的解释器」，
   // 它自己的自测会真的解析并求值四段小表达式 —— 全是这台 C 机器在做，
   // 没有一步经过 JavaScript。
-  const 码路 = path.join(临, "self.hmyrb");
+  const 码路 = path.join(临, "self.hmoks");
   const emit = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"),
-    path.join(ROOT, "self/run.hmyr"), 码路], { encoding: "utf8" });
+    path.join(ROOT, "self/run.hmoca"), 码路], { encoding: "utf8" });
   ok("自举层编得出字节码", emit.status === 0 && fs.existsSync(码路), String(emit.stderr).slice(0, 200));
   if (fs.existsSync(码路)) {
     const r = spawnSync(exe, [码路], { encoding: "utf8", timeout: 60000 });
@@ -168,9 +168,9 @@ console.log("六、用这台机器跑一个 .hmyr 文件");
 {
   // 这是「不依赖宿主」那句话该有的形状：C 跑自举层，自举层读一个 .hmyr、
   // 解析它、求值它。中间没有 JavaScript —— 上面第五节已经把字节码编好了。
-  const 码路 = path.join(临, "self.hmyrb");
+  const 码路 = path.join(临, "self.hmoks");
   if (fs.existsSync(码路)) {
-    const r = spawnSync(exe, [码路, path.join(ROOT, "examples/twice.hmyr")], { encoding: "utf8", timeout: 60000 });
+    const r = spawnSync(exe, [码路, path.join(ROOT, "examples/twice.hmoca")], { encoding: "utf8", timeout: 60000 });
     const 出 = String(r.stdout || "");
     ok("C 机器跑通了一个 .hmyr 文件", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 120));
     ok("那个文件算对了 21 乘 2", 出.includes("hi 42"), JSON.stringify(出.slice(0, 120)));
@@ -185,13 +185,13 @@ console.log("七、真库跑在 C 机器上");
   // 这几条是「同一个 bug 追了三轮」的收尾：自举层替目标程序执行时，
   // C 那台的弹栈会越过帧基线，于是实参整体错位一格。
   // 修好之后，五个标准库的验收程序都能在 C 上跑出零。
-  const 码路 = path.join(临, "self.hmyrb");
+  const 码路 = path.join(临, "self.hmoks");
   const 库们 = [
-    ["字符串库", "conformance/lib-strings.hmyr"],
-    ["元组库", "conformance/lib-tuples.hmyr"],
-    ["表库", "conformance/lib-tables.hmyr"],
-    ["JSON 库", "conformance/lib-json.hmyr"],
-    ["帧库", "conformance/lib-protocol.hmyr"],
+    ["字符串库", "conformance/lib-strings.hmoca"],
+    ["元组库", "conformance/lib-tuples.hmoca"],
+    ["表库", "conformance/lib-tables.hmoca"],
+    ["JSON 库", "conformance/lib-json.hmoca"],
+    ["帧库", "conformance/lib-protocol.hmoca"],
   ];
   for (const [标, 路] of 库们) {
     if (!fs.existsSync(码路)) { ok(标 + "在 C 机器上全过", false, "没有自举层字节码"); continue; }
@@ -247,9 +247,9 @@ console.log("九、效果声明在 C 上也管用");
     "  return 0",
     "}",
   ].join("\n");
-  const 源路 = path.join(临时, "fx.hmyr");
+  const 源路 = path.join(临时, "fx.hmoca");
   fs.writeFileSync(源路, 源码, "utf8");
-  const 码路 = path.join(临时, "fx.hmyrb");
+  const 码路 = path.join(临时, "fx.hmoks");
   const emit = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), 源路, 码路], { encoding: "utf8" });
   ok("这个程序编得出来", emit.status === 0, String(emit.stderr).slice(0, 120));
   if (fs.existsSync(码路)) {
@@ -587,9 +587,9 @@ console.log("十二、堆账：这台机器分配了不回收，而那个数读�
 {
   // 「没有 GC」是一条设计选择，而设计选择要有数字跟着，否则它既不能被验收，
   // 也不能被发现变坏。这台机器每次分配都记账，HMYR_MEM 一开就在退出时打一行。
-  const 码路 = path.join(临, "self.hmyrb");
+  const 码路 = path.join(临, "self.hmoks");
   if (fs.existsSync(码路)) {
-    const 重 = spawnSync(exe, [码路, path.join(ROOT, "conformance/lib-strings.hmyr")], {
+    const 重 = spawnSync(exe, [码路, path.join(ROOT, "conformance/lib-strings.hmoca")], {
       encoding: "utf8", timeout: 180000,
       env: { ...process.env, HMYR_MEM: "1", HMYR_STEPS: "200000000" },
     });
@@ -607,8 +607,8 @@ console.log("十二、堆账：这台机器分配了不回收，而那个数读�
     ok("最重的那一份工作能报出峰值", false, "没有自举层字节码");
   }
   // 不问就不出声：平常跑程序的人不该看见这一行。
-  const 小 = spawnSync(exe, [path.join(临, "astral.hmyrb")], { encoding: "utf8" });
-  if (fs.existsSync(path.join(临, "astral.hmyrb"))) {
+  const 小 = spawnSync(exe, [path.join(临, "astral.hmoks")], { encoding: "utf8" });
+  if (fs.existsSync(path.join(临, "astral.hmoks"))) {
     ok("不问的时候不出这一行", !String(小.stderr).includes("heap"), String(小.stderr).slice(0, 120));
   } else {
     ok("不问的时候不出这一行", false, "没有那一份字节码");
@@ -674,11 +674,11 @@ console.log("十五、调用深度：见底之前先说话");
     "  return 0",
     "}",
   ].join("\n");
-  const 源路 = path.join(临, "deep.hmyr");
+  const 源路 = path.join(临, "deep.hmoca");
   fs.writeFileSync(源路, 源码, "utf8");
   const unit = loadUnit(源路);
   const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));
-  const 码路 = path.join(临, "deep.hmyrb");
+  const 码路 = path.join(临, "deep.hmoks");
   fs.writeFileSync(码路, 写程序(程序));
 
   const 拦 = spawnSync(exe, [码路], { encoding: "utf8", env: { ...process.env, HMYR_MAX_DEPTH: "8" } });
@@ -765,11 +765,11 @@ console.log("十八、环境与路径：与机器有关的只断言形状");
 
 console.log("十九、不认识的 locale 要说出来");
 {
-  const 源路 = path.join(临, "badlocale.hmyr");
+  const 源路 = path.join(临, "badlocale.hmoca");
   fs.writeFileSync(源路, 'fn main() -> Int {\n  locale_set("xx-XX.utf8")\n  return 0\n}\n', "utf8");
   const unit = loadUnit(源路);
   const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));
-  const 码路 = path.join(临, "badlocale.hmyrb");
+  const 码路 = path.join(临, "badlocale.hmoks");
   fs.writeFileSync(码路, 写程序(程序));
   const r = spawnSync(exe, [码路], { encoding: "utf8" });
   ok("R0205 说的是没有这套档案",
@@ -894,11 +894,11 @@ console.log("二十四、回收：同一个程序开着回收，峰值降下来"
     "  return 0",
     "}",
   ].join("\n");
-  const 源路 = path.join(临, "gcmem.hmyr");
+  const 源路 = path.join(临, "gcmem.hmoca");
   fs.writeFileSync(源路, 源码, "utf8");
   const unit = loadUnit(源路);
   const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));
-  const 码路 = path.join(临, "gcmem.hmyrb");
+  const 码路 = path.join(临, "gcmem.hmoks");
   fs.writeFileSync(码路, 写程序(程序));
   const 读峰 = (env) => {
     const r = spawnSync(exe, [码路], { encoding: "utf8", timeout: 120000, env: { ...process.env, HMYR_MEM: "1", ...env } });

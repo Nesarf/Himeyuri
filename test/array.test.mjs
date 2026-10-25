@@ -31,7 +31,7 @@ const 程序 = [
 ].join("\n");
 
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-array-"));
-const 源 = path.join(临, "arr.hmyr");
+const 源 = path.join(临, "arr.hmoca");
 fs.writeFileSync(源, 程序 + "\n");
 
 console.log("一、解释器那条路");
@@ -47,7 +47,7 @@ console.log("一、解释器那条路");
 
 console.log("二、越界要报错，而不是悄悄写坏");
 {
-  const 源2 = path.join(临, "oob.hmyr");
+  const 源2 = path.join(临, "oob.hmoca");
   fs.writeFileSync(源2, [
     "fn main() -> Int {",
     "  let a = 数组((1, 2))",
@@ -63,7 +63,7 @@ console.log("二、越界要报错，而不是悄悄写坏");
 
 console.log("三、设 拒绝元组");
 {
-  const 源3 = path.join(临, "tuple.hmyr");
+  const 源3 = path.join(临, "tuple.hmoca");
   fs.writeFileSync(源3, [
     "fn main() -> Int {",
     "  let t = (1, 2)",

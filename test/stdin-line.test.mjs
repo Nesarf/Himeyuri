@@ -23,7 +23,7 @@ console.log("一、这一格在六处都有");
 {
   const 源 = [
     "src/eval.mjs", "src/minimal-eval.mjs", "src/vm-builtins.mjs",
-    "src/bytecode.mjs", "self/eval.hmyr", "vm/hmyr.c",
+    "src/bytecode.mjs", "self/eval.hmoca", "vm/hmyr.c",
   ];
   const 名们 = ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"];
   for (const f of 源) {
@@ -37,7 +37,7 @@ const 有编译器 = (() => {
 })();
 
 console.log("二、cat 用这一格读 stdin");
-const 源路 = path.join(ROOT, "self/cat.hmyr");
+const 源路 = path.join(ROOT, "self/cat.hmoca");
 ok("self/cat.hmyr 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
@@ -51,7 +51,7 @@ if (!有编译器) {
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
-    const 码路 = path.join(临, "cat.hmyrb");
+    const 码路 = path.join(临, "cat.hmoks");
     fs.writeFileSync(码路, 写程序(合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))))));
     const 试 = (输入) => spawnSync(exe, [码路], {
       input: 输入, encoding: "utf8", timeout: 120000,
@@ -75,11 +75,11 @@ if (!有编译器) {
         "  return 0",
         "}",
       ].join("\n");
-      const 源路2 = path.join(临, "bytes.hmyr");
+      const 源路2 = path.join(临, "bytes.hmoca");
       fs.writeFileSync(源路2, 源, "utf8");
       const u2 = loadUnit(源路2);
       ok("读字节那一段加载得动", u2.ok, JSON.stringify(u2.diagnostics.errors.slice(0, 1).map((e) => e.code)));
-      const 码路2 = path.join(临, "bytes.hmyrb");
+      const 码路2 = path.join(临, "bytes.hmoks");
       fs.writeFileSync(码路2, 写程序(合并程序(u2.order.map((文件) => 编译模块(u2.modules.get(文件))))));
       const 甲2 = spawnSync(exe, [码路2], { input: "hello", encoding: "utf8", timeout: 120000, env: { ...process.env, HMYR_STEPS: "2000000000" } });
       ok("五个字节读满，解回原文，结束是假", String(甲2.stdout) === "hello false\n", JSON.stringify(String(甲2.stdout)));

@@ -11,8 +11,8 @@
 //
 // 产物命名用 tag，不用日期：tag 是人给的声明，日期是机器的时间；而发布这件事
 // 需要的是「这一次叫什么」，不是「这一次发生在哪一天」。
-import "./manifest.hmyr"
-import "./package.hmyr"
+import "./manifest.hmoca"
+import "./package.hmoca"
 
 fn 数字(s: String) -> String {
   return s

@@ -42,7 +42,7 @@ const 样本组 = [
 ];
 
 for (const [名, a, b] of 样本组) {
-  const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/bigint.hmyr", a.toString(16), b.toString(16)], {
+  const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/bigint.hmoca", a.toString(16), b.toString(16)], {
     cwd: ROOT, encoding: "utf8", timeout: 120000,
   });
   ok(名 + "：跑得动", r.status === 0, String(r.stderr || "").slice(0, 120));

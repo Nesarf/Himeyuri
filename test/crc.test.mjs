@@ -36,7 +36,7 @@ const 程序 = [
   "  return 0",
   "}",
 ].join("\n") + "\n";
-const 程序路 = path.join(临, "probe.hmyr");
+const 程序路 = path.join(临, "probe.hmoca");
 fs.writeFileSync(程序路, 程序, "utf8");
 
 // 期望值全部由 node 算：文件本身的 CRC、空串的 0、四个字节的 CRC。
@@ -80,7 +80,7 @@ if (!有编译器) {
   const g = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", g.status === 0, String(g.stderr || "").slice(0, 160));
   if (g.status === 0) {
-    const 码路 = path.join(临, "probe.hmyrb");
+    const 码路 = path.join(临, "probe.hmoks");
     const e = spawnSync("node", ["tools/emit-code.mjs", 程序路, 码路], { cwd: ROOT, encoding: "utf8" });
     ok("字节码落盘", e.status === 0 && fs.existsSync(码路), String(e.stderr || "").slice(0, 160));
     if (e.status === 0) {

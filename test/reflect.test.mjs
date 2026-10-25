@@ -17,7 +17,7 @@ const tree = (source) => parse(lex(source, {}).tokens, { diagnostics: { add() {}
 
 console.log("what is declared here");
 {
-  const view = outline(fs.readFileSync(path.join(ROOT, "kpb/piece.hmyr"), "utf8"), "piece.hmyr");
+  const view = outline(fs.readFileSync(path.join(ROOT, "kpb/piece.hmoca"), "utf8"), "piece.hmoca");
   const names = view.symbols.map((s) => s.name);
   ok("the functions are found", ["note", "track", "strip", "main"].every((n) => names.includes(n)), names.join(","));
   ok("each carries its line", view.symbols.every((s) => typeof s.line === "number" && s.line > 0));
@@ -28,7 +28,7 @@ console.log("what is declared here");
 }
 {
   const source = 'import "std/io" as io\n\ntype Pair<T> = (T, T)\n\npub const N = 4\n\neffect file\n\npub fn f(own a: Bytes, b: Int? = 1) -> Pair<Int> effects(file, net) requires a != nil ensures b > 0 {\n  fn inner(x: Int) -> Int { return x }\n  return (b, b)\n}\n';
-  const view = outline(source, "synthetic.hmyr");
+  const view = outline(source, "synthetic.hmoca");
   const by = (n) => view.symbols.find((s) => s.name === n);
   ok("imports with aliases", view.imports.length === 1 && view.imports[0].alias === "io");
   ok("a type alias with a parameter", by("Pair") && by("Pair").kind === "type" && by("Pair").params.length === 1);
@@ -41,7 +41,7 @@ console.log("what is declared here");
 
 console.log("\nwhere a name is used");
 {
-  const ast = tree(fs.readFileSync(path.join(ROOT, "kpb/etude.hmyr"), "utf8"));
+  const ast = tree(fs.readFileSync(path.join(ROOT, "kpb/etude.hmoca"), "utf8"));
   const uses = references(ast, "note");
   ok("calls to note are found", uses.filter((u) => u.use === "call").length >= 2, JSON.stringify(uses));
   ok("each use carries a line", uses.every((u) => typeof u.line === "number" && u.line > 0));
@@ -58,7 +58,7 @@ console.log("\nwhere a name is used");
 
 console.log("\nthe refusals are not silently swallowed");
 {
-  const bad = outline("fn f( {\n", "broken.hmyr");
+  const bad = outline("fn f( {\n", "broken.hmoca");
   ok("a broken file still answers with what it could parse", Array.isArray(bad.symbols));
 }
 

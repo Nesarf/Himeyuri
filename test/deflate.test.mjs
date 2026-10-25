@@ -24,7 +24,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 console.log("一、工具的源码读得动");
-const 源路 = path.join(ROOT, "self/deflate.hmyr");
+const 源路 = path.join(ROOT, "self/deflate.hmoca");
 ok("self/deflate.hmyr 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
@@ -43,7 +43,7 @@ if (!有编译器) {
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
-    const 码路 = path.join(临, "deflate.hmyrb");
+    const 码路 = path.join(临, "deflate.hmoks");
     fs.writeFileSync(码路, 写程序(程序));
     const 跑 = (参) => spawnSync(exe, [码路, ...参], {
       encoding: "utf8", timeout: 600000,
@@ -51,7 +51,7 @@ if (!有编译器) {
     });
 
     console.log("二、stored：往返一个字节都不差");
-    const 源 = path.join(ROOT, "bootstrap/pack.hmyrb");
+    const 源 = path.join(ROOT, "bootstrap/pack.hmtn");
     const 压出 = path.join(临, "pack.deflate");
     const 解出 = path.join(临, "pack.roundtrip");
     const a = 跑([源, 压出]);
@@ -78,7 +78,7 @@ if (!有编译器) {
     {
       // 这一节的两个数就是这一件要记的东西：固定与动态各压成多少字节。
       const 样本路 = path.join(临, "dyn-sample.bin");
-      fs.writeFileSync(样本路, fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmyrb")).subarray(0, 4096));
+      fs.writeFileSync(样本路, fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmtn")).subarray(0, 4096));
       const 固路 = path.join(临, "dyn-fixed.z");
       const 动路 = path.join(临, "dyn-dynamic.z");
       const 固 = 跑([样本路, 固路, "--固定"]);
@@ -127,7 +127,7 @@ if (!有编译器) {
     console.log("五、固定 Huffman：真的压了，而且 zlib 解得回来");
     {
       // 样本取种子的前 4 KB：字节码重复多，适合看压缩率。
-      const 全 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmyrb"));
+      const 全 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmtn"));
       const 样本 = path.join(临, "sample.bin");
       fs.writeFileSync(样本, 全.subarray(0, 4096));
       const 压2 = path.join(临, "sample.fixed");
@@ -151,12 +151,12 @@ if (!有编译器) {
       {
         // 每 65535 字节一块，BFINAL 只在最后一块置位。
         // 链式找匹配对这个规模要五分钟，所以只在 HMYR_HEAVY 下跑。
-        const 种 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmyrb"));
+        const 种 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmtn"));
         const 大 = Buffer.concat([种, 种, 种.subarray(0, 20000)]);
         const 大入 = path.join(临, "multi.bin");
         const 大出 = path.join(临, "multi.z");
         fs.writeFileSync(大入, 大);
-        const r = spawnSync(exe, [path.join(临, "deflate.hmyrb"), 大入, 大出, "--固定"], {
+        const r = spawnSync(exe, [path.join(临, "deflate.hmoks"), 大入, 大出, "--固定"], {
           encoding: "utf8", timeout: 1800000,
           env: { ...process.env, HMYR_STEPS: "400000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
         });

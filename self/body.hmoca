@@ -1,4 +1,4 @@
-import "./stmt.hmyr"
+import "./stmt.hmoca"
 
 // 用 Himeyuri 写的第八件：函数体。
 //

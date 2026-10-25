@@ -21,7 +21,7 @@ const ok = (label, condition, detail = "") => {
 const 宿主 = (源) => run(源, {}).value;
 
 // 自举的答案：把同一个表达式转成它认的形状，再让它的求值器算。
-const 自举层 = loadUnit(path.join(ROOT, "self/eval.hmyr"));
+const 自举层 = loadUnit(path.join(ROOT, "self/eval.hmoca"));
 ok("自举那一层加载得动", 自举层.ok, 自举层.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const 自举 = runUnit(自举层);
 // 自举的求值器把成功与失败**包在结果里**（{ok, value}），而宿主直接交回值。

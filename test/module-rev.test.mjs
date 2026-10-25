@@ -23,28 +23,28 @@ const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-rev-"));
 
 // 造一对文件：一个模块，一个用它的人。
 const 造 = (模块头, 导入子句, 模块体 = "fn 甲() -> Int {\n  return 1\n}\n") => {
-  const 模块路 = path.join(临, "lib.hmyr");
+  const 模块路 = path.join(临, "lib.hmoca");
   fs.writeFileSync(模块路, 模块头 + 模块体, "utf8");
-  const 用路 = path.join(临, "use.hmyr");
+  const 用路 = path.join(临, "use.hmoca");
   fs.writeFileSync(用路, 导入子句 + "\nfn main() -> Int {\n  return 甲()\n}\n", "utf8");
   return loadUnit(用路);
 };
 
 console.log("一、要的版本不比模块给的高，就通过");
 {
-  const a = 造("rev 2\n", 'import "./lib.hmyr" rev 2');
+  const a = 造("rev 2\n", 'import "./lib.hmoca" rev 2');
   ok("模块给 2、要 2", a.ok, JSON.stringify(a.diagnostics.errors.map((e) => e.code)));
-  const b = 造("rev 3\n", 'import "./lib.hmyr" rev 1');
+  const b = 造("rev 3\n", 'import "./lib.hmoca" rev 1');
   ok("模块给 3、要 1（向下兼容）", b.ok, JSON.stringify(b.diagnostics.errors.map((e) => e.code)));
-  const c = 造("rev 1\n", 'import "./lib.hmyr"');
+  const c = 造("rev 1\n", 'import "./lib.hmoca"');
   ok("调用方不提要求", c.ok, JSON.stringify(c.diagnostics.errors.map((e) => e.code)));
-  const d = 造("", 'import "./lib.hmyr" rev 9');
+  const d = 造("", 'import "./lib.hmoca" rev 9');
   ok("模块不提版本时，要什么都放过", d.ok, JSON.stringify(d.diagnostics.errors.map((e) => e.code)));
 }
 
 console.log("二、要的版本比模块给的高，就拒绝，并且说清楚");
 {
-  const a = 造("rev 1\n", 'import "./lib.hmyr" rev 2');
+  const a = 造("rev 1\n", 'import "./lib.hmoca" rev 2');
   ok("模块给 1、要 2 → 加载失败", !a.ok, JSON.stringify(a.diagnostics.errors.map((e) => e.code)));
   const 错 = a.diagnostics.errors.find((e) => e.code === "HMYR-E0303");
   ok("用的是 E0303 这个编号", Boolean(错), JSON.stringify(a.diagnostics.errors.map((e) => e.code)));
@@ -54,7 +54,7 @@ console.log("二、要的版本比模块给的高，就拒绝，并且说清楚"
 
 console.log("三、rev 写错的时候有话说");
 {
-  const 模块路 = path.join(临, "bad.hmyr");
+  const 模块路 = path.join(临, "bad.hmoca");
   fs.writeFileSync(模块路, "rev\nfn f() -> Int {\n  return 1\n}\n", "utf8");
   const r = loadUnit(模块路);
   ok("rev 后面没写数字 → 报错而不是静默当成 0", !r.ok, JSON.stringify(r.diagnostics.errors.map((e) => e.code)));

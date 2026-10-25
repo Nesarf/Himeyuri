@@ -18,7 +18,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const unit = loadUnit(path.join(ROOT, "self/run.hmyr"));
+const unit = loadUnit(path.join(ROOT, "self/run.hmoca"));
 if (!unit.ok) {
   console.log("self/run.hmyr 加载失败：" + JSON.stringify((unit.diagnostics.errors || []).slice(0, 2).map((e) => e.code)));
   process.exit(1);
@@ -66,9 +66,9 @@ for (const [名, 源, 期望] of 样本) {
 console.log("三、整棵 import 树：两个文件，一个 Runtime");
 {
   const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-tree-"));
-  fs.writeFileSync(path.join(临, "lib.hmyr"), "fn double(x: Int) -> Int {\n  return x * 2\n}\n", "utf8");
-  fs.writeFileSync(path.join(临, "main.hmyr"), 'import "./lib.hmyr"\nfn main() -> Int {\n  return double(21)\n}\n', "utf8");
-  const 入口 = path.relative(ROOT, path.join(临, "main.hmyr")).split("\\").join("/");
+  fs.writeFileSync(path.join(临, "lib.hmoca"), "fn double(x: Int) -> Int {\n  return x * 2\n}\n", "utf8");
+  fs.writeFileSync(path.join(临, "main.hmoca"), 'import "./lib.hmoca"\nfn main() -> Int {\n  return double(21)\n}\n', "utf8");
+  const 入口 = path.relative(ROOT, path.join(临, "main.hmoca")).split("\\").join("/");
   let 模块数 = 0;
   let 结果 = null;
   let 错误 = null;

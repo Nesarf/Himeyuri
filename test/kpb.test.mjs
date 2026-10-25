@@ -12,7 +12,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const loaded = loadPiece(path.join(ROOT, "kpb/piece.hmyr"));
+const loaded = loadPiece(path.join(ROOT, "kpb/piece.hmoca"));
 ok("the description runs", loaded.ok, loaded.diagnostics ? loaded.diagnostics.items.map((d) => d.code + " " + d.message).join("; ") : "");
 if (!loaded.ok) { console.log("\n" + passed + " passed, " + failed + " failed"); process.exit(1); }
 

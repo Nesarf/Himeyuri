@@ -57,8 +57,8 @@ if (!fs.existsSync(exe)) {
 
 console.log("一、一段字节码，从内存里进去，从缓冲里出来");
 {
-  const 码路 = path.join(临, "twice.hmyrb");
-  const emit = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "examples/twice.hmyr"), 码路], { encoding: "utf8" });
+  const 码路 = path.join(临, "twice.hmoks");
+  const emit = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "examples/twice.hmoca"), 码路], { encoding: "utf8" });
   ok("先编出一份字节码", emit.status === 0 && fs.existsSync(码路), String(emit.stderr).slice(0, 200));
 
   const r = spawnSync(exe, [码路], { encoding: "utf8", timeout: 120000 });

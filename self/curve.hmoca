@@ -6,8 +6,8 @@
 //
 // 公式取自「dbl-2008-hwcd」与「add-2008-hwcd-3」这两套（a = -1 的那一支），
 // 也就是 RFC 8032 与多数实现用的那两条。
-import "./bigint.hmyr"
-import "./sha512.hmyr"
+import "./bigint.hmoca"
+import "./sha512.hmoca"
 
 fn d_常量() {
   return 从十六进制("52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3")

@@ -23,7 +23,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 console.log("一、语言服务器的源码读得动");
-const 源路 = path.join(ROOT, "self/lsp.hmyr");
+const 源路 = path.join(ROOT, "self/lsp.hmoca");
 ok("self/lsp.hmyr 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
@@ -45,15 +45,15 @@ if (!有编译器) {
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
-    const 码路 = path.join(临, "lsp.hmyrb");
+    const 码路 = path.join(临, "lsp.hmoks");
     fs.writeFileSync(码路, 写程序(程序));
     const 源码 = "fn 一() -> Int {\n  return 1\n}\n\nfn 二() -> Int {\n  return 2\n}\n";
     const 消息们 = [
       { jsonrpc: "2.0", id: 1, method: "initialize", params: {} },
-      { jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: "file:///t.hmyr", languageId: "hmyr", version: 1, text: 源码 } } },
-      { jsonrpc: "2.0", id: 2, method: "textDocument/documentSymbol", params: { textDocument: { uri: "file:///t.hmyr" } } },
-      { jsonrpc: "2.0", id: 3, method: "textDocument/definition", params: { textDocument: { uri: "file:///t.hmyr" }, position: { line: 0, character: 3 } } },
-      { jsonrpc: "2.0", id: 4, method: "textDocument/hover", params: { textDocument: { uri: "file:///t.hmyr" }, position: { line: 0, character: 3 } } },
+      { jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: "file:///t.hmoca", languageId: "hmyr", version: 1, text: 源码 } } },
+      { jsonrpc: "2.0", id: 2, method: "textDocument/documentSymbol", params: { textDocument: { uri: "file:///t.hmoca" } } },
+      { jsonrpc: "2.0", id: 3, method: "textDocument/definition", params: { textDocument: { uri: "file:///t.hmoca" }, position: { line: 0, character: 3 } } },
+      { jsonrpc: "2.0", id: 4, method: "textDocument/hover", params: { textDocument: { uri: "file:///t.hmoca" }, position: { line: 0, character: 3 } } },
       { jsonrpc: "2.0", id: 3, method: "shutdown" },
       { jsonrpc: "2.0", method: "exit" },
     ];
@@ -81,7 +81,7 @@ if (!有编译器) {
     console.log("四、定义：指着名字问，答的是它声明在哪儿");
     {
       ok("定义答了，而且指向名字那一格", 出.includes('"id":3') && 出.includes('"start":{"line":0,"character":3}') && 出.includes('"end":{"line":0,"character":4}'), JSON.stringify(出.slice(0, 400)));
-      ok("定义带着文档地址", 出.includes('"uri":"file:///t.hmyr"'), "");
+      ok("定义带着文档地址", 出.includes('"uri":"file:///t.hmoca"'), "");
     }
 
     console.log("五、悬浮：指着名字问，答的是一行签名");

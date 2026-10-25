@@ -23,7 +23,7 @@ const 计量 = (label, n, fn) => {
   return ms;
 };
 
-const 源码 = fs.readFileSync(path.join(ROOT, "self/eval.hmyr"), "utf8");
+const 源码 = fs.readFileSync(path.join(ROOT, "self/eval.hmoca"), "utf8");
 console.log("  测于 " + new Date().toISOString().slice(0, 19).replace("T", " ") + " · Node " + process.version);
 console.log("");
 console.log("词法与语法");
@@ -38,7 +38,7 @@ const 跑 = (src) => { const d = { items: [], errors: [], warnings: [], add() {}
 
 console.log("");
 console.log("自举");
-const 自举 = loadUnit(path.join(ROOT, "self/lex.hmyr"));
+const 自举 = loadUnit(path.join(ROOT, "self/lex.hmoca"));
 if (自举.ok) {
   const rt = runUnit(自举);
   计量("自举的词法，扫一段十六行", 30, () => rt.callFunction(rt.functions.get("scan_lines"), ["let a = 1\nlet b = 2\nlet c = 3\nlet d = 4\nlet e = 5\nlet f = 6\nlet g = 7\nlet h = 8\nlet i = 9\nlet j = 10\nlet k = 11\nlet l = 12\nlet m = 13\nlet n = 14\nlet o = 15\nlet p = 16\n"], null));
@@ -48,7 +48,7 @@ if (自举.ok) {
 
 console.log("");
 console.log("帧输出（同一块二十行的画布）");
-const 终端 = loadUnit(path.join(ROOT, "term.hmyr"));
+const 终端 = loadUnit(path.join(ROOT, "term.hmoca"));
 if (终端.ok) {
   const rt = runUnit(终端);
   const 布 = rt.callFunction(rt.functions.get("空画布"), [20, 40], null);

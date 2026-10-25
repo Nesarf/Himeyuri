@@ -38,10 +38,10 @@ try {
     ok("解得开", fs.existsSync(path.join(解, "manifest.json")), String(r.status));
     ok("清单在里面", fs.existsSync(path.join(解, "manifest.json")));
     ok("源码在里面", fs.existsSync(path.join(解, "src", "eval.mjs")));
-    ok("语言文件在里面", fs.existsSync(path.join(解, "term.hmyr")));
+    ok("语言文件在里面", fs.existsSync(path.join(解, "term.hmoca")));
     ok("套件在里面", fs.existsSync(path.join(解, "test")));
     ok("设计文档在里面", fs.existsSync(path.join(解, "design")));
-    ok("标准库在里面", fs.existsSync(path.join(解, "runtime", "text.hmyr")));
+    ok("标准库在里面", fs.existsSync(path.join(解, "runtime", "text.hmoca")));
 
     console.log("三、包里那份清单能被验");
     // 清单里的哈希是按仓库根算的，而包里是一个完整的仓库副本，

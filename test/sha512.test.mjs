@@ -20,7 +20,7 @@ const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-sha512-"));
 const 跑 = (字节) => {
   const 路 = path.join(临, "样本.bin");
   fs.writeFileSync(路, 字节);
-  const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/sha512.hmyr", 路], {
+  const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/sha512.hmoca", 路], {
     cwd: ROOT, encoding: "utf8", timeout: 300000,
     env: { ...process.env, HMYR_STEPS: "4000000000" },
   });

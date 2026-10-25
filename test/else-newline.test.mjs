@@ -22,8 +22,8 @@ const 同行 = "fn 选(n: Int) -> Int {\n  if n > 0 { return 1 } else { return 2
 const 换行 = "fn 选(n: Int) -> Int {\n  if n > 0 { return 1 }\n  else { return 2 }\n}\n\nfn main() -> Int {\n  print(str(选(1)) + str(选(0)) + chr(10))\n  return 0\n}\n";
 
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-else-"));
-const 甲路 = path.join(临, "same.hmyr");
-const 乙路 = path.join(临, "next.hmyr");
+const 甲路 = path.join(临, "same.hmoca");
+const 乙路 = path.join(临, "next.hmoca");
 fs.writeFileSync(甲路, 同行, "utf8");
 fs.writeFileSync(乙路, 换行, "utf8");
 
@@ -46,7 +46,7 @@ if (!有编译器) {
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
     const 跑 = (路, 名) => {
-      const 码 = path.join(临, 名 + ".hmyrb");
+      const 码 = path.join(临, 名 + ".hmoks");
       const e = spawnSync("node", [path.join(ROOT, "tools/emit-code.mjs"), 路, 码], { encoding: "utf8" });
       if (e.status !== 0) return { 错: String(e.stderr).slice(0, 200) };
       const r = spawnSync(exe, [码], { encoding: "utf8", timeout: 60000, env: { ...process.env, HMYR_STEPS: "2000000000" } });

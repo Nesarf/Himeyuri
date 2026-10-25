@@ -108,7 +108,7 @@ console.log("一、" + 案子.length + " 条：三条执行路给同一个答案
   const 细节 = [];
   for (const [源, 类] of 案子) {
     const 源文 = 外壳(源);
-    const p = path.join(临, "case.hmyr");
+    const p = path.join(临, "case.hmoca");
     fs.writeFileSync(p, 源文);
     const 甲 = 约(宿主跑(源文)), 乙 = 约(最小跑(p)), 丙 = 约(字节码跑(p));
     if (!(甲 === 乙 && 乙 === 丙)) { 分叉++; 细节.push(类 + " " + 源 + " -> " + 甲 + " / " + 乙 + " / " + 丙); }
@@ -122,7 +122,7 @@ console.log("二、半个代理对：那是码元的定义，不是意外");
   // 而这件事要紧的地方在于：它不能是「有时候是字符、有时候是半边」。
   const 源 = "chr(" + 笑 + ")[0]";
   const 源文 = 外壳(源);
-  const p = path.join(临, "half.hmyr");
+  const p = path.join(临, "half.hmoca");
   fs.writeFileSync(p, 源文);
   const 甲 = 宿主跑(源文), 乙 = 最小跑(p), 丙 = 字节码跑(p);
   ok("取半个代理对，三条路都给出那一半的码元位置", 甲 === 乙 && 乙 === 丙, 甲 + " / " + 乙 + " / " + 丙);
