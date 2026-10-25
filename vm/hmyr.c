@@ -509,9 +509,10 @@ static void compose_all(CpBuf *b) {
 
 /* ---- values ---------------------------------------------------------- */
 
-typedef enum { T_NULL, T_NUM, T_STR, T_BOOL, T_TUPLE, T_ARRAY, T_RECORD } Tag;
+typedef enum { T_NULL, T_NUM, T_STR, T_BOOL, T_TUPLE, T_ARRAY, T_RECORD, T_INDEX } Tag;
 
 typedef struct Value Value;
+typedef struct 索引 索引;
 
 typedef struct {
   const uint16_t **names;      /* field names, one allocation per name */
@@ -529,6 +530,35 @@ struct Value {
   Value *items;        /* tuple items */
   uint32_t ilen;
   Record rec;
+  索引 *idx;           /* index: a keyed table, see below */
+};
+
+/* ---- 索引：一个按键查的东西 ------------------------------------------
+ *
+ * design/INDEX.txt 定了约定，这一份把它做出来。C 那台原先在这里答一句
+ * 具体的拒绝（「键是运行时的字符串，那要一张真正的哈希表」）—— 而这张表
+ * 用的不是哈希：排序数组加二分。
+ *
+ * 为什么不用哈希：INDEX.txt 第五节把这个选择留给实现，判据是用法 ——
+ * 语料生成是「先全放、再全查」。排序数组在那里每个 set 是 O(1) 追加，
+ * 第一次查之前排一次（O(n log n)），之后每次查 O(log n)。哈希表要多一段
+ * 桶内存，还得处理删除；这一台不需要删除。
+ *
+ * 懒排序：set 只追加并标脏，查之前若脏则排一次。覆盖同一个键不追加，
+ * 也就不动它的序号 —— 那是 INDEX.txt 第三条约定：键序留在第一次那儿。
+ */
+typedef struct {
+  const uint16_t *键;   /* 码元，走 串存 */
+  uint32_t 键长;
+  uint32_t 序号;
+  Value 值;
+} 索引项;
+
+struct 索引 {
+  索引项 *项;
+  uint32_t n, cap;
+  uint32_t 下一个序号;
+  int 已排;
 };
 
 static Value v_null(void) { Value v; memset(&v, 0, sizeof v); v.tag = T_NULL; return v; }
@@ -830,6 +860,100 @@ static Value *alloc_values(uint32_t n) {
     Value *p = (Value *)gc_分配(字节, 0);
     memset(p, 0, 字节);
     return p;
+  }
+}
+
+/* ---- 索引：造、留、找 ------------------------------------------------
+ *
+ * 三个入口放在这里，因为它们的约定只有彼此知道：项数组由 索引留 整块换新，
+ * 二分只在 已排 为真时成立。摊进内置那一大段会让「谁改 已排」散在四处，
+ * 而这类散法最后总以「某一次取值拿到错的东西」收场。
+ */
+static 索引 *索引造(void) {
+  索引 *t;
+  if (g_gc开) {
+    t = (索引 *)gc_分配(sizeof(索引), 3);   /* 种类 3：里面只有指针与计数，没有 Value */
+    memset(t, 0, sizeof(索引));
+  } else {
+    t = (索引 *)hm_calloc(1, sizeof(索引));
+  }
+  if (!t) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  t->已排 = 1;
+  return t;
+}
+
+/* 扩容：GC 开着就换一块新的、把旧的留给回收（GC 块不能 realloc）。
+ * 旧块里的键与值已经被 memcpy 到新块，而标记只跟新块走 —— 所以不会少标。 */
+static void 索引留(索引 *t, uint32_t 要) {
+  索引项 *项;
+  uint32_t 新;
+  if (t->cap >= 要) return;
+  新 = t->cap ? t->cap * 2 : 16;
+  while (新 < 要) 新 *= 2;
+  if (g_gc开) {
+    项 = (索引项 *)gc_分配((size_t)新 * sizeof(索引项), 2);
+    memset(项, 0, (size_t)新 * sizeof(索引项));
+  } else {
+    项 = (索引项 *)hm_calloc(新, sizeof(索引项));
+  }
+  if (!项) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  if (t->n) memcpy(项, t->项, (size_t)t->n * sizeof(索引项));
+  t->项 = 项;
+  t->cap = 新;
+}
+
+/* 两个键的字典序：先逐码元，短的在前。 */
+static int 键比(const uint16_t *a, uint32_t an, const uint16_t *b, uint32_t bn) {
+  uint32_t m = an < bn ? an : bn;
+  for (uint32_t i = 0; i < m; i++) if (a[i] != b[i]) return a[i] < b[i] ? -1 : 1;
+  if (an == bn) return 0;
+  return an < bn ? -1 : 1;
+}
+
+static int 索引比(const void *a, const void *b) {
+  const 索引项 *x = (const 索引项 *)a;
+  const 索引项 *y = (const 索引项 *)b;
+  return 键比(x->键, x->键长, y->键, y->键长);
+}
+
+/* 交回下标，没有交回 -1。脏表先排一次 —— 排序只在「查」这一侧发生，
+ * 因为语料生成是几万次放配几千次取。 */
+static int 索引找(索引 *t, const uint16_t *键, uint32_t 键长) {
+  uint32_t 低, 高;
+  if (!t->已排) { qsort(t->项, t->n, sizeof(索引项), 索引比); t->已排 = 1; }
+  低 = 0; 高 = t->n;
+  while (低 < 高) {
+    uint32_t 中 = 低 + (高 - 低) / 2;
+    int c = 键比(t->项[中].键, t->项[中].键长, 键, 键长);
+    if (c == 0) return (int)中;
+    if (c < 0) 低 = 中 + 1; else 高 = 中;
+  }
+  return -1;
+}
+
+/* 放一个：已有的改值（序号不动），没有的追加并标脏。
+ * 脏表里只能线性找 —— 那张表最多只有「自上次排序以来的新增」那么多项。 */
+static void 索引放(索引 *t, const uint16_t *键, uint32_t 键长, Value 值) {
+  int 已有 = -1;
+  if (t->已排) {
+    已有 = 索引找(t, 键, 键长);
+  } else {
+    for (uint32_t i = 0; i < t->n; i++) {
+      if (键比(t->项[i].键, t->项[i].键长, 键, 键长) == 0) { 已有 = (int)i; break; }
+    }
+  }
+  if (已有 >= 0) { t->项[已有].值 = 值; return; }
+  索引留(t, t->n + 1);
+  {
+    uint16_t *拷贝 = 串存(键长 ? 键长 : 1);
+    if (!拷贝) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    for (uint32_t i = 0; i < 键长; i++) 拷贝[i] = 键[i];
+    t->项[t->n].键 = 拷贝;
+    t->项[t->n].键长 = 键长;
+    t->项[t->n].序号 = t->下一个序号++;
+    t->项[t->n].值 = 值;
+    t->n++;
+    t->已排 = 0;
   }
 }
 
@@ -1503,7 +1627,9 @@ typedef struct Gc块 {
   struct Gc块 *下;
   size_t 载荷;
   uint32_t 标记;
-  uint8_t 种类;   /* 0 = Value 数组，1 = UTF-16 串（叶子，内容里没有 Value） */
+  uint8_t 种类;   /* 0 = Value 数组，1 = UTF-16 串（叶子），
+                     2 = 索引项数组（每项一个键指针加一个值，不能按 Value 读），
+                     3 = 别的叶子（里面没有 Value，也没有要追的指针） */
 } Gc块;
 
 static Gc块 *g_gc链 = NULL;
@@ -1536,6 +1662,13 @@ static void gc_标值(Value v) {
   if ((v.tag == T_TUPLE || v.tag == T_ARRAY) && v.items) gc_压标(gc_查(v.items));
   else if (v.tag == T_RECORD && v.rec.vals) gc_压标(gc_查(v.rec.vals));
   else if (v.tag == T_STR && v.s) gc_压标(gc_查((void *)v.s));
+  /* 索引有两块：表本身（叶子，里面只有指针与计数）与项数组（装键与值，要按项读）。
+   * 两块都得压标 —— 挂在链上的块只要不被压标就会被清扫掉，而「表被收掉但项还在」
+   * 与「项被收掉但表还在」都只会表现为某一次取值拿到错的东西。 */
+  else if (v.tag == T_INDEX && v.idx) {
+    gc_压标(gc_查(v.idx));
+    if (v.idx->项) gc_压标(gc_查(v.idx->项));
+  }
 }
 
 static void gc_建表(size_t 槽) {
@@ -1624,7 +1757,18 @@ static size_t gc_收集(void) {
    * 字符串块是叶子 —— 它的载荷是码元，不是 Value，不能按 Value 去读。 */
   while (g_标数 > 0) {
     Gc块 *b = g_标栈[--g_标数];
-    if (b->种类 == 1) continue;
+    if (b->种类 == 1 || b->种类 == 3) continue;
+    if (b->种类 == 2) {
+      /* 索引项数组：每项一个键指针加一个值。不能按 Value 读 ——
+       * 索引项比 Value 大，那样读会把后面的项错位成前面项的一部分。 */
+      索引项 *项 = (索引项 *)(b + 1);
+      size_t n = b->载荷 / sizeof(索引项);
+      for (size_t i = 0; i < n; i++) {
+        if (项[i].键) gc_压标(gc_查((void *)项[i].键));
+        gc_标值(项[i].值);
+      }
+      continue;
+    }
     {
       Value *v = (Value *)(b + 1);
       size_t n = b->载荷 / sizeof(Value);
@@ -2114,18 +2258,75 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     return 1;
   }
   /* ---- 索引 ---- */
-  /* 一个按键查的东西。这台机器暂时没有它：这里的记录把字段名放在常量池里（编译期已知），
-   * 而索引的键是运行时的字符串 —— 那要一张真正的哈希表，属于另一件活。
-   * 与 arena 同一条规矩：说清「这台机器没有」，而不是装作有。
-   * index_has 是例外 —— 问「有没有」不是失败，交回 0。 */
-  if (name_is(name_idx, "index_new") || name_is(name_idx, "index_set") ||
-      name_is(name_idx, "index_get") || name_is(name_idx, "index_len") ||
-      name_is(name_idx, "index_keys")) {
-    fail("HMYR-R0221", "this machine has no index: keys here are runtime strings, and records keep their names in the constant pool");
+  /* 一个按键查的东西，约定在 design/INDEX.txt。这一台以前在这里答一句具体的拒绝
+   * （「键是运行时的字符串，那要一张真正的哈希表」）—— 现在做出来了，
+   * 用的是排序数组加二分，理由写在 索引造 那一节的头注释里。 */
+  if (name_is(name_idx, "index_new")) {
+    if (nargs != 0) { fail("HMYR-R0101", "index_new wants no arguments"); return 1; }
+    *out = v_null();
+    out->tag = T_INDEX;
+    out->idx = 索引造();
     return 1;
   }
+  if (name_is(name_idx, "index_set")) {
+    if (nargs != 3) { fail("HMYR-R0101", "index_set wants (index, key, value)"); return 1; }
+    if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-R0219", "index_set wants an index"); return 1; }
+    if (args[1].tag != T_STR) { fail("HMYR-R0130", "index_set wants a string key, found "); return 1; }
+    索引放(args[0].idx, args[1].s, args[1].slen, args[2]);
+    /* 交回同一个索引：INDEX.txt 第一条约定，于是可以链着写。 */
+    *out = args[0];
+    return 1;
+  }
+  if (name_is(name_idx, "index_get")) {
+    int 处;
+    if (nargs != 2) { fail("HMYR-R0101", "index_get wants (index, key)"); return 1; }
+    if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-R0219", "index_get wants an index"); return 1; }
+    if (args[1].tag != T_STR) { fail("HMYR-R0130", "index_get wants a string key"); return 1; }
+    处 = 索引找(args[0].idx, args[1].s, args[1].slen);
+    if (处 < 0) { fail("HMYR-R0218", "no such key in that index"); return 1; }
+    *out = args[0].idx->项[处].值;
+    return 1;
+  }
+  /* index_has 是纯函数：给错东西也交回 false，不抛 —— 问「有没有」不是失败。 */
   if (name_is(name_idx, "index_has")) {
-    *out = v_bool(0);
+    if (nargs != 2) { fail("HMYR-R0101", "index_has wants (index, key)"); return 1; }
+    if (args[0].tag != T_INDEX || !args[0].idx || args[1].tag != T_STR) { *out = v_bool(0); return 1; }
+    *out = v_bool(索引找(args[0].idx, args[1].s, args[1].slen) >= 0);
+    return 1;
+  }
+  if (name_is(name_idx, "index_len")) {
+    if (nargs != 1) { fail("HMYR-R0101", "index_len wants one argument"); return 1; }
+    if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-R0219", "index_len wants an index"); return 1; }
+    *out = v_num((double)args[0].idx->n);
+    return 1;
+  }
+  if (name_is(name_idx, "index_keys")) {
+    索引 *t;
+    Value v;
+    uint32_t *序;
+    if (nargs != 1) { fail("HMYR-R0101", "index_keys wants one argument"); return 1; }
+    if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-R0219", "index_keys wants an index"); return 1; }
+    t = args[0].idx;
+    v = v_null();
+    v.tag = T_TUPLE;
+    v.ilen = t->n;
+    v.items = alloc_values(t->n ? t->n : 1);
+    /* 键序是「第一次放进去的顺序」。表若被二分过，物理顺序已经不是那个了 ——
+     * 所以按序号另排一份下标。插入排序够用：这一支的键数是几千这个量级。 */
+    序 = (uint32_t *)hm_calloc(t->n ? t->n : 1, sizeof(uint32_t));
+    if (!序) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    for (uint32_t i = 0; i < t->n; i++) 序[i] = i;
+    for (uint32_t i = 1; i < t->n; i++) {
+      uint32_t k = 序[i], j = i;
+      while (j > 0 && t->项[序[j - 1]].序号 > t->项[k].序号) { 序[j] = 序[j - 1]; j--; }
+      序[j] = k;
+    }
+    for (uint32_t i = 0; i < t->n; i++) {
+      索引项 *e = &t->项[序[i]];
+      v.items[i] = v_str(e->键, e->键长);
+    }
+    hm_free(序);
+    *out = v;
     return 1;
   }
   /* ---- records ---- */

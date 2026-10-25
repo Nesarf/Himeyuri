@@ -53,7 +53,7 @@ if (!fs.existsSync(exe)) {
 }
 
 // 同一份源码：JS 那台跑内存里的字节码，C 那台跑文件里的字节码。
-const 两侧跑 = (源码, 名字) => {
+const 两侧跑 = (源码, 名字, 环境) => {
   const 源路 = path.join(临, 名字 + ".hmyr");
   fs.writeFileSync(源路, 源码, "utf8");
   const unit = loadUnit(源路);
@@ -69,7 +69,10 @@ const 两侧跑 = (源码, 名字) => {
 
   const 码路 = path.join(临, 名字 + ".hmyrb");
   fs.writeFileSync(码路, 写程序(程序));
-  const c = spawnSync(exe, [码路], { encoding: "utf8" });
+  const c = spawnSync(exe, [码路], {
+    encoding: "utf8",
+    ...(环境 ? { env: { ...process.env, ...环境 } } : {}),
+  });
 
   return {
     js: js出, js码: jsr.ok ? jsr.值 : null,
@@ -900,6 +903,65 @@ console.log("二十四、回收：同一个程序开着回收，峰值降下来"
   ok("两次都跑对了", 甲.码 === 0 && 乙.码 === 0 && 甲.出 === 乙.出, JSON.stringify([甲, 乙]));
   ok("开着回收时峰值不到一半", 乙.峰 > 0 && 甲.峰 > 0 && 乙.峰 * 2 < 甲.峰,
      Math.round(乙.峰 / 1048576) + " MB 对 " + Math.round(甲.峰 / 1048576) + " MB");
+}
+
+// 索引这一节的两件事值得分开：一台机器上「能不能用」与「回收开着时还能不能用」
+// 是两个问题。C 那台原先对 index_* 答一句具体的拒绝（键是运行时字符串，要一张
+// 真正的表），所以第二节才是这次的重头 —— 它验的是那张表在收集中活着。
+console.log("二十五、索引：两台机器同一个答案");
+{
+  const 源码 = [
+    "fn main() -> Int {",
+    "  var t = index_new()",
+    '  t = index_set(t, "0041", 65)',
+    '  t = index_set(t, "0042", 66)',
+    '  t = index_set(t, "a", 1)',
+    '  t = index_set(t, "b", 2)',
+    '  t = index_set(t, "a", 9)',
+    '  print(str(index_get(t, "0041")) + "," + str(index_get(t, "a")))',
+    '  print("," + str(index_len(t)))',
+    "  let 键 = index_keys(t)",
+    "  print(\",\" + 键[0] + 键[1] + 键[2] + 键[3])",
+    '  print("," + str(index_has(t, "0042")) + str(index_has(t, "zz")))',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const r = 两侧跑(源码, "index");
+  ok("两台机器输出一样", r.js === r.c, JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  ok("取回来的是放进去的那个（覆盖生效）", r.c.includes("65,9"), JSON.stringify(r.c));
+  ok("键是任意字符串：码点键与单字母都在", r.c.includes("00410042ab"), JSON.stringify(r.c));
+  ok("有没有：问到的一个真一个假", r.c.includes("truefalse"), JSON.stringify(r.c));
+  ok("长度是四不是五（覆盖不新增）", r.c.includes(",4,"), JSON.stringify(r.c));
+}
+
+console.log("二十六、索引在回收开着时也活着");
+{
+  // 四百个键，阈值压到六十四千字节 —— 建表过程里会收好几次。
+  // 这一条盯的是标记那一段：索引有两块分配（表与项数组），少标一块的样子
+  // 不是崩溃，而是某一次取值拿到错的东西，所以它必须有一个能跑的用例。
+  const 源码 = [
+    "fn main() -> Int {",
+    "  var t = index_new()",
+    "  var i = 0",
+    "  while i < 400 {",
+    '    t = index_set(t, "k" + str(i), i)',
+    "    i = i + 1",
+    "  }",
+    "  var 和 = 0",
+    "  i = 0",
+    "  while i < 400 {",
+    '    和 = 和 + index_get(t, "k" + str(i))',
+    "    i = i + 1",
+    "  }",
+    '  print(str(和) + "," + str(index_len(t)))',
+    "  return 0",
+    "}",
+  ].join("\n");
+  const 环境 = { HMYR_GC: "1", HMYR_GC_BYTES: "65536" };
+  const r = 两侧跑(源码, "indexgc", 环境);
+  ok("两台机器输出一样", r.js === r.c, JSON.stringify(r.js) + " 对 " + JSON.stringify(r.c));
+  ok("四百项加起来是七万九千八百", r.c.includes("79800"), JSON.stringify(r.c));
+  ok("长度还是四百", r.c.includes(",400"), JSON.stringify(r.c));
 }
 
 fs.rmSync(临, { recursive: true, force: true });
