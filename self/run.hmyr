@@ -330,6 +330,8 @@ fn 包声明(声明们: Int, i: Int, acc: Int) {
 fn 模块版本(tokens: Int, i: Int) {
   if i + 1 >= len(tokens) { return 0 }
   let t = tokens[i]
+  // 只看模块顶上那一句：碰到 import 或声明就该停 —— 记录里的 `rev: 版` 是字段，不是版本。
+  if t.kind == "ident" && (t.text == "import" || t.text == "fn" || t.text == "let" || t.text == "var") { return 0 }
   if t.kind == "ident" && t.text == "rev" {
     if tokens[i + 1].kind == "int" { return to_int(tokens[i + 1].text) }
     return 0 - 1

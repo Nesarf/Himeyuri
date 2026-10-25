@@ -87,14 +87,9 @@ const 深转 = (v) => {
       o.otherwise = null;
     }
     // rev 0 在这一侧表示「没写」；宿主用 null 表示不提要求。
-    // -1 表示「写了 rev 但没有数字」—— 那是一条语法错，不是「不提要求」。
+    // -1 原样留着 —— 它是「写了 rev 但没有数字」，由 loadUnit 报成一条语法错。
+    // 这里不能碰 诊断：深转 是模块级函数，那个变量不在它的作用域里。
     if ((o.kind === "Module" || o.kind === "Import") && o.rev === 0) o.rev = null;
-    if ((o.kind === "Module" || o.kind === "Import") && o.rev === -1) {
-      const 条 = { code: "HMYR-E0100", message: "rev is not followed by a revision number" };
-      诊断.errors.push(条);
-      诊断.items.push(条);
-      o.rev = null;
-    }
     return o;
   }
   if (Array.isArray(v)) return v.map(深转);
@@ -144,6 +139,10 @@ export function loadUnit(entry, options = {}) {
     let 键 = String(原).startsWith("./") ? String(原).slice(2) : String(原);
     键 = 键.split("/").join(path.sep);
     modules.set(键, m);
+    // 同一个模块挂两个门牌：order 里用的是相对形式（selfbody 那类套件照它比），
+    // 而多数套件拿 path.join(ROOT, ...) 的绝对路径来 get —— 只给一个的话，另一个就落空。
+    const 绝对键 = path.resolve(键);
+    if (绝对键 !== 键) modules.set(绝对键, m);
     order.push(键);
   });
   // 重名声明：与宿主 src/loader.mjs 同一句话、同一个位置（diagnostics.items）。
@@ -160,6 +159,27 @@ export function loadUnit(entry, options = {}) {
         });
       } else {
         声明过.set(d.name, 键);
+      }
+    }
+  }
+  // 「写了 rev 但没有数字」是一条语法错，不是「不提要求」。
+  for (const 键 of order) {
+    for (const d of Array.from(modules.get(键).decls || [])) void d;
+  }
+  for (const 键 of order) {
+    const 模块 = modules.get(键);
+    if (模块.rev === -1) {
+      const 条 = { code: "HMYR-E0100", message: "rev is not followed by a revision number", file: 键 };
+      诊断.errors.push(条);
+      诊断.items.push(条);
+      模块.rev = null;
+    }
+    for (const imp of Array.from(模块.imports || [])) {
+      if (imp && imp.rev === -1) {
+        const 条 = { code: "HMYR-E0100", message: "rev is not followed by a revision number", file: 键 };
+        诊断.errors.push(条);
+        诊断.items.push(条);
+        imp.rev = null;
       }
     }
   }
