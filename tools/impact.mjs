@@ -1,30 +1,26 @@
-// 工程地图：给一个文件，答「哪些套件会因此动」。
+// 工程地图：给一个文件，答「哪些套件会因此动」；或者给 --map，答整张图。
 //
 // 为什么要有它：每修一处就把十套一起拉（或者跑十几分钟的量具），是拿时间买「不用想影响面」。
 // 而那些关系是静态可查的 —— 谁加载了 self/run.hmyr、self/*.hmyr 之间谁 import 谁、
 // 哪个套件 import 了 src/eval.mjs。这张图本来就是写在那里的，只是没人把它拼起来。
 //
 // 用法：
-//   node tools/impact.mjs self/body.hmyr
-//   node tools/impact.mjs src/eval.mjs
-//   node tools/impact.mjs self/run.hmyr --all
-//
-// 答三行：直接（加载了它）、间接（通过 import 链）、无关（可以放心不跑）。
+//   node tools/impact.mjs self/body.hmyr       给一个文件，答它会碰到哪些套件
+//   node tools/impact.mjs src/eval.mjs         对 src 模块同样答
+//   node tools/impact.mjs --map               整张图：谁 import 谁、每个套件加载了什么
+//   node tools/impact.mjs <文件> --all         不省略，把「无关」也列全
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const 目标 = process.argv[2];
-const 要全部 = process.argv.includes("--all");
-if (!目标) {
-  console.error("用法：node tools/impact.mjs <相对仓库根的路径> [--all]");
-  process.exit(2);
-}
-const 目标键 = 目标.split("\\").join("/");
+const 参数 = process.argv.slice(2);
+const 要全部 = 参数.includes("--all");
+const 要总图 = 参数.includes("--map");
+const 目标 = 参数.find((a) => !a.startsWith("--"));
 
 // ---- 一、self/ 里谁 import 谁 ----
-const self文件们 = fs.readdirSync(path.join(ROOT, "self")).filter((f) => f.endsWith(".hmyr"));
+const self文件们 = fs.readdirSync(path.join(ROOT, "self")).filter((f) => f.endsWith(".hmyr")).sort();
 const self依赖 = new Map(); // 文件 → 它 import 的文件（仓库相对路径）
 for (const 名 of self文件们) {
   const 路 = "self/" + 名;
@@ -66,7 +62,42 @@ for (const [名, 脚本] of 清单) {
   套件.push({ 名, 脚本, 载入, src: src们 });
 }
 
-// ---- 三、答 ----
+// ---- 三、总图 ----
+if (要总图) {
+  console.log("工程地图 · " + self文件们.length + " 份 .hmyr · " + 套件.length + " 个套件");
+  console.log("");
+  console.log("一、谁被 import（左边是被用的，右边是用它的）");
+  const 被用 = new Map();
+  for (const [子, 依] of self依赖) {
+    for (const d of 依) {
+      if (!被用.has(d)) 被用.set(d, []);
+      被用.get(d).push(path.basename(子));
+    }
+  }
+  for (const [被, 用们] of [...被用].sort((a, b) => b[1].length - a[1].length)) {
+    console.log("  " + 被.padEnd(24) + " ← " + 用们.join(" "));
+  }
+  const 孤立 = self文件们.filter((f) => !被用.has("self/" + f));
+  if (孤立.length) console.log("  （没人 import 的入口：" + 孤立.join(" ") + "）");
+  console.log("");
+  console.log("二、每个套件加载的 .hmyr（只列前三个；单个文件的完整答案用单文件模式查）");
+  const 按载 = 套件.filter((s) => s.载入.size).sort((a, b) => b.载入.size - a.载入.size);
+  for (const s of 按载) {
+    const 载 = [...s.载入];
+    console.log("  " + s.名.padEnd(18) + " " + String(载.length).padStart(2) + " 份  " + 载.slice(0, 3).join(" ") + (载.length > 3 ? " …" : ""));
+  }
+  console.log("");
+  console.log("三、反过来：给一个文件，用 node tools/impact.mjs <文件> 看它会碰到哪些套件");
+  process.exit(0);
+}
+
+if (!目标) {
+  console.error("用法：node tools/impact.mjs <相对仓库根的路径> [--all]  或  --map");
+  process.exit(2);
+}
+const 目标键 = 目标.split("\\").join("/");
+
+// ---- 四、答一个文件 ----
 const 是src = 目标键.startsWith("src/");
 const 目标链 = 是src ? new Set() : new Set([目标键, ...上游(目标键)]);
 

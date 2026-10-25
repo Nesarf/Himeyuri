@@ -71,3 +71,8 @@
   design/DISTRO.txt      一个发行版该有什么，以及这里到哪儿了
   design/SELFRUN.txt     最终目标与三步路线
   conformance/plain.mjs  六十句中文，一句一个编号
+
+  而想先看形状而不是文字的时候：
+
+    node tools/impact.mjs --map                整张工程地图：谁 import 谁、每个套件加载了什么
+    node tools/impact.mjs self/body.hmyr       给一个文件，答「改动会碰到哪些套件」而不必试跑
