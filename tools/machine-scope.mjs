@@ -64,7 +64,7 @@ console.log("");
 // 反方向：每一项落在哪些函数里 —— 这才看得出「能不能先搬一项」。
 for (const 名 of 目标) {
   const 们 = [...归属].filter(([, 集]) => 集.has(名)).map(([f]) => f);
-  console.log("  " + 名.padEnd(12) + 们.length + " 个函数" + (们.length ? "：" + 们.slice(0, 8).join(" ") + (们.length > 8 ? " …" : "") : ""));
+  console.log("  " + 名.padEnd(12) + 们.length + " 个函数" + (们.length ? "：" + 们.join(" ") : ""));
 }
 
 console.log("");
