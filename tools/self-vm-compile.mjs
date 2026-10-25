@@ -84,6 +84,40 @@ for (const [标, 源] of 样本) {
   ok(标 + "（" + js.length + " 字节）", 同, 同 ? "" : "JS " + js.length + " / vm " + 她.length);
 }
 
+console.log("三、验签也在虚拟机上跑");
+{
+  const 签路 = path.join(ROOT, "runtime/sign.hmyrb");
+  if (!fs.existsSync(签路)) {
+    ok("runtime/sign.hmyrb 在", false, "先跑 node tools/emit-code.mjs self/sign.hmyr runtime/sign.hmyrb");
+  } else {
+    const 签vm = new 虚拟机(读程序(fs.readFileSync(签路)), {
+      capabilities: 本机能力(), stepLimit: 40000000000, maxDepth: 4000,
+    });
+    const 真签 = path.join(ROOT, "dist/manifest.json.sig");
+    const 真文 = path.join(ROOT, "dist/manifest.json");
+    if (!fs.existsSync(真签) || !fs.existsSync(真文)) {
+      ok("dist 里有真实签名", false, "没有 dist/manifest.json.sig");
+    } else {
+      const r = 签vm.调用("验文件", [真签, 真文], null);
+      const 结果 = r && r.ok ? r.值 : null;
+      ok("真实签名在 vm 上验得过", 结果 === true, r && r.ok ? JSON.stringify(结果) : JSON.stringify(签vm.停机));
+
+      // 改一个字节，应当验不过
+      const 临 = path.join(ROOT, ".tmp-sign");
+      fs.mkdirSync(临, { recursive: true });
+      const 改过 = path.join(临, "manifest.json");
+      const 原文 = fs.readFileSync(真文);
+      const 字节 = Buffer.from(原文);
+      字节[0] = 字节[0] === 0x7b ? 0x7c : 0x7b;
+      fs.writeFileSync(改过, 字节);
+      const r2 = 签vm.调用("验文件", [真签, 改过], null);
+      const 结果2 = r2 && r2.ok ? r2.值 : null;
+      ok("改一个字节就验不过", 结果2 === false, r2 && r2.ok ? JSON.stringify(结果2) : JSON.stringify(签vm.停机));
+      fs.rmSync(临, { recursive: true, force: true });
+    }
+  }
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

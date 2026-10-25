@@ -114,9 +114,9 @@ fn 择(a: Int, b: Int, c: Int) {
   return 异或64(异或64(与64(a, b), 与64(a, c)), 与64(b, c))
 }
 
-fn 一64() -> Int { return (1, 0) }
+fn 一64() -> (Int, Int) { return (1, 0) }
 
-fn 零64() -> Int { return (0, 0) }
+fn 零64() -> (Int, Int) { return (0, 0) }
 
 // ---- 分块与压缩 ----
 
