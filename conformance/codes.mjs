@@ -76,4 +76,8 @@ export const CODES = [
   // Planned: registered so the identifier is reserved and searchable, exempt from the "every registered
   // code is emitted" check until the zone model of design/MEMORY.txt exists.
   { code: "HMYR-R0301", stage: "run", planned: true, meaning: "a value escaped the arena it was allocated in" },
+  // The two below are reachable today: the zone model has its bookkeeping half, so a wrong
+  // conversion is a runtime refusal rather than a paragraph in a design paper.
+  { code: "HMYR-R0302", stage: "run", checkedBy: "test/zone.test.mjs", meaning: "a zone conversion was handed something that is not a live block of that arena: the block belongs elsewhere, or its arena is already closed" },
+  { code: "HMYR-R0303", stage: "run", checkedBy: "test/zone.test.mjs", meaning: "a block was adopted into a second arena that is still open: its lifetime would be owned in two places" },
 ];

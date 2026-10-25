@@ -515,6 +515,13 @@ const 造数组 = (t) => {
   return a;
 };
 
+// ---- 区的记账（design/MEMORY.txt 的三区模型，桩这一层能做到的那一半） ----
+// 「谁拥有这一块」不写进块里：记录是语言看得见的东西，而拥有关系是运行时的事。
+// WeakMap 让这条关系随块被回收自己消失，不会拖住一块内存。
+const 区拥有者 = new WeakMap();
+const 区活着 = new Set();
+let 区序号 = 0;
+
 const BUILTINS = {
   // ---- 〇、位运算（32 位无符号）：给 SHA-256 那类算法一条不用逐位循环的路 ----
   位与: (rt, args) => 位(rt.asNumber(args[0])) & 位(rt.asNumber(args[1])),
@@ -1057,12 +1064,56 @@ const BUILTINS = {
   key_start: (rt) => rt.cap.terminal.setRaw(true),
   // 环境说该是哪一套：语言看 Intl 给的区域，编码看控制台代码页。
   // 组合出来不在名单里就返回空串——环境说的话我们没档案，就如实说没有，不退回默认。
-  // ---- 九、内存（三区模型未实现前的宿主桩） ----
-  arena: () => {
+  // ---- 九、内存（三区模型的一半：区的记账与两条转换在这，真内存还在第三层） ----
+  //
+  // 这一格做的是 MEMORY.txt 里那条规则「不静默换区」的可检查部分：块带一个可见的
+  // zone 字段，freeze 把它交给托管区，adopt 把它收回来，违规两次各有编号。
+  // 而「托管区」今天就是宿主的回收器 —— freeze 改的是记账，不是搬内存；
+  // 那句「不移动」在桩里恰好天然成立，因为全程是同一个对象。
+  arena: (rt) => {
     const held = [];
+    const 我 = ++区序号;
+    区活着.add(我);
+    const 是块 = (b) => !!b && typeof b === "object" && typeof b.live === "boolean" && typeof b.size === "number";
+    const 要活块 = (b, 谁) => {
+      if (!是块(b)) rt.fail("HMYR-R0302", 谁 + " wants an arena block, found " + describe(b));
+      if (!b.live) rt.fail("HMYR-R0302", 谁 + " was given a block whose arena is already closed");
+    };
     return {
-      alloc: (n) => { const block = { size: typeof n === "number" ? n : 0, live: true }; held.push(block); return block; },
-      close: () => { for (const b of held) b.live = false; held.length = 0; return null; },
+      alloc: (n) => {
+        const block = { size: typeof n === "number" ? n : 0, live: true, zone: "arena" };
+        区拥有者.set(block, 我);
+        held.push(block);
+        return block;
+      },
+      // 交给托管区：从此不随 close 死。同一条记录交回去，正是「不移动」那条规矩的样子。
+      freeze: (b) => {
+        要活块(b, "arena.freeze");
+        if (区拥有者.get(b) !== 我) rt.fail("HMYR-R0302", "arena.freeze was given a block this arena does not own");
+        b.zone = "managed";
+        区拥有者.delete(b);
+        const i = held.indexOf(b);
+        if (i >= 0) held.splice(i, 1);
+        return b;
+      },
+      // 收回本区：从此随 close 死。已经属于另一个活着的区就拒绝 —— 那一块的寿命会被两处同时拥有。
+      adopt: (b) => {
+        要活块(b, "arena.adopt");
+        const 主人 = 区拥有者.get(b);
+        if (主人 !== undefined && 主人 !== 我 && 区活着.has(主人)) {
+          rt.fail("HMYR-R0303", "arena.adopt was given a block owned by another open arena: its lifetime would be owned twice");
+        }
+        b.zone = "arena";
+        区拥有者.set(b, 我);
+        if (!held.includes(b)) held.push(b);
+        return b;
+      },
+      close: () => {
+        for (const b of held) { b.live = false; 区拥有者.delete(b); }
+        held.length = 0;
+        区活着.delete(我);
+        return null;
+      },
       held: () => held.length,
     };
   },
