@@ -145,6 +145,7 @@ selfbridge	tools/self-bridge-check.mjs
 selfvmeval	tools/self-vm-eval.mjs
 selfvmcompile	tools/self-vm-compile.mjs
 selfvmfmt	tools/self-vm-fmt.mjs
+fmtwholehmyr	test/fmt-whole-hmyr.test.mjs
 ucdnfchmyr	test/ucd-nfc-hmyr.test.mjs
 ucdcasehmyr	test/ucd-case-hmyr.test.mjs
 selfnodes	tools/self-nodes.mjs

@@ -19,11 +19,11 @@ fn 去首尾(行: String) -> String {
   var 止 = len(行)
   var 左 = true
   while 起 < 止 && 左 {
-    if 行[起] == " " || 行[起] == "\t" { 起 = 起 + 1 } else { 左 = false }
+    if 行[起] == " " || 行[起] == chr(9) || 行[起] == chr(13) { 起 = 起 + 1 } else { 左 = false }
   }
   var 右 = true
   while 止 > 起 && 右 {
-    if 行[止 - 1] == " " || 行[止 - 1] == "\t" { 止 = 止 - 1 } else { 右 = false }
+    if 行[止 - 1] == " " || 行[止 - 1] == chr(9) || 行[止 - 1] == chr(13) { 止 = 止 - 1 } else { 右 = false }
   }
   return slice(行, 起, 止)
 }

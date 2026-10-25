@@ -233,8 +233,15 @@ HMYR 全面自举：运行时、宿主依赖与启动
         期望排版，加上每一条再排一次不变）。整文件排版仍在 src/format.mjs，
         它要完整语句树，那是下一步。
 
+        已搬，整文件排版：self/fmt.hmyr 的 整文件 现在排的是整个文件，而不只是表达式。
+        验收是 test/fmt-whole-hmyr.test.mjs（八项），三件事分开验：
+          没有注释的文件（examples 里的 arith、over、twice）与 src/format.mjs 逐字节相同；
+          有注释的文件里自举那一份把注释留下，而宿主那一份按设计丢弃并报 W0100 ——
+          去掉注释行之后两边一致，所以这不是缺陷，是自举那一份多做了一件事；
+          行尾的 carriage return 不会漏进输出（那一份语料本身是 CRLF）。
+        为此去首尾 补了 chr(9) 与 chr(13) —— 它原来只认空格，连 tab 都写成了两个字面字符。
         还没搬，按代价排：
-          格式化器   src/format.mjs 二百零九行，要「读 AST 再写文本」；
+          格式化器   （已搬，见下）
                      自举侧那份 parse.hmyr 只认表达式，完整的语句树在
                      stmt.hmyr 与 body.hmyr 里 —— 接口要另接一层。
           LSP        src/lsp.mjs 一百五十四行，JSON-RPC 走 stdio。
