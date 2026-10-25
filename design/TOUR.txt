@@ -57,12 +57,14 @@
 它现在还不能做什么
 --------------------------------------------------------------------
 
-  ・语言服务器有骨架：initialize、documentSymbol、definition、hover、completion 都通了，
-    而 definition 还能跨 import 跳到别的文件（self/lsp.hmyr，验收是 lsp、lspsymbol、
-    lspcompletion 与 lspmodule 四套）。
   ・还不能完全独立：执行器仍跑在 Node 上。最终目标是「完全独立的计算机语言」，
     而那要一个最小的机器层（见 design/SELFRUN.txt 里的三层）。
-  ・桌面上的第二台机器验过了：vm/hmyr.c 与 Node 那台逐字对拍，八十项；板子上还没有。
+  ・板子上还没有：桌面那第二台机器验过了，vm/hmyr.c 与 Node 那台逐字对拍八十项，
+    而它在一颗真芯片上跑过这件事还欠着。这一条等硬件，不是等代码。
+
+  语言服务器那一条已经不在这份名单里了：initialize、documentSymbol、definition、
+  hover、completion 都通，definition 还能跨 import 跳到别的文件（self/lsp.hmyr，
+  验收是 lsp、lspsymbol、lspcompletion 与 lspmodule 四套）。
 
 想深入的时候
 --------------------------------------------------------------------
