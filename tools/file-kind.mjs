@@ -1,19 +1,19 @@
 // 一个名字是源码还是字节码：这个判断只写在这里。
 //
-// 为什么单独一份：改名分两步，第一步是「工具同时认两套」。若七处各写一遍
-// endsWith(".hmyr") || endsWith(".hmoca")，第二步删旧名时就要改七处，
-// 而漏一处的样子不是报错 —— 是「某几套安静地扫不到文件」。
+// 第二步（批量 git mv）走完之后，仓库里已经没有 .hmyr 与 .hmyrb 了 —— 于是这里
+// 只认新名。曾经有一版同时收两套，那是给迁移留的桥；桥在第三步拆掉，理由与它
+// 当初被搭起来时一样：判断只留一处，而旧名留着就会有人继续写旧名。
 //
 // 对应关系见 design/FILETYPE.txt：
-//   .hmyr   旧名  源码    ↔ .hmoca  新名
-//   .hmyrb  旧名  字节码  ↔ .hmoks  新名
-//   .hmtn   新名  种子    （字节码的特例，单独一个名字）
+//   .hmoca   源码
+//   .hmoks   字节码
+//   .hmtn    种子（字节码的特例，单独一个名字）
 //
-// 大小写一律按小写比：Windows 上 Hello.HMYR 与 hello.hmyr 是同一个文件，
+// 大小写一律按小写比：Windows 上 Hello.HMOCA 与 hello.hmoca 是同一个文件，
 // 而两侧的工具都跑在 Windows 上，判据不必假装自己在 POSIX 上。
 
-const 源码后缀 = [".hmyr", ".hmoca"];
-const 字节码后缀 = [".hmyrb", ".hmoks", ".hmtn"];
+const 源码后缀 = [".hmoca"];
+const 字节码后缀 = [".hmoks", ".hmtn"];
 
 export const 是源码 = (名) => {
   const 小 = String(名 || "").toLowerCase();
@@ -29,7 +29,7 @@ export const 是字节码 = (名) => {
 // 「这一份是跑一次的产物」与「这一份是编译一切的起点」。
 export const 是种子 = (名) => {
   const 小 = String(名 || "").toLowerCase();
-  return 小.endsWith(".hmtn") || 小.endsWith(".seed.hmyrb") || 小.endsWith(".seed.hmoks");
+  return 小.endsWith(".hmtn") || 小.endsWith(".seed.hmtn");
 };
 
 export const 全部源码后缀 = () => [...源码后缀];

@@ -76,8 +76,8 @@ fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String, �
     var j = 0
     while j < len(语名们) {
       var 要 = false
-      if 以尾(语名们[j], ".hmoca") || 以尾(语名们[j], ".hmoca") { 要 = true }
-      if 以尾(语名们[j], ".hmoks") || 以尾(语名们[j], ".hmoks") || 以尾(语名们[j], ".hmtn") { 要 = true }
+      if 以尾(语名们[j], ".hmoca") { 要 = true }
+      if 以尾(语名们[j], ".hmoks") || 以尾(语名们[j], ".hmtn") { 要 = true }
       if 要 { 路们 = 收一件(路们, "runtime", (语名们[j],)) }
       j = j + 1
     }

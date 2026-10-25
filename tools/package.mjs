@@ -41,7 +41,7 @@ const 走 = (dir) => {
     // 只认旧的，改名之后 runtime/ 下的 .hmoca 与 .hmoks 会被这一行静静滤掉 ——
     // 症状是「包里少了文件」，而包照样打得出来、退出码照样是零、清单照样说「全对」。
     // 这一处是 package 那一套报「缺 2 项」时揪出来的：缺的正好是仅有的两份 .hmoca。
-    else if (/\.(mjs|hmyr|hmoca|hmyrb|hmoks|hmtn|txt|md)$/.test(e.name)) 收.push(p);
+    else if (/\.(mjs|hmoca|hmoks|hmtn|txt|md)$/.test(e.name)) 收.push(p);
     else if (dir === "assets" && /\.png$/.test(e.name)) 收.push(p);
   }
 };

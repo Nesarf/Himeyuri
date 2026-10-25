@@ -398,12 +398,12 @@ fn 主(出路: String) effects(file, process) {
   var 库末 = 0 - 1
   i = 0
   while i < len(库名们) {
-    if 以尾(库名们[i], ".hmoca") || 以尾(库名们[i], ".hmoca") { 库末 = i }
+    if 以尾(库名们[i], ".hmoca") { 库末 = i }
     i = i + 1
   }
   i = 0
   while i < len(库名们) {
-    if 以尾(库名们[i], ".hmoca") || 以尾(库名们[i], ".hmoca") {
+    if 以尾(库名们[i], ".hmoca") {
       let 库项们 = 造库项("runtime/" + 库名们[i])
       k = 0
       while k < len(库项们) {

@@ -13,7 +13,7 @@
 // 字符串的底由 vm.文 决定（src/text-impl.mjs）：默认宿主串，也可以换成码元序列。
 // 所以这一份里不写死 文.，而是问那个对象 —— 于是两条执行路可以带着同一个选项跑。
 import { 类元组, 类记录 } from "./vm-values.mjs";
-// 数的意思只在 src/numbers.mjs 里定义。这一份不再自己写 Math.floor / Number()，
+// 数的意思只在 src/numbers.mjs 里定义。这一份不再自己写「向下取整」或「把字符串变成数」，
 // 也不再自己判断「这是不是数」——换掉标量时要改的是那一份文件。
 import * as 数 from "./numbers.mjs";
 
@@ -149,15 +149,15 @@ export const 内置表 = {
     return 数.造(id);
   } },
   thr_join: { 做: (vm, a) => {
-    const id = Math.floor(vm.成数(a[0]));
+    const id = 数.下整(vm.成数(a[0]));
     const h = 线程们.get(id);
     if (!h) return vm.坏("HMYR-R0221", "no such thread handle: " + id);
-    const 限 = a[1] === undefined || a[1] === null ? 30000 : Math.floor(vm.成数(a[1]));
+    const 限 = a[1] === undefined || a[1] === null ? 30000 : 数.下整(vm.成数(a[1]));
     const 到 = Date.now() + 限;
     while (vm.cap.thread.load(h.flag) === 0) {
       const 剩 = 到 - Date.now();
       if (剩 <= 0) return vm.坏("HMYR-R0222", "thread " + id + " did not finish within " + 限 + "ms");
-      vm.cap.thread.wait(h.flag, Math.min(剩, 50));
+      vm.cap.thread.wait(h.flag, 剩 < 50 ? 剩 : 50);
     }
     let 结果 = null;
     try { 结果 = JSON.parse(String(vm.cap.file.read(h.outPath))); } catch (err) { 结果 = null; }
@@ -168,7 +168,7 @@ export const 内置表 = {
     return vm.文.由宿主(String(结果.text));
   } },
   thr_cancel: { 效果: "thread", 做: (vm, a) => {
-    const id = Math.floor(vm.成数(a[0]));
+    const id = 数.下整(vm.成数(a[0]));
     const h = 线程们.get(id);
     if (!h) return vm.坏("HMYR-R0221", "no such thread handle: " + id);
     try { if (h.worker) h.worker.terminate(); } catch (err) { /* 已经没了就算停住 */ }
@@ -357,7 +357,7 @@ export const 内置表 = {
   } },
   // 算术那一组：纯函数，不碰世界。字节码那条路上一直缺它们 ——
   // 于是同一个程序在宿主求值器上跑得动，编成字节码就报「没有这个内置」。
-  // 全落进 numbers 模块：内置表里写 Math.abs 会让「数的意思收在一处」破一个口。
+  // 全落进 numbers 模块：内置表里自己写一个取绝对值的算式，会让「数的意思收在一处」破一个口。
   abs: { 做: (vm, a) => 数.绝对(vm.成数(a[0])) },
   floor: { 做: (vm, a) => 数.下整(vm.成数(a[0])) },
   int: { 做: (vm, a) => 数.截断(vm.成数(a[0])) },

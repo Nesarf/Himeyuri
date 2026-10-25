@@ -4246,7 +4246,6 @@ static void 清线程(线程上下文 *c) {
  * 这一份里认名字的地方只有此处，其余出现 .hmyrb 的地方都是产物名。 */
 static int 是源码路径(const char *p) {
   size_t n = strlen(p);
-  if (n > 5 && strcmp(p + n - 5, ".hmyr") == 0) return 1;
   if (n > 6 && strcmp(p + n - 6, ".hmoca") == 0) return 1;
   return 0;
 }
