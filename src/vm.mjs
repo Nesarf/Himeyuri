@@ -159,7 +159,7 @@ export class 虚拟机 {
         case "ASSIGN": {
           const 槽 = 帧.槽[指令.a];
           const v = 弹();
-          if (!槽.可写) { this.坏("HMYR-R0150", "cannot assign to a name that was not declared with var"); return null; }
+          if (!槽.可写) { this.坏("HMYR-R0150", "cannot assign to a name that was not declared with var (slot " + 指令.a + " at pc " + pc + ")"); return null; }
           槽.v = v;
           pc++; break;
         }
