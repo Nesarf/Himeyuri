@@ -783,10 +783,50 @@ design/SELFRUN.txt 里那一栏原来列着六件「都还是 JS」，下面还�
 design/TOUR.txt 是「看一眼 Himeyuri」那份导览，它有五处停在半年（或一个月）前：
 
     错误编号「五十七个」        → 六十个（索引那一组补了两个）
-    发布「打包（tools/package.mjs）」 → 打包、清单、发布、验签、压缩五件都在 self/
+    发布「打包（tools/package.mjs）」 → 这一处当时没真的落到 TOUR 里，到第四十件才补上
     没有语言服务器              → 有骨架：initialize / documentSymbol / definition / hover
     没有在第二台机器上验过        → 桌面上的第二台已经逐字对拍八十项，板子上还没有
     中文人话「五十七句」          → 六十句
 
 这一份比别的文档要紧：它是唯一一份写给「还没决定要不要读这个仓库」的人看的。
 它过时的代价不是误导自己，是误导别人。
+
+第四十件（同日）：端到端发布 —— 一条闭环，以及它照出来的一个缺口。
+
+此前四件发布工具（manifest / package / verify / release）各有套件，但 releasehmyr 与
+verifyhmyr 两套的「真跑」都挂在 HMYR_HEAVY 之后，而常规全量从不设那个变量。
+于是「真发一次」这条路上，只有手动跑过的人知道它通不通。
+
+先手动走了一遍：release.hmyr 造三样（清单 1212 行、包 312 个文件 4.78 MB、说明书），
+再把那份清单交给 self/verify.hmyr 验 —— 250 项对得上、0 不对、0 缺，digest 也对得上。
+194 秒。这条路成立。
+
+于是把它固化成 tools/release-loop.mjs，一次三分钟上下，五节：
+
+    一、HMYR 真发一次
+    二、把包按中央目录解出来（成员一律 stored，按偏移切片即其内容）
+    三、包内那份 manifest.json 与包外那份逐字节相同
+    四、每个成员与仓库里的源文件逐字节相同
+    五、拿解出来的包当根，用 HMYR 自己的 verifier 验包里那份清单
+
+第五节照出一处缺口：清单报 [缺] runtime/text.hmyr。查下来是这样 ——
+
+    manifest.hmyr   standardLibrary 递归 runtime/，列了 runtime/text.hmyr
+                    与 runtime/ucd/blocks.hmyr 两条
+    package.hmyr    目录表里根本没有 runtime/，注释写着「那里装着几 MB 的语料」
+
+两件各自都对，合起来就是：包里的东西少了，而清单说它有。
+在仓库根下验清单永远看不见这一处 —— 那些文件本来就在仓库里，要拿包当根才照得出来。
+
+修法不是把语料收进包（codepoints.txt 45 MB、conformance 60 MB，读进来会撞内存上限），
+而是按后缀筛：runtime/ 只收 .hmyr 与 .hmyrb。改完成员从 313 涨到 319，第五节 14 项全过。
+
+验收：
+
+    tools/release-loop.mjs        14 项全过 · 成员 319 · 168 秒
+    packagehmyr                   21 项全过（含 C 那台真打一次、整棵仓库、附加成员）
+    releasehmyr（轻的一半）         9 项全过
+
+这一条的意义不在修好一个目录表，在「单件全过、合起来不对」这一类 —— 四个套件各自盯自己
+那一件，谁都不盯「发出去的东西拿回来还能不能验」。端到端不替代单件，它照的是单件之间
+那条缝。

@@ -50,10 +50,15 @@ fn 打包(包路: String, 只收: String, 要压: Bool) effects(file, process) {
 fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String, 附加名: String) effects(file, process) {
   // 要收的目录。默认这一层；给了第三个参数就只收那一个 —— 后者用来验结构。
   //
-  // runtime/ 与 conformance/ 不在表里：它们装着 UCD 语料（几 MB 的单个文件），
-  // 而这份语言把「一串字节」表示成每个字节一个值 —— 5 MB 就是 500 万个值，
-  // 读进来先撞内存上限（实测：带 runtime 的那一版分配了 7609 MB 就停了）。
+  // conformance/ 与 runtime/ucd/ 的语料不在表里：单个文件 45 MB 与 31 MB，
+  // 而这份语言把「一串字节」表示成每个字节一个值 —— 4500 万个值读进来先撞内存上限
+  // （实测：带语料的那一版分配了 7609 MB 就停了）。
   // 那是表示层面的限制，不是打包逻辑的问题；语料由 tools/ucd*.mjs 从 Unicode 源生成。
+  //
+  // runtime/ 本身要收，但只收源码与产物（.hmyr / .hmyrb）：清单里列着
+  // runtime/text.hmyr 与 runtime/ucd/blocks.hmyr，包若不含它们，
+  // 「拿到包的人自己验」就会在那两项上报缺。这一处是 release-loop 照出来的 ——
+  // 在仓库根下验清单永远看不见它，因为那些文件本来就在仓库里。
   var 目录们 = ("src", "self", "bin", "tools", "test", "design", "examples", "assets")
   if 只收 != "" { 目录们 = (只收,) }
   var 路们 = ()
@@ -64,6 +69,20 @@ fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String, �
     }
     d = d + 1
   }
+  // runtime/：只收源码与产物，语料按后缀跳过（理由见上）。
+  // 走文件 是递归的，所以 runtime/ucd/blocks.hmyr 也会进来 —— 清单里列了它。
+  if 只收 == "" {
+    let 语名们 = 走文件("runtime")
+    var j = 0
+    while j < len(语名们) {
+      var 要 = false
+      if 以尾(语名们[j], ".hmyr") { 要 = true }
+      if 以尾(语名们[j], ".hmyrb") { 要 = true }
+      if 要 { 路们 = 收一件(路们, "runtime", (语名们[j],)) }
+      j = j + 1
+    }
+  }
+
   if len(路们) == 0 {
     print("  没有可收的文件" + chr(10))
     return 1
