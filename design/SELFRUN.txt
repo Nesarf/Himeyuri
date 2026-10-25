@@ -240,39 +240,35 @@ HMYR 全面自举：运行时、宿主依赖与启动
           去掉注释行之后两边一致，所以这不是缺陷，是自举那一份多做了一件事；
           行尾的 carriage return 不会漏进输出（那一份语料本身是 CRLF）。
         为此去首尾 补了 chr(9) 与 chr(13) —— 它原来只认空格，连 tab 都写成了两个字面字符。
-        还没搬，按代价排：
+        工具链：全部搬完（2026-10-25 逐件核对过的账）
 
-          LSP        （已搬完，见下面那一段；下面保留的是当时「还没搬」的记录）
-                     它等的两格现在都有了：read_stdin_line 交回 {行, 结束}，
-                     read_stdin_bytes 交回 {字节们, 结束}，bytes_to_text 把字节解成文本。
-                     第一版已经搬了：self/lsp.hmyr 答 initialize（能力与服务器信息）、
-                     答 shutdown（空结果）、exit 之后自己停，其余一律回「没有这个方法」。
-                     第二版加了 didOpen 与 documentSymbol：符号列表来自自举侧的
-                     self/sig.hmyr（all_signatures 读真正的 token 流）。
-                     验收是 test/lsp-hmyr.test.mjs（十五项，含「exit 之后不再回话」
-                     与「Content-Length 数的是字节」—— 回话里一旦有中文，两者不再相等）。
-                     还没搬的是定义与悬浮签名 —— 那两样也要读语法树，而符号这一条
-                     已经证明那条路是通的。
-                     回话只用 ASCII：Content-Length 数的是字节，字符串长度数的是码元，
-                     两者只在全 ASCII 时相等。
-          语料生成   剩下三支：ucd-case（大小写表）、ucd-nfc（归一化表）、
-                     ucd（全码点扫描）。它们与 ucd-c 同一个形状，但数据量大得多。
-          打包发布   package/release/manifest/verify 约三百九十行，要一个自己的
-                     deflate —— 语言里没有压缩，这一项得先有压缩才能搬。
+        这一栏原来写着「LSP、格式化器、嵌入、打包发布、语料生成、测试框架都还是 JS」。
+        今天核了一遍，一件不剩了。逐件与它的验收：
 
-        已搬，语言服务器的符号这一半：self/lsp.hmyr 现在回 textDocument/documentSymbol，
-        符号表来自 self/sig.hmyr 的 all_signatures，位置按 token 的 at 换成行列、
-        零宽度（起止都给 character 0，与 src/lsp.mjs 同一条规矩）。
-        验收是 test/lsp-symbol-hmyr.test.mjs（六项）：两条真进程 —— node src/lsp.mjs --stdio
-        与 C 那台跑 self/lsp.hmyr 的字节码 —— 喂同一份文档、同样的五条消息，
-        只比 documentSymbol 那一条应答的 result，逐条比名字、类别、位置。
+          格式化器    self/fmt.hmyr        表达式与整文件都在，验收 fmtwholehmyr（8 项）
+          语料生成    self/ucd-c.hmyr      区间表，验收 ucdchmyr
+                      self/ucd-nfc.hmyr    归一化，验收 ucdnfchmyr（7 项，逐字节）
+                      self/ucd-case.hmyr   大小写，验收 ucdcasehmyr（7 项，逐字节）
+          测试框架    self/check.hmyr      验收 checkhmyr（11 项）
+          嵌入        self/embed.hmyr      验收 embedhmyr（16 项）
+          语言服务器  self/lsp.hmyr        验收 lsp（19 项）与 lspsymbol（10 项）
+          打包发布    self/zip.hmyr        验收 zip 与 zipmulti
+                      self/manifest.hmyr   验收 manifesthmyr
+                      self/package.hmyr    验收 packagehmyr
+                      self/release.hmyr    验收 releasehmyr
+                      self/verify.hmyr     验收 verifyhmyr
+          压缩        self/deflate.hmyr    699 行：存储块、固定 Huffman、动态 Huffman、LZ77
+                                            验收 deflate
 
-        搬的时候撞到一处方法名带了前缀：自举那一份写的是 documentSymbol，
-        而协议里是 textDocument/documentSymbol，于是它老老实实回 method not found。
-        这不是它坏，是两边的约定没对上 —— 前缀加上去，四类请求（didOpen、documentSymbol、
-        definition、hover）就都对上了。
+        于是「得先有压缩才能搬打包发布」这句话也失效了 —— deflate 早就在了，
+        而打包那几件正是用它写的。
 
-        还没搬的只剩打包发布（要一个自己的 deflate）。
+        搬的时候撞到的几处，各自的细节留在对应那一份的头注释里，这里只留索引：
+          平方级的字符串拼接       格式化器与嵌入各撞一次，改法是先入行、再折半拼
+          slice 对元组切的是文字   语料第二支，栈变成了 "["，全分解只收六条，改成递归
+          元组做插入排序是三次方   语料第三支，三千条六分钟，换可变数组后三秒
+          方法名少了前缀           语言服务器，四类请求全回 method not found
+
         这张清单现在有一份可执行的替身：tools/tooling-ledger.mjs。
         每一项要么「搬了」（必须指一个真的在 check-all 里的验收套件），
         要么「不搬」（必须写理由，而且它的文件要落在 runtime-path 那五份入口的
