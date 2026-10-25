@@ -64,6 +64,7 @@ function handle(message) {
           documentSymbolProvider: true,
           definitionProvider: true,
           hoverProvider: true,
+          completionProvider: { resolveProvider: false },
         },
         serverInfo: { name: "himeyuri", version: "0.1.0-m6" },
       });
@@ -94,6 +95,23 @@ function handle(message) {
         location: { uri, range: { start: { line: Math.max(0, s.line - 1), character: 0 }, end: { line: Math.max(0, s.line - 1), character: 0 } } },
         containerName: s.nestedIn || (s.pub ? "pub" : undefined),
       })));
+    }
+
+    case "textDocument/completion": {
+      // 补全的候选就是这份文档里的声明。没有上下文排序，也不做「按前缀过滤」——
+      // 过滤是客户端的事，编辑器自己会按已经敲下的几个字筛。
+      // kind 用的是 CompletionItemKind，与上面 documentSymbol 的 SymbolKind 不是同一张表：
+      // 那边 fn 是 12，这边是 3。两张表各自成立，混用会让编辑器把函数显示成变量。
+      const uri = params.textDocument.uri;
+      const { symbols: found } = parseDocument(uri);
+      return reply({
+        isIncomplete: false,
+        items: found.map((s) => ({
+          label: s.name,
+          kind: s.kind === "fn" ? 3 : s.kind === "type" ? 7 : s.kind === "const" ? 21 : 6,   // Function, Class, Constant, Variable
+          detail: signatureOf(s),
+        })),
+      });
     }
 
     case "textDocument/definition": {
