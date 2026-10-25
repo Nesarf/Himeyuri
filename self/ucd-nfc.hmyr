@@ -192,7 +192,7 @@ fn main() -> Int effects(file, process) {
     let 直 = index_get(直分解, str(cp))
     if len(直) == 2 {
       if index_has(排掉, str(cp)) == false {
-        let 首类 = 0
+        var 首类 = 0
         if index_has(组合类, str(直[0])) { 首类 = index_get(组合类, str(直[0])) }
         if 首类 == 0 {
           设(组合, 组合数, (直[0], 直[1], cp))

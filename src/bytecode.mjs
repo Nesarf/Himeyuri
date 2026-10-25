@@ -202,6 +202,11 @@ const 编译函数 = (decl) => {
   const 分配 = (名, 可写) => {
     const 槽 = 槽数++;
     层们[层们.length - 1].set(名, { 槽, 可写 });
+    // 槽号与名字的对照默认不留 —— 但查「R0150 的槽 38 是谁」时它是唯一的路。
+    // 打开方式：HMYR_SLOTS=1，输出走 stderr，不碰产物。
+    if (process.env.HMYR_SLOTS) {
+      process.stderr.write("槽 " + 槽 + " ← " + 名 + (可写 ? "（var）" : "（let）") + " · " + (decl.name || "?") + "\n");
+    }
     return 槽;
   };
   const 查 = (名) => {
