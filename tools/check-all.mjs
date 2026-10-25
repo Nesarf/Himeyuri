@@ -25,6 +25,7 @@ const SUITES = [
   ["stdlib", "test/stdlib.test.mjs", "SPEC M6 - the standard library reaches process and time, with effects"],
   ["reflect", "test/reflect.test.mjs", "SPEC M6 - a program can read its own shape"],
   ["lsp", "test/lsp.test.mjs", "SPEC M6 - an editor can ask about symbols, definitions and signatures"],
+  ["lspsymbol", "test/lsp-symbol-hmyr.test.mjs", "M6 - the language server symbols: two real processes, node and the C machine, answer the same documentSymbol request with the same names, kinds and locations"],
   ["adapter", "test/adapter.test.mjs", "SPEC M6 - the adapter: the host and the bootstrap compute the same number for the same source"],
   ["adapterstatements", "test/adapter-statements.test.mjs", "SPEC M6 - the adapter, statements: run the same program on both sides and they hand back the same value"],
   ["adapterfunctions", "test/adapter-functions.test.mjs", "SPEC M6 - the adapter, function table: whole programs agree on both sides, and the parameter boundary fails loudly"],

@@ -242,7 +242,7 @@ HMYR 全面自举：运行时、宿主依赖与启动
         为此去首尾 补了 chr(9) 与 chr(13) —— 它原来只认空格，连 tab 都写成了两个字面字符。
         还没搬，按代价排：
 
-          LSP        src/lsp.mjs 一百五十四行，JSON-RPC 走 stdio。
+          LSP        （已搬完，见下面那一段；下面保留的是当时「还没搬」的记录）
                      它等的两格现在都有了：read_stdin_line 交回 {行, 结束}，
                      read_stdin_bytes 交回 {字节们, 结束}，bytes_to_text 把字节解成文本。
                      第一版已经搬了：self/lsp.hmyr 答 initialize（能力与服务器信息）、
@@ -260,6 +260,19 @@ HMYR 全面自举：运行时、宿主依赖与启动
           打包发布   package/release/manifest/verify 约三百九十行，要一个自己的
                      deflate —— 语言里没有压缩，这一项得先有压缩才能搬。
 
+        已搬，语言服务器的符号这一半：self/lsp.hmyr 现在回 textDocument/documentSymbol，
+        符号表来自 self/sig.hmyr 的 all_signatures，位置按 token 的 at 换成行列、
+        零宽度（起止都给 character 0，与 src/lsp.mjs 同一条规矩）。
+        验收是 test/lsp-symbol-hmyr.test.mjs（六项）：两条真进程 —— node src/lsp.mjs --stdio
+        与 C 那台跑 self/lsp.hmyr 的字节码 —— 喂同一份文档、同样的五条消息，
+        只比 documentSymbol 那一条应答的 result，逐条比名字、类别、位置。
+
+        搬的时候撞到一处方法名带了前缀：自举那一份写的是 documentSymbol，
+        而协议里是 textDocument/documentSymbol，于是它老老实实回 method not found。
+        这不是它坏，是两边的约定没对上 —— 前缀加上去，四类请求（didOpen、documentSymbol、
+        definition、hover）就都对上了。
+
+        还没搬的只剩打包发布（要一个自己的 deflate）。
         这张清单现在有一份可执行的替身：tools/tooling-ledger.mjs。
         每一项要么「搬了」（必须指一个真的在 check-all 里的验收套件），
         要么「不搬」（必须写理由，而且它的文件要落在 runtime-path 那五份入口的

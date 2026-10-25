@@ -10,6 +10,7 @@ fmt	test/format.test.mjs
 stdlib	test/stdlib.test.mjs
 reflect	test/reflect.test.mjs
 lsp	test/lsp.test.mjs
+lspsymbol	test/lsp-symbol-hmyr.test.mjs
 adapter	test/adapter.test.mjs
 adapterstatements	test/adapter-statements.test.mjs
 adapterfunctions	test/adapter-functions.test.mjs
