@@ -143,6 +143,7 @@ selfpos	tools/self-positions.mjs
 selfbridge	tools/self-bridge-check.mjs
 selfvmeval	tools/self-vm-eval.mjs
 selfvmcompile	tools/self-vm-compile.mjs
+selfvmfmt	tools/self-vm-fmt.mjs
 selfnodes	tools/self-nodes.mjs
 selftree	tools/self-tree.mjs
 selfhandoff	tools/self-handoff.mjs
