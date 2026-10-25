@@ -220,9 +220,72 @@ fn 补全表(文本: String) {
   return {对象: (("isIncomplete", {假: 1}), ("items", {数组: 出}))}
 }
 
+// ---- 跨模块：uri 与路径 ----
+// 编辑器的 uri 是 file:// 的，文件系统要的是路径；换算只做这一处。
+// file:///E:/a/b.hmyr → E:/a/b.hmyr（Windows 那个开头的斜杠要去掉）
+// file:///tmp/x.hmyr  → /tmp/x.hmyr（在那里它本来就该在）
+fn 地址转路径(地址: String) -> String {
+  if len(地址) <= 7 { return "" }
+  var 路 = slice(地址, 7, len(地址))
+  if len(路) >= 3 {
+    if 路[0] == "/" && 路[2] == ":" { 路 = slice(路, 1, len(路)) }
+  }
+  return 路
+}
+
+fn 目录名(路: String) -> String {
+  var i = len(路) - 1
+  while i >= 0 {
+    if 路[i] == "/" { return slice(路, 0, i) }
+    i = i - 1
+  }
+  return ""
+}
+
+// import 的路径相对当前文件所在目录，与加载器同一条规矩。
+fn 拼导入(基: String, 相对: String) -> String {
+  var 名 = 相对
+  if len(名) >= 2 {
+    if slice(名, 0, 2) == "./" { 名 = slice(名, 2, len(名)) }
+  }
+  return 目录名(基) + "/" + 名
+}
+
+// 一份文本里的 import 路径们。关键字在词法里是 ident，后面那一个必须是字符串。
+fn 导入路们(文本: String) -> Int {
+  let tokens = scan(文本)
+  var 出 = ()
+  var i = 0
+  while i < len(tokens) {
+    if tokens[i].kind == "ident" && tokens[i].text == "import" {
+      if i + 1 < len(tokens) {
+        if tokens[i + 1].kind == "string" { 出 = 出 + (tokens[i + 1].text,) }
+      }
+    }
+    i = i + 1
+  }
+  return 出
+}
+
+// 一份文件的签名们。读不了就交回空元组 —— 问了一个打不开的文件不是错误。
+fn 文件签名们(路: String) -> Int {
+  var 出 = ()
+  if file_exists(路) { 出 = all_signatures(scan(read_text(路))) }
+  return 出
+}
+
+// 一个签名在它自己那份文本里的位置。
+fn 地位(地址: String, 那份: String, 签: Int) {
+  let 位 = at转行列(那份, 签.at)
+  let 起 = {对象: (("line", {数: 位.行}), ("character", {数: 位.列}))}
+  let 止 = {对象: (("line", {数: 位.行}), ("character", {数: 位.列 + len(签.name)}))}
+  let 范围 = {对象: (("start", 起), ("end", 止))}
+  return {对象: (("uri", {串: 地址}), ("range", 范围))}
+}
+
 // 处理一条消息：交回 {文, 停, 文本}。文本是「当前打开的文档」——
 // didOpen 送来它，documentSymbol 用它。状态在这一层过一手，因为语言里没有可变的全局。
-fn 处理(体: String, 文本: String) {
+fn 处理(体: String, 文本: String) effects(file) {
   let p = 解析(体)
   if !p.ok { return {文: "", 停: false, 文本: 文本} }
   let 值 = p.值
@@ -248,14 +311,30 @@ fn 处理(体: String, 文本: String) {
     let 位 = 取(取(值, "params"), "position")
     let 名 = 词在(文本, 取数(位, "line"), 取数(位, "character"))
     if len(名) == 0 { return {文: 应答(id, {空: 1}), 停: false, 文本: 文本} }
-    let 签 = 找签名(all_signatures(scan(文本)), 名)
-    if field_has(签, "空") { return {文: 应答(id, {空: 1}), 停: false, 文本: 文本} }
-    let 位2 = at转行列(文本, 签.at)
-    let 起 = {对象: (("line", {数: 位2.行}), ("character", {数: 位2.列}))}
-    let 止 = {对象: (("line", {数: 位2.行}), ("character", {数: 位2.列 + len(签.name)}))}
-    let 范围 = {对象: (("start", 起), ("end", 止))}
     let 地址 = 取串(取(取(值, "params"), "textDocument"), "uri")
-    return {文: 应答(id, {对象: (("uri", {串: 地址}), ("range", 范围))}), 停: false, 文本: 文本}
+    let 签 = 找签名(all_signatures(scan(文本)), 名)
+    if !field_has(签, "空") {
+      return {文: 应答(id, 地位(地址, 文本, 签)), 停: false, 文本: 文本}
+    }
+    // 跨模块：本地没有，就按 import 去目标文件里找。
+    // 本地优先 —— 与 src/lsp.mjs 同一条规矩：同名符号优先离得近的那一个。
+    let 基 = 地址转路径(地址)
+    let 路们 = 导入路们(文本)
+    var i = 0
+    while i < len(路们) {
+      let 目标 = 拼导入(基, 路们[i])
+      let 命中 = 找签名(文件签名们(目标), 名)
+      if !field_has(命中, "空") {
+        let 那份 = read_text(目标)
+        var 址 = "file:///" + 目标
+        if len(目标) > 0 {
+          if 目标[0] == "/" { 址 = "file://" + 目标 }
+        }
+        return {文: 应答(id, 地位(址, 那份, 命中)), 停: false, 文本: 文本}
+      }
+      i = i + 1
+    }
+    return {文: 应答(id, {空: 1}), 停: false, 文本: 文本}
   }
   if 方法 == "textDocument/hover" {
     let 位 = 取(取(值, "params"), "position")
@@ -275,7 +354,7 @@ fn 处理(体: String, 文本: String) {
   return {文: 应答错(id, 0 - 32601, "method not found"), 停: false, 文本: 文本}
 }
 
-fn main() -> Int {
+fn main() -> Int effects(file) {
   var 跑 = true
   var 文本 = ""
   while 跑 {

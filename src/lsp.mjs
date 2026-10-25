@@ -14,7 +14,8 @@
 //
 // Replies are plain text, not Markdown: a tooltip has no business carrying rendering syntax either.
 import fs from "node:fs";
-import { pathToFileURL } from "node:url";
+import path from "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { lex } from "./lexer.mjs";
 import { parse } from "./parser.mjs";
 import { symbols, references, typeName } from "./reflect.mjs";
@@ -41,6 +42,39 @@ function wordAt(text, position) {
   while (end < line.length && isWord(line[end])) end++;
   const word = line.slice(start, end);
   return word ? { word, line: position.line, start, end } : null;
+}
+
+// ---- 跨模块：uri 与路径 ----
+// 编辑器的 uri 是 file:// 的，文件系统要的是路径；换算只做这一处。
+const 位置 = (uri, s) => ({
+  uri,
+  range: { start: { line: Math.max(0, s.line - 1), character: 0 }, end: { line: Math.max(0, s.line - 1), character: 0 } },
+});
+
+// import 的路径相对当前文档所在目录，与加载器同一条规矩。
+function resolveImport(uri, 相对) {
+  try {
+    return path.resolve(path.dirname(fileURLToPath(uri)), 相对);
+  } catch {
+    return null;
+  }
+}
+
+// 别的文件的符号。按绝对路径缓存：同一份文件被问第二次时不再解析一遍。
+const 文件符号 = new Map();
+function symbolsOfFile(路) {
+  if (文件符号.has(路)) return 文件符号.get(路);
+  let 出 = [];
+  try {
+    const 文 = fs.readFileSync(路, "utf8");
+    const diagnostics = { items: [], errors: [], add() {}, error() {}, warn() {} };
+    const { ast } = parse(lex(文, {}).tokens, { diagnostics });
+    出 = symbols(ast);
+  } catch {
+    出 = [];
+  }
+  文件符号.set(路, 出);
+  return 出;
 }
 
 function signatureOf(symbol) {
@@ -119,10 +153,18 @@ function handle(message) {
       const text = documents.get(uri) || "";
       const word = wordAt(text, params.position);
       if (!word) return reply(null);
-      const { symbols: found } = parseDocument(uri);
-      const target = found.find((s) => s.name === word.word);
-      if (!target) return reply(null);
-      return reply({ uri, range: { start: { line: Math.max(0, target.line - 1), character: 0 }, end: { line: Math.max(0, target.line - 1), character: 0 } } });
+      const 本文 = parseDocument(uri);
+      const 本地 = 本文.symbols.find((s) => s.name === word.word);
+      if (本地) return reply(位置(uri, 本地));
+      // 跨模块：按 import 语句去目标文件里找。本地优先 —— 同名符号优先离得近的那一个，
+      // 那也是编辑器里人的预期。
+      for (const imp of (本文.ast && 本文.ast.imports) || []) {
+        const 目标 = resolveImport(uri, imp.path);
+        if (!目标) continue;
+        const 命中 = symbolsOfFile(目标).find((s) => s.name === word.word);
+        if (命中) return reply(位置(pathToFileURL(目标).href, 命中));
+      }
+      return reply(null);
     }
 
     case "textDocument/hover": {
