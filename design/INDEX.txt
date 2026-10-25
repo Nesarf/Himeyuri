@@ -60,7 +60,7 @@
     最小求值器      src/minimal-eval.mjs
     编译期内置名    src/bytecode.mjs 的 内置名
     字节码内置表    src/vm-builtins.mjs
-    自举求值器      self/eval.hmyr 的分派
+    自举求值器      self/eval.hmoca 的分派
     C 机器          vm/hmyr.c 的 name_is 分支
 
   加完跑 node tools/builtin-gap.mjs，差集应当为 0 —— 那把工具就是为这件事写的。
@@ -114,7 +114,7 @@
 七、第一个真实用户遇到的三个问题（2026-10-24）
 --------------------------------------------------------------------
 
-  self/ucd-nfc.hmyr 是索引的第一个真实用户。它现在跑不完真语料，三段问题按发现顺序：
+  self/ucd-nfc.hmoca 是索引的第一个真实用户。它现在跑不完真语料，三段问题按发现顺序：
 
   一、v - (v / 16) * 16 算出负的极小值。
 
@@ -193,7 +193,7 @@
           「不能比较」这一类错从此能指出位置，而不只是说「不能」。
   九、这一支跑通了（2026-10-24）。
 
-      self/ucd-nfc.hmyr 在字节码机上跑真语料，产出与 vm/ucd-nfc.h（tools/ucd-nfc.mjs 生成的）
+      self/ucd-nfc.hmoca 在字节码机上跑真语料，产出与 vm/ucd-nfc.h（tools/ucd-nfc.mjs 生成的）
       逐字节相同：144299 字节、4060 行。验收在 test/ucd-nfc-hmyr.test.mjs，已注册为 ucdnfchmyr
       （169 套）。
 
@@ -219,7 +219,7 @@
       这一句在这个仓库里已经写过三次（语句切分、词法截断、现在这一支），还没有失效过。
   十、第三支也跑通了（2026-10-24）。
 
-      self/ucd-case.hmyr：真语料上产出 137722 字节、4301 行，与 vm/ucd-case.h 逐字节相同。
+      self/ucd-case.hmoca：真语料上产出 137722 字节、4301 行，与 vm/ucd-case.h 逐字节相同。
       验收是 test/ucd-case-hmyr.test.mjs，注册为 ucdcasehmyr（170 套）。
 
       这一支遇到三件前两支没遇到的：

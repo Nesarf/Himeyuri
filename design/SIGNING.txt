@@ -48,7 +48,7 @@ A. 换签名方案：用 HMYR 能精确实现的那一类（例如 HMAC-SHA256 �
    代价：与 OpenSSH 那条链不互通 —— 老验签器验不了新包。目标里「互通」这一条要改。
 
 B. 验签留在 JS，HMYR 只做内容核验。
-   好处：今天就能用；内容核验（每文件 sha256 加整份 digest）已经在 self/verify.hmyr 里。
+   好处：今天就能用；内容核验（每文件 sha256 加整份 digest）已经在 self/verify.hmoca 里。
    代价：发布链上仍有一处依赖 node —— 「完全独立」还差这一步。
 
 C. 真的在 HMYR 里做 16 位大整数 + SHA-512 + 曲线。
@@ -62,7 +62,7 @@ C. 真的在 HMYR 里做 16 位大整数 + SHA-512 + 曲线。
 是要「任何人用 OpenSSH 就能验」，还是要「整条链一行 JS 都不碰」，还是两者都要。
 这个取舍不该由写代码的人替人定，所以第四件停在测量与记录。
 
-已经确定的部分：内容核验在 HMYR 里（self/verify.hmyr，逐项 sha256 加整份 digest），
+已经确定的部分：内容核验在 HMYR 里（self/verify.hmoca，逐项 sha256 加整份 digest），
 说明书里那条「怎么自己验」写的也正是这条路 —— 它不需要签名，只需要 sha256。
 
 
@@ -71,9 +71,9 @@ C. 真的在 HMYR 里做 16 位大整数 + SHA-512 + 曲线。
 
 已经站住的六层，各有验收并挂进 check-all：
 
-    大整数（self/bigint.hmyr）     16 位字组成 256 位值，加、减、乘、比、模乘、求逆，
+    大整数（self/bigint.hmoca）     16 位字组成 256 位值，加、减、乘、比、模乘、求逆，
                                    40 项与 node 的 BigInt 对照
-    曲线（self/curve.hmyr）        twisted Edwards 上的点加、倍点、标量乘、点解压，
+    曲线（self/curve.hmoca）        twisted Edwards 上的点加、倍点、标量乘、点解压，
                                    26 项：0 与 1 的边界、2 到 8 都落在曲线方程上、
                                    基点压缩形式还原、真签名里的公钥落在曲线上，
                                    以及验签的三条（见第十节）
@@ -85,7 +85,7 @@ C. 真的在 HMYR 里做 16 位大整数 + SHA-512 + 曲线。
                  8 项与 node 的 crypto 对照：空串、三字节、112 字节（填充边界）、
                  200 字节（跨两块）。两个 bug 各留了一课：长度字段的高位零该在前，
                  以及十六进制串的「前八个字符是高 32 位」被我当成了低半。
-    线格式       站住（只做「解出来」这一步）。self/ssh.hmyr 解 base64、按 SSHSIG 的
+    线格式       站住（只做「解出来」这一步）。self/ssh.hmoca 解 base64、按 SSHSIG 的
                  结构取段：魔数、版本、公钥 blob、命名空间、保留、哈希算法、签名 blob。
                  9 项对着一份真的签名（dist/manifest.json.sig 的正文）逐字节比。
     签与验       站住（2026-10-24）。在此之前修过三处真错误却都没让它通过：模 L 的
@@ -108,16 +108,16 @@ C. 真的在 HMYR 里做 16 位大整数 + SHA-512 + 曲线。
 
 已经站住、有验收在跑的四层：
 
-    self/bigint.hmyr   256 位整数（16 位字）：加、减、乘、比、模乘、求逆
+    self/bigint.hmoca   256 位整数（16 位字）：加、减、乘、比、模乘、求逆
                        40 项对 node 的 BigInt，含模数本身与两个伪随机样本
-    self/curve.hmyr    twisted Edwards 的点加、倍点、标量乘、点解压
+    self/curve.hmoca    twisted Edwards 的点加、倍点、标量乘、点解压
                        23 项：0 与 1 的边界、2 到 8 落在曲线方程、基点压缩形式还原
-    self/sha512.hmyr   64 位字拆两个 32 位半，轮常量由素数立方根现算
+    self/sha512.hmoca   64 位字拆两个 32 位半，轮常量由素数立方根现算
                        8 项对 node 的 crypto（空串、三字节、填充边界、跨两块）
-    self/ssh.hmyr      base64 与 SSHSIG 结构
+    self/ssh.hmoca      base64 与 SSHSIG 结构
                        9 项对一份真签名逐段比
 
-验签本体（self/curve.hmyr 里的 验签）已经接起来，4 到 5 秒跑完，但对 node 生成的
+验签本体（self/curve.hmoca 里的 验签）已经接起来，4 到 5 秒跑完，但对 node 生成的
 合法签名仍然回答「不通过」。
 
 最后一次测量的两条矛盾，就是下一轮的起点：
@@ -169,7 +169,7 @@ r 只在签名时用。所以 r 算错不影响验签，验签不通过的原因
     S·B 与 R + k·A     相等（左右 x 逐位相同）
 
 这推翻了上一节的判断。验签方程按我的理解是成立的，两条边在 node 里也确实对上了 ——
-所以「共有理解错了」这个说法不成立，错的是 self/curve.hmyr 里那份实现。
+所以「共有理解错了」这个说法不成立，错的是 self/curve.hmoca 里那份实现。
 
 又一次栽在同一件事上：上一条「不等式成立」的结论来自控制台乱码，而这次把输出落成
 文件再读，同一个脚本给出的答案是「相等」。
@@ -250,10 +250,10 @@ sha512字节 已经被四份样本验过（「abc」等四条，与 node 一致�
 十一、发布链闭合：真签名验得过
 --------------------------------------------------------------------
 
-同日，self/sign.hmyr 把 self/ssh.hmyr 的解析与 self/curve.hmyr 的验签接起来，于是
+同日，self/sign.hmoca 把 self/ssh.hmoca 的解析与 self/curve.hmoca 的验签接起来，于是
 一份发布物的签名可以由 HMYR 自己验：
 
-    hmyr self/sign.hmyr dist/manifest.json.sig dist/manifest.json
+    hmyr self/sign.hmoca dist/manifest.json.sig dist/manifest.json
 
 一处必须记下的形状错误。第一版把「版本」与「公钥 blob」也拼进了被签数据。而
 PROTOCOL.sshsig 第 3 节里，被签数据只有五段：六字节魔数、命名空间、保留、哈希算法、
@@ -271,8 +271,8 @@ PROTOCOL.sshsig 第 3 节里，被签数据只有五段：六字节魔数、命�
 
 于是发布链上「内容对不对」与「签名对不对」两问，现在都在 HMYR 里回答：
 
-    self/verify.hmyr   逐文件 sha256 加整份 digest
-    self/sign.hmyr     SSHSIG 的被签数据 + Ed25519
+    self/verify.hmoca   逐文件 sha256 加整份 digest
+    self/sign.hmoca     SSHSIG 的被签数据 + Ed25519
 
 仍然留在外面的只有「签」这一个动作，而它要一把私钥。私钥不该进语言运行时，
 所以那一步交给 ssh-keygen，也交给任何持有钥匙的人。

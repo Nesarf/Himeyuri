@@ -5,11 +5,11 @@ C 版虚拟机：那台不是 JS 的机器
 
   HMYR 已经能解释 HMYR，但最底下那台是 JS 写的虚拟机。要让这门语言不依赖宿主，
   得有一台不是 JS 的机器执行同一份字节码。vm/hmyr.c 就是那一台：
-  它读 .hmyrb，执行它，不懂 HMYR 的语法 —— 只知道指令流。那正是正确的分工：
+  它读 .hmoks，执行它，不懂 HMYR 的语法 —— 只知道指令流。那正是正确的分工：
   它是机器，不是语言。
 
   编译：gcc -std=c11 -O2 -Wall -o hmyr-vm vm/hmyr.c
-  运行：./hmyr-vm 程序.hmyrb
+  运行：./hmyr-vm 程序.hmoks
 
   文件格式
 
@@ -71,16 +71,16 @@ C 版虚拟机：那台不是 JS 的机器
 
   入口的那一条规矩
 
-  self/run.hmyr 编译成字节码时，合并程序的规矩是「重名先到者赢」，
-  而 import 顺序是依赖在前 —— 于是 main 会是 self/lex.hmyr 自己那个自测。
+  self/run.hmoca 编译成字节码时，合并程序的规矩是「重名先到者赢」，
+  而 import 顺序是依赖在前 —— 于是 main 会是 self/lex.hmoca 自己那个自测。
   症状是「跑起来没输出、退出码 19」：19 是 lex 自测算出的词数，与入口毫无关系。
   现在 tools/emit-code.mjs 在合并之后用入口文件的 main 覆盖，
   规则写在注释里：谁是入口，谁的 main 说了算。
 
   启动器：一个可执行文件，两个入口
 
-    hmyr 程序.hmyr  [参数]   先用种子把它编成字节码，再跑那一份。
-    hmyr 程序.hmyrb [参数]   装载就绪的字节码，直接跑。
+    hmyr 程序.hmoca  [参数]   先用种子把它编成字节码，再跑那一份。
+    hmyr 程序.hmoks [参数]   装载就绪的字节码，直接跑。
 
   第一条是这一份文档最后落下的那一块。它做到的事很具体：从源码到运行，
   路上没有 JavaScript —— 种子是自己编出来的字节码，编出来的那一份也由这台机器跑。
@@ -106,7 +106,7 @@ C 版虚拟机：那台不是 JS 的机器
 
   验收在 test/cli.test.mjs（十九项）：跑通一份真实源码、参数照顺序到达、
   返回值就是退出码、编不过时报 E0009 且不跑半成品、找不到种子时说得出话、
-  字节码那条老路没变、以及 HMYR_KEEP 留下的那份文件确实是个 .hmyrb。
+  字节码那条老路没变、以及 HMYR_KEEP 留下的那份文件确实是个 .hmoks。
 
   ARM：这台机器编得进一块没有操作系统的板子
 
@@ -203,7 +203,7 @@ C 版虚拟机：那台不是 JS 的机器
   port/board-main.c 是上电之后真正跑的那一段 —— 装平台口、把字节码交出去、
   调 hmyr_运行，最后把出口一个字节一个字节地交给串口。它与 board-check.c
   共用 port/arm-port.c 的平台口，所以「接上了」这件事只验一次，两条路都算数。
-  字节码不靠文件系统：objcopy 把 program.hmyrb 打成一个对象文件，符号名由
+  字节码不靠文件系统：objcopy 把 program.hmoks 打成一个对象文件，符号名由
   文件名给（_binary_program_hmoks_start 与 _end），段名约定成 .program。
   链接脚本里那句 KEEP(*(.program)) 是必需的 —— board-main.c 对它是弱引用，
   而弱引用拦不住 --gc-sections；少了那一句，映像照样链得过、照样烧得进，
@@ -274,7 +274,7 @@ C 版虚拟机：那台不是 JS 的机器
   （并且要求零警告，链接时把栈放大到 64 MB —— 调用是 C 递归，默认那一兆不够），
   然后对同一份源码，JS 那台与 C 那台各跑一遍比输出。
   十二组：算数与递归、比较与分支、字符串（含中文与码点）、坏文件被拒、
-  自举层本身、用这台机器跑一个 .hmyr 文件、五个标准库、数字写成文字、
+  自举层本身、用这台机器跑一个 .hmoca 文件、五个标准库、数字写成文字、
   效果声明、大小写、归一化、堆账，以及第十四组的调用深度。
 
   第十组是三方的：C 那台跑一遍，JS 那台跑一遍，语料那一侧再独立读一遍
@@ -286,14 +286,14 @@ C 版虚拟机：那台不是 JS 的机器
   一段等距抽样（拿 conformance/unicode-nfc.txt 当另一侧的答案，它是一百一十一万行）、
   两个组合类不同的记号按两种先后排、以及韩文字母拼音节。
 
-  第五组是这一份存在的理由：self/run.hmyr 编成 40963 字节字节码，
+  第五组是这一份存在的理由：self/run.hmoca 编成 40963 字节字节码，
   由 C 机器执行，跑出它自己的四行自测（1 + 2 * 3 → 7 等）。
   那四行是 HMYR 写的解释器在做真实解析与求值，而下面那台不是 JS。
 
   下一步
 
-  已经做到：read_text、write_text、argv 都补上了，于是这台机器能跑一个 .hmyr 文件 ——
-  hmyr-vm self.hmyrb 目标.hmyr 这一行里，读文件、解析、求值全是 C 与 HMYR 在做，
+  已经做到：read_text、write_text、argv 都补上了，于是这台机器能跑一个 .hmoca 文件 ——
+  hmyr-vm self.hmoks 目标.hmoca 这一行里，读文件、解析、求值全是 C 与 HMYR 在做，
   中间没有 JavaScript。
 
   出口的规矩：带参数时用 命令行入口，不带参数时用 main（自举层自己的四行自测）。
@@ -301,26 +301,26 @@ C 版虚拟机：那台不是 JS 的机器
 
   已经验过的形状（都是 C 机器 + 自举层 + 目标文件）：
     算数与递归、while、字符串拼接、slice、chr(92) 这类反斜杠、记录与字段、
-    import "./b.hmyr"、import "../b.hmyr"、中文字符串。
+    import "./b.hmoca"、import "../b.hmoca"、中文字符串。
 
   还没通的一处，诚实记在这里
 
   规模上去之后会报「不认识的运算符：[object Object]」——
-  conformance/lib-strings.hmyr（二十二个函数、三百行）与 conformance/lib-tuples.hmyr
-  都复现，而上面那几种小形状都通。那句错来自 self/eval.hmyr 的 求二元，
+  conformance/lib-strings.hmoca（二十二个函数、三百行）与 conformance/lib-tuples.hmoca
+  都复现，而上面那几种小形状都通。那句错来自 self/eval.hmoca 的 求二元，
   它收到的 op 不是字符串。
 
   定位时的两条事实：
     一、自举层不再把 import 行当语句解析了（合并从 里加了 去导入）——
         那是一个真修复，但它没能解决这个错。
-    二、JS 那台跑同一份 .hmyrb 会先撞「调用深度」或 JS 栈，所以这一处只能在 C 上查 ——
+    二、JS 那台跑同一份 .hmoks 会先撞「调用深度」或 JS 栈，所以这一处只能在 C 上查 ——
         C 是唯一跑得到那里的机器。
 
   下一步的定位办法（写在明处，省下一次重走）：让 C 在 fail 时带上当前函数名与 pc，
   再用二分把它缩小到某一条指令。规模相关的错多半在某个数组的长度或索引上，
   而现在的报错只说「运算符不对」，离现场太远。
 
-  已经走了一步（2026-10-26）：self/eval.hmyr 的 求二元 在收尾处加了四支辨认 ——
+  已经走了一步（2026-10-26）：self/eval.hmoca 的 求二元 在收尾处加了四支辨认 ——
   若 op 是节点记录就说出它的 kind，若它自己带 op、带 name、带 value 也各说一句。
   于是消息从「[object Object]」变成了「一个带 value 的记录」。
 
@@ -342,9 +342,9 @@ C 版虚拟机：那台不是 JS 的机器
 
   那句话后来证明是守卫自己的错：C 这一侧的栈是所有帧共用的一条，
   拿 base 去比「本帧压了几个」在跨帧时会误判。收窄成「栈深不足」之后，
-  examples/twice.hmyr 立刻恢复正常（hi 42 琥珀音），所以那一次报的是假的。
+  examples/twice.hmoca 立刻恢复正常（hi 42 琥珀音），所以那一次报的是假的。
 
-  lib-strings.hmyr 的错因此仍然在，而且不是栈深不足 —— 否则会报 R0110。
+  lib-strings.hmoca 的错因此仍然在，而且不是栈深不足 —— 否则会报 R0110。
   现在能确定的是：求二元 收到的第一个实参是一个带 value 的字段值，
   所以在 节点.op 这条字段读取上，取到的不是 op。
 
@@ -352,14 +352,14 @@ C 版虚拟机：那台不是 JS 的机器
 
     症状   目标程序里写 if a && b { 时，条件解析停在 &&，于是 parse_if 看到的下一个
            记号不是花括号，报「语法层报的错：if」—— 错的文字是 if，与 && 毫无关系。
-    修法   self/chain.hmyr 加 or_op、and_op、logic、logic_tail、and_level、and_tail 六件，
-           并把 stmt.hmyr 的 from_here 从 compare 改成 logic。
-    顺带   self/eval.hmyr 的 求二元 也要认 && 与 ||（不短路，这一点写在注释里）。
+    修法   self/chain.hmoca 加 or_op、and_op、logic、logic_tail、and_level、and_tail 六件，
+           并把 stmt.hmoca 的 from_here 从 compare 改成 logic。
+    顺带   self/eval.hmoca 的 求二元 也要认 && 与 ||（不短路，这一点写在注释里）。
 
   修完之后 if a == 1 && b == 2 与 if a == 9 || b == 2 在 C 机器上都算对了，
   test/c-vm.test.mjs 第二节加了这两条。
 
-  但 lib-strings.hmyr 的错没变。所以它是第三件事，不是这一个。
+  但 lib-strings.hmoca 的错没变。所以它是第三件事，不是这一个。
 
   第三件事追到的地方（2026-10-26）：错消息现在会把那个记录的字段名说出来，
   而它说的是 ok,value —— 正是求值器自己的返回值 {ok: true, value: …}。
@@ -369,7 +369,7 @@ C 版虚拟机：那台不是 JS 的机器
   与 JS 那台一致。所以错位不在「嵌套调用」这件事本身，而在 lib-strings 那个规模上
   才出现的某个构造。
 
-  下一步该做的是二分：把 lib/strings.hmyr 与 conformance/lib-strings.hmyr 各删一半函数，
+  下一步该做的是二分：把 lib/strings.hmoca 与 conformance/lib-strings.hmoca 各删一半函数，
   直到某一次删掉之后错消失 —— 那一段就是复现。
 
   二分做完了，复现缩到四行（2026-10-26）：
@@ -387,16 +387,16 @@ C 版虚拟机：那台不是 JS 的机器
     id(1) == 1                        出错
 
   所以触发条件是「一个调用的结果当二元运算的左操作数」。
-  二分是这么走到的：conformance/lib-strings.hmyr 的第一个断言块就复现，
+  二分是这么走到的：conformance/lib-strings.hmoca 的第一个断言块就复现，
   再剥掉 import 与中文标识符，只剩上面四行。
 
-  下一格从这条出发看 self/chain.hmyr 的 compare 与 add 对
+  下一格从这条出发看 self/chain.hmoca 的 compare 与 add 对
   「左操作数是调用」这件事的处理 —— 那是自举 parser 的一条路径，
   与 C 的字节码执行无关（同一份目标代码在 JS 那台上也走同一条自举 parser，
   只是 JS 那台跑不到那么深就先撞调用深度了）。
 
-  又缩了一层（2026-10-26）：写了一个探针，import self/lex.hmyr 与 self/body.hmyr，
-  然后让自举层去解析 self/chain.hmyr，数它认出几个函数。探针报的是
+  又缩了一层（2026-10-26）：写了一个探针，import self/lex.hmoca 与 self/body.hmoca，
+  然后让自举层去解析 self/chain.hmoca，数它认出几个函数。探针报的是
   「语法层报的错：if」—— 而那探针自己一行 if 都没有。
 
   但那个结论后来被推翻了，而推翻它的方式值得写下来：直接在宿主上量。
@@ -419,7 +419,7 @@ C 版虚拟机：那台不是 JS 的机器
   逐指令对比做了（同一天），而且它给出的答案比预期更具体。
 
   两件工具：
-    tools/run-bytecode.mjs   用 JS 那台执行一份 .hmyrb（这是它的第一次正式入口）
+    tools/run-bytecode.mjs   用 JS 那台执行一份 .hmoks（这是它的第一次正式入口）
     HMYR_TRACE=1             两边都留最近四十条指令（pc、操作码、栈深）
     HMYR_CALLS=1             两边都打调用序列，只打「第几个函数」
 
@@ -485,12 +485,12 @@ C 版虚拟机：那台不是 JS 的机器
   时交回空值而不弹；RET 时还原外层的 g_base。
 
   修完立刻见效：
-    examples/twice.hmyr                  hi 42 琥珀音
-    conformance/lib-strings.hmyr         0
-    conformance/lib-tuples.hmyr          0
-    conformance/lib-json.hmyr            0
-    conformance/lib-protocol.hmyr        0
-    conformance/lib-tables.hmyr          16（还有一条，另一件事）
+    examples/twice.hmoca                  hi 42 琥珀音
+    conformance/lib-strings.hmoca         0
+    conformance/lib-tuples.hmoca          0
+    conformance/lib-json.hmoca            0
+    conformance/lib-protocol.hmoca        0
+    conformance/lib-tables.hmoca          16（还有一条，另一件事）
 
   也就是说：追了三轮的那条「实参错位」，是两台机器的栈语义差了一点点。
   而它只在「自举层替目标程序执行」这种深嵌套下才显形，所以小例子一直跑得对。
@@ -500,12 +500,12 @@ C 版虚拟机：那台不是 JS 的机器
   而 JS 那侧记录是 Map 或普通对象，两者都是「后者赢」。改成覆盖之后五个库全通。
 
   于是现在的对账表是：
-    examples/twice.hmyr                  hi 42 琥珀音
-    conformance/lib-strings.hmyr         0
-    conformance/lib-tuples.hmyr          0
-    conformance/lib-tables.hmyr          0
-    conformance/lib-json.hmyr            0
-    conformance/lib-protocol.hmyr        0
+    examples/twice.hmoca                  hi 42 琥珀音
+    conformance/lib-strings.hmoca         0
+    conformance/lib-tuples.hmoca          0
+    conformance/lib-tables.hmoca          0
+    conformance/lib-json.hmoca            0
+    conformance/lib-protocol.hmoca        0
   六条都在 test/c-vm.test.mjs 的第六、七节里，编不出 C 那台时明说跳过。
 
   事件流这个形式的代价要说一句：它每步写一行 stderr，跑一次几万行。
@@ -516,12 +516,12 @@ C 版虚拟机：那台不是 JS 的机器
 
   怎么复现（省下一次重走）：
     gcc -std=c11 -O2 '-Wl,--stack,67108864' -o hmyr-vm.exe vm/hmyr.c
-    node tools/emit-code.mjs self/run.hmyr self.hmyrb
-    HMYR_TRACE=1 ./hmyr-vm.exe self.hmyrb conformance/lib-strings.hmyr
+    node tools/emit-code.mjs self/run.hmoca self.hmoks
+    HMYR_TRACE=1 ./hmyr-vm.exe self.hmoks conformance/lib-strings.hmoca
 
   一次栈溢出的查法（2026 这一轮）
 
-  症状    hmyr bootstrap/pack.hmyrb 出 self.hmyrb self/eval.hmyr ... 退出码
+  症状    hmyr bootstrap/pack.hmtn 出 self.hmoks self/eval.hmoca ... 退出码
           0xC00000FD，零输出。那个数字是 Windows 的 STATUS_STACK_OVERFLOW，
           它只说「栈没了」，不说谁挖的。
 
@@ -533,13 +533,13 @@ C 版虚拟机：那台不是 JS 的机器
   读到的  拆行      一万六千七百零四层（逐字符尾递归，深度等于字符数）
           拼两半    三万零三百三十六层，然后崩
 
-  根因    拆行：每个字符一层 C 栈。self/pack.hmyr 与 self/run.hmyr 各一份。
+  根因    拆行：每个字符一层 C 栈。self/pack.hmoca 与 self/run.hmoca 各一份。
           拼两半：找中点时「两头各收一步、差一步就停」，差一步时 左 + 1 等于 止，
           左半区间与整段一样大，于是同一段再交给自己 —— 不收敛。
           块数一走到 2 就锁死。
 
   修法    拆行改成 while 循环；拼两半 的停条件从「差一步」改成「差两步」。
-          修完 eval.hmyr 从编不动变成 14311 字节、零点九秒，
+          修完 eval.hmoca 从编不动变成 14311 字节、零点九秒，
           自举固定点重来一遍是 43619 字节，B 与 C 逐字节相同。
 
   教训    深递归在这里有两个来源：源码写法（逐字符、折半算错）与机器模型

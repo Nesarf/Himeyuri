@@ -8,7 +8,7 @@ HMYR 全面自举：运行时、宿主依赖与启动
   这一句比「全面自举」重。全面自举说的是「能跑自己」，
   而完全独立说的是「不依赖任何宿主」——两者差着三层：
 
-    第一层 语言侧不依赖宿主：.hmyr 文件只用内置，不 import 宿主的任何模块。
+    第一层 语言侧不依赖宿主：.hmoca 文件只用内置，不 import 宿主的任何模块。
            这一层已经成立（2026-10-19 实测：语言侧对 node: 的依赖为零）。
 
     第二层 宿主缩成能力内核：文件、进程、终端、时间、环境各一组，
@@ -34,7 +34,7 @@ HMYR 全面自举：运行时、宿主依赖与启动
 现状（2026 年间实测，数字都来自当场检查）
 --------------------------------------------------------------------
 
-  ・启动方式：node bin/hmyr.mjs xxx.hmyr（启动器会把目标程序交给自举的求值器，而不是宿主的）
+  ・启动方式：node bin/hmyr.mjs xxx.hmoca（启动器会把目标程序交给自举的求值器，而不是宿主的）
   ・宿主：纯 ESM 的 Node 脚本，Node 24。
   ・构建：没有。无 package.json、无 tsconfig、无打包器、无 node_modules。
   ・第三方依赖：零。
@@ -48,7 +48,7 @@ HMYR 全面自举：运行时、宿主依赖与启动
       src/thr-worker.mjs          跑在另一个线程里的那一份
     启动那条路上一处都没有：Stage 0 的五份（loader · 子集切词 · 子集 parser · 诊断 ·
     最小求值器）全都不 import node:，它们只拿到能力对象。
-  ・规模（2026-10-20 实测）：src/ 三千四百三十九行；.mjs 一百三十七个，.hmyr 三十七个。
+  ・规模（2026-10-20 实测）：src/ 三千四百三十九行；.mjs 一百三十七个，.hmoca 三十七个。
   ・已经自制的那一半：self/ 那六件（lex · chain · stmt · body · eval · run）证明「Himeyuri 能跑 Himeyuri」。
     而「读它自己那一层」与「跑」都交出去了：Stage 0 现在是五份 1108 行
     （loader 114 · 子集切词 175 · 子集 parser 386 · 诊断 20 · 最小求值器 413）。
@@ -93,10 +93,10 @@ HMYR 全面自举：运行时、宿主依赖与启动
 
   这一轮又补上最后一块用户面的一格：vm/hmyr.c 自己就是启动器。
 
-    hmyr 程序.hmyr  先用种子编成字节码，再跑那一份
-    hmyr 程序.hmyrb 直接跑
+    hmyr 程序.hmoca  先用种子编成字节码，再跑那一份
+    hmyr 程序.hmoks 直接跑
 
-  于是「hmyr xxx.hmyr」这一步不再需要 Node。验在 test/bootstrap-seed.test.mjs（九项，
+  于是「hmyr xxx.hmoca」这一步不再需要 Node。验在 test/bootstrap-seed.test.mjs（九项，
   全程只有 gcc 与种子）与 test/cli.test.mjs（十九项）。
 
   这一格落地之后，design/HOSTMIN.txt 那张清单的用法要改一句：十项全局与八种构造
@@ -287,11 +287,11 @@ HMYR 全面自举：运行时、宿主依赖与启动
                   选后者，理由是先求对再求省：线程活得短，不回收的代价是内存，
                   而错收的代价是数据。代价写清楚：线程里 HMYR_GC 形同关闭。
 
-               二、线程拿到的是源码，不是文件。而 run_bytecode 走的是「读一份 .hmyrb」。
+               二、线程拿到的是源码，不是文件。而 run_bytecode 走的是「读一份 .hmoks」。
                   所以线程里要先编译 —— C 那台有内置种子（vm/pack_seed.h），
                   能编，但那条路现在长在 cli_main 里，而且它跑的是 main 或 命令行入口，
                   不是 thr_spawn 指定的那个入口。所以线程那一侧要自己走三步：
-                  写源码到临时文件、跑种子编出 .hmyrb、再装载它、找指定入口、run_func。
+                  写源码到临时文件、跑种子编出 .hmoks、再装载它、找指定入口、run_func。
                   第三步不需要新的函数签名 —— 线程局部已经让它们跑在临时机器上了。
 
              顺序也改了：不必先拆 cli_main。机器那一半已经就位，剩下的是
@@ -303,7 +303,7 @@ HMYR 全面自举：运行时、宿主依赖与启动
                   g_机 与另外十一个「每台一份」的全局成了线程局部（见文件头那个宏），
                   板子那一支这个宏是空的。于是十三个函数的签名一个都没动。
 
-               二、线程体。写源码到临时文件、找内置种子编成 .hmyrb、装载、找指定入口、
+               二、线程体。写源码到临时文件、找内置种子编成 .hmoks、装载、找指定入口、
                   跑、把结果的文本形式写进上下文。三步都不是新东西 —— 编译是 cli_main
                   那一趟、装载与入口查找是 run_bytecode 那一段，差别只是它们跑在线程的
                   机器上。编译那一步要 g_compile_quiet = 1，否则种子的「N 个块 → 路径」
@@ -349,24 +349,24 @@ HMYR 全面自举：运行时、宿主依赖与启动
 
        「不在路径上」与「不用搬」是两件事，账在这里分开写：
 
-        已搬：编译（self/compile.hmyr）、打包（self/pack.hmyr）、
-              求值（self/eval.hmyr + self/run.hmyr）、读（self/lex.hmyr 那六件）、
+        已搬：编译（self/compile.hmoca）、打包（self/pack.hmoca）、
+              求值（self/eval.hmoca + self/run.hmoca）、读（self/lex.hmoca 那六件）、
               启动（vm/hmyr.c 自己就是启动器）。于是「跑程序」这条路上
               没有 JavaScript，运行时不依赖任何工具。
-              测试框架也已经搬了：self/check.hmyr 读一份清单、一个一个跑、
+              测试框架也已经搬了：self/check.hmoca 读一份清单、一个一个跑、
               按退出码汇总。它只用两件世界面（读文本、跑程序），而清单由
               node tools/check-all.mjs --list 生成，只有这一个来源。
               验收是 test/check-hmyr.test.mjs（十一项，含「真的调度得动」：
               三个快套件、三个通过、没有一行不通过）。
-              嵌入也搬了：self/embed.hmyr 把一份 .hmyrb 摊成 C 源码。
+              嵌入也搬了：self/embed.hmoca 把一份 .hmoks 摊成 C 源码。
               为此世界面加了一格 read_bytes —— read_text 会按 UTF-8 解码，
               而字节码文件一过就坏。它同样六处对齐，验收是
               test/embed-hmyr.test.mjs（十六项，含「数组从 HMYRB 的魔数开始」）。
               搬的时候撞到的平方级也记在那儿：加号每拼一次就复制一次已经拼好的
               全部，四万三千字节摊成二十六万字符的 C 文本，逐字节拼会顶到四吉；
-              所以它先入行、再折半拼接，与 self/compile.hmyr 的 拼两半 同一个形状。
+              所以它先入行、再折半拼接，与 self/compile.hmoca 的 拼两半 同一个形状。
 
-        已搬，语料生成的第二支：self/ucd-nfc.hmyr 生成 vm/ucd-nfc.h（分解、组合类、
+        已搬，语料生成的第二支：self/ucd-nfc.hmoca 生成 vm/ucd-nfc.h（分解、组合类、
         组合对）。真语料上跑两秒半，产物 144299 字节、4060 行，与 tools/ucd-nfc.mjs
         的产物逐字节相同（test/ucd-nfc-hmyr.test.mjs，七项）。它是 design/INDEX.txt
         那五个内置的第一个真实用户 —— 全分解要按码点回头查，而记录一次建好、元组
@@ -374,23 +374,23 @@ HMYR 全面自举：运行时、宿主依赖与启动
         这一支撞到「slice 对元组切的是它写成文字之后的字符串」，于是「弹出栈顶」把
         元组变成了 "["，全分解只收六条 —— 改成递归之后才对上。
 
-        已搬，语料生成的第三支：self/ucd-case.hmyr 生成 vm/ucd-case.h（大小写映射
+        已搬，语料生成的第三支：self/ucd-case.hmoca 生成 vm/ucd-case.h（大小写映射
         与两个属性区间，读三份语料）。真语料上三秒，产物 137722 字节、4301 行，与
         tools/ucd-case.mjs 的产物逐字节相同（test/ucd-case-hmyr.test.mjs，七项）。
         这一支把排序写成了三次方（用「按位置重建元组」做插入排序，三千条要跑六分钟），
         换成可变数组之后三秒 —— 同一个排序在前一支已经写对过，说明「可变结构用数组」
         该当成默认，不该每次重新想。
-        已搬，语料生成的第一支：self/ucd-c.hmyr 从 codepoints.txt 生成两张
+        已搬，语料生成的第一支：self/ucd-c.hmoca 从 codepoints.txt 生成两张
         C 用的区间表（字母与记号）。验收是最结实的那种对拍：两份实现喂同一段
         两千行的小样本，产物逐字节相同（test/ucd-c-hmyr.test.mjs，十一项）。
         为此 tools/ucd-c.mjs 加了可选的输入与输出目录参数，缺省行为不变。
 
-        已搬，格式化器的第一版：self/fmt.hmyr 排的是表达式 —— 括号按优先级与结合性加，
+        已搬，格式化器的第一版：self/fmt.hmoca 排的是表达式 —— 括号按优先级与结合性加，
         打印两次与打印一次一样。验收是 test/fmt-hmyr.test.mjs（十六项：六个例子的
         期望排版，加上每一条再排一次不变）。整文件排版仍在 src/format.mjs，
         它要完整语句树，那是下一步。
 
-        已搬，整文件排版：self/fmt.hmyr 的 整文件 现在排的是整个文件，而不只是表达式。
+        已搬，整文件排版：self/fmt.hmoca 的 整文件 现在排的是整个文件，而不只是表达式。
         验收是 test/fmt-whole-hmyr.test.mjs（八项），三件事分开验：
           没有注释的文件（examples 里的 arith、over、twice）与 src/format.mjs 逐字节相同；
           有注释的文件里自举那一份把注释留下，而宿主那一份按设计丢弃并报 W0100 ——
@@ -402,19 +402,19 @@ HMYR 全面自举：运行时、宿主依赖与启动
         这一栏原来写着「LSP、格式化器、嵌入、打包发布、语料生成、测试框架都还是 JS」。
         今天核了一遍，一件不剩了。逐件与它的验收：
 
-          格式化器    self/fmt.hmyr        表达式与整文件都在，验收 fmtwholehmyr（8 项）
-          语料生成    self/ucd-c.hmyr      区间表，验收 ucdchmyr
-                      self/ucd-nfc.hmyr    归一化，验收 ucdnfchmyr（7 项，逐字节）
-                      self/ucd-case.hmyr   大小写，验收 ucdcasehmyr（7 项，逐字节）
-          测试框架    self/check.hmyr      验收 checkhmyr（11 项）
-          嵌入        self/embed.hmyr      验收 embedhmyr（16 项）
-          语言服务器  self/lsp.hmyr        验收 lsp（19 项）与 lspsymbol（10 项）
-          打包发布    self/zip.hmyr        验收 zip 与 zipmulti
-                      self/manifest.hmyr   验收 manifesthmyr
-                      self/package.hmyr    验收 packagehmyr
-                      self/release.hmyr    验收 releasehmyr
-                      self/verify.hmyr     验收 verifyhmyr
-          压缩        self/deflate.hmyr    699 行：存储块、固定 Huffman、动态 Huffman、LZ77
+          格式化器    self/fmt.hmoca        表达式与整文件都在，验收 fmtwholehmyr（8 项）
+          语料生成    self/ucd-c.hmoca      区间表，验收 ucdchmyr
+                      self/ucd-nfc.hmoca    归一化，验收 ucdnfchmyr（7 项，逐字节）
+                      self/ucd-case.hmoca   大小写，验收 ucdcasehmyr（7 项，逐字节）
+          测试框架    self/check.hmoca      验收 checkhmyr（11 项）
+          嵌入        self/embed.hmoca      验收 embedhmyr（16 项）
+          语言服务器  self/lsp.hmoca        验收 lsp（19 项）与 lspsymbol（10 项）
+          打包发布    self/zip.hmoca        验收 zip 与 zipmulti
+                      self/manifest.hmoca   验收 manifesthmyr
+                      self/package.hmoca    验收 packagehmyr
+                      self/release.hmoca    验收 releasehmyr
+                      self/verify.hmoca     验收 verifyhmyr
+          压缩        self/deflate.hmoca    699 行：存储块、固定 Huffman、动态 Huffman、LZ77
                                             验收 deflate
 
         于是「得先有压缩才能搬打包发布」这句话也失效了 —— deflate 早就在了，
@@ -451,13 +451,13 @@ HMYR 全面自举：运行时、宿主依赖与启动
   结论里会明说自举层还差几格，不藏。验收是 test/independence.test.mjs（十二项）。
 
   入口这一层（2026-10 补）：vm/pack_seed.h 把种子摊成 C 数组（43619 字节，3653 行，
-  由 self/embed.hmyr 生成），vm/hmyr.c 在桌面那一支把它编进来。于是 hmyr 自带编译器：
-  一份 .hmyr 进来，cli_main 用内置种子编成字节码、再跑那一段 —— 全程不经 node，
-  也不需要旁边有 bootstrap/pack.hmyrb。找种子的顺序变成「内置优先」，然后才是
+  由 self/embed.hmoca 生成），vm/hmyr.c 在桌面那一支把它编进来。于是 hmyr 自带编译器：
+  一份 .hmoca 进来，cli_main 用内置种子编成字节码、再跑那一段 —— 全程不经 node，
+  也不需要旁边有 bootstrap/pack.hmtn。找种子的顺序变成「内置优先」，然后才是
   HMYR_SEED、可执行文件旁边、当前目录（那三条留给「想换一份种子」的人）。
   板子那一支不编它：那台没有文件系统，也用不到 cli_main，而几百千字节的常量会塞满 flash。
   验收是 test/self-contained.test.mjs（十二项，含「编译到一个没有 bootstrap/ 的目录里，
-  跑 examples/twice.hmyr，输出正好是 hi 42 琥珀音」）。
+  跑 examples/twice.hmoca，输出正好是 hi 42 琥珀音」）。
 
 
 三步（按顺序，前一步不成立就不走下一步）
@@ -470,11 +470,11 @@ HMYR 全面自举：运行时、宿主依赖与启动
 
   二、启动器还原
       把 node 那一步缩成最小能力内核：只留读文件、写终端、跑进程、取时间与环境。
-      求值器逐步换成 self/eval.hmyr 那条线（先补语句层，再补记录）。
+      求值器逐步换成 self/eval.hmoca 那条线（先补语句层，再补记录）。
       输出与输入仍走可注入的通道——这两条优势不能为了自举而丢。
 
   三、自举闭环
-      宿主只剩能力内核，而 hmyr xxx.hmyr 由 HMYR 写的启动器完成。
+      宿主只剩能力内核，而 hmyr xxx.hmoca 由 HMYR 写的启动器完成。
       到那时 Node 只是众多宿主之一，而不是唯一的那一个。
 
 底线（比进度更要紧）
@@ -483,7 +483,7 @@ HMYR 全面自举：运行时、宿主依赖与启动
   ・每条断言仍要可查。自举不换来任何「先跑起来再说」。
   ・能力边界写在明处：做不到的说做不到，不装作支持。
   ・效果声明与可注入这两条优势不许为自举让路：谁动世界谁声明，输入输出都要能被断言。
-  ・换宿主时，同一份 .hmyr 的行为必须一致；不一致就是契约没写清，先补契约。
+  ・换宿主时，同一份 .hmoca 的行为必须一致；不一致就是契约没写清，先补契约。
 
 不做什么
 --------------------------------------------------------------------

@@ -88,7 +88,7 @@
 
   第六条是查出来的，不是想出来的。第一次只跑五条时 TextDecoder 落在「未执行」里——
   它是 read_text 里 UTF-16 那两条分支用的，而 UTF-8 BOM 那条走的是 Buffer.toString。
-  于是把「目标程序自己存成 UTF-16」当第六条：self/run.hmyr 读目标文件用的就是 read_text，
+  于是把「目标程序自己存成 UTF-16」当第六条：self/run.hmoca 读目标文件用的就是 read_text，
   那一条正好把它走到。它跑出来的结果（解码后语法层报错）不影响这一节要问的事。
 
   结果：

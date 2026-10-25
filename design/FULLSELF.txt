@@ -9,7 +9,7 @@
 
 按行数算，今天的比例是 8017 / 20965，约百分之三十八：
 
-    self/*.hmyr     32 个文件   8017 行    HMYR 自己
+    self/*.hmoca     32 个文件   8017 行    HMYR 自己
     src/*.mjs       28 个文件   6450 行    求值器、编译器、加载器、词法、语法
     tools/*.mjs     25 个文件   2762 行    打包、清单、发布、检查器
     vm/*.c           1 个文件   3736 行    字节码机
@@ -34,10 +34,10 @@ test/*.mjs 那 14850 行不计入，因为验收是验收，不是产品的一�
     一、字句法（lexer/parser）。self/ 里已有能跑的那一份，且与 JS 版逐条对齐过
        （selflex、subsetlex、subsetparse 三套验收）。这一段最接近完成。
 
-    二、求值器。self/eval.hmyr 已经能跑，但与 src/eval.mjs 比还缺内置与效果检查的
+    二、求值器。self/eval.hmoca 已经能跑，但与 src/eval.mjs 比还缺内置与效果检查的
        一些分支。stage0eval 与 minimaleval 两套验收在量它到底需要多少。
 
-    三、编译器。self/compile.hmyr 能编一部分，hmyrcompile 那套验收在量「两套编译器
+    三、编译器。self/compile.hmoca 能编一部分，hmyrcompile 那套验收在量「两套编译器
        给出同一个答案」的边界。
 
     四、字节码机。vm/hmyr.c 是唯一没有 HMYR 版本的一层，也是最大的一块（3736 行 C）。
@@ -65,7 +65,7 @@ test/*.mjs 那 14850 行不计入，因为验收是验收，不是产品的一�
 五、现在就该做的两件小事
 --------------------------------------------------------------------
 
-    一、量第一个数。把 self/ 那一套（self/*.hmyr 的求值器与编译器）真的接到
+    一、量第一个数。把 self/ 那一套（self/*.hmoca 的求值器与编译器）真的接到
        check-all 的一个开关后面，跑一次，数出「换掉之后还绿多少套」。没有这个数，
        后面四段都是空谈。
 
@@ -75,7 +75,7 @@ test/*.mjs 那 14850 行不计入，因为验收是验收，不是产品的一�
 两个数都量了。它们各自是「换掉 src/ 之后还绿多少套」的下界，合起来把起点定得更窄。
 
 第一件：求值这一层，十四段程序全部对上（14 / 14）。量具 tools/self-coverage.mjs，
-挂进 check-all 叫 selfcov。这个数说的是「self/run.hmyr 那条全 HMYR 的链，在十四段
+挂进 check-all 叫 selfcov。这个数说的是「self/run.hmoca 那条全 HMYR 的链，在十四段
 小程序上与 JS 版给出同样的值」，不是「换掉 src/ 之后还有多少套是绿的」。
 
 第二件（2026-10-24）：加载这一层，二十七份真实源码全部认得下来（27 / 27）。
@@ -92,7 +92,7 @@ test/*.mjs 那 14850 行不计入，因为验收是验收，不是产品的一�
 把诊断装成宿主 loader 那个形状」。所以第一段还差一件事：把 self/ 的加载链包成一个与
 src/loader.mjs 同形状的东西。那件事做完，这个数才量得出来。
 
-第三件（2026-10-24）：模块加载的语义也量了。self/run.hmyr 的 加载走 照宿主 loader
+第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 E0301；
 另外引的文件不在就报 E0302（宿主也是这个码）。顺序取后序，于是 order 逐项相同。
 
@@ -103,7 +103,7 @@ src/loader.mjs 同形状的东西。那件事做完，这个数才量得出来�
 于是「加载」这一层有两半都对齐了：认不认得（selfload，27 / 27），以及按什么规矩加载
 （selfmod，order 与错误码）。还差的一半是树的形状：
 宿主 loader 交出的 ast 是 subset-parse 那一套（Module、Import、Fn、Block、Literal …，
-带 line 与 column），而 self/chain.hmyr 交出的节点是另一套（num、str、name、bin、call、
+带 line 与 column），而 self/chain.hmoca 交出的节点是另一套（num、str、name、bin、call、
 field、index、tuple、record、unary —— 小写单字、不带位置、也没有声明与语句层）。
 两套名字不同、字段不同、层次也不同。
 
@@ -113,7 +113,7 @@ subset-parse 的形状，要么让宿主这一侧接受两种形状。在那之�
 runUnit，也就都要树。这一段的工作量比上面两件加起来大，且它是一个形状问题，
 不是一批 bug。
 
-第四件（2026-10-24）：位置。self/lex.hmyr 的 scan 与 scan_lines 现在给每个 token 带上
+第四件（2026-10-24）：位置。self/lex.hmoca 的 scan 与 scan_lines 现在给每个 token 带上
 line 与 column —— token 本来就带着字符偏移，所以这一遍只是一次线性扫描；位置在词法这一层
 有了，后面的节点才有东西可抄。这一件不改任何现有语义，只多两个字段。
 
@@ -130,7 +130,7 @@ line 与 column —— token 本来就带着字符偏移，所以这一遍只是
 位置之所以先做，是因为它只加字段、不改语义，而后面每一步都要它：一个说不出第几行的
 诊断，没法与宿主的诊断对照。
 
-第五件（2026-10-24）：节点位置。self/chain.hmyr 的表达式节点现在带 line 与 column ——
+第五件（2026-10-24）：节点位置。self/chain.hmoca 的表达式节点现在带 line 与 column ——
 num、str、name、err、bin、unary、call、field、index 处各从它那个 token 抄一次。
 这一件同样只加字段，不改语义。
 
@@ -146,7 +146,7 @@ num、str、name、err、bin、unary、call、field、index 处各从它那个 t
 还没做的：语句层（let、var、return、assign、expr、if、while）还没有位置；声明层（Fn、
 Block、Module、Import）在 self 这一侧还没有节点 —— 宿主的树里有，这边只是一组元组。
 这两条是「形状」剩下的主要工作。
-第六件（2026-10-24）：语句层也带位置。self/stmt.hmyr 的 let、var、return、assign、expr、
+第六件（2026-10-24）：语句层也带位置。self/stmt.hmoca 的 let、var、return、assign、expr、
 if、while 各从它该抄的那个 token 抄一次 —— 关键字节点抄关键字，赋值抄名字，表达式语句抄
 语句起始那个 token，与宿主那边同一个规矩。
 
@@ -156,7 +156,7 @@ selfnodes 从六项长到八项。
 至此表达式层与语句层的位置都齐了。剩下的是声明层：宿主的树里有 Module、Import、Fn、Block
 四个节点，self 这一侧还是元组 —— 那是「形状」最后也是最实的一块。它一动，两侧的节点数才
 会真正相等；在此之前的比较都只能问「self 的位置宿主有没有」，还不能问「节点对不对得上」。
-第七件（2026-10-24）：声明层。self/run.hmyr 的 造模块 把 parse_decls 的元组包成
+第七件（2026-10-24）：声明层。self/run.hmoca 的 造模块 把 parse_decls 的元组包成
 Module → Fn → Block 三层 —— 宿主 loader 与 runUnit 认得的那三种东西。解析本身没动，
 包一层是为了让两侧的节点数能对上。
 
@@ -266,7 +266,7 @@ If 的 then 包 Block、Return 的空值用 null、params 的形状。
 
 顺带抓到两件：
 
-  一、批量替换漏了 run.hmyr 里 n.kind == "if" || n.kind == "while" 那一处判断。症状是 Block
+  一、批量替换漏了 run.hmoca 里 n.kind == "if" || n.kind == "while" 那一处判断。症状是 Block
      的语句层不再包 ExprStmt，selftree 立刻红 —— 而它红得对，因为那时 self 与宿主的语句层
      确实差了这一层。
   二、selfcompile 期望的函数数过期了：lex 26 对 27、run 32 对 43。那不是改名气的，是这几轮
@@ -288,7 +288,7 @@ selfhandoff、selfcompile、hmyrcompile。
 以及 Ident 的 text → name 这一类字段改名。self-tree 除了改读新字段名之外无事可做 ——
 一次对齐从外面看起来就该是这样。
 
-又一次被 selfcompile 抓到：run.hmyr 从 43 个函数变成 44（新增 转参数们）。这套件的固定数字
+又一次被 selfcompile 抓到：run.hmoca 从 43 个函数变成 44（新增 转参数们）。这套件的固定数字
 今天第二次报红，两次都不是它错 —— 它报的正是「规模变了」。
 第十四件（2026-10-24）：最后的翻译搬进 HMYR，适配器归零。
 
@@ -318,7 +318,7 @@ selfhandoff、selfcompile、hmyrcompile。
 一条管「谁先被读到」，一条管「那一个文件长什么样」。宿主 loader 是把这两件合成一次的，
 所以 造整棵 也合成一次 —— 交回一串 Module，按依赖顺序排。
 
-判据做在一个临时工程上（lib.hmyr 提供 double，main.hmyr 引它并用 21 调它）：
+判据做在一个临时工程上（lib.hmoca 提供 double，main.hmoca 引它并用 21 调它）：
 造出两个 Module 且依赖在前；两个 Module 依次登记进同一个 Runtime 之后，main 跑出 42。
 跨模块调用能成立，是因为宿主的函数表本来就是扁平的 —— 这一点在 loader 第一次写的时候就写清了。
 
@@ -330,8 +330,8 @@ selfhandoff 从 10 项长到 12 项。
 第十六件（2026-10-24）：第一套真的换了 loader。
 
 tools/self-bridge.mjs 是一座同形状的桥：loadUnit 与 runUnit 的签名不变，里面换成
-self/run.hmyr 的 造整棵。引导那一层还得借宿主 —— 要跑 HMYR 写的加载器，总得先有个东西
-跑它 —— 但从「读 .hmyr 文件、搭出树」这一步起，做主的已经是 HMYR 自己：递归、去重、
+self/run.hmoca 的 造整棵。引导那一层还得借宿主 —— 要跑 HMYR 写的加载器，总得先有个东西
+跑它 —— 但从「读 .hmoca 文件、搭出树」这一步起，做主的已经是 HMYR 自己：递归、去重、
 环拒绝、后序。
 
 换了两套：
@@ -350,7 +350,7 @@ HMYR 代码、跑在宿主求值器上。那是一个数，不是一句结论：
     二、true 与 false 在这一侧是标识符，在宿主那边是字面量 —— 不转的话宿主会去找一个叫
         false 的名字，报 R0104，而那句话听起来像拼写错误；
     三、记录字面量里的字段值没有翻 —— 宿主于是去找一个叫 undefined 的名字；
-    四、行首是声明 只看第一行，而 lex.hmyr 以注释开头，整份被当成裸语句包进 fn main。
+    四、行首是声明 只看第一行，而 lex.hmoca 以注释开头，整份被当成裸语句包进 fn main。
 
 四条都在包装层修好，解析与求值两条路仍然不动。
 第十七件（2026-10-24）：扩面，以及代价。
@@ -366,7 +366,7 @@ selfhandoff 12 项通过。两套换不了 —— selfmod 与 selfload 本身就
 
 所以做了取舍：
 
-    selfpos      留在桥上 —— 它只加载 lex.hmyr（两百来行），六秒，成本可接受；
+    selfpos      留在桥上 —— 它只加载 lex.hmoca（两百来行），六秒，成本可接受；
                  它是「真实套件真的走 HMYR 的 loader」这一条的常驻证据
     其余四个     恢复宿主 loader —— 它们的价值是比两边的产出，走桥不改变结论却要付一分多钟
     selfbridge   新加的桥专项验收（8 项，约 13 秒）：同一个文件两边都认得、函数名一模一样、
@@ -377,14 +377,14 @@ selfhandoff 12 项通过。两套换不了 —— selfmod 与 selfload 本身就
 （vm 比解释器快一个量级），或者先把求值器换过去。
 第十八件（2026-10-24）：甲路撞在一块更硬的地方 —— 尾调用。
 
-把 self/run.hmyr 编成字节码：167 个函数、11135 条指令、67 KB，编得很干净。快也确实快：
+把 self/run.hmoca 编成字节码：167 个函数、11135 条指令、67 KB，编得很干净。快也确实快：
 造整棵 在字节码机上 0.33 秒，在解释器上要一到两秒。
 
 但它跑不起来。深度一过 4000 就撞 JS 栈（3000 抛、4000 过、12000 抛，边界不干净），
 而在桥这样的调用深度里 4000 也不稳。
 
 原因不在字节码，在一条还没补的优化：解释器把尾递归吃掉（src/eval.mjs 的 TailCall），
-字节码机老实压栈。而 tokenize 是「每读一个 token 递归一次」—— lex.hmyr 一千多个 token
+字节码机老实压栈。而 tokenize 是「每读一个 token 递归一次」—— lex.hmoca 一千多个 token
 就是一千多层。这一千层在解释器里是常数栈，在字节码机里是真栈。
 
 于是这件事被重新定性了：它不是「换个配置就快七十倍」，而是「虚拟机缺尾调用」。
@@ -399,7 +399,7 @@ selfhandoff 12 项通过。两套换不了 —— selfmod 与 selfload 本身就
 改动在 src/vm.mjs：CALLF 的下一条指令是 RET 时，换掉这一帧而不是压新的 —— 槽、效果集、
 指令指针与栈都重来，深度不变。这就是解释器里那条规矩（TailCall）搬到显式栈上。
 
-为什么非要它：tokenize 是「每读一个 token 递归一次」，lex.hmyr 一千多个 token 就是一千多层。
+为什么非要它：tokenize 是「每读一个 token 递归一次」，lex.hmoca 一千多个 token 就是一千多层。
 解释器把它吃成循环，字节码机老实压栈 —— 同一个程序在一边是常数栈，在另一边是真栈。
 
 补上之后，造整棵 在字节码机上 0.13 秒跑出结果（深度 2000、4000、12000 都过），
@@ -413,10 +413,10 @@ selfhandoff 12 项通过。两套换不了 —— selfmod 与 selfload 本身就
 
 也随之改了两处上限：test/bytecode.test.mjs 的函数数（151 到 173）与指令数上限（一万到一万二），
 test/c-vm.test.mjs 的内存峰值界线（256 到 320 兆）。两处都不是宽容，是自举层确实长大了：
-加载器那一串搬进 self/run.hmyr 之后，C 那台跑它的峰值从两百出头涨到两百九十上下。
+加载器那一串搬进 self/run.hmoca 之后，C 那台跑它的峰值从两百出头涨到两百九十上下。
 
-runtime/run.hmyrb 从此入库（67 KB）。它会过期，所以 selfbridge 里钉了一条：字节码不能比
-self/run.hmyr 旧 —— 旧了桥会静默退回解释器，而套件该替人记住这件事。
+runtime/run.hmoks 从此入库（67 KB）。它会过期，所以 selfbridge 里钉了一条：字节码不能比
+self/run.hmoca 旧 —— 旧了桥会静默退回解释器，而套件该替人记住这件事。
 第二十件（2026-10-24）：五套真实套件走 HMYR 的 loader。
 
 字节码通了之后，把 selfcov、selfnodes、selftree、selfhandoff 也接到桥上 —— 它们之前走桥
@@ -470,9 +470,9 @@ src/adapter.mjs 是「宿主源码 → self 形状」的那一层，它还在产
 
 再加上前一轮修好的六个，改名波及的那十二个测试全部回绿。
 
-顺带改了桥的新鲜度检查。原来只看 self/run.hmyr 的修改时间，而 runtime/run.hmyrb 里含着
-它 import 的全部代码 —— 改了 chain.hmyr 而 run.hmyr 没动时，产物被判成「新鲜」，桥于是
-拿一份旧字节码跑得很欢。现在比的是 self/ 下所有 .hmyr 里最新的那一个，selfbridge 里那条
+顺带改了桥的新鲜度检查。原来只看 self/run.hmoca 的修改时间，而 runtime/run.hmoks 里含着
+它 import 的全部代码 —— 改了 chain.hmoca 而 run.hmoca 没动时，产物被判成「新鲜」，桥于是
+拿一份旧字节码跑得很欢。现在比的是 self/ 下所有 .hmoca 里最新的那一个，selfbridge 里那条
 断言也照这个口径写。
 
 这一批的教训只有一句：改名这种「一处动、处处看」的改动，靠「我跑了哪些套件」是不够的，
@@ -536,13 +536,13 @@ tools/loader-swap.mjs 把每个 import 宿主 loader 的套件换成桥跑一遍
 第二十六件（2026-10-24）：工程地图 —— 改一个文件，跑哪几套。
 
 每改一处就拉十套、隔一阵还跑十几分钟的量具，是拿时间买「不用想影响面」。而那些关系一直是
-写着的：哪个套件加载哪个 .hmyr、self/ 六份之间谁 import 谁、哪个套件 import 哪个 src 模块。
+写着的：哪个套件加载哪个 .hmoca、self/ 六份之间谁 import 谁、哪个套件 import 哪个 src 模块。
 只是没人把它们拼起来。
 
 tools/impact.mjs 拼起来了。它读套件表，抽出每个套件的 loadUnit 目标与 src import，
 再顺着 self/ 的 import 链往回走，答三行：直接、间接、无关。
 
-    node tools/impact.mjs self/body.hmyr
+    node tools/impact.mjs self/body.hmoca
       直接   1   selfbody
       间接  19   selfrun selfimport selfcompile bootstrap subsetload …
       无关 145   （不跑）
@@ -579,16 +579,16 @@ tools/impact.mjs 拼起来了。它读套件表，抽出每个套件的 loadUnit
 tools/bridge-cost.mjs 把两条路的同一份文件各卡一次表（中位数，三次）：
 
     样本                宿主 loader     桥          倍数
-    locale.hmyr            1.1 ms     44.4 ms      38.7
-    color.hmyr             1.3 ms     37.6 ms      28.0
-    json.hmyr              3.5 ms    332.7 ms      95.0
-    self/run.hmyr         16.4 ms   2986.8 ms     182.5
-    examples/demo.hmyr     0.3 ms      7.4 ms      24.1
+    locale.hmoca            1.1 ms     44.4 ms      38.7
+    color.hmoca             1.3 ms     37.6 ms      28.0
+    json.hmoca              3.5 ms    332.7 ms      95.0
+    self/run.hmoca         16.4 ms   2986.8 ms     182.5
+    examples/demo.hmoca     0.3 ms      7.4 ms      24.1
 
-桥的引导（读 self/run.hmyr 那六份，一次性）是 3205 ms。
+桥的引导（读 self/run.hmoca 那六份，一次性）是 3205 ms。
 
 结论分两层。第一层：这个数量级不适合做默认 —— 一个普通程序加载要几十到几百毫秒，
-而 self/run.hmyr 那种带整棵 import 树的要三秒。第二层：慢在哪里是很清楚的 ——
+而 self/run.hmoca 那种带整棵 import 树的要三秒。第二层：慢在哪里是很清楚的 ——
 桥的每一毫秒都花在「造整棵」上，而那是 HMYR 代码跑在宿主求值器上。把它编成字节码交给
 vm 跑，或者干脆交给 C 那台，这条线才谈得上做默认。
 
@@ -599,11 +599,11 @@ vm 跑，或者干脆交给 C 那台，这条线才谈得上做默认。
 把桥切成字节码路径，同一张表重量了一遍：
 
     样本                宿主 loader     桥（字节码）   倍数
-    locale.hmyr            1.1 ms     49.2 ms       45.3
-    color.hmyr             1.0 ms     37.6 ms       37.0
-    json.hmyr              3.7 ms    343.2 ms       93.4
-    self/run.hmyr         16.0 ms   3011.5 ms      188.5
-    examples/demo.hmyr     0.3 ms      7.1 ms       27.9
+    locale.hmoca            1.1 ms     49.2 ms       45.3
+    color.hmoca             1.0 ms     37.6 ms       37.0
+    json.hmoca              3.7 ms    343.2 ms       93.4
+    self/run.hmoca         16.0 ms   3011.5 ms      188.5
+    examples/demo.hmoca     0.3 ms      7.1 ms       27.9
 
 与解释器那一路（44.4 / 37.6 / 332.7 / 2986.8 / 7.4）在同一个量级，有的还略慢。
 
@@ -619,9 +619,9 @@ vm 跑，或者干脆交给 C 那台，这条线才谈得上做默认。
 tools/bridge-share.mjs 把这两段拆开量（三次取中位，毫秒）：
 
     文件             只调造整棵     走完整 loadUnit    包装部分
-    locale.hmyr        53.2          54.4            1.2  （2%）
-    json.hmyr         377.8         345.3          -32.5  （噪声）
-    self/run.hmyr    3044.4        3055.0           10.7  （0%）
+    locale.hmoca        53.2          54.4            1.2  （2%）
+    json.hmoca         377.8         345.3          -32.5  （噪声）
+    self/run.hmoca    3044.4        3055.0           10.7  （0%）
 
 包装（深转、诊断、别名）几乎不占时间。慢的全部在「造整棵」里面 —— 也就是 self 的
 lex/chain/stmt/body 那一串在造记录、造元组。
@@ -633,7 +633,7 @@ lex/chain/stmt/body 那一串在造记录、造元组。
 照出两边哪里不一致；当默认要的是另一个量级的东西。
 第三十一件（2026-10-24）：求值器跑在字节码机上，并且给出同样的答案。
 
-tools/self-vm-eval.mjs 把 runtime/run.hmyrb 装进虚拟机 —— 也就是说自举那一层的 lexer、chain、
+tools/self-vm-eval.mjs 把 runtime/run.hmoks 装进虚拟机 —— 也就是说自举那一层的 lexer、chain、
 语句解析、body 解析与求值器全都是字节码在执行 —— 然后让它解释四段程序，与宿主求值器比答案：
 
     算术            7 · 7
@@ -648,7 +648,7 @@ tools/self-vm-eval.mjs 把 runtime/run.hmyrb 装进虚拟机 —— 也就是说
 但它把「求值器自举」从设想变成了一个可以继续加样本的量具。
 第三十二件（2026-10-24）：工具链也在虚拟机上跑起来了。
 
-tools/self-vm-compile.mjs 把 runtime/pack.hmyrb（自举那一层的编译与打包）装进虚拟机，
+tools/self-vm-compile.mjs 把 runtime/pack.hmoks（自举那一层的编译与打包）装进虚拟机，
 让「编源码 → 打包」整条跑在字节码上，再与 JS 那位逐字节比：
 
     直接返回一个数        35 字节
@@ -668,7 +668,7 @@ tools/self-vm-compile.mjs 把 runtime/pack.hmyrb（自举那一层的编译与�
 它还不含「签名」那一段（那部分仍由 JS 侧的工具调用 HMYR 的验签），是这条线上剩下的最后一块。
 第三十三件（2026-10-24）：签名也跑在虚拟机上 —— 自举这条线闭合了。
 
-runtime/sign.hmyrb 是 self/sign.hmyr 的字节码（92 个函数、4097 条指令、24443 字节）。
+runtime/sign.hmoks 是 self/sign.hmoca 的字节码（92 个函数、4097 条指令、24443 字节）。
 虚拟机加载它，让它验一次真实签名：
 
     真实签名（dist/manifest.json.sig）     验得过 true
@@ -676,7 +676,7 @@ runtime/sign.hmyrb 是 self/sign.hmyr 的字节码（92 个函数、4097 条指�
 
 8 项全过（五段字节对照 + 两条验签）。
 
-顺带被静态核对抓到两处旧账：sha512.hmyr 里 一64 与 零64 声明 -> Int，实际交回 (1, 0) 与 (0, 0)。
+顺带被静态核对抓到两处旧账：sha512.hmoca 里 一64 与 零64 声明 -> Int，实际交回 (1, 0) 与 (0, 0)。
 那两个声明一直写着 Int，而检查以前看不见（因为返回类型根本没进树）。这一类错正是「收下返回类型」
 之后才开始现形的 —— 声明与实情不符的地方，从此会当场说出来。
 
@@ -706,7 +706,7 @@ tools/self-checkup.mjs 把三段串起来，用一份报告回答「这台机器
 因为它是「编译 + 打包 + 验签」里最重的活，而验签的 15.6 秒主要在 dist 那份清单上。
 第三十五件（2026-10-24）：工具链的第一格 —— 格式化器上了虚拟机。
 
-设计与编译、打包、验签同构：emit-code 把 self/fmt.hmyr 编成 runtime/fmt.hmyrb（23 个函数、
+设计与编译、打包、验签同构：emit-code 把 self/fmt.hmoca 编成 runtime/fmt.hmoks（23 个函数、
 988 条指令、5568 字节），虚拟机加载它，调 整文件(源)，与宿主求值器跑同一份输入的输出比。
 
     简单函数 · 缩进乱了 · 嵌套 if · 多个函数     四段两边同一段文本，4 项全过
@@ -739,9 +739,9 @@ tools/self-checkup.mjs 把三段串起来，用一份报告回答「这台机器
 这一条记在这里，好让下一次有人（包括我自己）想搬测试框架时先看到这两个数。
 
 要补一句更正：写这一件之前我没先读 design/SELFRUN.txt 的账，而那里早就记着
-「测试框架也已经搬了：self/check.hmyr 读一份清单、一个一个跑、按退出码汇总」，
+「测试框架也已经搬了：self/check.hmoca 读一份清单、一个一个跑、按退出码汇总」，
 验收在 test/check-hmyr.test.mjs（十一项）。所以「搬测试框架」根本不是待办 ——
-我量的是 check-all 那层 JS 外壳（171 套的调度器），而 self/check.hmyr 是它旁边
+我量的是 check-all 那层 JS 外壳（171 套的调度器），而 self/check.hmoca 是它旁边
 另一条已经跑通的路。
 
 两个数仍然有用（它们说明「换外壳省不下时间」），但结论要改一个字：
@@ -797,8 +797,8 @@ design/TOUR.txt 是「看一眼 Himeyuri」那份导览，它有五处停在半�
 verifyhmyr 两套的「真跑」都挂在 HMYR_HEAVY 之后，而常规全量从不设那个变量。
 于是「真发一次」这条路上，只有手动跑过的人知道它通不通。
 
-先手动走了一遍：release.hmyr 造三样（清单 1212 行、包 312 个文件 4.78 MB、说明书），
-再把那份清单交给 self/verify.hmyr 验 —— 250 项对得上、0 不对、0 缺，digest 也对得上。
+先手动走了一遍：release.hmoca 造三样（清单 1212 行、包 312 个文件 4.78 MB、说明书），
+再把那份清单交给 self/verify.hmoca 验 —— 250 项对得上、0 不对、0 缺，digest 也对得上。
 194 秒。这条路成立。
 
 于是把它固化成 tools/release-loop.mjs，一次三分钟上下，五节：
@@ -810,17 +810,17 @@ verifyhmyr 两套的「真跑」都挂在 HMYR_HEAVY 之后，而常规全量从
     五、拿解出来的包当根，用 HMYR 自己的 verifier 验包里那份清单
     六、从解出来的目录里起一次启动器，跑一个例子程序（字节对得上不等于跑得起来）
 
-第五节照出一处缺口：清单报 [缺] runtime/text.hmyr。查下来是这样 ——
+第五节照出一处缺口：清单报 [缺] runtime/text.hmoca。查下来是这样 ——
 
-    manifest.hmyr   standardLibrary 递归 runtime/，列了 runtime/text.hmyr
-                    与 runtime/ucd/blocks.hmyr 两条
-    package.hmyr    目录表里根本没有 runtime/，注释写着「那里装着几 MB 的语料」
+    manifest.hmoca   standardLibrary 递归 runtime/，列了 runtime/text.hmoca
+                    与 runtime/ucd/blocks.hmoca 两条
+    package.hmoca    目录表里根本没有 runtime/，注释写着「那里装着几 MB 的语料」
 
 两件各自都对，合起来就是：包里的东西少了，而清单说它有。
 在仓库根下验清单永远看不见这一处 —— 那些文件本来就在仓库里，要拿包当根才照得出来。
 
 修法不是把语料收进包（codepoints.txt 45 MB、conformance 60 MB，读进来会撞内存上限），
-而是按后缀筛：runtime/ 只收 .hmyr 与 .hmyrb。改完成员从 313 涨到 319，第五节 14 项全过。
+而是按后缀筛：runtime/ 只收 .hmoca 与 .hmoks。改完成员从 313 涨到 319，第五节 14 项全过。
 
 验收：
 

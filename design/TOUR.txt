@@ -12,7 +12,7 @@
       return 0
     }
 
-  跑它：node bin/hmyr.mjs 你的文件.hmyr
+  跑它：node bin/hmyr.mjs 你的文件.hmoca
 
   就这些。没有 package.json，没有 tsconfig，没有 bundler，没有 node_modules。
   整个仓库是一堆源码，而它跑起来只需要 Node。
@@ -40,7 +40,7 @@
 
   五、零构建。
      源码就是运行的东西。那意味着改一行就生效，也意味着没有「构建产物」这回事。
-     发布是另一件事：self/release.hmyr 一条命令出清单、归档、说明书三样，
+     发布是另一件事：self/release.hmoca 一条命令出清单、归档、说明书三样，
      而 tools/release-loop.mjs 把发出去的东西拿回来、用 HMYR 自己的 verifier 验一遍。
 
 它和别的不一样在哪
@@ -48,7 +48,7 @@
 
   ・它是自举的：self/ 里那一套用自己的语言写了词法、语法、语句与求值，
     而启动器把目标程序交给那一层，不是交给宿主。
-  ・它有终端：画布、场景栈、帧循环、节拍、字形，全在 term.hmyr 里，
+  ・它有终端：画布、场景栈、帧循环、节拍、字形，全在 term.hmoca 里，
     而每一帧都能被套件断言（输出可注入）。
   ・它能算颜色：sRGB 到 CMYK 的可测量转换，两套具名策略，
     而报告的那几项判定是在语言里做的，不是在宿主里。
@@ -63,7 +63,7 @@
     而它在一颗真芯片上跑过这件事还欠着。这一条等硬件，不是等代码。
 
   语言服务器那一条已经不在这份名单里了：initialize、documentSymbol、definition、
-  hover、completion 都通，definition 还能跨 import 跳到别的文件（self/lsp.hmyr，
+  hover、completion 都通，definition 还能跨 import 跳到别的文件（self/lsp.hmoca，
   验收是 lsp、lspsymbol、lspcompletion 与 lspmodule 四套）。
 
 想深入的时候
@@ -79,4 +79,4 @@
   而想先看形状而不是文字的时候：
 
     node tools/impact.mjs --map                整张工程地图：谁 import 谁、每个套件加载了什么
-    node tools/impact.mjs self/body.hmyr       给一个文件，答「改动会碰到哪些套件」而不必试跑
+    node tools/impact.mjs self/body.hmoca       给一个文件，答「改动会碰到哪些套件」而不必试跑

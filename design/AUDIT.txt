@@ -53,7 +53,7 @@
 
   node tools/bench.mjs
 
-    词法 self/eval.hmyr（8 KB）      2.070 ms
+    词法 self/eval.hmoca（8 KB）      2.070 ms
     语法（同一份）                   1.981 ms
     一万次 while 循环                2.410 ms
     一百次函数调用                   3.724 ms
@@ -96,7 +96,7 @@
 
   一、格式化器。src/format.mjs 从 M6 就在，连验收标准都与我写的一样（打印出来的
       能解析回同一棵树、再打印一遍不变、比较时去掉位置）。我写的那个改名为
-      whitespace.hmyr，它与格式化器分工不同，那一份留下了。
+      whitespace.hmoca，它与格式化器分工不同，那一份留下了。
 
   二、语言服务器。src/lsp.mjs 从第一笔提交就在，三种能力（符号、跳转、悬停），
       十七项验收。我写的 tools/lsp.mjs 是重复的，删了。

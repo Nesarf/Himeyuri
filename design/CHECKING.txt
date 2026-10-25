@@ -23,9 +23,9 @@
 从每个测试文件出发，扫两样东西：
 
     一、相对 import：从「../src/eval.mjs」这样的写法递归下去。
-    二、路径字面量：「self/curve.hmyr」这类字符串。
+    二、路径字面量：「self/curve.hmoca」这类字符串。
 
-第二样是关键。很多套件并不 import 被测的 HMYR 源码，而是 spawn 一个 self/*.hmyr 去跑
+第二样是关键。很多套件并不 import 被测的 HMYR 源码，而是 spawn 一个 self/*.hmoca 去跑
 （curve 套件跑标量乘、package 套件真打一个包）。只看 import 图，这些套件会整个隐形。
 
 判据是保守的：图上有一条路就选中。宁可多跑一套，不可漏掉一套。
@@ -35,14 +35,14 @@
 
 按「改动落在哪一层」分三档：
 
-    只改一个自足的函数（比如 curve.hmyr 里某个内部函数）
+    只改一个自足的函数（比如 curve.hmoca 里某个内部函数）
         --only curve
         十几秒。
 
     改了会被别的程序 import 或 spawn 的 HMYR 源码
-        --affects self/curve.hmyr
+        --affects self/curve.hmoca
         选中的十几套，约五分钟。跳掉慢的几套可以压到一分钟内：
-        --affects self/curve.hmyr --skip package,packagehmyr,release,releasehmyr
+        --affects self/curve.hmoca --skip package,packagehmyr,release,releasehmyr
 
     改了被几乎所有测试 import 的东西（src/eval.mjs、src/bytecode.mjs、loader）
         --affects src/eval.mjs
@@ -69,7 +69,7 @@
 
 依赖图是静态扫出来的，扫不到的东西有两种：
 
-    一、运行期拼出来的路径（比如把 "self/" 与一个名字与 ".hmyr" 接起来）。目前没有这样的测试，将来有了
+    一、运行期拼出来的路径（比如把 "self/" 与一个名字与 ".hmoca" 接起来）。目前没有这样的测试，将来有了
         就得在 SUITES 里手工声明，或者把拼路径改成字面量。
     二、读数据的套件（读 docs、读 tools/suite-list.txt）。它们被 --affects 选中时
         依赖的是「文件在不在」，不是「内容对不对」—— 所以改文档之后仍然要跑 docs。

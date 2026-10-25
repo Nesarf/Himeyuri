@@ -2,16 +2,16 @@ deflate 与 ZIP 的现状
 
 一、两个方向都在 HMYR 里
 
-    self/deflate.hmyr   存储块、固定 Huffman、动态 Huffman 三种编码
-    self/inflate.hmyr   存储块、固定 Huffman、动态 Huffman 三种解码，多块流
-    self/zip.hmyr       ZIP 容器（stored 与 deflate 两种成员），CRC32 查表
+    self/deflate.hmoca   存储块、固定 Huffman、动态 Huffman 三种编码
+    self/inflate.hmoca   存储块、固定 Huffman、动态 Huffman 三种解码，多块流
+    self/zip.hmoca       ZIP 容器（stored 与 deflate 两种成员），CRC32 查表
 
 解码侧的输出是块化的：每 1024 字节封一块，复制时按逻辑下标取。逐字节往一个元组上
 拼是平方级，四万三千字节会顶到四吉上限；块化之后同样的流用四十兆。
 
 二、压缩率
 
-4 KB 样本（bootstrap/pack.hmyrb 的前 4096 字节），三条路都能被 node 的 zlib 解回原样：
+4 KB 样本（bootstrap/pack.hmtn 的前 4096 字节），三条路都能被 node 的 zlib 解回原样：
 
     存储块         4096 加五字节块头
     固定 Huffman   1283
@@ -42,7 +42,7 @@ deflate 与 ZIP 的现状
 
 四、怎么找到它的
 
-    self/tree.hmyr   只建树不写流，打印三张表的码长分布、最大深、Kraft 和
+    self/tree.hmoca   只建树不写流，打印三张表的码长分布、最大深、Kraft 和
     --字面 模式       编码器不做匹配，于是它与参照实现输出逐位可比的流
     ref-encoder.mjs  node 写的参照编码器，证明手写的动态块 zlib 一定接受
 

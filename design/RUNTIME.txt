@@ -16,7 +16,7 @@
     约定      套件 · 设计文档 · 三面与第四面的对照 · 错误编号表。
 
   而发行版还得有第五样：让人定制的东西。Nyarch 有 Nyarch Customize，
-  而这里已经有 reader.hmyr（改语法的读法）与 format.mjs（改排版）——
+  而这里已经有 reader.hmoca（改语法的读法）与 format.mjs（改排版）——
   两样都是「让用的人按自己的习惯改」，而不是「让作者改源码」。
 
 
@@ -64,10 +64,10 @@
 小库该有什么
 --------------------------------------------------------------------
 
-  runtime/num.hmyr      整数算术与比较（在那之上再搭十进制与浮点的后续）
-  runtime/text.hmyr     按字的切与拼、去空白、比较
-  runtime/table.hmyr    元组与记录的常用动作（取、找、连、映、筛）
-  runtime/mem.hmyr      区（arena）：一次分配、一次释放
+  runtime/num.hmoca      整数算术与比较（在那之上再搭十进制与浮点的后续）
+  runtime/text.hmoca     按字的切与拼、去空白、比较
+  runtime/table.hmoca    元组与记录的常用动作（取、找、连、映、筛）
+  runtime/mem.hmoca      区（arena）：一次分配、一次释放
 
   四件都只用上面十五个内置。而它们的验收与别的套件一样：
   走完整的 Himeyuri 程序，不直接调内置。
