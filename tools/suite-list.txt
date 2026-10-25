@@ -88,6 +88,7 @@ tailcall	test/tail-call.test.mjs
 launcher	test/launcher.test.mjs
 task	test/task.test.mjs
 recordnew	test/record-new.test.mjs
+index	test/index.test.mjs
 surface	test/surface.test.mjs
 pixel	test/pixel.test.mjs
 parallel	test/parallel.test.mjs

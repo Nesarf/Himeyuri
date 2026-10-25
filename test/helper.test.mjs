@@ -54,8 +54,8 @@ console.log("五、中文人话那一份与编号表对得上");
   const 取 = (p) => Array.from(new Set(Array.from(fs.readFileSync(path.join(ROOT, p), "utf8").matchAll(/HMYR-[A-Z]\d+/g)).map((m) => m[0]))).sort();
   const 甲 = 取("conformance/codes.mjs");
   const 乙 = 取("conformance/plain.mjs");
-  // 这个数跟着编号表走：field_names 那一格补了一个 R0217。
-  ok("两个文件都有五十八个编号", 甲.length === 58 && 乙.length === 58, 甲.length + " 对 " + 乙.length);
+  // 这个数跟着编号表走：索引那一组补了 R0218 与 R0219。
+  ok("两个文件都有六十个编号", 甲.length === 60 && 乙.length === 60, 甲.length + " 对 " + 乙.length);
   const 缺 = 甲.filter((c) => !乙.includes(c));
   const 多 = 乙.filter((c) => !甲.includes(c));
   ok("一个不缺", 缺.length === 0, 缺.slice(0, 4).join(" "));
