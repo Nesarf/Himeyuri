@@ -20,6 +20,7 @@ import { 藏路径, 在用脱敏 } from "./redact.mjs";
 import { lex } from "./lexer.mjs";
 import { parse } from "./parser.mjs";
 import { 有序, 下整 } from "./numbers.mjs";
+import { 展开模块 } from "./expand.mjs";
 
 // 尾调用的标记：函数体最后一件事是调用另一个函数时，抛它而不是真的压栈。
 //
@@ -1064,8 +1065,17 @@ const BUILTINS = {
 
 export function run(source, options = {}) {
   const lexed = lex(source, options);
-  const { ast, diagnostics } = parse(lexed.tokens, { diagnostics: lexed.diagnostics });
+  const { ast: 未展开, diagnostics } = parse(lexed.tokens, { diagnostics: lexed.diagnostics });
   if (diagnostics.errors.length) return { output: [], diagnostics, value: null };
+  // 宏在解析之后、执行之前展开（src/expand.mjs）。没有宏的模块原样通过。
+  // 展开期的错算语法那一类：它是「这段源码的形状不对」，不是运行到一半才出事。
+  let ast;
+  try {
+    ast = 展开模块(未展开);
+  } catch (e) {
+    diagnostics.error("HMYR-E0103", String(e.message).replace(/^HMYR-E0103\s*/, ""), 0, 0);
+    return { output: [], diagnostics, value: null };
+  }
   const rt = new Runtime(options);
   let value = null;
   try {

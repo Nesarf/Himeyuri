@@ -28,6 +28,7 @@ const SUITES = [
   ["lspsymbol", "test/lsp-symbol-hmyr.test.mjs", "M6 - the language server symbols: two real processes, node and the C machine, answer the same documentSymbol request with the same names, kinds and locations"],
   ["lspcompletion", "test/lsp-completion-hmyr.test.mjs", "M6 - the language server completion: two real processes offer the same candidates for the same document, keyed by the CompletionItemKind table rather than the SymbolKind one"],
   ["lspmodule", "test/lsp-module.test.mjs", "M6 - the language server beyond one file: a name that is only in an imported file resolves there, a local name stays local, and a name in neither is null rather than an error"],
+  ["macro", "test/macro.test.mjs", "M6 - hygienic macros: one-line declarations, parameter substitution, macros inside macros, and an argument-count mistake that names itself instead of becoming an undefined call"],
   ["adapter", "test/adapter.test.mjs", "SPEC M6 - the adapter: the host and the bootstrap compute the same number for the same source"],
   ["adapterstatements", "test/adapter-statements.test.mjs", "SPEC M6 - the adapter, statements: run the same program on both sides and they hand back the same value"],
   ["adapterfunctions", "test/adapter-functions.test.mjs", "SPEC M6 - the adapter, function table: whole programs agree on both sides, and the parameter boundary fails loudly"],

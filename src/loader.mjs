@@ -14,6 +14,7 @@ import { Runtime } from "./eval.mjs";
 import { 本机能力 } from "./capabilities.mjs";
 import { 切 } from "./subset-lex.mjs";
 import { 子集解 } from "./subset-parse.mjs";
+import { 展开模块 } from "./expand.mjs";
 
 const short = (file) => file.split(/[\\/]/).pop() || file;
 
@@ -49,7 +50,15 @@ export function loadUnit(entry, options = {}) {
     const 解 = 子集解(切(source));
     // 子集那一层的诊断要并进调用方拿到的那一份，不然「读进来了但有抱怨」会被吞掉。
     for (const d of 解.diagnostics.items) diagnostics.add(d.severity, d.code, d.message, d.line, d.column);
-    return 解;
+    // 宏在这里展开：加载一次就展开一次，下游（求值器与字节码那台）看到的是同一棵没有宏的树。
+    // 展开期的错记成语法那类 —— 它与「这段源码的形状不对」是同一件事。
+    let ast = 解.ast;
+    try {
+      ast = 展开模块(解.ast);
+    } catch (e) {
+      diagnostics.error("HMYR-E0103", String(e.message).replace(/^HMYR-E0103\s*/, ""), 0, 0);
+    }
+    return { ...解, ast };
   });
 
   function visit(file) {

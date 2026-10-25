@@ -132,6 +132,7 @@ export function parse(tokens, options = {}) {
       return inner;
     }
     if (at("keyword", "fn")) return parseFn();
+    if (at("ident", "macro")) return parseMacro();
     if (at("keyword", "type")) return parseTypeAlias();
     if (at("keyword", "const")) return parseConst();
     if (at("keyword", "effect")) return parseEffectDecl();
@@ -267,6 +268,30 @@ export function parse(tokens, options = {}) {
     const value = parseExpr();
     endStatement();
     return { kind: "Const", name: name ? name.value : "<error>", value, line: kw.line, column: kw.column };
+  }
+
+  // 宏：macro 名(参数们) = 表达式
+  //
+  // 一行一条，与 const 同一条形状 —— 只是右边那棵树里，参数名是占位。
+  // 展开在 src/expand.mjs 里，与解析分开放：解析器只管认形状，不管要不要展开。
+  // macro 走 ident 而不是关键字，理由与 rev 相同：它只在模块顶层的声明位置有意义，
+  // 而当关键字就得动两张词法表（宿主与子集各一张），代价比收益大。
+  function parseMacro() {
+    const kw = advance();
+    const 名 = expect("ident", "a macro name");
+    expectPunct("(", "to open the parameter list");
+    const params = [];
+    while (!atPunct(")") && !at("eof")) {
+      const p = expect("ident", "a parameter name");
+      if (p) params.push(p.value);
+      if (atPunct(",")) advance();
+      else break;
+    }
+    expectPunct(")", "to close the parameter list");
+    expectPunct("=", "before the template");
+    const body = parseExpr();
+    endStatement();
+    return { kind: "Macro", name: 名 ? 名.value : "<error>", params, body, line: kw.line, column: kw.column };
   }
 
   function parseEffectDecl() {

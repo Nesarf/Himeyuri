@@ -164,6 +164,7 @@ export const 子集解 = (tokens, options = {}) => {
 
   function 解析声明() {
     if (是("keyword", "fn")) return 解析函数();
+    if (是("ident", "macro")) return 解析宏();
     // 这几样宿主读得动，而这一份还不认——边界，抛。
     if (是("keyword", "type") || 是("keyword", "const") || 是("keyword", "effect") || 是("keyword", "pub")) {
       不认("子集只认 fn 声明，见到 " + 说明(看()));
@@ -172,6 +173,26 @@ export const 子集解 = (tokens, options = {}) => {
     报("HMYR-E0103", "不能以 " + 说明(看()) + " 开始一个声明");
     恢复();
     return null;
+  }
+
+  // 宏：macro 名(参数们) = 表达式 —— 与宿主那份同一个形状，展开也共用 src/expand.mjs。
+  // 这一份只认 fn 与 macro；type/const/effect/pub 仍然抛，那是边界，不是漏。
+  function 解析宏() {
+    const kw = 进();
+    const 名 = 要("ident", "宏名");
+    要标("(", "开参数表");
+    const params = [];
+    while (!是标(")") && !是("eof")) {
+      const p = 要("ident", "参数名");
+      if (p) params.push(p.value);
+      if (是标(",")) 进();
+      else break;
+    }
+    要标(")", "关参数表");
+    要标("=", "模板");
+    const body = 解析表达式();
+    收句();
+    return { kind: "Macro", name: 名 ? 名.value : "<error>", params, body, line: kw.line, column: kw.column };
   }
 
   function 解析函数() {
