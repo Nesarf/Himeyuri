@@ -130,6 +130,10 @@ export function loadUnit(entry, options = {}) {
   }
   // order 用真实路径（与宿主 loader 同一个说法）。加载器交回的路径带 "./" 前缀，去掉。
   const modules = new Map();
+  const 别名 = new Map();
+  // get 先查正式表，再查别名 —— 对外仍是 Map，size 仍只数正式记录。
+  const 原get = modules.get.bind(modules);
+  modules.get = (k) => 原get(k) || 别名.get(k);
   const order = [];
   const 路径们 = Array.from(树.路径们 || []);
   Array.from(树.模块们).forEach((m, i) => {
@@ -139,10 +143,11 @@ export function loadUnit(entry, options = {}) {
     let 键 = String(原).startsWith("./") ? String(原).slice(2) : String(原);
     键 = 键.split("/").join(path.sep);
     modules.set(键, m);
-    // 同一个模块挂两个门牌：order 里用的是相对形式（selfbody 那类套件照它比），
-    // 而多数套件拿 path.join(ROOT, ...) 的绝对路径来 get —— 只给一个的话，另一个就落空。
+    // 同一个模块挂两个门牌：order 里用相对形式，而多数套件拿绝对路径来 get。
+    // 但别名只挂在查询上，不进 Map 本身 —— 否则 modules.size 会翻倍，
+    // 而 bootstrap 那套正是拿 size 数「带进几份文件」。
     const 绝对键 = path.resolve(键);
-    if (绝对键 !== 键) modules.set(绝对键, m);
+    if (绝对键 !== 键) 别名.set(绝对键, m);
     order.push(键);
   });
   // 重名声明：与宿主 src/loader.mjs 同一句话、同一个位置（diagnostics.items）。
