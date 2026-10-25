@@ -563,6 +563,33 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 1 { return 坏("is_mark 要一个参数") }
     return 好(is_mark(值们[0]))
   }
+  // 索引：一个按键查的东西。约定见 design/INDEX.txt —— 键是任意字符串，
+  // set 交回同一个索引（于是可以写 表 = index_set(表, k, v)），取不到报 R0218。
+  // 这六条是自举求值器的分派：它跑在宿主或字节码机上，于是实际调用落到那一层的内置。
+  if 名 == "index_new" {
+    if len(值们) != 0 { return 坏("index_new 不要参数") }
+    return 好(index_new())
+  }
+  if 名 == "index_set" {
+    if len(值们) != 3 { return 坏("index_set 要三个参数") }
+    return 好(index_set(值们[0], 值们[1], 值们[2]))
+  }
+  if 名 == "index_get" {
+    if len(值们) != 2 { return 坏("index_get 要两个参数") }
+    return 好(index_get(值们[0], 值们[1]))
+  }
+  if 名 == "index_has" {
+    if len(值们) != 2 { return 坏("index_has 要两个参数") }
+    return 好(index_has(值们[0], 值们[1]))
+  }
+  if 名 == "index_len" {
+    if len(值们) != 1 { return 坏("index_len 要一个参数") }
+    return 好(index_len(值们[0]))
+  }
+  if 名 == "index_keys" {
+    if len(值们) != 1 { return 坏("index_keys 要一个参数") }
+    return 好(index_keys(值们[0]))
+  }
   let 找 = 查找(环境, "fn:" + 名)
   if 找.found == false { return 坏("没有这个函数：" + 名) }
   // 找.value 是 (参数名们, 语句们, 效果名们)。绑参数要在**新的一层**上绑，
