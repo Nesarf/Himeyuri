@@ -142,6 +142,16 @@ export const 本机能力 = (options = {}) => ({
         const 元组项 = Array.isArray(x) ? x : (x && x.tag === "tuple" ? x.items : null);
         if (是元组 && 元组项 && 元组项.length === 0) { 段.push(0); return; }
         if (是元组 && 元组项) { 段.push(4); u16(元组项.length); for (const it of 元组项) 值(it); return; }
+        // 码元序列也是字符串值：src/text-impl.mjs 的另一种底就是它。
+        // 这一支必须先于下面的「记录」那一支 —— 否则 Object.keys 会把 "0"、"1" 当成字段名，
+        // 同一个 "ab" 被编成一段记录。实测：同一个样本 JS 那位 104 字节，码元底 148 字节，
+        // 差的那 44 字节全在这里。selfvmcompile 那条「if 与字符串」就是被它绊住的。
+        if (x instanceof Uint16Array) {
+          段.push(2);
+          u16(x.length);
+          for (const c of x) u16(c);
+          return;
+        }
         const 是记录 = x && x.tag === "record" ? x.fields : (x && typeof x === "object" && !Array.isArray(x) ? x : null);
         if (是记录) {
           段.push(5);

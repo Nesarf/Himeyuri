@@ -57,8 +57,8 @@ if (process.argv.includes("--compile")) {
     capabilities: 本机能力(),
     argv: [目标, ...其余.slice(1)],
     stepLimit: Number(process.env.HMYR_STEPS || 50000000),
-    // 与解释那条路同一个开关。默认关着：码元序列那一侧还差一条真差异（selfvmcompile）。
-    字符串用码元序列: process.argv.includes("--own-scalars"),
+    // 与解释那条路同一个默认：字符串住在码元序列里。
+    字符串用码元序列: !process.argv.includes("--host-scalars"),
   });
   vm.write = (s) => process.stdout.write(s);
   vm.writeErr = (s) => process.stderr.write(s);
@@ -140,7 +140,7 @@ const 参数 = process.argv.slice(1);
 const 用宿主 = 参数.includes("--host-eval");
 // 两件事拆开：字符串的底（默认码元序列）与数的算术（默认宿主，因为自家那份慢三百倍）。
 // 拆开是为了量的时候分得清是哪一件引起的 —— 合在一个开关里，红了也不知道该收回哪一个。
-const 自家标量 = 参数.includes("--own-scalars");
+const 自家标量 = !参数.includes("--host-scalars");
 const 自家算术 = 参数.includes("--own-arithmetic");
 if (自家算术) 数.用自家算术(true);
 if (参数.includes("--redact") || process.env.HMYR_REDACT === "1") 设脱敏(true);

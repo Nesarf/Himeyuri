@@ -190,6 +190,24 @@ console.log("五、字节码那边也打开同一个开关，三条路仍然一�
     fs.rmSync(临2, { recursive: true, force: true });
   }
   ok("十五条文本程序，三条路一个答案", 分叉 === 0, 例.slice(0, 3).join(" · "));
+
+  // 默认就是码元序列。这一条盯的是「默认」本身 —— 上面几节都在显式传选项，
+  // 谁把默认悄悄改回去它们不会红。翻默认之前它红过一次：那时 packValue 把码元序列
+  // 当成记录编，self-vm-compile 的「if 与字符串」多出 44 字节。
+  {
+    const 临三 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-units-default-");
+    try {
+      const p = path.join(临三, "默认.hmyr");
+      fs.writeFileSync(p, "fn main() -> Int {\n  return \"abc\"\n}\n");
+      const 层 = loadUnit(p);
+      const vm = 跑字节码(层, { write: () => {}, capabilities: 本机能力(), argv: ["hmyr", p] });
+      const q = vm.调用("main", [], null);
+      ok("不传选项时，默认的字符串底是码元序列", q.ok && q.值 instanceof Uint16Array,
+        q.ok ? Object.prototype.toString.call(q.值) : String(q.码));
+    } finally {
+      fs.rmSync(临三, { recursive: true, force: true });
+    }
+  }
 }
 
 console.log("六、这一份借了什么");

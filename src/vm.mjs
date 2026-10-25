@@ -57,11 +57,11 @@ export class 虚拟机 {
     this.argv = 选项.argv || [];
     this.cap = 选项.capabilities;
     if (!this.cap) throw new Error("虚拟机需要一份能力（见 src/capabilities.mjs）");
-    // 字符串住在哪里：默认宿主串，选项或 HMYR_UNITS=1 打开码元序列（src/text-impl.mjs）。
-    // 量过一轮：打开之后 175 个套件里有 5 个红，其中 4 个是验收的判据没跟上，
-    // 剩下 selfvmcompile 那条「if 与字符串」是真差异（JS 104 字节 / vm 148 字节）。
-    // 那一条查清之前默认不翻 —— 差 44 字节不是误差。
-    this.码元串 = 选项.字符串用码元序列 === true || process.env.HMYR_UNITS === "1";
+    // 字符串住在哪里：默认码元序列（src/text-impl.mjs），--host-scalars 或 HMYR_UNITS=0 退回去。
+    // 上一次没敢翻，是因为 self-vm-compile 的「if 与字符串」多出 44 字节。那一条的根在
+    // capabilities.mjs 的 packValue：它把码元序列当成记录编，Object.keys 把 "0"、"1" 当字段名。
+    // 修好之后带着开关跑了整轮全量（175 套，退出码零），所以现在是默认。
+    this.码元串 = 选项.字符串用码元序列 === true || process.env.HMYR_UNITS !== "0";
     // 这一句必须跟着上一句走。早先它读的是原始选项，于是「默认」只翻了一个标志，
     // 而真正取字符串层的那一句没动 —— 量出来的全绿是空转。units 套件里那条
     // 「不传选项时默认是码元序列」就是为这件事加的。
