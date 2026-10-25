@@ -157,6 +157,7 @@ const SUITES = [
   ["selfpos", "tools/self-positions.mjs", "FULLSELF - the lexer's positions: six samples agree with the host lexer token for token on text, line and column"],
   ["selfbridge", "tools/self-bridge-check.mjs", "FULLSELF - the bridge: loadUnit replaced by HMYR's own loader agrees with the host loader on acceptance, function names, import order and the refusal of a missing file"],
   ["selfvmeval", "tools/self-vm-eval.mjs", "FULLSELF - the evaluator on the bytecode machine: the self-hosted lexer, parser and evaluator run as bytecode and interpret four programs to the same answers as the host"],
+  ["selfvmcompile", "tools/self-vm-compile.mjs", "SELFVMC - the packer on the bytecode machine: compile and pack run as bytecode and produce the same five byte streams as the JavaScript packer"],
   ["selfnodes", "tools/self-nodes.mjs", "FULLSELF - nodes and declarations: every node the HMYR parser produces sits where the host tree has one, and Module/Fn/Block match the host field for field, in six samples"],
   ["selftree", "tools/self-tree.mjs", "FULLSELF - a lockstep walk: the Module built by HMYR and the host ast are compared node by node over eight samples including imports and literals, and the walk stops at the first mismatch"],
   ["selfhandoff", "tools/self-handoff.mjs", "FULLSELF - the handoff: a Module built by HMYR is handed straight to the host Runtime, registerModule then callFunction with no adapter at all, and five programs produce the expected value"],
