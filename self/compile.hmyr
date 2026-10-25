@@ -162,6 +162,49 @@ fn 是内置(名: String) -> Bool {
   if 名 == "write_bytes" { return true }
   if 名 == "f64_bytes" { return true }
   if 名 == "pack_value" { return true }
+  // 补：宿主那份名单有、这张表以前漏掉的。2026-10-25 一次补齐。
+  // 依据是 tools/seed-gap.mjs：它量的正是「种子认得哪些内置」，而种子就是这个函数的字节码。
+  if 名 == "arena" { return true }
+  if 名 == "bytes_to_text" { return true }
+  if 名 == "chdir" { return true }
+  if 名 == "console_codepage" { return true }
+  if 名 == "cwd" { return true }
+  if 名 == "home_dir" { return true }
+  if 名 == "index_get" { return true }
+  if 名 == "index_has" { return true }
+  if 名 == "index_keys" { return true }
+  if 名 == "index_len" { return true }
+  if 名 == "index_new" { return true }
+  if 名 == "index_set" { return true }
+  if 名 == "key_available" { return true }
+  if 名 == "key_push" { return true }
+  if 名 == "key_read" { return true }
+  if 名 == "key_start" { return true }
+  if 名 == "locale_current" { return true }
+  if 名 == "locale_env" { return true }
+  if 名 == "locale_set" { return true }
+  if 名 == "now_ms" { return true }
+  if 名 == "python_path" { return true }
+  if 名 == "read_bytes" { return true }
+  if 名 == "read_line" { return true }
+  if 名 == "read_lines" { return true }
+  if 名 == "read_stdin_bytes" { return true }
+  if 名 == "read_stdin_line" { return true }
+  if 名 == "repo_path" { return true }
+  if 名 == "run_program" { return true }
+  if 名 == "sleep_ms" { return true }
+  if 名 == "split" { return true }
+  if 名 == "temp_path" { return true }
+  if 名 == "term_clear" { return true }
+  if 名 == "term_color" { return true }
+  if 名 == "term_escape" { return true }
+  if 名 == "term_hide" { return true }
+  if 名 == "term_show" { return true }
+  if 名 == "term_size" { return true }
+  if 名 == "thr_cancel" { return true }
+  if 名 == "thr_count" { return true }
+  if 名 == "thr_join" { return true }
+  if 名 == "thr_spawn" { return true }
   return false
 }
 

@@ -54,10 +54,21 @@ const 编译 = 集合里的名(读("src/bytecode.mjs"), "const 内置名 = new S
 const 字节码 = 块里的键(读("src/vm-builtins.mjs"), "export const 内置表 = {", /^ {2}([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*\{/);
 const 自举 = [...读("self/eval.hmyr").matchAll(/if 名 == "([a-zA-Z_][a-zA-Z0-9_]*)"/g)].map((m) => m[1]);
 const C = [...new Set([...读("vm/hmyr.c").matchAll(/name_is\(name_idx, "([a-zA-Z_][a-zA-Z0-9_]*)"\)/g)].map((m) => m[1]))];
+// 第七处（2026-10-25 补）：自举编译器自己的「是内置」表，在 self/compile.hmyr 里。
+//
+// 为什么它必须在这一份账上：种子（bootstrap/pack.hmyrb）就是它的字节码，所以这张表
+// 落后等于种子落后，而种子落后只表现为「HMYR-R0104 there is no such function」——
+// 那个症状看起来像调用写错了，不像账没对齐。这一天量到的正是这件事：这一份报
+// 「六处齐了」，而种子里缺四十一个内置。
+//
+// 它比别的几处多一样东西：表里还有一批中文名（数组 · 设 · 位与 … 与 校验和），
+// 那些不是宿主的 BUILTINS 键，只在 C 那台的 name_is 上。所以这一处只要求
+// 「宿主有的，这里都有」，不要求反向相等。
+const 自举编译 = [...new Set([...读("self/compile.hmyr").matchAll(/if 名 == "([^"]+)" \{ return true \}/g)].map((m) => m[1]))];
 
 const 去重 = (a) => [...new Set(a)].sort();
 const 宿 = 去重(宿主), 小 = 去重(最小), 编 = 去重(编译), 字 = 去重(字节码), 自 = 去重(自举), 机 = 去重(C);
-const 全部 = 去重([...宿, ...小, ...编, ...字, ...自, ...机]);
+const 全部 = 去重([...宿, ...小, ...编, ...字, ...自, ...机, ...自举编译]);
 const 有 = (集, 名) => 集.includes(名) ? "有" : "";
 
 // 二、按组说清缺的是什么。分组来自 design/CAPABILITIES.txt。
@@ -96,13 +107,16 @@ if (process.argv.includes("--missing")) {
 }
 
 const 宽 = Math.max(...全部.map((x) => x.length));
-console.log("内置六处对照（" + 全部.length + " 个名字）");
-console.log("  " + "名称".padEnd(宽 + 2) + "宿主  最小  编译  字节码  自举  C");
+console.log("内置七处对照（" + 全部.length + " 个名字）");
+console.log("  " + "名称".padEnd(宽 + 2) + "宿主  最小  编译  字节码  自举  C     自编");
 for (const x of 全部) {
-  const 行 = [有(宿, x), 有(小, x), 有(编, x), 有(字, x), 有(自, x), 有(机, x)];
+  const 行 = [有(宿, x), 有(小, x), 有(编, x), 有(字, x), 有(自, x), 有(机, x), 有(自举编译, x)];
   console.log("  " + x.padEnd(宽 + 2) + 行.map((s) => (s || "无").padEnd(6)).join(""));
 }
 console.log("");
-console.log("宿主 " + 宿.length + " · 最小 " + 小.length + " · 编译 " + 编.length + " · 字节码 " + 字.length + " · 自举 " + 自.length + " · C " + 机.length);
+console.log("宿主 " + 宿.length + " · 最小 " + 小.length + " · 编译 " + 编.length + " · 字节码 " + 字.length +
+            " · 自举 " + 自.length + " · C " + 机.length + " · 自编 " + 自举编译.length);
 console.log("宿主有而 C 没有：" + 宿.filter((x) => !机.includes(x)).length + " 个");
+// 这一条是新的：宿主有而自举编译器没有 —— 那种缺口只会在「用种子编程序」时现形。
+console.log("宿主有而自编没有：" + 宿.filter((x) => !自举编译.includes(x)).length + " 个");
 if (未归组.length) console.log("没有归组的名字：" + 未归组.join(" "));

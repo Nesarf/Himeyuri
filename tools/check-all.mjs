@@ -142,6 +142,10 @@ const SUITES = [
   ["fmthmyr", "test/fmt-hmyr.test.mjs", "SPEC M7 - the expression formatter written in Himeyuri: parentheses where they matter, and printing twice changes nothing"],
   ["elsenewline", "test/else-newline.test.mjs", "SPEC 2.2 - a newline before else is not a statement boundary: both spellings parse to one tree and run to one answer"],
   ["selfcontained", "test/self-contained.test.mjs", "SPEC M7 - the binary carries its own compiler: a .hmyr runs with no node, no seed beside it, and no manual compile step"],
+  // 种子与内置表同步：2026-10-25 量到它只认得七十二个内置里的三十一个，
+  // 而 self-contained 那一套用的例子只用 print 与 str，所以它一直是绿的。
+  // 同一天把 self/compile.hmyr 的「是内置」补齐并重建种子，这条现在是账。
+  ["seedgap", "test/seed-gap.test.mjs", "SPEC M7 - the committed seed keeps up with the builtin table: every builtin name the host defines is also known to the seed compiler"],
   ["deflate", "test/deflate.test.mjs", "SPEC M7 - deflate stored blocks written in Himeyuri: round trip, and zlib reads the stream without being told anything"],
   ["tree", "test/tree.test.mjs", "SPEC M7 - the Huffman tree alone: all three code-length tables must sum to a complete Kraft total"],
   ["array", "test/array.test.mjs", "SPEC 2.2 - a mutable array beside the immutable tuple: write, read, out of range, and the tuple it came from stays put"],
