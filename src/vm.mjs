@@ -99,7 +99,8 @@ export class 虚拟机 {
   比(a, b) {
     if (数.是数(a) && 数.是数(b)) return 数.比(a, b);
     if (this.文.是串(a) && this.文.是串(b)) return this.文.比(a, b);
-    this.坏("HMYR-R0131", "cannot compare " + 述(a, this.文) + " with " + 述(b, this.文));
+    // 带上 pc：这条错曾经只说「不能比较」，而查它要的是「在哪比」。
+    this.坏("HMYR-R0131", "cannot compare " + 述(a, this.文) + " with " + 述(b, this.文) + " at pc " + (this.当前pc === undefined ? "?" : this.当前pc) + " in " + (this.当前函 === undefined ? "?" : this.当前函));
     return 0;
   }
 
@@ -151,6 +152,7 @@ export class 虚拟机 {
       const 指令 = 码[pc];
       if (!指令) { this.坏("HMYR-R0110", "the instruction stream ran off its end"); return null; }
       if (迹要) { 迹.push({ pc, op: 指令.op, n: 栈.length }); if (迹.length > 迹长) 迹.shift(); }
+      this.当前pc = pc;
       switch (指令.op) {
         // 字面量是编译期从宿主串来的，所以它进来时要落到选定的那种底上。
         case "CONST": 压(this.码元串 && typeof 指令.a === "string" ? 收进来(this.文, 指令.a) : 指令.a); pc++; break;
@@ -271,6 +273,7 @@ export class 虚拟机 {
           pc++; break;
         }
         case "CALLF": {
+          this.当前函 = 指令.a;
           const n = 指令.b;
           if (叫要 && 叫数 < 叫上限) {
             // 与 C 那台同一行：事件号、被调者位置、调用前的栈深、实参数。

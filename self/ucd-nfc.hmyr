@@ -41,6 +41,7 @@ fn 十六进制值(文: String) -> Int {
 }
 
 fn 十六进制写法(n: Int) -> String {
+  print("HEX<" + str(n) + ">" + chr(10))
   if n == 0 { return "0" }
   let 表 = "0123456789ABCDEF"
   var 出 = ""
@@ -127,7 +128,7 @@ fn main() -> Int effects(file, process) {
     i = i + 1
   }
 
-  print("C 扫描完 序数 " + str(序数) + chr(10))
+  print("C 扫描完 序数 " + str(序数) + " 序列[0]=" + str(序列[0]) + " 序列[1]=" + str(序列[1]) + chr(10))
   // ---- 全分解：递归到底 ----
   var 全分解 = index_new()
   var 最长 = 0
@@ -246,8 +247,10 @@ fn main() -> Int effects(file, process) {
   var p = 0
   while p < 序数 {
     let cp = 序列[p]
+    if p < 4 { print("p" + str(p) + " cp=" + str(cp) + chr(10)) }
     if index_has(全分解, str(cp)) {
       let 全 = index_get(全分解, str(cp))
+    if p < 3 { print("P" + str(p) + " cp=" + str(cp) + " 全=" + str(全) + chr(10)) }
       var 填 = (0, 0, 0, 0)
       var q = 0
       while q < len(全) && q < 4 {
