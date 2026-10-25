@@ -33,6 +33,8 @@ ok("发布 声明了 file 与 process 效果", /fn 发布\([^)]*\) effects\(file
 ok("说明书回答了「哪些资产带签名」", 文.includes("哪些资产带签名"));
 ok("说明书回答了「哪些没有，以及为什么」", 文.includes("哪些没有，以及为什么"));
 ok("说明书回答了「怎么自己验」", 文.includes("怎么自己验"));
+ok("说明书说了包里不含语料，以及去哪补",
+  文.includes("conformance/") && 文.includes("codepoints.txt") && 文.includes("tools/ucd.mjs"));
 ok("真发留在 JS 那一侧，且写明了理由", 文.includes("gh release create") && 文.includes("令牌"));
 
 if (!process.env.HMYR_HEAVY) {
