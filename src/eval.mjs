@@ -639,6 +639,42 @@ const BUILTINS = {
     }
     return Object.keys(rec);
   },
+  // ---- 九半、索引 ----
+  //
+  // 一个按键查的东西。为什么不用记录凑：记录只能一次建好，而且键必须「像名字」，
+  // 码点键 "0041" 会被拒。为什么不用元组收集：拼接是 O(n²)，八千个键就撞步数上限
+  // （design/INDEX.txt 里有那张表）。
+  //
+  // 键是任意字符串；交回的是同一个索引，于是可以写 表 = index_set(表, k, v)。
+  index_new: () => new Map(),
+  index_set: (rt, args) => {
+    const m = args[0];
+    if (!(m instanceof Map)) rt.fail("HMYR-R0219", "index_set wants an index, found " + describe(m));
+    m.set(rt.asString(args[1]), args[2]);
+    return m;
+  },
+  index_get: (rt, args) => {
+    const m = args[0];
+    if (!(m instanceof Map)) rt.fail("HMYR-R0219", "index_get wants an index, found " + describe(m));
+    const k = rt.asString(args[1]);
+    if (!m.has(k)) rt.fail("HMYR-R0218", "no key " + JSON.stringify(k) + " in that index");
+    return m.get(k);
+  },
+  index_has: (rt, args) => {
+    const m = args[0];
+    if (!(m instanceof Map)) return false;
+    return m.has(rt.asString(args[1]));
+  },
+  index_len: (rt, args) => {
+    const m = args[0];
+    if (!(m instanceof Map)) rt.fail("HMYR-R0219", "index_len wants an index, found " + describe(m));
+    return m.size;
+  },
+  index_keys: (rt, args) => {
+    const m = args[0];
+    if (!(m instanceof Map)) rt.fail("HMYR-R0219", "index_keys wants an index, found " + describe(m));
+    return [...m.keys()];
+  },
   // ---- 十、线程 ----
   // thr_spawn 起一个 worker；thr_join 同步等它；thr_cancel 叫停；thr_count 数活着的。
   // 起与停要 thread 效果；等与数是读。

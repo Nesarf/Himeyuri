@@ -362,8 +362,39 @@ const 内置 = {
     }
     return Object.keys(rec);
   },
-  // 写一份文本。规格里有它，而这一层一直没转发 —— 库只有读的那一侧。
-  // 只认 utf8：别的编码要一张表，而表在 deps/encodings 下（宿主那一份用着）。
+  // ---- 索引 ----
+  // 一个按键查的东西。记录凑不了（键要像名字，也不能增量置入），元组拼接是 O(n²)。
+  // 约定见 design/INDEX.txt：键是任意字符串，set 交回同一个索引，取不到报 R0218。
+  index_new: () => new Map(),
+  index_set: (rt, a) => {
+    const m = a[0];
+    if (!(m instanceof Map)) rt.坏("HMYR-R0219", "index_set wants an index, found " + 述(m));
+    m.set(rt.成串(a[1]), a[2]);
+    return m;
+  },
+  index_get: (rt, a) => {
+    const m = a[0];
+    if (!(m instanceof Map)) rt.坏("HMYR-R0219", "index_get wants an index, found " + 述(m));
+    const k = rt.成串(a[1]);
+    if (!m.has(k)) rt.坏("HMYR-R0218", "no key " + JSON.stringify(k) + " in that index");
+    return m.get(k);
+  },
+  index_has: (rt, a) => {
+    const m = a[0];
+    if (!(m instanceof Map)) return false;
+    return m.has(rt.成串(a[1]));
+  },
+  index_len: (rt, a) => {
+    const m = a[0];
+    if (!(m instanceof Map)) rt.坏("HMYR-R0219", "index_len wants an index, found " + 述(m));
+    return m.size;
+  },
+  index_keys: (rt, a) => {
+    const m = a[0];
+    if (!(m instanceof Map)) rt.坏("HMYR-R0219", "index_keys wants an index, found " + 述(m));
+    return [...m.keys()];
+  },
+  // 写一份文本。规格里有它，而这一层一直没转发 —— 库只有读的那一侧。  // 只认 utf8：别的编码要一张表，而表在 deps/encodings 下（宿主那一份用着）。
   // 说清这个边界，比悄悄按 utf8 处理要好。
   write_text: (rt, a) => {
     const 路径 = rt.成串(a[0]);

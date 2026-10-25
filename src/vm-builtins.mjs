@@ -312,6 +312,38 @@ export const 内置表 = {
   nfc: { 做: (vm, a) => vm.文.由宿主(vm.cap.unicode.normalize(vm.成串(a[0]))) },
   is_letter: { 做: (vm, a) => vm.cap.unicode.isLetter(vm.成串(a[0])) },
   is_mark: { 做: (vm, a) => vm.cap.unicode.isMark(vm.成串(a[0])) },
+  // ---- 索引 ----
+  // 值形状是 { tag: "index", m: Map }，与记录/元组同一层：靠传递，没有就地改动。
+  // 约定见 design/INDEX.txt。
+  index_new: { 做: () => ({ tag: "index", m: new Map() }) },
+  index_set: { 做: (vm, a) => {
+    const 表 = a[0];
+    if (!表 || 表.tag !== "index") return vm.坏("HMYR-R0219", "index_set wants an index, found " + 述(表, vm.文));
+    表.m.set(vm.成串(a[1]), a[2]);
+    return 表;
+  } },
+  index_get: { 做: (vm, a) => {
+    const 表 = a[0];
+    if (!表 || 表.tag !== "index") return vm.坏("HMYR-R0219", "index_get wants an index, found " + 述(表, vm.文));
+    const k = vm.成串(a[1]);
+    if (!表.m.has(k)) return vm.坏("HMYR-R0218", "no key " + JSON.stringify(k) + " in that index");
+    return 表.m.get(k);
+  } },
+  index_has: { 做: (vm, a) => {
+    const 表 = a[0];
+    if (!表 || 表.tag !== "index") return false;
+    return 表.m.has(vm.成串(a[1]));
+  } },
+  index_len: { 做: (vm, a) => {
+    const 表 = a[0];
+    if (!表 || 表.tag !== "index") return vm.坏("HMYR-R0219", "index_len wants an index, found " + 述(表, vm.文));
+    return 表.m.size;
+  } },
+  index_keys: { 做: (vm, a) => {
+    const 表 = a[0];
+    if (!表 || 表.tag !== "index") return vm.坏("HMYR-R0219", "index_keys wants an index, found " + 述(表, vm.文));
+    return new 类元组([...表.m.keys()]);
+  } },
   record_new: { 做: (vm, a) => {
     const pairs = a[0];
     if (!pairs || pairs.tag !== "tuple") return vm.坏("HMYR-R0214", "record_of wants a tuple of (name, value) pairs");
