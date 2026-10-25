@@ -38,6 +38,11 @@ SECTIONS
   {
     *(.text*)
     *(.rodata*)
+    /* 板子上要跑的那份字节码：由 objcopy 把 program.hmyrb 打成一个对象文件，
+     * 段名约定成 .program。它唯一的引用者是 board-main.c 里的弱声明，而弱引用
+     * 拦不住 --gc-sections —— 少了这一句 KEEP，字节码会被安静地回收掉，
+     * 映像照样链得过、照样烧得进，跑起来却报「读不到文件」。 */
+    KEEP(*(.program))
     KEEP(*(.init))
     KEEP(*(.fini))
     . = ALIGN(4);

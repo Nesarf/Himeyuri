@@ -121,6 +121,34 @@ console.log("五、真的链出一张映像（启动文件 + 链接脚本）");
   ok("映像的 RAM 在四十五千字节上下（含堆与出口缓冲）", 乙 > 30 * 1024 && 乙 < 64 * 1024, String(乙));
 }
 
+console.log("六、板子上那一份的入口");
+{
+  // 第五节链的是「桌面 main + 移植骨架」：字节码从文件名读，输出打到 stdout。
+  // 这张映像烧进板子只会打一行 usage 然后停住 —— 它的 main 是桌面那个。
+  //
+  // 这一节问的是另一件事：有没有一张映像的入口就是 port/board-main.c，
+  // 字节码编在里面，上电就跑。判据不是我信不信，是两样能查的东西 ——
+  // 桌面 main 会打的那行 usage 在不在映像里，字节码符号在不在映像里。
+  const r = spawnSync(process.execPath, [path.join(ROOT, "tools/arm-size.mjs")], { encoding: "utf8", timeout: 300000 });
+  const 文 = String(r.stdout || "") + String(r.stderr || "");
+  ok("arm-size 报出了板子那一张", /板子 ROM \d+ 字节/.test(文), String(r.stderr).slice(0, 200));
+  const rom = /板子 ROM (\d+) 字节/.exec(文);
+  const ram = /板子 RAM (\d+) 字节/.exec(文);
+  const 甲 = rom ? Number(rom[1]) : -1;
+  const 乙 = ram ? Number(ram[1]) : -1;
+  // 这一张比第五节那张小一点：桌面 main 与它那一串启动器没了，
+  // 多出来的是 board-main.o 与二百字节的字节码。
+  ok("板子那一张的 ROM 在二百千字节上下", 甲 > 180 * 1024 && 甲 < 240 * 1024, String(甲));
+  ok("板子那一张的 RAM 在五十千字节上下（含堆与出口缓冲）", 乙 > 40 * 1024 && 乙 < 64 * 1024, String(乙));
+  ok("入口是板子那一份（桌面 main 的 usage 不在映像里）",
+    /板子入口 板子那一份/.test(文), String(/板子入口[^\n]*/.exec(文)?.[0] || "（没有这一行）"));
+  // 这一条盯的是链接脚本：board-main.c 对字节码是弱引用，而弱引用拦不住
+  // --gc-sections。少了 link.ld 里那句 KEEP(*(.program))，映像照样链得过、
+  // 照样烧得进，跑起来却报「读不到文件」。
+  ok("字节码真的在映像里（KEEP 生效了）",
+    /板子字节码 在映像里/.test(文), String(/板子字节码[^\n]*/.exec(文)?.[0] || "（没有这一行）"));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

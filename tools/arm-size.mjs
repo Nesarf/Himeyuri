@@ -129,6 +129,93 @@ if (gcc) {
   console.log("映像（含启动例程、C 库选择、链接脚本给的堆与栈）：");
   console.log("  ROM " + 印.flash + " 字节（" + (印.flash / 1024).toFixed(1) + " KB）");
   console.log("  RAM " + 印.ram + " 字节（" + (印.ram / 1024).toFixed(1) + " KB）");
+
+  // ---- 板子上真正跑的那一张 ----
+  // 与上面那张只差两处：这台机器用 -DHMYR_LIB 编（不要桌面那个 main），
+  // 入口换成 port/board-main.c。字节码用 examples/twice.hmyr 现编一份打进去 ——
+  // 于是这张映像不需要文件系统，也不需要 argv：烧进去，上电，跑。
+  //
+  // 为什么要单独量：上面那张的 main 是桌面版，它会打一行 usage 然后返回。
+  // 「链得过」与「上电跑得起来」之间差的就是这一个 main。
+  {
+    const 板 = path.join(临, "board");
+    fs.mkdirSync(板, { recursive: true });
+    const 码 = path.join(板, "program.hmyrb");
+    const objcopy = 前缀 + (process.platform === "win32" ? "objcopy.exe" : "objcopy");
+    const 字节码进程 = spawnSync(process.execPath,
+      [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "examples/twice.hmyr"), 码], { encoding: "utf8" });
+    if (字节码进程.status !== 0) {
+      console.error("板子那一份的字节码没编出来：\n" + String(字节码进程.stderr).slice(0, 500));
+      process.exit(1);
+    }
+    // objcopy 给的符号名由输入文件名决定，所以这一步要在那个目录里用相对名跑：
+    // 传绝对路径的话符号会变成 _binary_E__DaShaoHuo_..._start，与 board-main.c
+    // 里声明的名字对不上 —— 症状是弱声明落空，链接照样过，上电却说读不到文件。
+    const 打 = spawnSync(objcopy, ["-I", "binary", "-O", "elf32-littlearm", "-B", "arm",
+      "--rename-section", ".data=.program,alloc,load,readonly,data,contents",
+      "program.hmyrb", "program.o"], { encoding: "utf8", cwd: 板 });
+    if (打.status !== 0) {
+      console.error("字节码没打进对象文件：\n" + String(打.stderr).slice(0, 500));
+      process.exit(1);
+    }
+    const 库 = path.join(板, "hmyr-lib.o");
+    const 库编 = spawnSync(gcc, ["-mcpu=cortex-m4", "-mthumb", "-O2", "-Wall",
+      "-Wno-unused-function", "-DHMYR_LIB", "-c", path.join(ROOT, "vm/hmyr.c"), "-o", 库], { encoding: "utf8" });
+    if (库编.status !== 0) {
+      console.error("库形态的这台机器没编过：\n" + String(库编.stderr).slice(0, 500));
+      process.exit(1);
+    }
+    const 入口 = path.join(板, "board-main.o");
+    const 入口编 = spawnSync(gcc, ["-mcpu=cortex-m4", "-mthumb", "-O2", "-Wall",
+      "-c", path.join(ROOT, "port/board-main.c"), "-o", 入口], { encoding: "utf8" });
+    if (入口编.status !== 0) {
+      console.error("板子入口没编过：\n" + String(入口编.stderr).slice(0, 500));
+      process.exit(1);
+    }
+    const 板映像 = path.join(板, "board.elf");
+    // --gc-sections 留着：掉了没用的段，这张映像才装得进 512 KB。
+    // 字节码靠 link.ld 里那句 KEEP(*(.program)) 钉住，不靠引用计数。
+    const 板链 = spawnSync(gcc, [
+      "-mcpu=cortex-m4", "-mthumb", "-nostartfiles", "--specs=nosys.specs",
+      "-T", path.join(ROOT, "port/link.ld"), "-Wl,--gc-sections",
+      "-o", 板映像, 启动, 库, path.join(临, "port.o"), 入口, path.join(板, "program.o"),
+      "-lm",
+    ], { encoding: "utf8" });
+    if (板链.status !== 0) {
+      const 全 = String(板链.stderr || "");
+      const 要紧 = 全.split(/\r?\n/).filter((l) => /error|undefined reference|multiple definition/i.test(l));
+      console.error("板子侧映像链接没过：\n" + (要紧.slice(0, 20).join("\n") || "（没有 error 行）"));
+      process.exit(1);
+    }
+    const 板量 = 分(量(板映像));
+    // 入口归属：桌面那个 main 的第一件事是打一行 usage。它若还在映像里，
+    // 说明 -DHMYR_LIB 没生效，或者链接把桌面的 main 挑了进来 —— 那种映像
+    // 烧进去只会打一行字然后停住，看起来像「板子坏了」。
+    const strings = 前缀 + (process.platform === "win32" ? "strings.exe" : "strings");
+    const 串 = String(spawnSync(strings, [板映像], { encoding: "utf8" }).stdout || "");
+    // 字节码是不是真在映像里：board-main.c 那一句是弱引用，而弱引用拦不住
+    // --gc-sections —— 只有 link.ld 里那句 KEEP(*(.program)) 能钉住它。
+    // 所以这一条问的是链接脚本，不是编译器。
+    const nm = 前缀 + (process.platform === "win32" ? "nm.exe" : "nm");
+    const 符 = String(spawnSync(nm, [板映像], { encoding: "utf8" }).stdout || "");
+    const 有码 = /_binary_program_hmyrb_start/.test(符);
+    console.log("——");
+    console.log("板子侧的映像（入口是 port/board-main.c，字节码编在里面）：");
+    console.log("  板子 ROM " + 板量.flash + " 字节（" + (板量.flash / 1024).toFixed(1) + " KB）");
+    console.log("  板子 RAM " + 板量.ram + " 字节（" + (板量.ram / 1024).toFixed(1) + " KB）");
+    console.log("  板子入口 " + (串.includes("usage: hmyr") ? "桌面那一份（不该这样）" : "板子那一份"));
+    console.log("  板子字节码 " + (有码 ? "在映像里" : "不在映像里（KEEP 没生效）"));
+
+    // 量具默认不留东西。但上板子要一张能烧的映像，而这一张跑完就随临时目录
+    // 一起没了 —— 所以要留的话得说一声。tools/arm-flash.mjs 认的就是这个位置。
+    const 留 = process.env.HMYR_ARM_ELF;
+    if (留) {
+      const 去处 = path.isAbsolute(留) ? 留 : path.join(ROOT, 留);
+      fs.mkdirSync(path.dirname(去处), { recursive: true });
+      fs.copyFileSync(板映像, 去处);
+      console.log("  映像留了一份：" + 去处);
+    }
+  }
 } else {
   // ---- Arm 那一支：保持原样 ----
   console.log("工具链：Arm（" + clang + "）");
