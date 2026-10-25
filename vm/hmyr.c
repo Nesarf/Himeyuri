@@ -2113,6 +2113,21 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = case_fold(args[0], name_is(name_idx, "to_upper"));
     return 1;
   }
+  /* ---- 索引 ---- */
+  /* 一个按键查的东西。这台机器暂时没有它：这里的记录把字段名放在常量池里（编译期已知），
+   * 而索引的键是运行时的字符串 —— 那要一张真正的哈希表，属于另一件活。
+   * 与 arena 同一条规矩：说清「这台机器没有」，而不是装作有。
+   * index_has 是例外 —— 问「有没有」不是失败，交回 0。 */
+  if (name_is(name_idx, "index_new") || name_is(name_idx, "index_set") ||
+      name_is(name_idx, "index_get") || name_is(name_idx, "index_len") ||
+      name_is(name_idx, "index_keys")) {
+    fail("HMYR-R0221", "this machine has no index: keys here are runtime strings, and records keep their names in the constant pool");
+    return 1;
+  }
+  if (name_is(name_idx, "index_has")) {
+    *out = v_bool(0);
+    return 1;
+  }
   /* ---- records ---- */
   if (name_is(name_idx, "record_new")) {
     if (nargs != 1) { fail("HMYR-R0101", "record_new wants one argument"); return 1; }
