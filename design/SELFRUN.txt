@@ -241,9 +241,7 @@ HMYR 全面自举：运行时、宿主依赖与启动
           行尾的 carriage return 不会漏进输出（那一份语料本身是 CRLF）。
         为此去首尾 补了 chr(9) 与 chr(13) —— 它原来只认空格，连 tab 都写成了两个字面字符。
         还没搬，按代价排：
-          格式化器   （已搬，见下）
-                     自举侧那份 parse.hmyr 只认表达式，完整的语句树在
-                     stmt.hmyr 与 body.hmyr 里 —— 接口要另接一层。
+
           LSP        src/lsp.mjs 一百五十四行，JSON-RPC 走 stdio。
                      它等的两格现在都有了：read_stdin_line 交回 {行, 结束}，
                      read_stdin_bytes 交回 {字节们, 结束}，bytes_to_text 把字节解成文本。
