@@ -27,7 +27,7 @@
 // 默认仍是宿主串 —— 与算术那两条路同一个安排：能换，而换不换由调用方说。
 import * as 码元 from "./units.mjs";
 import { 藏路径, 在用脱敏 } from "./redact.mjs";
-import { 有序 } from "./numbers.mjs";
+import { 有序, 下整 } from "./numbers.mjs";
 const 步限 = 5_000_000;
 const 深限 = 500;
 const 循环闸 = 1000000;
@@ -711,7 +711,8 @@ export class 最小运行时 {
       }
       case "Index": {
         const target = this.求值(node.target, scope, effects);
-        const index = this.成数(this.求值(node.index, scope, effects));
+        // 下标先取下整，与 slice 的起止、设()、chr() 同一条规矩。
+        const index = 下整(this.成数(this.求值(node.index, scope, effects)));
         if (码元.是码元序列(target)) {
           const 长 = 码元.长(target);
           if (!码元.在界内(target, index)) this.坏("HMYR-R0151", "index " + index + " is outside a value of length " + 长);

@@ -245,7 +245,9 @@ export class 虚拟机 {
           pc++; break;
         }
         case "INDEX": {
-          const i = this.成数(弹()), t = 弹();
+          // 下标先取下整：与 slice 的起止、设()、chr() 走同一个 数.下整 ——
+          // 小数下标原来是直接把宿主的 undefined 压进值域，而那不是这门语言的值。
+          const i = 数.下整(this.成数(弹())), t = 弹();
           if (this.文.是串(t)) {
             if (!this.文.在界内(t, i)) { this.坏("HMYR-R0151", "index " + 数.成文(i) + " is outside a value of length " + this.文.长(t)); return null; }
             压(this.文.元(t, i));

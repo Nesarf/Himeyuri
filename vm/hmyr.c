@@ -3415,7 +3415,9 @@ static Value run_func(Func *f, Value *args, int nargs) {
         Value i = pop(), t = pop();
         int ok = 0; double d = as_num(i, &ok);
         if (!ok) { fail("HMYR-R0130", "index must be a number"); FRAME_RET(v_null()); }
-        long long idx = (long long)d;
+        /* 下标先取下整，与 slice 的起止、设()、chr() 同一条规矩（src/numbers.mjs 的 下整）。
+           原来是 (long long) 直接转，对小数是朝零截断，而 JS 那三台用的是 floor —— 负数上不同。 */
+        long long idx = (long long)floor(d);
         if (t.tag == T_STR) {
           if (idx < 0 || idx >= (long long)t.slen) { fail("HMYR-R0151", "index outside the value"); FRAME_RET(v_null()); }
           push(v_str(t.s + idx, 1));

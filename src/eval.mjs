@@ -19,7 +19,7 @@ import { 本机能力 } from "./capabilities.mjs";
 import { 藏路径, 在用脱敏 } from "./redact.mjs";
 import { lex } from "./lexer.mjs";
 import { parse } from "./parser.mjs";
-import { 有序 } from "./numbers.mjs";
+import { 有序, 下整 } from "./numbers.mjs";
 
 // 尾调用的标记：函数体最后一件事是调用另一个函数时，抛它而不是真的压栈。
 //
@@ -299,7 +299,8 @@ export class Runtime {
       }
       case "Index": {
         const target = this.evalExpr(node.target, scope, effects);
-        const index = this.asNumber(this.evalExpr(node.index, scope, effects));
+        // 下标先取下整，与 slice 的起止、设()、chr() 同一条规矩。
+        const index = 下整(this.asNumber(this.evalExpr(node.index, scope, effects)));
         if (typeof target !== "string" && !Array.isArray(target)) this.fail("HMYR-R0152", "cannot index " + describe(target));
         if (index < 0 || index >= target.length) this.fail("HMYR-R0151", "index " + index + " is outside a value of length " + target.length);
         return target[index];
