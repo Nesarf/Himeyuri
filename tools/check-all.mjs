@@ -90,6 +90,11 @@ const SUITES = [
   ["writetext", "test/write-text.test.mjs", "SPEC 2.5 - write_text writes and reads back the same text, and an undeclared effect refuses instead of writing"],
   ["codefile", "test/code-file.test.mjs", "SPEC M4 - bytecode survives a file round trip: same names, same slots, same effects, same instructions, same answer"],
   ["cvm", "test/c-vm.test.mjs", "SPEC M4 - a machine that is not JavaScript executes the same bytecode and prints the same thing (skipped when the host has no C compiler)"],
+  // 目标验收：线程在两台字节码机上现在都没有。红着是它的用处 ——
+  // 它把「有线程之后两台该给出同一个答案」写成可跑的东西，而不是一句计划。
+  // 第三条真值在 2026-10-25 量到：不只 C 那台缺，JS 的字节码机也缺
+  // （src/vm-builtins.mjs 里那四条就是「如实说没有」），理由不同，缺一样。
+  ["threadscvm", "test/threads-c-vm.test.mjs", "SPEC M4 - threads on both bytecode machines: two threads alive at once, hard isolation, and a handle that is gone after join (known missing: neither machine has threads yet)", { knownMissing: "两台字节码机都还没有线程：C 那台的执行状态是文件级全局，JS 那台在 vm-builtins 里就没写" }],
   ["cli", "test/cli.test.mjs", "SPEC M4 - the launcher: one command from source to running, with no JavaScript in between (skipped when the host has no C compiler)"],
   ["arm", "test/arm.test.mjs", "SPEC M4 - the same C machine compiled for a bare-metal Cortex-M4: the desktop assumptions sit behind conditionals, the image links against a linker script and a startup file, and it runs on either arm-none-eabi-gcc or armclang (skipped when neither is present)"],
   ["board", "test/board.test.mjs", "SPEC M4 - the board path walked on a desk: bytecode in memory, a platform installed, output into a buffer"],
@@ -330,21 +335,30 @@ for (const [名, 脚本] of 选中) {
 }
 
 const 慢的 = [];
-for (const [name, script, what] of 选中) {
+let 已知缺 = 0, 意外通过 = 0;
+for (const [name, script, what, 标记] of 选中) {
   const result = 结果.get(name);
   const tail = String(result.出 || "").trim().split("\n").filter(Boolean).pop() || "";
   const ok = result.码 === 0;
-  if (!ok) failed++;
+  // known-missing：这一套是「目标验收」——它验的是还没做的东西，所以现在该红。
+  // 红不算失败，而绿了要报出来：那是账该改的信号，不是好消息。
+  // 与 conformance 里 xfail 的语义一致，理由也一样：缺的东西要能被看见，不能靠沉默。
+  const 是目标 = !!(标记 && 标记.knownMissing);
+  if (ok && 是目标) { 意外通过++; }
+  else if (!ok && !是目标) failed++;
+  else if (!ok && 是目标) 已知缺++;
   慢的.push([result.耗时, name]);
-  console.log("  " + (ok ? "[通过] " : "[不通过] ") + name.padEnd(7) + tail +
+  const 标签 = ok ? (是目标 ? "[目标已达成] " : "[通过] ") : (是目标 ? "[已知缺] " : "[不通过] ");
+  console.log("  " + 标签 + name.padEnd(12) + tail +
     (result.耗时 >= 1000 ? "  (" + (result.耗时 / 1000).toFixed(1) + "s)" : ""));
   console.log("          " + what);
-  if (!ok) {
+  if (是目标) console.log("          " + (ok ? "这一套本以为还做不到：把账改掉" : "还没做到，理由：" + 标记.knownMissing));
+  if (!ok && !是目标) {
     console.log("          exit " + result.码 + (result.重试过 ? ", after retrying once" : ""));
     const err = String(result.错 || "").trim().split("\n").slice(0, 3).join(" | ");
     if (err) console.log("          " + err);
     if (!tail) console.log("          and it produced no output at all");
-  } else if (result.重试过) {
+  } else if (ok && result.重试过) {
     console.log("          (passed on the second attempt: this suite is flaky under load)");
   }
 }
@@ -356,5 +370,7 @@ if (慢五.length) {
   console.log("慢的五套：" + 慢五.map(([毫, 名]) => 名 + " " + (毫 / 1000).toFixed(1) + "s").join(" · "));
   console.log("");
 }
+if (已知缺) console.log(已知缺 + " suite(s) are known missing: counted here, not failed — they are the target acceptance");
+if (意外通过) console.log(意外通过 + " suite(s) passed although the table says they cannot yet: fix the bookkeeping, not the suite");
 console.log(failed === 0 ? "all suites held" : failed + " suite(s) did not hold");
 process.exit(failed === 0 ? 0 : 1);
