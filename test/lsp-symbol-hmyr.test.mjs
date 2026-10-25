@@ -112,6 +112,32 @@ console.log("三、两张表相同");
   ok("每一条的名字、类别、位置都一样", 第一处 === "", 第一处);
 }
 
+console.log("四、正文里有中文时，Content-Length 数的仍是字节");
+{
+  // 中文标识符按 UTF-8 是三个字节，而字符串长度数的是码元 —— 两边只有在全 ASCII 时才相等。
+  // 这一条不直接看长度数字，而是看「能不能把应答完整拆出来」：长度算错时 JSON 会被截断。
+  const 中文源 = "fn 一甲(a: Int) -> Int {\n  return a\n}\n";
+  const 中文地址 = "file:///tmp/zhongwen.hmyr";
+  const 中文消息 = [
+    { jsonrpc: "2.0", id: 11, method: "initialize", params: {} },
+    { jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: 中文地址, languageId: "hmyr", version: 1, text: 中文源 } } },
+    { jsonrpc: "2.0", id: 12, method: "textDocument/documentSymbol", params: { textDocument: { uri: 中文地址 } } },
+    { jsonrpc: "2.0", method: "exit", params: {} },
+  ];
+  const 文输入 = Buffer.concat(中文消息.map(装框));
+  const 宿2 = spawnSync(process.execPath, [path.join(ROOT, "src/lsp.mjs"), "--stdio"], { input: 文输入, encoding: "buffer", timeout: 60000 });
+  const 自2 = spawnSync(exe, [码路], { input: 文输入, encoding: "buffer", timeout: 120000 });
+  const 宿2答 = 拆应答(宿2.stdout);
+  const 自2答 = 拆应答(自2.stdout);
+  ok("宿主的应答完整（长度对）", 宿2答.has(12));
+  ok("自举的应答完整（长度对）", 自2答.has(12), String(自2.stderr || "").slice(0, 100));
+  const a = 宿2答.get(12) ? 宿2答.get(12).result : null;
+  const b = 自2答.get(12) ? 自2答.get(12).result : null;
+  ok("两边都认出那一个中文名的符号", Array.isArray(a) && Array.isArray(b) && a.length === 1 && b.length === 1,
+    JSON.stringify(a) + " 对 " + JSON.stringify(b));
+  ok("名字一样", Array.isArray(a) && Array.isArray(b) && a[0] && b[0] && a[0].name === b[0].name, (a && a[0] ? a[0].name : "?") + " 对 " + (b && b[0] ? b[0].name : "?"));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 
 console.log("");

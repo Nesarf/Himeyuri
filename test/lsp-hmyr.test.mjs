@@ -50,10 +50,10 @@ if (!有编译器) {
     const 源码 = "fn 一() -> Int {\n  return 1\n}\n\nfn 二() -> Int {\n  return 2\n}\n";
     const 消息们 = [
       { jsonrpc: "2.0", id: 1, method: "initialize", params: {} },
-      { jsonrpc: "2.0", method: "didOpen", params: { textDocument: { uri: "file:///t.hmyr", languageId: "hmyr", version: 1, text: 源码 } } },
-      { jsonrpc: "2.0", id: 2, method: "documentSymbol", params: { textDocument: { uri: "file:///t.hmyr" } } },
-      { jsonrpc: "2.0", id: 3, method: "definition", params: { textDocument: { uri: "file:///t.hmyr" }, position: { line: 0, character: 3 } } },
-      { jsonrpc: "2.0", id: 4, method: "hover", params: { textDocument: { uri: "file:///t.hmyr" }, position: { line: 0, character: 3 } } },
+      { jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: "file:///t.hmyr", languageId: "hmyr", version: 1, text: 源码 } } },
+      { jsonrpc: "2.0", id: 2, method: "textDocument/documentSymbol", params: { textDocument: { uri: "file:///t.hmyr" } } },
+      { jsonrpc: "2.0", id: 3, method: "textDocument/definition", params: { textDocument: { uri: "file:///t.hmyr" }, position: { line: 0, character: 3 } } },
+      { jsonrpc: "2.0", id: 4, method: "textDocument/hover", params: { textDocument: { uri: "file:///t.hmyr" }, position: { line: 0, character: 3 } } },
       { jsonrpc: "2.0", id: 3, method: "shutdown" },
       { jsonrpc: "2.0", method: "exit" },
     ];
