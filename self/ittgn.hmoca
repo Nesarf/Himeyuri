@@ -1,0 +1,211 @@
+// 容器：.hm-ittgn-krgn-m 的最小形状 —— 能装、能列、能取。
+//
+// 这一份只做骨架，不做「可执行」与「与 zip 平级转换」：那两件要等运行逻辑
+// 那一条设计落地。骨架里已经带着三条会咬人的规矩，写在这里是因为它们是格式的一部分：
+//
+//   一、深度各自算。每个容器只看自己成员的路径，不从外面累加 ——
+//      否则一叠套娃，外层两层加内层十层就超了限，而它们本来互不相干。
+//   二、容器里不出现 hmsnp 与 hmhsr。那两个是容器的逻辑，不是成员。
+//      写成成员的样子是「转换一次多一份副本」，往返两次就是四份。
+//   三、字节原样进出。不压缩、不改行尾、不猜编码 —— 容器只管装。
+//
+// 格式（小端）：
+//   "HMYRITTGN"   9 字节魔数
+//   版本          1 字节（1）
+//   成员数        2 字节
+//   每个成员：
+//     路径长      2 字节
+//     路径        N 字节（只允许 ASCII —— write_bytes 只收 0 到 255 的值，
+//                 中文路径在这里会失真，所以最小形状先拒绝它，而不是悄悄写坏）
+//     数据长      4 字节
+//     数据        M 字节
+//
+// 用法：
+//   hmyr self/ittgn.hmoca --装 <包> <文件...>
+//   hmyr self/ittgn.hmoca --列 <包>
+//   hmyr self/ittgn.hmoca --取 <包> <成员名> <输出文件>
+
+fn 以尾(s: String, 尾: String) -> Bool {
+  if len(s) < len(尾) { return false }
+  return slice(s, len(s) - len(尾), len(s)) == 尾
+}
+
+fn 斜杠数(s: String) -> Int {
+  var n = 0
+  var i = 0
+  while i < len(s) {
+    if slice(s, i, i + 1) == "/" { n = n + 1 }
+    i = i + 1
+  }
+  return n
+}
+
+fn 全ASCII(s: String) -> Bool {
+  var i = 0
+  while i < len(s) {
+    if ord(slice(s, i, i + 1)) > 255 { return false }
+    i = i + 1
+  }
+  return true
+}
+
+fn 串字节(s: String) {
+  var 出 = ()
+  var i = 0
+  while i < len(s) {
+    出 = 出 + (ord(slice(s, i, i + 1)),)
+    i = i + 1
+  }
+  return 出
+}
+
+fn 字节串(字节们, 起: Int, 止: Int) -> String {
+  var s = ""
+  var i = 起
+  while i < 止 {
+    s = s + chr(字节们[i])
+    i = i + 1
+  }
+  return s
+}
+
+fn 小16(n: Int) {
+  return (n % 256, ((n - (n % 256)) / 256) % 256)
+}
+
+fn 小32(n: Int) {
+  let 一 = n % 256
+  let 二 = ((n - 一) / 256) % 256
+  let 三 = ((n - 一 - 二 * 256) / 65536) % 256
+  let 四 = (n - 一 - 二 * 256 - 三 * 65536) / 16777216
+  return (一, 二, 三, 四)
+}
+
+fn 读16(字节们, 位: Int) -> Int {
+  return 字节们[位] + 字节们[位 + 1] * 256
+}
+
+fn 读32(字节们, 位: Int) -> Int {
+  return 字节们[位] + 字节们[位 + 1] * 256 + 字节们[位 + 2] * 65536 + 字节们[位 + 3] * 16777216
+}
+
+// 扫一遍成员表：交回每项的 (名, 数据起, 数据止)。
+fn 扫(字节们) {
+  if len(字节们) < 12 { return () }
+  let 数 = 读16(字节们, 10)
+  var 出 = ()
+  var 位 = 12
+  var i = 0
+  while i < 数 {
+    let 名长 = 读16(字节们, 位)
+    let 名 = 字节串(字节们, 位 + 2, 位 + 2 + 名长)
+    let 长位 = 位 + 2 + 名长
+    let 数据长 = 读32(字节们, 长位)
+    let 起 = 长位 + 4
+    出 = 出 + ((名, 起, 起 + 数据长),)
+    位 = 起 + 数据长
+    i = i + 1
+  }
+  return 出
+}
+
+fn 装(包路: String, 文件们) -> Int effects(file) {
+  var i = 0
+  while i < len(文件们) {
+    let 名 = 文件们[i]
+    if !全ASCII(名) {
+      print("HMYR-E0412 最小形状只收 ASCII 路径：" + 名 + chr(10))
+      return 4
+    }
+    if 以尾(名, ".hmsnp") || 以尾(名, ".hmhsr") {
+      print("HMYR-E0410 容器里不能放 " + 名 + "：入口是容器的逻辑，不是成员" + chr(10))
+      return 4
+    }
+    if 斜杠数(名) + 1 > 12 {
+      print("HMYR-E0411 层太深：" + 名 + " 是第 " + str(斜杠数(名) + 1) + " 层，上限 12" + chr(10))
+      return 4
+    }
+    i = i + 1
+  }
+  var 段们 = (串字节("HMYRITTGN"), (1,), 小16(len(文件们)))
+  i = 0
+  while i < len(文件们) {
+    let 名 = 文件们[i]
+    let 数据 = read_bytes(名)
+    段们 = 段们 + (小16(len(名)), 串字节(名), 小32(len(数据)), 数据)
+    i = i + 1
+  }
+  write_bytes(包路, 段们)
+  print("装了 " + str(len(文件们)) + " 个成员 → " + 包路 + chr(10))
+  return 0
+}
+
+fn 列(包路: String) -> Int effects(file) {
+  let 字节们 = read_bytes(包路)
+  if len(字节们) < 12 || 字节串(字节们, 0, 9) != "HMYRITTGN" {
+    print("HMYR-E0413 这不是容器：" + 包路 + chr(10))
+    return 4
+  }
+  let 成员们 = 扫(字节们)
+  var i = 0
+  while i < len(成员们) {
+    let 一 = 成员们[i]
+    print(一[0] + "  " + str(一[2] - 一[1]) + " 字节" + chr(10))
+    i = i + 1
+  }
+  return 0
+}
+
+fn 取(包路: String, 名: String, 出: String) -> Int effects(file) {
+  let 字节们 = read_bytes(包路)
+  if len(字节们) < 12 || 字节串(字节们, 0, 9) != "HMYRITTGN" {
+    print("HMYR-E0413 这不是容器：" + 包路 + chr(10))
+    return 4
+  }
+  let 成员们 = 扫(字节们)
+  var i = 0
+  while i < len(成员们) {
+    let 一 = 成员们[i]
+    if 一[0] == 名 {
+      write_bytes(出, (slice(字节们, 一[1], 一[2]),))
+      print("取了 " + 名 + " → " + 出 + chr(10))
+      return 0
+    }
+    i = i + 1
+  }
+  print("HMYR-E0414 没有这个成员：" + 名 + chr(10))
+  return 4
+}
+
+fn main() -> Int effects(file, process) {
+  let 参 = argv()
+  if len(参) < 3 {
+    print("用法：hmyr self/ittgn.hmoca --装 <包> <文件...> | --列 <包> | --取 <包> <成员> <输出>" + chr(10))
+    return 2
+  }
+  if 参[1] == "--装" {
+    if len(参) < 4 {
+      print("--装 要给一个包和至少一个文件" + chr(10))
+      return 2
+    }
+    var 文件们 = ()
+    var i = 3
+    while i < len(参) {
+      文件们 = 文件们 + (参[i],)
+      i = i + 1
+    }
+    return 装(参[2], 文件们)
+  }
+  if 参[1] == "--列" {
+    return 列(参[2])
+  }
+  if 参[1] == "--取" {
+    if len(参) < 5 {
+      print("--取 要给一个包、一个成员名和一个输出" + chr(10))
+      return 2
+    }
+    return 取(参[2], 参[3], 参[4])
+  }
+  print("不认识的子命令：" + 参[1] + chr(10))
+  return 2
+}

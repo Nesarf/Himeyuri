@@ -412,11 +412,18 @@ const 内置 = {
   write_bytes: (rt, a) => {
     const 路径 = rt.成串(a[0]);
     const 元组 = a[1];
-    if (!元组 || !元组.items) return rt.坏("HMYR-R0130", "write_bytes wants a tuple of bytes");
+    // 三种形状都要认：这一层的元组是普通数组（见开头那段值表示），字节码机那边
+    // 交上来的是带 items 的类元组，而 read_bytes 在这一层交回的是 TypedArray ——
+    // 于是「读出来再写回去」这件事只认前两种时会失败。2026-10-26 撞上的：
+    // 容器那一份在 bin/hmyr.mjs 下报「wants a tuple of bytes」，同一份代码在字节码机上是好的。
+    const 是视图 = typeof ArrayBuffer !== "undefined" && ArrayBuffer.isView(元组);
+    if (!元组 || !(元组.items || Array.isArray(元组) || 是视图)) return rt.坏("HMYR-R0130", "write_bytes wants a tuple of bytes");
     // 元素可以是字节，也可以是一块字节（语言那边按块累积，省掉平方复制）。
     const 字节 = [];
-    for (const x of 元组.items) {
-      if (Array.isArray(x)) { for (const y of x) 字节.push(Math.trunc(rt.成数(y))); }
+    for (const x of (元组.items || 元组)) {
+      if (Array.isArray(x) || (typeof ArrayBuffer !== "undefined" && ArrayBuffer.isView(x))) {
+        for (const y of x) 字节.push(Math.trunc(rt.成数(y)));
+      }
       else 字节.push(Math.trunc(rt.成数(x)));
     }
     try { rt.cap.file.writeBytes(路径, 字节); }
