@@ -3314,11 +3314,18 @@ static Value run_func(Func *f, Value *args, int nargs) {
       case OP_LT: case OP_LE: case OP_GT: case OP_GE: {
         Value b = pop(), a = pop();
         int c = 0;
-        if (a.tag == T_NUM && b.tag == T_NUM) c = (a.num < b.num) ? -1 : (a.num > b.num ? 1 : 0);
+        int 能比 = 1;
+        if (a.tag == T_NUM && b.tag == T_NUM) {
+          /* NaN 与任何东西都不可比，而下面那行会把不可比压成 0（等于）——
+             于是 <= 与 >= 会成立。这条规矩在 src/numbers.mjs 的 有序 里也写着。 */
+          if (a.num != a.num || b.num != b.num) 能比 = 0;
+          c = (a.num < b.num) ? -1 : (a.num > b.num ? 1 : 0);
+        }
         else if (a.tag == T_STR && b.tag == T_STR) c = str_cmp(a, b);
         else { fail("HMYR-R0131", "cannot compare those two values"); FRAME_RET(v_null()); }
         int r = 0;
-        if (in->op == OP_LT) r = c < 0;
+        if (!能比) r = 0;
+        else if (in->op == OP_LT) r = c < 0;
         else if (in->op == OP_LE) r = c <= 0;
         else if (in->op == OP_GT) r = c > 0;
         else r = c >= 0;

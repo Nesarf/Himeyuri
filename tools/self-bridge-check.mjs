@@ -63,25 +63,29 @@ console.log("四、找不到的文件：如实说，不装作认得");
   ok("诊断里有一条", (桥.diagnostics.errors || []).length > 0, JSON.stringify((桥.diagnostics.errors || []).map((e) => e.code)));
 }
 
-console.log("五、字节码产物：在，而且不比源旧");
+console.log("五、字节码产物：在，而且不比它的链旧");
 {
   // 桥会因为「字节码缺失或过期」而退回解释器 —— 那是对的，但那时它慢十倍。
-  // 这一条把那个静默的回退变成一句会红的话：改完 self/run.hmyr 忘了重新生成，
-  // 桥不会说谎，只是悄悄变慢，而套件该替人记住这件事。
+  // 这一条把那个静默的回退变成一句会红的话：改完 run.hmyr 或它 import 的任何一份，
+  // 忘了重新生成，桥不会说谎，只是悄悄变慢，而套件该替人记住这件事。
+  //
+  // 比的是「这条链」，不是整个 self/：产物里含的是 run.hmyr 与它 import 的那些，
+  // 而 self/ 下还有 release、package、lsp 之类与它无关的文件。
+  // 早先按整个目录比，于是改一份无关的 self 文件就误报一次 —— 那是判定过宽，不是产物旧。
   const 字节路 = path.join(ROOT, "runtime/run.hmyrb");
-  const 目录 = path.join(ROOT, "self");
   const 在 = fs.existsSync(字节路);
   ok("runtime/run.hmyrb 在", 在);
   if (在) {
-    // 比的是 self/ 下最新的那一份 .hmyr，不只 run.hmyr —— 产物里含着它 import 的全部代码。
+    const 层 = 宿主载(path.join(ROOT, "self/run.hmyr"));
+    ok("run.hmyr 的链读得动", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
     let 最新 = 0;
-    for (const 名 of fs.readdirSync(目录)) {
-      if (!名.endsWith(".hmyr")) continue;
-      const t = fs.statSync(path.join(目录, 名)).mtimeMs;
+    for (const 份 of 层.order) {
+      const t = fs.statSync(份).mtimeMs;
       if (t > 最新) 最新 = t;
     }
     const 新 = fs.statSync(字节路).mtimeMs >= 最新;
-    ok("它不比 self/ 下任何 .hmyr 旧", 新, "旧了就重新生成：node tools/emit-code.mjs self/run.hmyr runtime/run.hmyrb");
+    ok("它不比这条链（" + 层.order.length + " 份）里任何一份旧", 新,
+      "旧了就重新生成：node tools/emit-code.mjs self/run.hmyr runtime/run.hmyrb");
   }
 }
 

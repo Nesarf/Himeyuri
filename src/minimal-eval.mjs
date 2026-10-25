@@ -27,6 +27,7 @@
 // 默认仍是宿主串 —— 与算术那两条路同一个安排：能换，而换不换由调用方说。
 import * as 码元 from "./units.mjs";
 import { 藏路径, 在用脱敏 } from "./redact.mjs";
+import { 有序 } from "./numbers.mjs";
 const 步限 = 5_000_000;
 const 深限 = 500;
 const 循环闸 = 1000000;
@@ -786,9 +787,10 @@ export class 最小运行时 {
       case "==": return this.相等(a, b);
       case "!=": return !this.相等(a, b);
       case "<": return this.比(a, b) < 0;
-      case "<=": return this.比(a, b) <= 0;
+      // <= 与 >= 先问「能不能比」：「比」把不可比压成 0，看起来像等于。
+      case "<=": return 有序(a, b) && this.比(a, b) <= 0;
       case ">": return this.比(a, b) > 0;
-      case ">=": return this.比(a, b) >= 0;
+      case ">=": return 有序(a, b) && this.比(a, b) >= 0;
       default: this.坏("HMYR-R0111", "no evaluation for operator " + node.op);
     }
   }

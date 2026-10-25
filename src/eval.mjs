@@ -19,6 +19,7 @@ import { 本机能力 } from "./capabilities.mjs";
 import { 藏路径, 在用脱敏 } from "./redact.mjs";
 import { lex } from "./lexer.mjs";
 import { parse } from "./parser.mjs";
+import { 有序 } from "./numbers.mjs";
 
 // 尾调用的标记：函数体最后一件事是调用另一个函数时，抛它而不是真的压栈。
 //
@@ -363,9 +364,11 @@ export class Runtime {
       case "==": return this.equal(a, b);
       case "!=": return !this.equal(a, b);
       case "<": return this.compare(a, b) < 0;
-      case "<=": return this.compare(a, b) <= 0;
+      // <= 与 >= 要先问「能不能比」：compare 把不可比压成 0，那看起来像「等于」。
+      // < 与 > 不必问，0 < 0 与 0 > 0 都是假。
+      case "<=": return 有序(a, b) && this.compare(a, b) <= 0;
       case ">": return this.compare(a, b) > 0;
-      case ">=": return this.compare(a, b) >= 0;
+      case ">=": return 有序(a, b) && this.compare(a, b) >= 0;
       default: this.fail("HMYR-R0111", "no evaluation for operator " + node.op);
     }
   }

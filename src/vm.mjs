@@ -191,9 +191,10 @@ export class 虚拟机 {
         case "EQ": { const b = 弹(), a = 弹(); 压(this.相等(a, b)); pc++; break; }
         case "NE": { const b = 弹(), a = 弹(); 压(!this.相等(a, b)); pc++; break; }
         case "LT": { const b = 弹(), a = 弹(); 压(this.比(a, b) < 0); pc++; break; }
-        case "LE": { const b = 弹(), a = 弹(); 压(this.比(a, b) <= 0); pc++; break; }
+        // 同上：<= 与 >= 先问「能不能比」，因为「比」把不可比压成 0。
+        case "LE": { const b = 弹(), a = 弹(); 压(数.有序(a, b) && this.比(a, b) <= 0); pc++; break; }
         case "GT": { const b = 弹(), a = 弹(); 压(this.比(a, b) > 0); pc++; break; }
-        case "GE": { const b = 弹(), a = 弹(); 压(this.比(a, b) >= 0); pc++; break; }
+        case "GE": { const b = 弹(), a = 弹(); 压(数.有序(a, b) && this.比(a, b) >= 0); pc++; break; }
         case "JMP": pc = 指令.a; break;
         case "JMPF": if (!真(弹(), this.文)) pc = 指令.a; else pc++; break;
         case "JMPT": if (真(弹(), this.文)) pc = 指令.a; else pc++; break;
