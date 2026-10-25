@@ -90,10 +90,10 @@ const SUITES = [
   ["writetext", "test/write-text.test.mjs", "SPEC 2.5 - write_text writes and reads back the same text, and an undeclared effect refuses instead of writing"],
   ["codefile", "test/code-file.test.mjs", "SPEC M4 - bytecode survives a file round trip: same names, same slots, same effects, same instructions, same answer"],
   ["cvm", "test/c-vm.test.mjs", "SPEC M4 - a machine that is not JavaScript executes the same bytecode and prints the same thing (skipped when the host has no C compiler)"],
-  // 目标验收：线程在两台字节码机上。JS 那台 2026-10-25 做了（worker 里跑同一台
-  // 字节码机），C 那台还缺 —— 它的执行状态是文件级全局。红着是它的用处：
-  // 它把「两台该给出同一个答案」写成可跑的东西，而今天只有一台给出答案。
-  ["threadscvm", "test/threads-c-vm.test.mjs", "SPEC M4 - threads on both bytecode machines: two threads alive at once, hard isolation, and a handle that is gone after join (known missing: the JS machine has them now, the C machine still does not)", { knownMissing: "C 那台还没有线程：它的执行状态是文件级全局，要第二台机器就得先实例化" }],
+  // 线程：两台字节码机都有了自己的实例。JS 那台 2026-10-25，C 那台次日 ——
+  // C 那台靠的是线程局部的 g_机：一个线程一个 Hmyr机器，线程里编译、装载、跑，
+  // 结果写成文本交回。板子那一支不编线程，thr_* 仍如实说没有。
+  ["threadscvm", "test/threads-c-vm.test.mjs", "SPEC M4 - threads on both bytecode machines: two threads alive at once, hard isolation, and a handle that is gone after join"],
   ["cli", "test/cli.test.mjs", "SPEC M4 - the launcher: one command from source to running, with no JavaScript in between (skipped when the host has no C compiler)"],
   ["arm", "test/arm.test.mjs", "SPEC M4 - the same C machine compiled for a bare-metal Cortex-M4: the desktop assumptions sit behind conditionals, the image links against a linker script and a startup file, and it runs on either arm-none-eabi-gcc or armclang (skipped when neither is present)"],
   ["board", "test/board.test.mjs", "SPEC M4 - the board path walked on a desk: bytecode in memory, a platform installed, output into a buffer"],

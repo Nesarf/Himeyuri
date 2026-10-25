@@ -604,6 +604,39 @@ typedef struct {
 static Hmyr机器 主机;
 static 线程局部 Hmyr机器 *g_机 = &主机;
 
+/* ---- 线程的形状（定义在文件更靠后的位置） -----------------------------
+ *
+ * 放在这里而不是内置表旁边：内置表在 call_builtin 的函数体里，而结构体与函数声明
+ * 不能在函数体内定义。定义（线程体、线程起、找线程、清线程）放在 run_bytecode
+ * 之后，因为它们要用种子、装载与执行那一批函数。
+ *
+ * 一个线程一个独立的 Hmyr机器 —— 分开的机制是上面那个线程局部的 g_机：
+ * 线程入口把它指向自己那一台，于是所有读它的代码在那一个线程里看到自己那一份。
+ */
+#if defined(_WIN32)
+typedef struct 线程上下文 {
+  int 号;
+  HANDLE 手;
+  char 源码路径[1024];
+  /* 比源码路径宽八个字节：它是「源码路径 + .hmyrb」，同宽会让 snprintf 报可能截断，
+   * 而那个警告是真的（截断之后编出来的产物名与要读的那个对不上）。 */
+  char 产物路径[1032];
+  char 入口[256];
+  char 结果[4096];
+  volatile int 完;
+  int 码;
+  char 话[256];
+} 线程上下文;
+
+#define 线程上限 16
+static 线程上下文 *g_线程们[线程上限];
+static int g_下一个线程号 = 1;
+
+static int 线程起(const char *源码, const char *入口);
+static 线程上下文 *找线程(int 号);
+static void 清线程(线程上下文 *c);
+#endif
+
 /* ---- 索引：一个按键查的东西 ------------------------------------------
  *
  * design/INDEX.txt 定了约定，这一份把它做出来。C 那台原先在这里答一句
@@ -1180,7 +1213,7 @@ typedef struct Func {
 /* A name pool: every string a caller might need to compare by name. */
 static 线程局部 uint16_t **pool_p;
 static 线程局部 uint32_t *pool_len;
-static uint32_t pool_n, pool_cap;
+static 线程局部 uint32_t pool_n, pool_cap;
 
 static int64_t pool_add(const uint16_t *p, uint32_t len) {
   if (pool_n == pool_cap) {
@@ -1651,7 +1684,7 @@ static int g_fields_on = 0;
 static long g_ev = 0;
 /* 最近一次字段读取用的是哪个名字（池索引）。诊断用：
  * 某个调用的实参不对时，先问「上一个读的字段是哪个」。 */
-static int64_t g_last_field = -1;
+static 线程局部 int64_t g_last_field = -1;
 
 /* The argv the programme sees. Built in main from the real command line:
  * the first element is where the bytecode came from, the rest are the
@@ -2079,7 +2112,7 @@ static int has_effect(Func *f, const uint16_t *名, uint32_t 长) {
 static int g_effects_on = 1;
 
 /* 编译那一段的 print 改道到标准错误 —— 理由写在 print 那个内置那里。 */
-static int g_compile_quiet = 0;
+static 线程局部 int g_compile_quiet = 0;
 
 static Value run_func(Func *f, Value *args, int nargs);
 
@@ -3432,10 +3465,76 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     free(编码们);
     return 1;
   }
-  /* ---- 线程：这一台没有 ----------------------------------------------
-   * 跨核要一个独立的机器实例，而这台的执行状态还是文件级全局。
-   * 如实说没有：spawn 交回 -1（无效句柄），join 与 cancel 报 R0221，
-   * count 交回 0 —— 与 JS 那侧在「起不来」时的答案同一条路。 */
+  /* ---- 线程：桌面那一支真做，板子那一支如实说没有 ----------------------
+   * 桌面：一个线程 = 一个独立的 Hmyr机器（线程局部的 g_机 让每个线程看到自己那一台）。
+   * 板子：那台没有线程（也没有种子），所以仍是「spawn 交回 -1、join 与 cancel 报 R0221、
+   *      count 交回 0」—— 与 JS 那侧「起不来」时同一条路。
+   *
+   * 上下文、线程表与三个辅助函数的声明在文件头部（g_机 那一段之后），
+   * 它们的定义在 run_bytecode 之后 —— 那批函数在文件更靠后的位置。 */
+#if defined(_WIN32)
+  if (name_is(name_idx, "thr_spawn")) {
+    if (nargs != 2) { fail("HMYR-R0101", "thr_spawn wants (source, entry)"); return 1; }
+    {
+      Value s = v_null(), e = v_null();
+      char *源码, *入口;
+      int 号;
+      value_to_text(args[0], &s);
+      value_to_text(args[1], &e);
+      源码 = utf16_to_utf8(s.s, s.slen);
+      入口 = utf16_to_utf8(e.s, e.slen);
+      号 = 线程起(源码 ? 源码 : "", 入口 ? 入口 : "");
+      free(源码);
+      free(入口);
+      *out = v_num((double)号);
+    }
+    return 1;
+  }
+  if (name_is(name_idx, "thr_join")) {
+    线程上下文 *c;
+    int 号;
+    DWORD 到;
+    if (nargs < 1) { fail("HMYR-R0101", "thr_join wants (handle [, timeout_ms])"); return 1; }
+    号 = (int)args[0].num;
+    c = 找线程(号);
+    if (!c) { fail("HMYR-R0221", "no such thread handle"); return 1; }
+    到 = (nargs >= 2 && args[1].tag == T_NUM && args[1].num > 0) ? (DWORD)args[1].num : 30000;
+    if (WaitForSingleObject(c->手, 到) != WAIT_OBJECT_0) {
+      fail("HMYR-R0222", "the thread did not finish within that time");
+      return 1;
+    }
+    if (c->码 == 0) {
+      uint32_t 长16 = 0;
+      uint16_t *u = utf8_to_utf16(c->结果, strlen(c->结果), &长16);
+      *out = v_str(u, 长16);
+    } else {
+      /* 线程里失败：交回空串，与 JS 那一侧同一个选择 —— 失败不是这一门语言的值。
+       * 但失败的理由要能看见：不写出来，症状只是「结果少了」，而那种症状要查很久。 */
+      fprintf(stderr, "[thread %d failed at step %d] %s\n", c->号, c->码, c->话);
+      *out = v_str(串存(1), 0);
+    }
+    清线程(c);
+    return 1;
+  }
+  if (name_is(name_idx, "thr_cancel")) {
+    线程上下文 *c;
+    int 号;
+    if (nargs != 1) { fail("HMYR-R0101", "thr_cancel wants one argument"); return 1; }
+    号 = (int)args[0].num;
+    c = 找线程(号);
+    if (!c) { fail("HMYR-R0221", "no such thread handle"); return 1; }
+    TerminateThread(c->手, 1);
+    清线程(c);
+    *out = v_num((double)号);
+    return 1;
+  }
+  if (name_is(name_idx, "thr_count")) {
+    int n = 0;
+    for (int i = 0; i < 线程上限; i++) if (g_线程们[i] && !g_线程们[i]->完) n++;
+    *out = v_num((double)n);
+    return 1;
+  }
+#else
   if (name_is(name_idx, "thr_spawn")) {
     *out = v_num(-1);
     return 1;
@@ -3448,6 +3547,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_num(0);
     return 1;
   }
+#endif
   /* arena：三区模型的桩，三个字段都是函数值，而这一台没有一等函数值。
    * 用 R0104（没有这个内置）而不是另开编号：它确实没有。 */
   if (name_is(name_idx, "arena")) {
@@ -3883,7 +3983,9 @@ static void 临时路径(char *buf, size_t cap) {
   const char *dir = getenv("TEMP");
   if (!dir || !*dir) dir = getenv("TMP");
   if (!dir || !*dir) dir = ".";
-  snprintf(buf, cap, "%s\\hmyr-%ld.hmyrb", dir, (long)_getpid());
+  /* 名字里带线程号：两个线程同时要一份临时文件时，光有 pid 会撞成同一个名字 ——
+   * 一个在写、另一个在读，症状是访问违例而不是「文件读不到」。 */
+  snprintf(buf, cap, "%s\\hmyr-%ld-%lu.hmyrb", dir, (long)_getpid(), (unsigned long)GetCurrentThreadId());
 #elif defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
   const char *dir = getenv("TMPDIR");
   if (!dir || !*dir) dir = "/tmp";
@@ -3899,7 +4001,7 @@ static void 临时路径(char *buf, size_t cap) {
  * 当前目录。找不到就明说，别让人等一个「没有这个文件」的通用消息。 */
 /* 内置种子写到哪儿：与编译产物分开一个名字，免得 cli_main 的清理删错文件。 */
 #if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
-static char g_种子临时[1024];
+static 线程局部 char g_种子临时[1024];
 
 static int 写种子临时(char *buf, size_t cap) {
   临时路径(buf, cap);
@@ -4022,6 +4124,116 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
    * 而一台机器不欠谁这一行。 */
   return (r.tag == T_NUM) ? (int)r.num : 0;
 }
+
+/* ---- 线程：三个辅助函数的定义（声明在内置表那一段） -------------------
+ *
+ * 为什么定义在这儿：它们要用种子、装载与执行那一批函数，而那批在文件更靠后的位置。
+ * 结构与线程表留在内置表旁边 —— 那里要用到它们的字段。 */
+#if defined(_WIN32)
+static DWORD WINAPI 线程体(LPVOID 参) {
+  线程上下文 *c = (线程上下文 *)参;
+  Hmyr机器 m;
+  memset(&m, 0, sizeof m);
+  m.步限 = 200000000;
+  /* 这一句就是「独立实例」：从此刻起，这个线程里每一处 g_机 都是自己那一台。 */
+  g_机 = &m;
+  g_failed = 0;
+  c->码 = 0;
+  c->话[0] = 0;
+  c->结果[0] = 0;
+
+  do {
+    char 种子[1024];
+    if (!找种子(种子, sizeof 种子, "")) { c->码 = 1; snprintf(c->话, sizeof c->话, "no seed to compile with"); break; }
+    {
+      char *编译参[2];
+      int 码;
+      编译参[0] = c->产物路径;
+      编译参[1] = c->源码路径;
+      /* 种子自己会打印「N 个块 → 路径」。那是编译期的进度，不该落进用户程序的输出 ——
+       * cli_main 在它那一趟做同样的一件事，这里也要做，否则线程里的编译日志会混进
+       * 主线程的 stdout，症状是「输出对，但前面多了一行」。 */
+      g_compile_quiet = 1;
+      码 = run_bytecode(种子, 种子, 2, 编译参, 200000000);
+      g_compile_quiet = 0;
+      if (码 != 0) { c->码 = 2; snprintf(c->话, sizeof c->话, "the compiler failed on that source"); break; }
+    }
+    {
+      size_t 长 = 0;
+      uint8_t *字节 = read_file(c->产物路径, &长);
+      Func *入口 = NULL;
+      if (!字节) { c->码 = 3; snprintf(c->话, sizeof c->话, "cannot read what the compiler wrote"); break; }
+      load_program(字节, 长);
+      {
+        uint32_t 长16 = 0;
+        uint16_t *u = utf8_to_utf16(c->入口, strlen(c->入口), &长16);
+        for (uint32_t i = 0; i < g_机->函数数; i++) {
+          Func *f = &g_机->函数们[i];
+          uint32_t same = 1;
+          if (f->name_len != 长16) continue;
+          for (uint32_t k = 0; k < 长16; k++) if (f->name[k] != u[k]) { same = 0; break; }
+          if (same) { 入口 = f; break; }
+        }
+      }
+      if (!入口) { c->码 = 4; snprintf(c->话, sizeof c->话, "no such function: %s", c->入口); break; }
+      {
+        Value r = run_func(入口, NULL, 0);
+        Value t = v_null();
+        if (g_failed) { c->码 = 5; snprintf(c->话, sizeof c->话, "%s", g_fail_msg); break; }
+        value_to_text(r, &t);
+        {
+          char *文本 = utf16_to_utf8(t.s, t.slen);
+          snprintf(c->结果, sizeof c->结果, "%s", 文本 ? 文本 : "");
+          free(文本);
+        }
+      }
+    }
+  } while (0);
+
+  c->完 = 1;
+  g_机 = &主机;
+  return 0;
+}
+
+/* 起一个线程。交回句柄号，起不来交回 -1 —— 与 JS 那侧「起不来」同一条路：
+ * 调用方拿到 -1 之后 join 会得到 R0221，一条路而不是两条。 */
+static int 线程起(const char *源码, const char *入口) {
+  线程上下文 *c;
+  FILE *f;
+  int 槽 = -1;
+  for (int i = 0; i < 线程上限; i++) if (!g_线程们[i]) { 槽 = i; break; }
+  if (槽 < 0) return -1;
+  c = (线程上下文 *)calloc(1, sizeof(线程上下文));
+  if (!c) return -1;
+  c->号 = g_下一个线程号++;
+  snprintf(c->入口, sizeof c->入口, "%s", 入口);
+  临时路径(c->源码路径, sizeof c->源码路径);
+  snprintf(c->产物路径, sizeof c->产物路径, "%s.hmyrb", c->源码路径);
+  f = 开文件(c->源码路径, "wb");
+  if (!f) { free(c); return -1; }
+  fwrite(源码, 1, strlen(源码), f);
+  fclose(f);
+
+  c->手 = CreateThread(NULL, 0, 线程体, c, 0, NULL);
+  if (!c->手) { remove(c->源码路径); free(c); return -1; }
+  g_线程们[槽] = c;
+  return c->号;
+}
+
+static 线程上下文 *找线程(int 号) {
+  for (int i = 0; i < 线程上限; i++) if (g_线程们[i] && g_线程们[i]->号 == 号) return g_线程们[i];
+  return NULL;
+}
+
+/* 收掉一行的账：句柄关掉、两份临时文件删掉、结构放掉。 */
+static void 清线程(线程上下文 *c) {
+  for (int i = 0; i < 线程上限; i++) if (g_线程们[i] == c) g_线程们[i] = NULL;
+  if (c->手) CloseHandle(c->手);
+  remove(c->源码路径);
+  remove(c->产物路径);
+  free(c);
+}
+#endif
 
 /* 启动器的正文：两趟。第一趟种子编，第二趟跑编出来的那一份。 */
 static int cli_main(int argc, char **argv) {

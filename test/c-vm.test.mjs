@@ -840,14 +840,15 @@ console.log("二十二、跑一个程序：退出码、两路输出、超时");
   ok("退出码、输出与超时都对", r.c.trim() === "0 hi 3 -1 true", JSON.stringify(r.c.trim()));
 }
 
-console.log("二十三、线程：C 那台没有，JS 那台有了");
+console.log("二十三、线程：两台都有了");
 {
-  // 跨核要一个独立的机器实例，而 C 那台的执行状态是文件级全局 —— 于是它如实说没有：
-  // spawn 交回 -1，活的数是 0。
+  // 这一节的历史值得留一句：它先是「两台都给 -1 0」（都还没有），后来拆成
+  // 「C 那台如实说没有、JS 那台有了」，现在是「两台都有了」。
+  // 判据跟着事实走，而不是跟着上一版的说法走。
   //
-  // 而 JS 那台在 2026-10-25 之后有了（src/vm-builtins.mjs 起一个 worker，
-  // worker 里用同一台字节码机跑）。所以这一节从「两台都给 -1 0」
-  // 变成「一台给拒绝、一台给句柄」—— 差异要写在判据里，不能只写两边相等。
+  // 这一段 spawn 的源码故意是坏的（`fn main() -> Int { 0 }` 缺 return）：
+  // 它验的是「spawn 这一步成不成」，编译失败发生在线程里，join 才知道。
+  // 所以这里只看句柄，不 join —— 收尾靠进程退出。
   const 源码 = [
     "fn main() -> Int effects(thread) {",
     '  print(str(thr_spawn("(fn main() -> Int { 0 })", "main")) + " ")',
@@ -856,9 +857,10 @@ console.log("二十三、线程：C 那台没有，JS 那台有了");
     "}",
   ].join("\n");
   const r = 两侧跑(源码, "threads");
-  ok("C 那台如实说没有：spawn 交回 -1、活的数是 0", r.c.trim() === "-1 0", JSON.stringify(r.c.trim()));
+  const c句柄 = String(r.c).trim().split(/\s+/)[0];
   const js句柄 = String(r.js).trim().split(/\s+/)[0];
-  ok("JS 那台有了线程：交回的不是 -1", js句柄 !== "" && js句柄 !== "-1", JSON.stringify(r.js.trim()));
+  ok("C 那台交回了句柄（不是 -1）", c句柄 !== "" && c句柄 !== "-1", JSON.stringify(r.c.trim()));
+  ok("JS 那台交回了句柄（不是 -1）", js句柄 !== "" && js句柄 !== "-1", JSON.stringify(r.js.trim()));
 }
 
 console.log("二十四、回收：同一个程序开着回收，峰值降下来");
