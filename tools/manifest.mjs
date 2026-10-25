@@ -13,6 +13,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { 是源码 } from "./file-kind.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 读 = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
@@ -54,7 +55,7 @@ const 走 = (dir) => {
   for (const e of fs.readdirSync(全, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) 走(p);
-    else if (e.name.endsWith(".hmyr")) {
+    else if (是源码(e.name)) {
       const 文本 = 读(p);
       const 函数 = (文本.match(/^fn /gm) || []).length;
       // 路径写成斜杠：清单要能 diff，而反斜杠只在 Windows 上成立。

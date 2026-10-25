@@ -7,6 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { 是源码 } from "./file-kind.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 读 = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
@@ -66,7 +67,7 @@ const 走 = (dir) => {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) 走(p);
-    else if (e.name.endsWith(".hmyr")) 库文件.push(p);
+    else if (是源码(e.name)) 库文件.push(p);
   }
 };
 走(path.join(ROOT, "runtime"));

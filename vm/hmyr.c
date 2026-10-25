@@ -4236,6 +4236,21 @@ static void 清线程(线程上下文 *c) {
 #endif
 
 /* 启动器的正文：两趟。第一趟种子编，第二趟跑编出来的那一份。 */
+
+/* 一个路径是源码还是字节码。判据只看后缀，不看内容去猜 ——
+ * 猜错的时候症状比报错难查得多（这一句在这一份里已经写过一次）。
+ *
+ * 两套名字并存，是改名第一步（design/FILETYPE.txt 第七节）：
+ *   .hmyr   旧名    ↔ .hmoca  新名
+ *   .hmyrb  旧名    ↔ .hmoks  新名（种子另有 .hmtn）
+ * 这一份里认名字的地方只有此处，其余出现 .hmyrb 的地方都是产物名。 */
+static int 是源码路径(const char *p) {
+  size_t n = strlen(p);
+  if (n > 5 && strcmp(p + n - 5, ".hmyr") == 0) return 1;
+  if (n > 6 && strcmp(p + n - 6, ".hmoca") == 0) return 1;
+  return 0;
+}
+
 static int cli_main(int argc, char **argv) {
   char 种子[1024];
   if (!找种子(种子, sizeof 种子, argv[0])) {
@@ -4421,8 +4436,7 @@ int main(int argc, char **argv) {
   /* 两个入口：给一份源码时先编再跑（启动器那一面），给一份字节码时直接跑。
    * 判据是后缀 —— 别看文件内容去猜，猜错的时候症状比报错难查得多。 */
   {
-    size_t 名长 = strlen(argv[1]);
-    if (名长 > 5 && strcmp(argv[1] + 名长 - 5, ".hmyr") == 0) {
+    if (是源码路径(argv[1])) {
       int 码 = cli_main(argc, argv);
 #if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
       if (g_种子临时[0]) remove(g_种子临时);

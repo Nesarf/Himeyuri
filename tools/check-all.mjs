@@ -146,6 +146,9 @@ const SUITES = [
   // 而 self-contained 那一套用的例子只用 print 与 str，所以它一直是绿的。
   // 同一天把 self/compile.hmyr 的「是内置」补齐并重建种子，这条现在是账。
   ["seedgap", "test/seed-gap.test.mjs", "SPEC M7 - the committed seed keeps up with the builtin table: every builtin name the host defines is also known to the seed compiler"],
+  // 改名第一步的验收：新名与旧名指的是同一件事，两台机器都得认两套拼法。
+  // 第二步（批量 git mv）之后这一套仍然该绿 —— 那时它证明的是「旧的接了没」。
+  ["names", "test/names.test.mjs", "design/FILETYPE.txt - the rename's first step: .hmyr with .hmoca, .hmyrb with .hmoks, and .hmtn for the seed, all naming the same things on both machines"],
   ["deflate", "test/deflate.test.mjs", "SPEC M7 - deflate stored blocks written in Himeyuri: round trip, and zlib reads the stream without being told anything"],
   ["tree", "test/tree.test.mjs", "SPEC M7 - the Huffman tree alone: all three code-length tables must sum to a complete Kraft total"],
   ["array", "test/array.test.mjs", "SPEC 2.2 - a mutable array beside the immutable tuple: write, read, out of range, and the tuple it came from stays put"],

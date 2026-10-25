@@ -12,6 +12,7 @@
 //
 // 从「读 .hmyr 文件、搭出树」这一步起，做主的已经是 HMYR 自己：递归、去重、环拒绝、后序。
 import fs from "node:fs";
+import { 是源码 } from "./file-kind.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit as 宿主载, runUnit as 宿主跑 } from "../src/loader.mjs";
@@ -31,7 +32,7 @@ function 源最新时间() {
   let 新 = 0;
   const 目录 = path.join(ROOT, "self");
   for (const 名 of fs.readdirSync(目录)) {
-    if (!名.endsWith(".hmyr")) continue;
+    if (!是源码(名)) continue;
     const t = fs.statSync(path.join(目录, 名)).mtimeMs;
     if (t > 新) 新 = t;
   }
