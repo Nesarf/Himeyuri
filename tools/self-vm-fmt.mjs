@@ -11,6 +11,7 @@ import { 读程序 } from "../src/code-file.mjs";
 import { 虚拟机 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
 import { loadUnit, runUnit } from "../src/loader.mjs";
+import * as 单位 from "../src/units.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -48,9 +49,12 @@ const 样本 = [
 ];
 
 console.log("格式化器：虚拟机与宿主给出同一段文本");
+// 两台的字符串底不同：宿主交回宿主串，虚拟机交回码元序列。
+// 比的是同一段文本，所以比之前折成宿主串 —— 那一步不改变文本，只改变表示。
+const 折 = (v) => (v instanceof Uint16Array ? 单位.成宿主(v) : v);
 for (const [标, 源] of 样本) {
-  const 甲 = vm调(源);
-  const 乙 = 宿主调(源);
+  const 甲 = 折(vm调(源));
+  const 乙 = 折(宿主调(源));
   const 同 = 甲 !== null && 乙 !== null && 甲 === 乙;
   ok(标, 同, 同 ? "" : JSON.stringify(String(甲).slice(0, 60)) + " · " + JSON.stringify(String(乙).slice(0, 60)));
 }

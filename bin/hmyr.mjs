@@ -33,7 +33,8 @@ import { 设脱敏, 在用脱敏, 脱线 } from "../src/redact.mjs";
 // 编译这一面不打印返回值，跑的就是程序本身 —— 这才与 C 那台 hmyr <源码.hmyr> 的语义一致，
 // 于是「同一个程序，两台机器」这句话就有了可以逐字节比较的两个入口。
 if (process.argv.includes("--compile")) {
-  const 其余 = process.argv.slice(2).filter((x) => x !== "--compile");
+  const 其余 = process.argv.slice(2).filter((x) =>
+    x !== "--compile" && x !== "--host-scalars" && x !== "--own-scalars" && x !== "--own-arithmetic");
   const 目标 = 其余[0];
   if (!目标) {
     console.error("用法：node bin/hmyr.mjs --compile 程序.hmyr [参数...]");
@@ -56,6 +57,8 @@ if (process.argv.includes("--compile")) {
     capabilities: 本机能力(),
     argv: [目标, ...其余.slice(1)],
     stepLimit: Number(process.env.HMYR_STEPS || 50000000),
+    // 与解释那条路同一个开关。默认关着：码元序列那一侧还差一条真差异（selfvmcompile）。
+    字符串用码元序列: process.argv.includes("--own-scalars"),
   });
   vm.write = (s) => process.stdout.write(s);
   vm.writeErr = (s) => process.stderr.write(s);
@@ -135,8 +138,11 @@ if (!层.ok) {
 // 因为这两种的结果一样：输出没有去处。退回标准流是更坏的选择 —— 那是静默丢输出。
 const 参数 = process.argv.slice(1);
 const 用宿主 = 参数.includes("--host-eval");
+// 两件事拆开：字符串的底（默认码元序列）与数的算术（默认宿主，因为自家那份慢三百倍）。
+// 拆开是为了量的时候分得清是哪一件引起的 —— 合在一个开关里，红了也不知道该收回哪一个。
 const 自家标量 = 参数.includes("--own-scalars");
-if (自家标量) 数.用自家算术(true);
+const 自家算术 = 参数.includes("--own-arithmetic");
+if (自家算术) 数.用自家算术(true);
 if (参数.includes("--redact") || process.env.HMYR_REDACT === "1") 设脱敏(true);
 
 // 带值的开关要从两处剔掉：开关本身与它后面那一个值。

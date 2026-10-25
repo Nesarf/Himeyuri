@@ -18,6 +18,7 @@ import { 最小运行 } from "../src/minimal-eval.mjs";
 import { 跑字节码 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
 import * as 文 from "../src/text.mjs";
+import * as 单位 from "../src/units.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -70,6 +71,12 @@ const 描述 = (v) => {
   if (typeof v === "boolean") return "bool:" + v;
   if (v === null) return "nil";
   if (v === undefined) return "未定义";
+  // 码元序列也是字符串值：默认的底现在是它（src/text-impl.mjs）。
+  // 格式与上面那个分支一样，连码元一起说清。
+  if (v instanceof Uint16Array) {
+    const 码元 = Array.from(v, (x) => x.toString(16));
+    return "str:" + JSON.stringify(单位.成宿主(v)) + " [" + 码元.join(",") + "]";
+  }
   return "聚合:" + (v && v.tag ? v.tag : String(v));
 };
 const 约 = (s) => { const m = /^错:(HMYR-[A-Z]?\d+)/.exec(s); return m ? "错:" + m[1] : s; };

@@ -12,6 +12,7 @@ import { 读程序 } from "../src/code-file.mjs";
 import { 虚拟机 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
 import { loadUnit, runUnit } from "../src/loader.mjs";
+import * as 单位 from "../src/units.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 字节路 = path.join(ROOT, "runtime/run.hmyrb");
@@ -68,11 +69,20 @@ console.log("一、字节码那台能跑自己的解释器吗");
 }
 
 console.log("二、同一段程序，两台机器给出同一个答案");
+// 两台机器的字符串底不同：宿主那一台交回宿主串，字节码那一台交回码元序列。
+// 比的是「同一个字符串」，所以写出来的时候把码元序列折成宿主串 —— 否则同一个答案
+// 会以两种形状出现，看起来像分叉。
+const 写 = (v) => {
+  if (v instanceof Uint16Array) return JSON.stringify(单位.成宿主(v));
+  if (Array.isArray(v)) return "[" + v.map(写).join(",") + "]";
+  if (v && (v.tag === "tuple" || v.tag === "array")) return "[" + v.items.map(写).join(",") + "]";
+  return JSON.stringify(v);
+};
 for (const [标, 源] of 样本) {
   const 甲 = 调("跑程序文字", [源]);
   const 乙 = 宿主调("跑程序文字", [源]);
-  const 同 = !甲.err && !乙.err && JSON.stringify(甲.value) === JSON.stringify(乙.value);
-  ok(标, 同, 甲.err || 乙.err || ("vm " + JSON.stringify(甲.value).slice(0, 40) + " · 宿主 " + JSON.stringify(乙.value).slice(0, 40)));
+  const 同 = !甲.err && !乙.err && 写(甲.value) === 写(乙.value);
+  ok(标, 同, 甲.err || 乙.err || ("vm " + 写(甲.value).slice(0, 40) + " · 宿主 " + 写(乙.value).slice(0, 40)));
 }
 
 console.log("");

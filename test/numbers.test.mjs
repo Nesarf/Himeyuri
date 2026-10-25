@@ -19,6 +19,7 @@ import { 本机能力 } from "../src/capabilities.mjs";
 import * as 数 from "../src/numbers.mjs";
 import * as 浮点 from "../src/f64.mjs";
 import { 位, 由位 } from "../src/bits.mjs";
+import * as 单位 from "../src/units.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -105,6 +106,9 @@ const 描述 = (v) => {
   if (typeof v === "boolean") return "bool:" + v;
   if (v === null) return "nil";
   if (v === undefined) return "未定义";
+  // 码元序列也是字符串值：默认的底现在是它（src/text-impl.mjs）。
+  // 少了这一行，三条路的对照会把「同一个字符串」判成一处聚合 —— 那不是分叉，是判据没跟上。
+  if (v instanceof Uint16Array) return "str:" + JSON.stringify(单位.成宿主(v));
   return "聚合:" + (v && v.tag ? v.tag : String(v));
 };
 // 错误只看编号：消息的措辞是三条路各自的，编号才是契约。

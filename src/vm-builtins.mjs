@@ -85,7 +85,9 @@ export const 内置表 = {
     if (v && (v.tag === "tuple" || v.tag === "array")) return 数.造(v.items.length);
     return vm.坏("HMYR-R0140", "len() wants a string or a tuple");
   } },
-  str: { 做: (vm, a) => vm.成串(a[0]) },
+  // 交回的必须是「语言的字符串值」，不是宿主串 —— 在当前那个底上要用当前底的表示。
+  // 少了 由宿主 这一步，str() 在码元序列底上会把一个宿主串塞进值域，下一次 len 就报 R0140。
+  str: { 做: (vm, a) => vm.文.由宿主(vm.成串(a[0])) },
   slice: { 做: (vm, a) => {
     // 码元序列与宿主串各切一遍。夹界的规矩两边一致，所以结果也一致。
     const v = a[0];

@@ -18,6 +18,7 @@ import { 编译模块, 合并程序 } from "./bytecode.mjs";
 import * as 数 from "./numbers.mjs";
 import * as 文 from "./text.mjs";
 import { 按选项取, 收进来 } from "./text-impl.mjs";
+import { 是串 as 是宿主串 } from "./text.mjs";
 
 // 值：两种聚合值自己带标签（定义在 src/vm-values.mjs，内置表也要用同一份）。
 import { 类元组, 类记录 } from "./vm-values.mjs";
@@ -56,10 +57,15 @@ export class 虚拟机 {
     this.argv = 选项.argv || [];
     this.cap = 选项.capabilities;
     if (!this.cap) throw new Error("虚拟机需要一份能力（见 src/capabilities.mjs）");
-    // 字符串住在哪里：默认宿主串，打开之后是码元序列（src/text-impl.mjs）。
-    // 与最小求值器用同一个选项名，于是两条执行路可以一起换。
-    this.码元串 = 选项.字符串用码元序列 === true;
-    this.文 = 按选项取(选项);
+    // 字符串住在哪里：默认宿主串，选项或 HMYR_UNITS=1 打开码元序列（src/text-impl.mjs）。
+    // 量过一轮：打开之后 175 个套件里有 5 个红，其中 4 个是验收的判据没跟上，
+    // 剩下 selfvmcompile 那条「if 与字符串」是真差异（JS 104 字节 / vm 148 字节）。
+    // 那一条查清之前默认不翻 —— 差 44 字节不是误差。
+    this.码元串 = 选项.字符串用码元序列 === true || process.env.HMYR_UNITS === "1";
+    // 这一句必须跟着上一句走。早先它读的是原始选项，于是「默认」只翻了一个标志，
+    // 而真正取字符串层的那一句没动 —— 量出来的全绿是空转。units 套件里那条
+    // 「不传选项时默认是码元序列」就是为这件事加的。
+    this.文 = 按选项取({ 字符串用码元序列: this.码元串 });
     this.步 = 0;
     this.步限 = 选项.stepLimit || 5_000_000;
     this.深限 = 选项.maxDepth || 500;
@@ -112,6 +118,10 @@ export class 虚拟机 {
   // 这一层不再抛，于是「失败」是一条要读的返回值，而不是一个要接的异常。
   调用(名, 实参, 调用者效果) {
     if (this.停机) return { ok: false, ...this.停机 };
+    // 参数是从外面交进来的值，字符串要按当前的底收一遍。
+    // 少了这一步，码元序列那台会把一个宿主串塞进值域，被调函数的第一句 len() 就报 R0140。
+    // 判「是不是宿主串」要走 text.mjs 那一份，不在这里写 typeof —— 与那两个执行器同一条规矩。
+    const 参数 = (实参 || []).map((x) => (是宿主串(x) ? 收进来(this.文, x) : x));
     const 函 = this.程序.函数们.get(名);
     if (!函) { this.坏("HMYR-R0104", "there is no name '" + 名 + "' in scope"); return { ok: false, ...this.停机 }; }
     if (++this.深 > this.深限) {
@@ -128,12 +138,12 @@ export class 虚拟机 {
           }
         }
       }
-      if (实参.length !== 函.参数量) {
-        this.坏("HMYR-R0101", "function '" + 名 + "' expects " + 函.参数量 + " argument(s), got " + 实参.length);
+      if (参数.length !== 函.参数量) {
+        this.坏("HMYR-R0101", "function '" + 名 + "' expects " + 函.参数量 + " argument(s), got " + 参数.length);
         return { ok: false, ...this.停机 };
       }
       const 帧 = { 槽: new Array(函.槽数).fill(null).map(() => ({ v: null, 可写: true })), 效果: new Set(函.效果) };
-      for (let i = 0; i < 实参.length; i++) 帧.槽[i] = { v: 实参[i], 可写: true };
+      for (let i = 0; i < 参数.length; i++) 帧.槽[i] = { v: 参数[i], 可写: true };
       const 值 = this.执行(函.码, 帧);
       return this.停机 ? { ok: false, ...this.停机 } : { ok: true, 值 };
     } finally { this.深--; }
