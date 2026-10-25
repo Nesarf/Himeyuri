@@ -533,18 +533,18 @@ struct Value {
   索引 *idx;           /* index: a keyed table, see below */
 };
 
-/* ---- 回收的根：收在一个地方 -----------------------------------------
+/* ---- 这台机器：状态收在一个地方 -------------------------------------
  *
- * design/SELFRUN.txt 那一格的第二半。第一半把五类根收进了 gc_标根；
- * 这一半把那五类本身收进一个结构，于是「这台机器的根」是一个对象，
- * 而不是八个散在三处的全局。
+ * design/SELFRUN.txt 那一格的第二、三半。回收的根先收进了 gc_标根（一个名字），
+ * 再收进这个结构；随后执行位置也进来了 —— 因为它们与根一样，是「每台机器一份」。
  *
- * 为什么值得：线程要的是「第二台机器」，而第二台机器的根不该再借第一个的。
- * 收成结构之后，那件事只剩下「把这一个结构变成每台机器一份」。
+ * 为什么值得：线程要的是「第二台机器」。而第二台机器的根与执行位置
+ * 都不该再借第一个的。收成结构之后，那件事只剩下「把这个对象变成每台一份」。
  *
- * 这里只收「根」，不收全部可变状态。g_cur / g_base / steps 是执行位置，
- * 它们进结构要动函数签名，那是最后一刀的事 —— 这一份的边界要写清，
- * 否则下一刀会以为这里已经收完了。
+ * 还差的一样东西是签名：这些字段今天是全局 g_机 的字段，任何函数都能直接读。
+ * 真正实例化要的是「每个跑指令的函数收下一个 Hmyr机器 *」—— 那是最后一刀，
+ * 价码在 tools/machine-scope.mjs 里：十四个函数直接读这些位置，
+ * 而它们各自又被别处调用。这一份的边界写在这里，否则下一刀会以为已经收完了。
  *
  * 键队列的大小原先定义在终端那一段（#define KEY_环 16），现在提到这里：
  * 一个结构体要知道自己数组有多大，而宏跟着它走比留在八百行之外好读。
@@ -556,6 +556,7 @@ typedef struct 帧记录 帧记录;   /* 定义在下面：这里只要一个指
 typedef struct Func Func;       /* 同上 */
 
 typedef struct {
+  /* ---- 回收要找的根 ---- */
   /* 操作栈：每一帧的槽都在里面 */
   Value *stack;
   uint32_t stack_n, stack_cap;
@@ -569,9 +570,18 @@ typedef struct {
   /* 函数表：指令里带着常量值 */
   Func *函数们;
   uint32_t 函数数;
-} Hmyr根;
 
-static Hmyr根 g_根;
+  /* ---- 执行位置：不是根，但同样是「每台一份」 ---- */
+  /* 当前帧的槽起点（操作栈里的下标） */
+  uint32_t 基址;
+  /* 正在跑的那个函数：报错定位与诊断输出要用它 */
+  Func *当前函数;
+  /* 已跑步数，与它的上限 */
+  long 步数;
+  int 步限;
+} Hmyr机器;
+
+static Hmyr机器 g_机;
 
 /* ---- 索引：一个按键查的东西 ------------------------------------------
  *
@@ -854,16 +864,16 @@ static int g_有原模式 = 0;
 #endif
 
 static void 键入队(Value v) {
-  if (g_根.键数 >= KEY_环) return;
-  g_根.键们[(g_根.键头 + g_根.键数) % KEY_环] = v;
-  g_根.键数++;
+  if (g_机.键数 >= KEY_环) return;
+  g_机.键们[(g_机.键头 + g_机.键数) % KEY_环] = v;
+  g_机.键数++;
 }
 
 static Value 键出队(void) {
-  if (g_根.键数 == 0) return v_null();
-  Value v = g_根.键们[g_根.键头];
-  g_根.键头 = (g_根.键头 + 1) % KEY_环;
-  g_根.键数--;
+  if (g_机.键数 == 0) return v_null();
+  Value v = g_机.键们[g_机.键头];
+  g_机.键头 = (g_机.键头 + 1) % KEY_环;
+  g_机.键数--;
   return v;
 }
 
@@ -1238,10 +1248,10 @@ static void load_program(const uint8_t *bytes, size_t len) {
   uint16_t ver = rd_u16(&r);
   if (ver != 1) { fprintf(stderr, "hmyr: file version %u, this reader knows 1\n", ver); exit(2); }
 
-  g_根.函数数 = rd_u16(&r);
-  g_根.函数们 = (Func *)calloc(g_根.函数数 ? g_根.函数数 : 1, sizeof(Func));
-  for (uint32_t i = 0; i < g_根.函数数; i++) {
-    Func *f = &g_根.函数们[i];
+  g_机.函数数 = rd_u16(&r);
+  g_机.函数们 = (Func *)calloc(g_机.函数数 ? g_机.函数数 : 1, sizeof(Func));
+  for (uint32_t i = 0; i < g_机.函数数; i++) {
+    Func *f = &g_机.函数们[i];
     f->name = (uint16_t *)rd_str(&r, &f->name_len);
     f->nargs = rd_u16(&r);
     f->nslots = rd_u16(&r);
@@ -1504,8 +1514,6 @@ static void 数字成文(double x, char *out, size_t cap) {
 
 /* ---- the machine ----------------------------------------------------- */
 
-static int step_limit = 5000000;
-static long steps = 0;
 
 /* A short ring of what the machine was doing. When a run ends badly, the last
  * few instructions are the only thing that says where "badly" started - the
@@ -1562,7 +1570,7 @@ static void 记深度(Func *f, Func *父) {
       函数名(父, 父名, sizeof 父名);
       char *名 = utf16_to_utf8(f->name, f->name_len);
       fprintf(stderr, "DEPTH %u #%ld %s (from %s) %s\n", (unsigned)g_深度,
-              (long)(f - g_根.函数们), 子名, 父名, 名 ? 名 : "?");
+              (long)(f - g_机.函数们), 子名, 父名, 名 ? 名 : "?");
       free(名);
     }
   }
@@ -1576,12 +1584,12 @@ static void 记深度(Func *f, Func *父) {
 }
 
 static void push(Value v) {
-  if (g_根.stack_n == g_根.stack_cap) {
-    g_根.stack_cap = g_根.stack_cap ? g_根.stack_cap * 2 : 256;
-    g_根.stack = (Value *)realloc(g_根.stack, g_根.stack_cap * sizeof(Value));
-    if (!g_根.stack) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  if (g_机.stack_n == g_机.stack_cap) {
+    g_机.stack_cap = g_机.stack_cap ? g_机.stack_cap * 2 : 256;
+    g_机.stack = (Value *)realloc(g_机.stack, g_机.stack_cap * sizeof(Value));
+    if (!g_机.stack) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
   }
-  g_根.stack[g_根.stack_n++] = v;
+  g_机.stack[g_机.stack_n++] = v;
 }
 
 /* 当前帧的栈基线。弹栈不许越过它 —— 这是全篇最要紧的一处语义对齐。
@@ -1589,11 +1597,10 @@ static void push(Value v) {
  * JS 那台的栈是每帧一条数组，弹空只是拿到 undefined，帧外的东西碰不到。
  * C 这台所有帧共用一条栈，若 pop 不认基线，帧内弹空就会吃掉调用者的值：
  * 少一个值，后面所有实参整体错位一格。查了两轮的「实参错位」就是它。 */
-static uint32_t g_base = 0;
 
 static Value pop(void) {
-  if (g_根.stack_n <= g_base) return v_null();
-  return g_根.stack[--g_根.stack_n];
+  if (g_机.stack_n <= g_机.基址) return v_null();
+  return g_机.stack[--g_机.stack_n];
 }
 
 static int truthy(Value v) {
@@ -1610,7 +1617,6 @@ static char g_fail_msg[512];
 
 /* 当前正在跑的函数。诊断用：一条指令的 pc 只在它自己的函数里有意义，
  * 所以报错时要能说出「哪个函数、第几条」。 */
-static Func *g_cur = NULL;
 
 /* 调用序列：HMYR_CALLS=1 时，每次函数调用打一行「第几个」。
  * 两台机器跑同一份字节码时，第一条不一致的调用就是分歧的起点。 */
@@ -1775,27 +1781,27 @@ static uint16_t *gc_串分配(size_t 码元数) {
  *
  * 根有五类，共同点是「解释器还活着，所以这些东西不能收」：
  *
- *   操作栈   g_根.stack 那一段：每一帧的槽都在里面
- *   argv     g_根.argv：程序参数本身是值
- *   键队列   g_根.键们：终端输入推进去的那一串
- *   帧链     g_根.帧链：每一帧的槽数组（标的是块本身，不只是槽里的值）
- *   函数表   g_根.函数们：指令里带着常量值
+ *   操作栈   g_机.stack 那一段：每一帧的槽都在里面
+ *   argv     g_机.argv：程序参数本身是值
+ *   键队列   g_机.键们：终端输入推进去的那一串
+ *   帧链     g_机.帧链：每一帧的槽数组（标的是块本身，不只是槽里的值）
+ *   函数表   g_机.函数们：指令里带着常量值
  *
  * 判据：这五类全在，且 gc_收集 里不再出现第二处压标。
- * 第二刀（Hmyr根 结构）要改的就是这一份 —— 到那时这里的每一行变成 g_根.xxx，
+ * 第二刀（Hmyr根 结构）要改的就是这一份 —— 到那时这里的每一行变成 g_机.xxx，
  * 而 gc_收集 一行都不用动。
  */
 static void gc_标根(void) {
-  for (uint32_t i = 0; i < g_根.stack_n; i++) gc_标值(g_根.stack[i]);
-  gc_标值(g_根.argv);
-  for (int i = 0; i < g_根.键数; i++) gc_标值(g_根.键们[(g_根.键头 + i) % KEY_环]);
-  for (帧记录 *f = g_根.帧链; f; f = f->上) {
+  for (uint32_t i = 0; i < g_机.stack_n; i++) gc_标值(g_机.stack[i]);
+  gc_标值(g_机.argv);
+  for (int i = 0; i < g_机.键数; i++) gc_标值(g_机.键们[(g_机.键头 + i) % KEY_环]);
+  for (帧记录 *f = g_机.帧链; f; f = f->上) {
     /* 标的是「槽数组」这一个块本身：它也是 alloc_values 分配的，
      * 只标槽里的值会让清扫把它自己收掉 —— 那是「活着的东西被回收」的典型形状。 */
     gc_压标(gc_查(f->slots));
   }
-  for (uint32_t i = 0; i < g_根.函数数; i++) {
-    Func *fn = &g_根.函数们[i];
+  for (uint32_t i = 0; i < g_机.函数数; i++) {
+    Func *fn = &g_机.函数们[i];
     for (uint32_t j = 0; j < fn->ncode; j++) gc_标值(fn->code[j].val);
   }
 }
@@ -1971,11 +1977,11 @@ static int values_equal(Value a, Value b) {
  * 交回位置而不是指针，是因为调用序列要跨机器对齐，而函数名多是中文 ——
  * 两台机器都打「第几个」，那个数字是共同的。 */
 static int64_t find_func_index(int64_t name_idx) {
-  for (uint32_t i = 0; i < g_根.函数数; i++) {
-    if (g_根.函数们[i].name_len != pool_len[name_idx]) continue;
+  for (uint32_t i = 0; i < g_机.函数数; i++) {
+    if (g_机.函数们[i].name_len != pool_len[name_idx]) continue;
     uint32_t same = 1;
-    for (uint32_t k = 0; k < g_根.函数们[i].name_len; k++) {
-      if (g_根.函数们[i].name[k] != pool_p[name_idx][k]) { same = 0; break; }
+    for (uint32_t k = 0; k < g_机.函数们[i].name_len; k++) {
+      if (g_机.函数们[i].name[k] != pool_p[name_idx][k]) { same = 0; break; }
     }
     if (same) return (int64_t)i;
   }
@@ -3136,22 +3142,22 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     if (nargs != 1) { fail("HMYR-R0101", "key_push wants one argument"); return 1; }
     Value s;
     value_to_text(args[0], &s);
-    if (g_根.键数 < KEY_环) {
+    if (g_机.键数 < KEY_环) {
       uint16_t *p = 串存((size_t)(s.slen ? s.slen : 1));
       if (s.slen) memcpy(p, s.s, (size_t)s.slen * sizeof(uint16_t));
       键入队(v_str(p, s.slen));
     }
-    *out = v_num((double)g_根.键数);
+    *out = v_num((double)g_机.键数);
     return 1;
   }
   if (name_is(name_idx, "key_available")) {
     if (nargs != 0) { fail("HMYR-R0101", "key_available takes no arguments"); return 1; }
-    *out = v_bool(g_根.键数 > 0);
+    *out = v_bool(g_机.键数 > 0);
     return 1;
   }
   if (name_is(name_idx, "key_read")) {
     if (nargs != 0) { fail("HMYR-R0101", "key_read takes no arguments"); return 1; }
-    if (g_根.键数 > 0) { *out = 键出队(); return 1; }
+    if (g_机.键数 > 0) { *out = 键出队(); return 1; }
 #if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
     /* 板子上没有标准输入：没有键就是空串。 */
     *out = ascii_text("");
@@ -3430,7 +3436,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   }
   if (name_is(name_idx, "argv")) {
     if (nargs != 0) { fail("HMYR-R0101", "argv takes no arguments"); return 1; }
-    *out = g_根.argv;
+    *out = g_机.argv;
     return 1;
   }
   {
@@ -3457,37 +3463,37 @@ static Value run_func(Func *f, Value *args, int nargs) {
     fail("HMYR-R0101", "that function got the wrong number of arguments");
     return v_null();
   }
-  记深度(f, g_cur);
+  记深度(f, g_机.当前函数);
   Value *slots = alloc_values(f->nslots);
   for (int i = 0; i < nargs && i < (int)f->nslots; i++) slots[i] = args[i];
   /* 帧链：GC 靠它看见递归中的槽；出口要还原，否则它指向一个已经没了的栈帧。 */
   帧记录 帧;
   帧.slots = slots;
   帧.槽数 = f->nslots;
-  帧.上 = g_根.帧链;
-  g_根.帧链 = &帧;
+  帧.上 = g_机.帧链;
+  g_机.帧链 = &帧;
 #if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
   if (g_gc开 && g_gc字节 > g_gc阈值) gc_收集();
 #endif
-#define FRAME_RET(x) do { g_根.帧链 = 帧.上; return (x); } while (0)
-  uint32_t base = g_根.stack_n;
+#define FRAME_RET(x) do { g_机.帧链 = 帧.上; return (x); } while (0)
+  uint32_t base = g_机.stack_n;
   /* 进帧时把基线交给 pop：从那以后弹栈不会越过它。
    * 退出时要还原 —— 否则回到调用者之后，它自己也弹不动自己压的东西了。 */
-  uint32_t 外base = g_base;
-  g_base = base;
-  Func *外函 = g_cur;
-  g_cur = f;
+  uint32_t 外base = g_机.基址;
+  g_机.基址 = base;
+  Func *外函 = g_机.当前函数;
+  g_机.当前函数 = f;
   int32_t pc = 0;
   for (;;) {
     if (g_failed) FRAME_RET(v_null());
-    if (++steps > step_limit) { fail("HMYR-R0102", "the program ran for too long"); FRAME_RET(v_null()); }
+    if (++g_机.步数 > g_机.步限) { fail("HMYR-R0102", "the program ran for too long"); FRAME_RET(v_null()); }
     if ((uint32_t)pc >= f->ncode) { fail("HMYR-R0110", "the instruction stream ran off its end"); FRAME_RET(v_null()); }
     Ins *in = &f->code[pc];
     if (g_trace_on) {
       Trace *t = &g_trace[g_trace_at];
       t->pc = pc;
       t->op = in->op;
-      t->n = g_根.stack_n;
+      t->n = g_机.stack_n;
       g_trace_at = (g_trace_at + 1) % TRACE_N;
     }
     switch (in->op) {
@@ -3588,14 +3594,14 @@ static Value run_func(Func *f, Value *args, int nargs) {
       case OP_JMP: pc = (int32_t)in->a; break;
       case OP_JMPF: { Value v = pop(); if (!truthy(v)) pc = (int32_t)in->a; else pc++; break; }
       case OP_JMPT: { Value v = pop(); if (truthy(v)) pc = (int32_t)in->a; else pc++; break; }
-      case OP_JMPF_KEEP: if (g_根.stack_n > base && !truthy(g_根.stack[g_根.stack_n - 1])) pc = (int32_t)in->a; else { pop(); pc++; } break;
-      case OP_JMPT_KEEP: if (g_根.stack_n > base && truthy(g_根.stack[g_根.stack_n - 1])) pc = (int32_t)in->a; else { pop(); pc++; } break;
+      case OP_JMPF_KEEP: if (g_机.stack_n > base && !truthy(g_机.stack[g_机.stack_n - 1])) pc = (int32_t)in->a; else { pop(); pc++; } break;
+      case OP_JMPT_KEEP: if (g_机.stack_n > base && truthy(g_机.stack[g_机.stack_n - 1])) pc = (int32_t)in->a; else { pop(); pc++; } break;
       case OP_TUPLE: {
         uint32_t n = (uint32_t)in->a;
         Value v = v_null(); v.tag = T_TUPLE; v.ilen = n;
         v.items = alloc_values(n);
-        for (uint32_t i = 0; i < n; i++) v.items[i] = g_根.stack[g_根.stack_n - n + i];
-        g_根.stack_n -= n;
+        for (uint32_t i = 0; i < n; i++) v.items[i] = g_机.stack[g_机.stack_n - n + i];
+        g_机.stack_n -= n;
         push(v); pc++; break;
       }
       case OP_RECORD: {
@@ -3608,8 +3614,8 @@ static Value run_func(Func *f, Value *args, int nargs) {
           lens[i] = pool_len[in->a + i];
           names[i] = pool_p[in->a + i];
         }
-        for (uint32_t i = 0; i < n; i++) v.rec.vals[i] = g_根.stack[g_根.stack_n - n + i];
-        g_根.stack_n -= n;
+        for (uint32_t i = 0; i < n; i++) v.rec.vals[i] = g_机.stack[g_机.stack_n - n + i];
+        g_机.stack_n -= n;
         v.rec.name_lens = lens;
         v.rec.names = names;
         push(v); pc++; break;
@@ -3625,8 +3631,8 @@ static Value run_func(Func *f, Value *args, int nargs) {
           名[nl] = 0;
           char m[220];
           char 函名[48];
-          uint32_t fl3 = (g_cur && g_cur->name_len < 47) ? g_cur->name_len : 0;
-          for (uint32_t k = 0; k < fl3; k++) 函名[k] = (g_cur->name[k] < 128) ? (char)g_cur->name[k] : '?';
+          uint32_t fl3 = (g_机.当前函数 && g_机.当前函数->name_len < 47) ? g_机.当前函数->name_len : 0;
+          for (uint32_t k = 0; k < fl3; k++) 函名[k] = (g_机.当前函数->name[k] < 128) ? (char)g_机.当前函数->name[k] : '?';
           函名[fl3] = 0;
           snprintf(m, sizeof m, "field '%s' read off a value that is not a record (tag=%d, %s pc=%u)",
                    名, (int)t.tag, 函名, (unsigned)pc);
@@ -3691,16 +3697,16 @@ static Value run_func(Func *f, Value *args, int nargs) {
           fprintf(stderr, "EV %ld CALLB %s n=%u\n", g_ev++, bn, (unsigned)n);
           g_calls_n++;
         }
-        if (g_根.stack_n < base || g_根.stack_n - base < n) {
+        if (g_机.stack_n < base || g_机.stack_n - base < n) {
           char m[160];
           snprintf(m, sizeof m, "a builtin call wants %u argument(s), the frame has %u",
-                   (unsigned)n, (unsigned)(g_根.stack_n - base));
+                   (unsigned)n, (unsigned)(g_机.stack_n - base));
           fail("HMYR-R0110", m);
           FRAME_RET(v_null());
         }
         Value *args = (Value *)malloc((size_t)(n ? n : 1) * sizeof(Value));
-        for (uint32_t i = 0; i < n; i++) args[i] = g_根.stack[g_根.stack_n - n + i];
-        g_根.stack_n -= n;
+        for (uint32_t i = 0; i < n; i++) args[i] = g_机.stack[g_机.stack_n - n + i];
+        g_机.stack_n -= n;
         Value out = v_null();
         call_builtin(in->a, args, (int)n, &out);
         free(args);
@@ -3709,14 +3715,14 @@ static Value run_func(Func *f, Value *args, int nargs) {
       }
       case OP_CALLF: {
         int64_t 位 = find_func_index(in->a);
-        Func *callee = (位 >= 0) ? &g_根.函数们[位] : NULL;
+        Func *callee = (位 >= 0) ? &g_机.函数们[位] : NULL;
         if (!callee) { fail("HMYR-R0104", "there is no such function"); FRAME_RET(v_null()); }
         if (g_calls_on && g_calls_n < 200000) {
           /* 对某一个函数，顺手把实参的种类打出来：调用序列只说明「调了它」，
            * 说不清「给了它什么」。求二元 就是被盯的那个（79 号）。 */
           if (位 == 79) {
-            fprintf(stderr, "ARGS79 base=%u stackn=%u n=%u tags=", (unsigned)base, (unsigned)g_根.stack_n, (unsigned)in->b);
-            for (uint32_t i = 0; i < (uint32_t)in->b; i++) fprintf(stderr, " %d", (int)g_根.stack[g_根.stack_n - (uint32_t)in->b + i].tag);
+            fprintf(stderr, "ARGS79 base=%u stackn=%u n=%u tags=", (unsigned)base, (unsigned)g_机.stack_n, (unsigned)in->b);
+            for (uint32_t i = 0; i < (uint32_t)in->b; i++) fprintf(stderr, " %d", (int)g_机.stack[g_机.stack_n - (uint32_t)in->b + i].tag);
             fprintf(stderr, " lastfield=");
             if (g_last_field >= 0) { for (uint32_t k = 0; k < pool_len[g_last_field] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)pool_p[g_last_field][k]); }
             fprintf(stderr, "\n");
@@ -3724,8 +3730,8 @@ static Value run_func(Func *f, Value *args, int nargs) {
           /* 栈深要减掉本帧基线：C 这边所有帧共用一条栈，而 JS 那边每帧一条。
            * 不减的话两个数字根本不是一回事 —— 这一点白比过一轮。 */
           fprintf(stderr, "EV %ld CALL %lld sn=%u n=%u tags=", g_ev++, (long long)位,
-                  (unsigned)(g_根.stack_n - base), (unsigned)in->b);
-          for (uint32_t i = 0; i < (uint32_t)in->b; i++) fprintf(stderr, " %d", (int)g_根.stack[g_根.stack_n - (uint32_t)in->b + i].tag);
+                  (unsigned)(g_机.stack_n - base), (unsigned)in->b);
+          for (uint32_t i = 0; i < (uint32_t)in->b; i++) fprintf(stderr, " %d", (int)g_机.stack[g_机.stack_n - (uint32_t)in->b + i].tag);
           fprintf(stderr, "\n");
           g_calls_n++;
         }
@@ -3749,26 +3755,26 @@ static Value run_func(Func *f, Value *args, int nargs) {
             FRAME_RET(v_null());
           }
         }
-        if (g_根.stack_n < base || g_根.stack_n - base < n) {
+        if (g_机.stack_n < base || g_机.stack_n - base < n) {
           char fname[64];
           uint32_t fl = callee->name_len < 63 ? callee->name_len : 63;
           for (uint32_t k = 0; k < fl; k++) fname[k] = (callee->name[k] < 128) ? (char)callee->name[k] : '?';
           fname[fl] = 0;
           char m[260];
           snprintf(m, sizeof m, "calling %s (#%lld) wants %u argument(s), the frame has %u (pc=%u)",
-                   fname, (long long)位, (unsigned)n, (unsigned)(g_根.stack_n - base), (unsigned)pc);
+                   fname, (long long)位, (unsigned)n, (unsigned)(g_机.stack_n - base), (unsigned)pc);
           fail("HMYR-R0110", m);
           FRAME_RET(v_null());
         }
         Value *args = (Value *)malloc((size_t)(n ? n : 1) * sizeof(Value));
-        for (uint32_t i = 0; i < n; i++) args[i] = g_根.stack[g_根.stack_n - n + i];
-        g_根.stack_n -= n;
+        for (uint32_t i = 0; i < n; i++) args[i] = g_机.stack[g_机.stack_n - n + i];
+        g_机.stack_n -= n;
         Value r = run_func(callee, args, (int)n);
         free(args);
         if (g_failed) FRAME_RET(v_null());
         push(r); pc++; break;
       }
-      case OP_RET: { Value v = pop(); g_根.stack_n = base; g_base = 外base; g_cur = 外函; if (g_深度) g_深度--; FRAME_RET(v); }
+      case OP_RET: { Value v = pop(); g_机.stack_n = base; g_机.基址 = 外base; g_机.当前函数 = 外函; if (g_深度) g_深度--; FRAME_RET(v); }
       default: {
         char msg[160];
         uint32_t k = in->op;
@@ -3826,20 +3832,20 @@ static uint8_t *read_file(const char *path, size_t *out_len) {
 /* 把装载过的那一份放下，好装下一份。不清的话第二份的槽位与名字池会接在第一份
  * 后面，症状是「程序跑起来了，但用的是别人的常数」—— 那种错比崩溃难查。 */
 static void unload_program(void) {
-  g_根.函数们 = NULL;
-  g_根.函数数 = 0;
+  g_机.函数们 = NULL;
+  g_机.函数数 = 0;
   pool_p = NULL;
   pool_len = NULL;
   pool_n = 0;
   pool_cap = 0;
-  g_根.stack_n = 0;
-  g_base = 0;
-  g_cur = NULL;
+  g_机.stack_n = 0;
+  g_机.基址 = 0;
+  g_机.当前函数 = NULL;
   g_failed = 0;
   g_last_field = -1;
   g_trace_at = 0;
-  steps = 0;
-  g_根.argv = v_null();
+  g_机.步数 = 0;
+  g_机.argv = v_null();
 }
 
 static int 文件在(const char *path) {
@@ -3946,24 +3952,24 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
     return 1;
   }
   load_program(bytes, len);
-  step_limit = 限;
-  steps = 0;
+  g_机.步限 = 限;
+  g_机.步数 = 0;
   g_failed = 0;
 
   /* 第一个槽位是脚本自己，之后才是参数 —— 与启动器那一层的约定一致。 */
-  g_根.argv = v_null();
-  g_根.argv.tag = T_TUPLE;
-  g_根.argv.ilen = (uint32_t)(nrest + 1);
-  g_根.argv.items = alloc_values(g_根.argv.ilen);
+  g_机.argv = v_null();
+  g_机.argv.tag = T_TUPLE;
+  g_机.argv.ilen = (uint32_t)(nrest + 1);
+  g_机.argv.items = alloc_values(g_机.argv.ilen);
   {
     uint32_t n16 = 0;
     uint16_t *u = utf8_to_utf16(argv0, strlen(argv0), &n16);
-    g_根.argv.items[0] = v_str(u, n16);
+    g_机.argv.items[0] = v_str(u, n16);
   }
   for (int i = 0; i < nrest; i++) {
     uint32_t n16 = 0;
     uint16_t *u = utf8_to_utf16(rest[i], strlen(rest[i]), &n16);
-    g_根.argv.items[i + 1] = v_str(u, n16);
+    g_机.argv.items[i + 1] = v_str(u, n16);
   }
 
   /* 入口：带参数时用 命令行入口，否则用 main。自举层两个都有 ——
@@ -3972,8 +3978,8 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
   Func *cli = NULL;
   {
     const uint16_t cli_name[] = { 0x547D, 0x4EE4, 0x884C, 0x5165, 0x53E3 };
-    for (uint32_t i = 0; i < g_根.函数数; i++) {
-      Func *f = &g_根.函数们[i];
+    for (uint32_t i = 0; i < g_机.函数数; i++) {
+      Func *f = &g_机.函数们[i];
       if (f->name_len == 4 && f->name[0] == 'm' && f->name[1] == 'a' && f->name[2] == 'i' && f->name[3] == 'n') entry = f;
       if (f->name_len == 5) {
         uint32_t same = 1;
