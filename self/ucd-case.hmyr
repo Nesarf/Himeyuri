@@ -1,0 +1,387 @@
+// 从 data/ucd/ 生成 C 那台要的大小写表（简单映射、完整映射、两个属性区间）。
+//
+// 这是 tools/ucd-case.mjs 的 HMYR 版，也是「语料生成」这一项的第三支。
+// 验收方式与前两支相同：拿真语料跑一遍，产物必须与 JS 那位逐字节相同。
+//
+// 写的时候避开了三处已经踩过的坑：
+//   一、slice 只切字符串 —— 对元组它会先写成文字再切，所以这里一律用下标取、用变量拼；
+//   二、排序的「不必后移」要用标志跳出，不能把下标减成 -1（那会写到位置 0）；
+//   三、这一门语言只有双精度，整数运算用 % 与 floor，不用「除回去再减」。
+//
+// 用法：hmyr self/ucd-case.hmyr <data/ucd 目录> <输出文件>
+
+fn 十六进制值(文: String) -> Int {
+  var v = 0
+  var i = 0
+  while i < len(文) {
+    let c = 文[i]
+    var d = 0 - 1
+    var k = 0
+    while k < 10 {
+      if c == "0123456789"[k] { d = k }
+      k = k + 1
+    }
+    var k2 = 0
+    while k2 < 6 {
+      if c == "abcdef"[k2] { d = 10 + k2 }
+      if c == "ABCDEF"[k2] { d = 10 + k2 }
+      k2 = k2 + 1
+    }
+    if d >= 0 { v = v * 16 + d }
+    i = i + 1
+  }
+  return v
+}
+
+fn 十六进制写法(n: Int) -> String {
+  if n == 0 { return "0" }
+  let 表 = "0123456789ABCDEF"
+  var 出 = ""
+  var v = n
+  while v > 0 {
+    出 = 表[v % 16] + 出
+    v = floor(v / 16)
+  }
+  return 出
+}
+
+fn 修剪(文: String) -> String {
+  var 起 = 0
+  var 止 = len(文)
+  var 走 = true
+  while 起 < 止 && 走 {
+    let c = 文[起]
+    if c == " " || c == chr(9) || c == chr(13) { 起 = 起 + 1 } else { 走 = false }
+  }
+  var 完 = 止
+  var 走2 = true
+  while 完 > 起 && 走2 {
+    let c = 文[完 - 1]
+    if c == " " || c == chr(9) || c == chr(13) { 完 = 完 - 1 } else { 走2 = false }
+  }
+  return slice(文, 起, 完)
+}
+
+// 一串十六进制码点（空格分隔）→ 元组。空串给空元组。
+fn 切码点(文: String) -> Int {
+  var 出 = ()
+  if len(文) == 0 { return 出 }
+  let 部 = split(文, " ")
+  var i = 0
+  while i < len(部) {
+    let 段 = 修剪(部[i])
+    if len(段) > 0 { 出 = 出 + (十六进制值(段),) }
+    i = i + 1
+  }
+  return 出
+}
+
+// 码点 → UTF-16 单元。语言里的字符串就是按单元算的，所以表里存单元。
+fn 成单元(码点们: Int) -> Int {
+  var 出 = ()
+  var i = 0
+  while i < len(码点们) {
+    let c = 码点们[i]
+    if c <= 65535 {
+      出 = 出 + (c,)
+    } else {
+      let 差 = c - 65536
+      出 = 出 + (55296 + floor(差 / 1024), 56320 + (差 % 1024))
+    }
+    i = i + 1
+  }
+  return 出
+}
+
+// 把两个索引合起来：完整映射优先，否则简单映射；与自身相同的丢掉；代理区跳过。
+// 交回「按码点升序」的元组，每条是 (码点, 单元们)。
+fn 收(完整: Int, 简单: Int) -> Int {
+  // 先把两边的键并起来。键是字符串形式的码点，这里要按数值排，所以转回数字。
+  var 全部 = ()
+  let 完键 = index_keys(完整)
+  var i = 0
+  while i < len(完键) {
+    全部 = 全部 + (to_int(完键[i]),)
+    i = i + 1
+  }
+  let 简键 = index_keys(简单)
+  var j = 0
+  while j < len(简键) {
+    if index_has(完整, 简键[j]) == false { 全部 = 全部 + (to_int(简键[j]),) }
+    j = j + 1
+  }
+
+  // 排序在可变数组上做：`只改` 每次都重建整个元组，用它做插入排序是三次方，
+  // 实测三千条就要跑六分钟。数组的交换是 O(1)。
+  let 排 = 数组(全部)
+  let n = len(全部)
+  var a = 1
+  while a < n {
+    let 当前 = 排[a]
+    var b = a - 1
+    var 走 = true
+    while b >= 0 && 走 {
+      if 排[b] > 当前 {
+        设(排, b + 1, 排[b])
+        b = b - 1
+      } else {
+        走 = false
+      }
+    }
+    设(排, b + 1, 当前)
+    a = a + 1
+  }
+
+  var 列 = ()
+  var k = 0
+  while k < n {
+    let cp = 排[k]
+    if cp < 55296 || cp > 57343 {
+      var 映 = ()
+      var 有 = false
+      if index_has(完整, str(cp)) {
+        映 = index_get(完整, str(cp))
+        有 = true
+      }
+      if 有 == false && index_has(简单, str(cp)) {
+        映 = index_get(简单, str(cp))
+        有 = true
+      }
+      if 有 && len(映) > 0 {
+        var 同 = false
+        if len(映) == 1 && 映[0] == cp { 同 = true }
+        if 同 == false {
+          let 单元 = 成单元(映)
+          if len(单元) <= 3 { 列 = 列 + ((cp, 单元),) }
+        }
+      }
+    }
+    k = k + 1
+  }
+  return 列
+}
+// 只改一个位置的元组：slice 对元组不可用，所以逐个取出来重拼。
+fn 只改(t: Int, 位: Int, 值: Int) -> Int {
+  var 出 = ()
+  var i = 0
+  while i < len(t) {
+    if i == 位 { 出 = 出 + (值,) } else { 出 = 出 + (t[i],) }
+    i = i + 1
+  }
+  return 出
+}
+
+fn 写映射(名: String, 列: Int, 说明: String) -> String {
+  var 行们 = ""
+  var i = 0
+  while i < len(列) {
+    let 条 = 列[i]
+    let cp = 条[0]
+    let 单元 = 条[1]
+    var 填0 = 0
+    var 填1 = 0
+    var 填2 = 0
+    if len(单元) > 0 { 填0 = 单元[0] }
+    if len(单元) > 1 { 填1 = 单元[1] }
+    if len(单元) > 2 { 填2 = 单元[2] }
+    // 这门语言没有跨行的 + 续行：一个表达式写完，长的就分几步接。
+    var 行 = "  {0x" + 十六进制写法(cp) + "u, " + str(len(单元)) + "u, {0x" + 十六进制写法(填0)
+    行 = 行 + "u, 0x" + 十六进制写法(填1) + "u, 0x" + 十六进制写法(填2) + "u}},"
+    if i == 0 { 行们 = 行 } else { 行们 = 行们 + chr(10) + 行 }
+    i = i + 1
+  }
+  var 头 = "/* " + 说明 + chr(10) + " *" + chr(10) + " * 按码点升序，二分查找。" + str(len(列)) + " 条。" + chr(10)
+  头 = 头 + " */" + chr(10) + "static const HmyrCaseEntry " + 名 + "[] = {" + chr(10) + 行们 + chr(10)
+  头 = 头 + "};" + chr(10) + chr(10) + "static const size_t " + 名 + "_count = " + str(len(列)) + ";" + chr(10)
+  return 头
+}
+
+fn 写区间(名: String, 列: Int, 说明: String) -> String {
+  var 行们 = ""
+  var 平 = ()
+  var i = 0
+  while i < len(列) {
+    let 条 = 列[i]
+    平 = 平 + (条[0], 条[1])
+    i = i + 1
+  }
+  var p = 0
+  while p < len(平) {
+    var 行 = "  "
+    var k = 0
+    while k < 8 && p + k < len(平) {
+      if k > 0 { 行 = 行 + ", " }
+      行 = 行 + "0x" + 十六进制写法(平[p + k]) + "u"
+      k = k + 1
+    }
+    行 = 行 + ","
+    if p == 0 { 行们 = 行 } else { 行们 = 行们 + chr(10) + 行 }
+    p = p + 8
+  }
+  var 头 = "/* " + 说明 + chr(10) + " *" + chr(10) + " * 每两个数一段：起、止，两端都含。" + str(len(列)) + " 段。" + chr(10)
+  头 = 头 + " */" + chr(10) + "static const uint32_t " + 名 + "[] = {" + chr(10) + 行们 + chr(10)
+  头 = 头 + "};" + chr(10) + chr(10) + "static const size_t " + 名 + "_count = " + str(len(列)) + ";" + chr(10)
+  return 头
+}
+
+fn 收区间(数据目录: String, 名字: String) -> Int effects(file) {
+  var 列 = ()
+  let 文 = read_text(数据目录 + "/DerivedCoreProperties.txt")
+  let 行们 = split(文, chr(10))
+  var i = 0
+  while i < len(行们) {
+    let 净行 = split(行们[i], "#")
+    var 净 = ""
+    if len(净行) > 0 { 净 = 修剪(净行[0]) }
+    if len(净) > 0 {
+      let 段 = split(净, ";")
+      if len(段) >= 2 {
+        if 修剪(段[1]) == 名字 {
+          let 范围 = split(修剪(段[0]), "..")
+          let 起 = 十六进制值(修剪(范围[0]))
+          var 止 = 起
+          if len(范围) > 1 { 止 = 十六进制值(修剪(范围[1])) }
+          列 = 列 + ((起, 止),)
+        }
+      }
+    }
+    i = i + 1
+  }
+  // 按起点升序（插入排序，同上）
+  var a = 1
+  while a < len(列) {
+    let 当前 = 列[a]
+    var b = a - 1
+    var 走 = true
+    while b >= 0 && 走 {
+      if 列[b][0] > 当前[0] {
+        列 = 只改(列, b + 1, 列[b])
+        b = b - 1
+      } else {
+        走 = false
+      }
+    }
+    列 = 只改(列, b + 1, 当前)
+    a = a + 1
+  }
+  return 列
+}
+
+fn main() -> Int effects(file, process) {
+  let 参 = argv()
+  var 数据目录 = "data/ucd"
+  if len(参) > 1 { 数据目录 = 参[1] }
+  var 出文件 = "vm/ucd-case.h"
+  if len(参) > 2 { 出文件 = 参[2] }
+
+  // ---- 一、简单映射（UnicodeData 的第十二、十三段） ----
+  var 简单上 = index_new()
+  var 简单下 = index_new()
+  let 文 = read_text(数据目录 + "/UnicodeData.txt")
+  let 行们 = split(文, chr(10))
+  var i = 0
+  while i < len(行们) {
+    let 行 = 行们[i]
+    if len(行) > 0 {
+      let 段 = split(行, ";")
+      if len(段) >= 15 {
+        // 区间标记那几行（<CJK Ideograph, First> 这种）没有大小写，跳过。
+        let 名 = 段[1]
+        var 跳 = false
+        if len(名) > 0 {
+          if 名[0] == "<" {
+            let 逗 = split(名, ",")
+            if len(逗) > 1 { 跳 = true }
+          }
+        }
+        if 跳 == false {
+          let cp = 十六进制值(段[0])
+          let 上 = 修剪(段[12])
+          let 下 = 修剪(段[13])
+          if len(上) > 0 { 简单上 = index_set(简单上, str(cp), 切码点(上)) }
+          if len(下) > 0 { 简单下 = index_set(简单下, str(cp), 切码点(下)) }
+        }
+      }
+    }
+    i = i + 1
+  }
+
+  // ---- 二、完整映射（SpecialCasing 里无条件的那几条） ----
+  var 完整上 = index_new()
+  var 完整下 = index_new()
+  let 特文 = read_text(数据目录 + "/SpecialCasing.txt")
+  let 特行们 = split(特文, chr(10))
+  var j = 0
+  while j < len(特行们) {
+    let 井 = split(特行们[j], "#")
+    var 净 = ""
+    if len(井) > 0 { 净 = 修剪(井[0]) }
+    if len(净) > 0 {
+      let 段 = split(净, ";")
+      if len(段) >= 5 {
+        // 带条件的那几条（地区规则）不管：第五段非空就跳过。
+        if 修剪(段[4]) == "" {
+          let cp = 十六进制值(修剪(段[0]))
+          let 下 = 切码点(修剪(段[1]))
+          let 上 = 切码点(修剪(段[3]))
+          if len(上) > 0 { 完整上 = index_set(完整上, str(cp), 上) }
+          if len(下) > 0 { 完整下 = index_set(完整下, str(cp), 下) }
+        }
+      }
+    }
+    j = j + 1
+  }
+
+  // ---- 三、合起来 ----
+  let 大写 = 收(完整上, 简单上)
+  let 小写 = 收(完整下, 简单下)
+
+  // ---- 四、两个属性区间 ----
+  let 区有 = 收区间(数据目录, "Cased")
+  let 区可 = 收区间(数据目录, "Case_Ignorable")
+
+  // ---- 五、写出来 ----
+  var 文本 = "/* Unicode 的大小写表，C 那台机器用。" + chr(10)
+  文本 = 文本 + " *" + chr(10)
+  文本 = 文本 + " * 由 tools/ucd-case.mjs 从 data/ucd/ 的语料生成，别手改 ——" + chr(10)
+  文本 = 文本 + " * 改了它，生成器下一次就会把它改回去。" + chr(10)
+  文本 = 文本 + " * 验收在 test/c-vm.test.mjs 第十节：两台机器对同一串文字交出同一串单元。" + chr(10)
+  文本 = 文本 + " */" + chr(10)
+  文本 = 文本 + "#ifndef HMYR_UCD_CASE_H" + chr(10)
+  文本 = 文本 + "#define HMYR_UCD_CASE_H" + chr(10)
+  文本 = 文本 + "#include <stdint.h>" + chr(10)
+  文本 = 文本 + "#include <stddef.h>" + chr(10) + chr(10)
+  文本 = 文本 + "/* 一条映射：码点、映射出来的单元数、最多三个 UTF-16 单元。" + chr(10)
+  文本 = 文本 + " * 三个够用 —— 全码点里最长的那一道正好是三个（德语里那一个字母的上半），" + chr(10)
+  文本 = 文本 + " * 生成器遇到更长的会自己停下，不写出半张表。 */" + chr(10)
+  文本 = 文本 + "typedef struct {" + chr(10)
+  文本 = 文本 + "  uint32_t cp;" + chr(10)
+  文本 = 文本 + "  uint16_t n;" + chr(10)
+  文本 = 文本 + "  uint16_t u[3];" + chr(10)
+  文本 = 文本 + "} HmyrCaseEntry;" + chr(10) + chr(10)
+  文本 = 文本 + 写映射("ucd_upper_map", 大写, "大写映射：码点 → 大写的 UTF-16 单元") + chr(10)
+  文本 = 文本 + 写映射("ucd_lower_map", 小写, "小写映射：码点 → 小写的 UTF-16 单元") + chr(10)
+  文本 = 文本 + 写区间("ucd_cased_ranges", 区有, "有大小写的码点区间（DerivedCoreProperties 的 Cased）") + chr(10)
+  文本 = 文本 + 写区间("ucd_case_ignorable_ranges", 区可, "大小写可以忽略的码点区间（DerivedCoreProperties 的 Case_Ignorable）") + chr(10)
+  文本 = 文本 + chr(10) + "#endif" + chr(10)
+
+  write_text(出文件, 文本)
+
+  var 多上 = 0
+  var m1 = 0
+  while m1 < len(大写) {
+    if len(大写[m1][1]) > 1 { 多上 = 多上 + 1 }
+    m1 = m1 + 1
+  }
+  var 多下 = 0
+  var m2 = 0
+  while m2 < len(小写) {
+    if len(小写[m2][1]) > 1 { 多下 = 多下 + 1 }
+    m2 = m2 + 1
+  }
+  print("大写映射 " + str(len(大写)) + " 条（其中多单元 " + str(多上) + " 条）" + chr(10))
+  print("小写映射 " + str(len(小写)) + " 条（其中多单元 " + str(多下) + " 条）" + chr(10))
+  print("有大小写 " + str(len(区有)) + " 段；大小写可忽略 " + str(len(区可)) + " 段" + chr(10))
+  print("→ " + 出文件 + "  " + str(len(文本) / 1024) + " KB" + chr(10))
+  return 0
+}

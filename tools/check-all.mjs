@@ -160,6 +160,7 @@ const SUITES = [
   ["selfvmcompile", "tools/self-vm-compile.mjs", "SELFVMC - the packer on the bytecode machine: compile and pack run as bytecode and produce the same five byte streams as the JavaScript packer"],
   ["selfvmfmt", "tools/self-vm-fmt.mjs", "SELFVMF - the formatter on the bytecode machine: self/fmt.hmyr as bytecode rewrites four sources to the same text the host evaluator produces"],
   ["ucdnfchmyr", "test/ucd-nfc-hmyr.test.mjs", "CORPUS - the HMYR-written NFC table generator runs on the bytecode machine and produces vm/ucd-nfc.h byte for byte, which is also the index builtins\u0027 first real user"],
+  ["ucdcasehmyr", "test/ucd-case-hmyr.test.mjs", "CORPUS - the HMYR-written case table generator runs on the bytecode machine and produces vm/ucd-case.h byte for byte"],
   ["selfnodes", "tools/self-nodes.mjs", "FULLSELF - nodes and declarations: every node the HMYR parser produces sits where the host tree has one, and Module/Fn/Block match the host field for field, in six samples"],
   ["selftree", "tools/self-tree.mjs", "FULLSELF - a lockstep walk: the Module built by HMYR and the host ast are compared node by node over eight samples including imports and literals, and the walk stops at the first mismatch"],
   ["selfhandoff", "tools/self-handoff.mjs", "FULLSELF - the handoff: a Module built by HMYR is handed straight to the host Runtime, registerModule then callFunction with no adapter at all, and five programs produce the expected value"],
