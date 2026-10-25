@@ -26,7 +26,7 @@ const 现成 = path.join(ROOT, "vm/ucd-case.h");
 const 语料 = path.join(ROOT, "data/ucd");
 
 console.log("一、前提在");
-ok("self/ucd-case.hmyr 在", fs.existsSync(源路));
+ok("self/ucd-case.hmoca 在", fs.existsSync(源路));
 ok("vm/ucd-case.h 在（JS 那位的产物）", fs.existsSync(现成));
 ok("三份语料都在", ["UnicodeData.txt", "SpecialCasing.txt", "DerivedCoreProperties.txt"]
   .every((f) => fs.existsSync(path.join(语料, f))));

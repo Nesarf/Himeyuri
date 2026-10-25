@@ -19,11 +19,11 @@ const ok = (label, condition, detail = "") => {
 
 console.log("一、源码读得动、编得过");
 const 源路 = path.join(ROOT, "self/package.hmoca");
-ok("self/package.hmyr 在", fs.existsSync(源路));
+ok("self/package.hmoca 在", fs.existsSync(源路));
 const 层 = loadUnit(源路);
 ok("加载没有诊断", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
 const 文 = fs.readFileSync(源路, "utf8");
-// 撞名那个错只有真跑才现形：manifest.hmyr 里也有 主，而合并是先到者赢。
+// 撞名那个错只有真跑才现形：manifest.hmoca 里也有 主，而合并是先到者赢。
 ok("辅助函数不叫 主（会和 manifest 撞名）", !/fn 主\(/.test(文));
 ok("打包 声明了 file 效果", /fn 打包\([^)]*\) effects\(file/.test(文));
 

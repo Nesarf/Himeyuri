@@ -62,7 +62,7 @@ console.log("按键让它提前收手");
 console.log("示例文件本身也是可解析的 Himeyuri");
 {
   const unit = loadUnit(path.join(ROOT, "examples/demo.hmoca"));
-  ok("examples/demo.hmyr 加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
+  ok("examples/demo.hmoca 加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 }
 
 console.log("");

@@ -3,7 +3,7 @@
 // 这一套钉三件事：
 //   一、生成器跑得动，摘要里的规模与位置抽查都说得对（U+0041 在 Basic Latin、
 //       U+3042 在 Hiragana、U+4E2D 在 CJK Unified Ideographs 与 Han 脚本）。
-//   二、生成的 blocks.hmyr 是一份 HMYR 源码：它能被读进、被求值、并给出同样的答案。
+//   二、生成的 blocks.hmoca 是一份 HMYR 源码：它能被读进、被求值、并给出同样的答案。
 //   三、它为什么用嵌套 if 而不是复合条件 —— 那一条由自举那一层的 parser 决定，
 //       而这一份把它写成一条断言，免得下次有人「顺手优化」成 && 之后在自举那条路上崩。
 import fs from "node:fs";
@@ -54,7 +54,7 @@ console.log("二、生成出来的表是一份 HMYR 源码，能被读进并求�
 
   const 程序 = path.join(ROOT, "conformance/ucd-blocks.hmoca");
   const 层 = loadUnit(程序);
-  ok("conformance/ucd-blocks.hmyr 读得进", 层.ok, JSON.stringify(层.diagnostics.errors.slice(0, 2).map((e) => e.code)));
+  ok("conformance/ucd-blocks.hmoca 读得进", 层.ok, JSON.stringify(层.diagnostics.errors.slice(0, 2).map((e) => e.code)));
   if (层.ok) {
     let 码 = null;
     try {

@@ -138,7 +138,7 @@ console.log("四、坏文件要被拒绝，而不是跑出怪结果");
   const 坏 = path.join(临, "bad.hmoks");
   fs.writeFileSync(坏, Buffer.from([1, 2, 3, 4, 5, 6, 7, 8]));
   const r = spawnSync(exe, [坏], { encoding: "utf8" });
-  ok("不是 .hmyrb 就拒绝", r.status !== 0, String(r.status));
+  ok("不是 .hmoks 就拒绝", r.status !== 0, String(r.status));
   const 空 = path.join(临, "empty.hmoks");
   fs.writeFileSync(空, Buffer.alloc(0));
   const r2 = spawnSync(exe, [空], { encoding: "utf8" });
@@ -147,7 +147,7 @@ console.log("四、坏文件要被拒绝，而不是跑出怪结果");
 
 console.log("五、自举层本身：HMYR 写的解释器，跑在 C 机器上");
 {
-  // 这一条是这一套存在的理由。self/run.hmyr 是「HMYR 写的解释器」，
+  // 这一条是这一套存在的理由。self/run.hmoca 是「HMYR 写的解释器」，
   // 它自己的自测会真的解析并求值四段小表达式 —— 全是这台 C 机器在做，
   // 没有一步经过 JavaScript。
   const 码路 = path.join(临, "self.hmoks");
@@ -164,19 +164,19 @@ console.log("五、自举层本身：HMYR 写的解释器，跑在 C 机器上")
   }
 }
 
-console.log("六、用这台机器跑一个 .hmyr 文件");
+console.log("六、用这台机器跑一个 .hmoca 文件");
 {
-  // 这是「不依赖宿主」那句话该有的形状：C 跑自举层，自举层读一个 .hmyr、
+  // 这是「不依赖宿主」那句话该有的形状：C 跑自举层，自举层读一个 .hmoca、
   // 解析它、求值它。中间没有 JavaScript —— 上面第五节已经把字节码编好了。
   const 码路 = path.join(临, "self.hmoks");
   if (fs.existsSync(码路)) {
     const r = spawnSync(exe, [码路, path.join(ROOT, "examples/twice.hmoca")], { encoding: "utf8", timeout: 60000 });
     const 出 = String(r.stdout || "");
-    ok("C 机器跑通了一个 .hmyr 文件", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 120));
+    ok("C 机器跑通了一个 .hmoca 文件", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 120));
     ok("那个文件算对了 21 乘 2", 出.includes("hi 42"), JSON.stringify(出.slice(0, 120)));
     ok("中文字符串也过得去", 出.includes("琥珀音"), JSON.stringify(出.slice(0, 120)));
   } else {
-    ok("C 机器跑通了一个 .hmyr 文件", false, "把自举层编出来才能测这一条");
+    ok("C 机器跑通了一个 .hmoca 文件", false, "把自举层编出来才能测这一条");
   }
 }
 

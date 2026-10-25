@@ -32,8 +32,8 @@ const 编一份 = (名) => {
 console.log("一、两份工具的源码都读得动");
 const 压码 = 编一份("deflate");
 const 解码 = 编一份("inflate");
-ok("self/deflate.hmyr 编得动", !!压码, "");
-ok("self/inflate.hmyr 编得动", !!解码, "");
+ok("self/deflate.hmoca 编得动", !!压码, "");
+ok("self/inflate.hmoca 编得动", !!解码, "");
 
 const 有编译器 = (() => {
   try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }

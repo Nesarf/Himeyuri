@@ -44,7 +44,7 @@ ok("the dependency was followed", unit.order.length === 2 && unit.order.some((f)
 {
   const conflicts = unit.diagnostics.items.filter((d) => d.code === "HMYR-W0302");
   ok("shared helper names are reported rather than hidden", conflicts.length > 0, String(conflicts.length) + " warning(s)");
-  ok("and each warning names both files", conflicts.every((d) => /lex\.hmyr/.test(d.message) && /chain\.hmyr/.test(d.message)));
+  ok("and each warning names both files", conflicts.every((d) => /lex\.hmoca/.test(d.message) && /chain\.hmoca/.test(d.message)));
 }
 
 const chainRt = runUnit(unit);

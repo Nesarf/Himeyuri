@@ -87,7 +87,7 @@ try {
   console.log("\n选工作空间：从损失最小的排起（这是三条原则的机械化）");
   {
     const text = call("选工作空间", ["sRGB", "ClayRGB-elle-V2-srgbtrc.icc;AllColorsRGB-elle-V2-srgbtrc.icc;RSWOP.icm"]);
-    const data = JSON.parse(text);   // 语言那边现在有 json.hmyr 了；这一条暂时留在宿主侧，下一步换成它
+    const data = JSON.parse(text);   // 语言那边现在有 json.hmoca 了；这一条暂时留在宿主侧，下一步换成它
     ok("排名第一的是零损失的目标", data.ranked[0].given === "ClayRGB-elle-V2-srgbtrc.icc" && data.ranked[0].sum === 0,
       JSON.stringify(data.ranked[0]));
     ok("CMYK 排在最后", data.ranked[data.ranked.length - 1].given === "RSWOP.icm",

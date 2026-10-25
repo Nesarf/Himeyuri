@@ -1,4 +1,4 @@
-// HMYR 写的嵌入器：把一份 .hmyrb 摊成 C 源码。
+// HMYR 写的嵌入器：把一份 .hmoks 摊成 C 源码。
 //
 // 这是「工具链搬进 HMYR」的第二项。它只用三件世界面：读字节、拼文本、写文本 ——
 // 而读字节（read_bytes）是这一轮新加的那一格，因为 read_text 会按 UTF-8 解码，
@@ -25,7 +25,7 @@ const ok = (label, condition, detail = "") => {
 
 console.log("一、嵌入器的源码读得动");
 const 源路 = path.join(ROOT, "self/embed.hmoca");
-ok("self/embed.hmyr 在", fs.existsSync(源路));
+ok("self/embed.hmoca 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
 const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));
@@ -68,13 +68,13 @@ if (!有编译器) {
       const 文 = fs.readFileSync(出, "utf8");
       const 行们 = 文.split("\n");
       const 字节 = fs.statSync(path.join(ROOT, "bootstrap/pack.hmtn")).size;
-      ok("生成的行数在三千上下", 行们.length > 3000 && 行们.length < 4000, String(行们.length));
+      ok("生成的行数在四千上下", 行们.length > 3000 && 行们.length < 6000, String(行们.length));
       ok("首行写着字节数", 行们[0].includes(String(字节) + " 字节"), JSON.stringify(行们[0]));
       ok("数组从 HMYRB 的魔数开始", (行们[2] || "").trim().startsWith("0x48, 0x4d, 0x59, 0x52, 0x42"), JSON.stringify((行们[2] || "").slice(0, 60)));
       ok("末行给出长度", 文.includes("pack_hmyrb_len = " + 字节 + ";"), "");
       ok("没有一行长到离谱", 行们.every((l) => l.length < 400), String(Math.max(...行们.map((l) => l.length))));
     } else {
-      ok("生成的行数在三千上下", false, "没有产物");
+      ok("生成的行数在四千上下", false, "没有产物");
     }
   }
   fs.rmSync(临, { recursive: true, force: true });

@@ -66,7 +66,7 @@ try {
     写("loop.hmoca", "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n");
     写("fn.hmoca", "fn 加(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  let s = \"abc\"\n  return 加(len(s), 2)\n}\n");
     写("rec.hmoca", "fn main() -> Int {\n  let r = {a: 1}\n  return r.a\n}\n");
-    写("imp.hmoca", "import \"./mod/lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
+    写("imp.hmoca", "import \"./mod/lib.hmoca\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
     写("text.hmoca", "fn main() -> String {\n  return slice(\"hello world\", 0, 5) + str(len(\"ab\"))\n}\n");
     写("tuple.hmoca", "fn main() -> Int {\n  let t = (1, 2) + (3,)\n  return len(t) + t[0]\n}\n");
     写("nested.hmoca", "fn 外(n: Int) -> Int {\n  let f = if n > 2 { 1 } else { 2 }\n  return f + n\n}\nfn main() -> Int {\n  return 外(3)\n}\n");
@@ -82,7 +82,7 @@ try {
 
     console.log("二·补、两个求值器跑「自举自己的求值器」，答案也同一个");
   {
-    // 这一节比上面那批硬：它跑的源码是 self/run.hmyr 里的 跑（表达式求值），
+    // 这一节比上面那批硬：它跑的源码是 self/run.hmoca 里的 跑（表达式求值），
     // 那条路上要经过自举的切词、搭树与求值三层。两个宿主求值器在这条路上给出同一个字符串，
     // 才算「它们对这门语言的理解一致」——而不是各算各的加法。
     const 层 = loadUnit(path.join(ROOT, "self/run.hmoca"));

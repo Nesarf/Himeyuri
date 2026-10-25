@@ -19,7 +19,7 @@ const 真 = (b) => createHash("sha256").update(b).digest("hex");
 
 console.log("一、源码读得动");
 const 源路 = path.join(ROOT, "self/sha256.hmoca");
-ok("self/sha256.hmyr 在", fs.existsSync(源路));
+ok("self/sha256.hmoca 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
 

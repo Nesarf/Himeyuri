@@ -1,7 +1,7 @@
 // verify 的验收：它验清单里每一项的哈希，逐行扫，不做整份解析。
 //
 // 这一套同时盯着两个安静的错误：
-//   一、self/verify.hmyr 会 import sha256.hmyr，而两个文件都有 main。加载器把依赖排在前面，
+//   一、self/verify.hmoca 会 import sha256.hmoca，而两个文件都有 main。加载器把依赖排在前面，
 //       于是「先到者赢」会让 sha256 的自测 main 抢走入口 —— 症状是「跑 verify 输出一个哈希」，
 //       看起来还像成功。
 //   二、逐行扫如果判「这一行含不含某个键」，那么一个名字就叫 sha256 的套件会让它的 name 行
@@ -56,7 +56,7 @@ const 写出 = (名, 文) => { const p = path.join(临, 名); fs.writeFileSync(p
 
 console.log("一、源码读得动");
 const 源路 = path.join(ROOT, "self/verify.hmoca");
-ok("self/verify.hmyr 在", fs.existsSync(源路));
+ok("self/verify.hmoca 在", fs.existsSync(源路));
 const 层 = loadUnit(源路);
 ok("加载没有诊断", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
 ok("它 import 了 sha256（入口抢位那个错的前提）", fs.readFileSync(源路, "utf8").includes('import "./sha256.hmoca"'));

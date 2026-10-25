@@ -1,4 +1,4 @@
-// HMYR 自己把程序打成 .hmyrb —— 逐字节相同的那一条。
+// HMYR 自己把程序打成 .hmoks —— 逐字节相同的那一条。
 //
 // 为什么这一套值得单列：目标里「src/ 可以删掉」的最后一块就是这一步。
 // 而「搬对了没有」有一个不会被解释动摇的答案：同一份源码，两位打包者交出的字节，
@@ -52,7 +52,7 @@ console.log("一、两位打包者对同一份源码交出同样的字节");
     const unit = loadUnit(源路);
     if (!unit.ok) { ok(标, false, "加载失败"); continue; }
     const js字节 = 写程序(合并程序(unit.order.map((f) => 编译模块(unit.modules.get(f)))));
-    // HMYR 那位：跑 self/pack.hmyr 的编译与打包两段，拿它交回的字节元组。
+    // HMYR 那位：跑 self/pack.hmoca 的编译与打包两段，拿它交回的字节元组。
     const rt = runUnit(loadUnit(path.join(ROOT, "self/pack.hmoca")), { stage0: true, stepLimit: 400000000 });
     const 编源码 = rt.functions.get("编源码");
     const 打包 = rt.functions.get("打包");
@@ -95,12 +95,12 @@ console.log("三、C 那台也交得出同一份字节");
     if (c.status === 0) {
       const 源路 = path.join(临, "r.hmoca");
       fs.writeFileSync(源路, 程序们[0][1], "utf8");
-      // pack.hmyr 自己编成字节码，再由 C 那台执行它 —— 中间没有 JavaScript。
+      // pack.hmoca 自己编成字节码，再由 C 那台执行它 —— 中间没有 JavaScript。
       // 编这一份要走 tools/emit-code.mjs：入口文件的 main 才算 main，
-      // 否则会是 import 链里某个自测的 main（lex.hmyr 那个返回词数 19，看起来像个错误码）。
+      // 否则会是 import 链里某个自测的 main（lex.hmoca 那个返回词数 19，看起来像个错误码）。
       const 码路 = path.join(临, "pack.hmoks");
       const 编r = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/pack.hmoca"), 码路], { encoding: "utf8" });
-      ok("pack.hmyr 编得成字节码", 编r.status === 0, String(编r.stderr).slice(0, 160));
+      ok("pack.hmoca 编得成字节码", 编r.status === 0, String(编r.stderr).slice(0, 160));
       const 出路 = path.join(临, "out.hmoks");
       const r = spawnSync(exe, [码路, 出路, 源路], { encoding: "utf8", timeout: 300000, env: { ...process.env, HMYR_STEPS: "2000000000" } });
       ok("C 跑 packer 写出了一个文件", r.status === 0 && fs.existsSync(出路), String(r.status) + " " + String(r.stderr).slice(0, 160));

@@ -70,7 +70,7 @@ console.log("三、求值不在 Stage 0 里（两份账都不在）");
   }
   // 而求值器确实在 self/ 里——那才是「怎么算」的答案所在。
   const 求值 = fs.readFileSync(path.join(ROOT, "self/eval.hmoca"), "utf8");
-  ok("求值器在 self/eval.hmyr 里", 求值.includes("fn 求值(") && 求值.includes("fn 执行("), "在");
+  ok("求值器在 self/eval.hmoca 里", 求值.includes("fn 求值(") && 求值.includes("fn 执行("), "在");
 }
 
 console.log("四、启动器只做三件事");

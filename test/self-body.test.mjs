@@ -95,7 +95,7 @@ for (const source of BODIES) {
 
 console.log("\nwhat it still cannot read, said plainly");
 {
-  // 这些不是脚手架的毛病，而是链的子集边界：self/chain.hmyr 眼下只认 + - * / % 与括号。
+  // 这些不是脚手架的毛病，而是链的子集边界：self/chain.hmoca 眼下只认 + - * / % 与括号。
   // 每一条都把“当前会读成什么”写下来，于是补链的时候有对照。
   const assign = readBody("fn f() {\n  var n = 7\n  n = n + 1\n  return n\n}\n");
   ok("an assignment now comes through as an assignment", assign.list.length === 3 && assign.list[1].kind === "Assign" && assign.list[1].name === "n",

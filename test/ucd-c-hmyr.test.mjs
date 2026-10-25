@@ -1,7 +1,7 @@
 // HMYR 写的语料生成器：从 codepoints.txt 生成两张 C 用的区间表。
 //
 // 这是「语料生成」这一项的第一支（字母与记号两张表）。验收方式是最结实的那种：
-// 同一段小样本喂给两份实现（tools/ucd-c.mjs 与 self/ucd-c.hmyr），
+// 同一段小样本喂给两份实现（tools/ucd-c.mjs 与 self/ucd-c.hmoca），
 // 产物必须逐字节相同 —— 不是「看起来一样」，是比较之后相同。
 //
 // 小样本取 codepoints.txt 的前两千行：一份五十万行的全量对拍太慢，
@@ -24,7 +24,7 @@ const ok = (label, condition, detail = "") => {
 
 console.log("一、生成器的源码读得动");
 const 源路 = path.join(ROOT, "self/ucd-c.hmoca");
-ok("self/ucd-c.hmyr 在", fs.existsSync(源路));
+ok("self/ucd-c.hmoca 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
 const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));

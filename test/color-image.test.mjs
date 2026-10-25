@@ -41,7 +41,7 @@ const call = (name, args) => {
 };
 
 try {
-  // color.hmyr 的转换封装不支持 --embed-target，所以这里直接用桥验证这一条
+  // color.hmoca 的转换封装不支持 --embed-target，所以这里直接用桥验证这一条
   const out = p("out.png"), rep = p("rep.json");
   const r = spawnSync(PY, [path.join(ROOT, "deps/color/bridge.py"), "convert",
     "--src", SRGB, "--dst", SWOP, "--strategy", "min-loss",

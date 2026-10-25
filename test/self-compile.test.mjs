@@ -36,8 +36,8 @@ console.log("一、六份，默认栈下，名字与顺序都与宿主一致");
     const 路 = path.join(ROOT, "self", 名 + ".hmoca");
     const 甲 = 算名(路);
     const 乙 = 宿名(路);
-    ok(名 + ".hmyr 认出 " + 期[名] + " 个", 甲.length === 期[名], String(甲.length));
-    ok(名 + ".hmyr 与宿主名字一致", 乙 !== null && JSON.stringify(甲) === JSON.stringify(乙), JSON.stringify(甲).slice(0, 50));
+    ok(名 + ".hmoca 认出 " + 期[名] + " 个", 甲.length === 期[名], String(甲.length));
+    ok(名 + ".hmoca 与宿主名字一致", 乙 !== null && JSON.stringify(甲) === JSON.stringify(乙), JSON.stringify(甲).slice(0, 50));
   }
 }
 

@@ -1,4 +1,4 @@
-// 字形与渲染的验收：定义在 glyphs.hmyr，逻辑在 term.hmyr，两边各自可核对。
+// 字形与渲染的验收：定义在 glyphs.hmoca，逻辑在 term.hmoca，两边各自可核对。
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";

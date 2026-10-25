@@ -91,14 +91,14 @@ console.log("三、跑几条真实路径时，那十项全局没有一项是虚�
     (() => {
       const p = path.join(临时, "mod/main.hmoca"); fs.mkdirSync(path.join(临时, "mod"), { recursive: true });
       fs.writeFileSync(path.join(临时, "mod/lib.hmoca"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
-      fs.writeFileSync(p, "import \"./lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
+      fs.writeFileSync(p, "import \"./lib.hmoca\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
       return p;
     })(),
     path.join(临时, "nope.hmoca"),
     // 第六条：把「目标程序自己」存成 UTF-16LE 带 BOM。
     //
     // 为什么要这么绕：read_text 的显式编码与 UTF-16 那两条分支才用 TextDecoder，
-    // 而 UTF-8 BOM 那条走的是 Buffer.toString。而 self/run.hmyr 读目标文件时用的就是 read_text——
+    // 而 UTF-8 BOM 那条走的是 Buffer.toString。而 self/run.hmoca 读目标文件时用的就是 read_text——
     // 于是「读一份 UTF-16 的源码」正好把它走到。
     //
     // 它解码出来之后语法层会报错（自举的 lexer 不认这段），但那不影响这一节要问的事：

@@ -25,7 +25,7 @@ const 现成 = path.join(ROOT, "vm/ucd-nfc.h");
 const 语料 = path.join(ROOT, "data/ucd");
 
 console.log("一、前提在");
-ok("self/ucd-nfc.hmyr 在", fs.existsSync(源路));
+ok("self/ucd-nfc.hmoca 在", fs.existsSync(源路));
 ok("vm/ucd-nfc.h 在（JS 那位的产物）", fs.existsSync(现成));
 ok("data/ucd 语料在", fs.existsSync(path.join(语料, "UnicodeData.txt")) && fs.existsSync(path.join(语料, "CompositionExclusions.txt")));
 

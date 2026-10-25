@@ -39,7 +39,7 @@ const 宿主读 = (source) => {
 };
 const 短 = (f) => path.basename(f);
 
-console.log("一、self/run.hmyr：默认那条与宿主那条，模块与声明都相同");
+console.log("一、self/run.hmoca：默认那条与宿主那条，模块与声明都相同");
 {
   const 默认 = loadUnit(path.join(ROOT, "self/run.hmoca"));
   const 宿主 = loadUnit(path.join(ROOT, "self/run.hmoca"), { reader: 宿主读 });
@@ -68,7 +68,7 @@ console.log("三、一个真工程：入口 import 另一件，两条路算同�
   try {
     fs.writeFileSync(path.join(目录, "lib.hmoca"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
     const 入口 = path.join(目录, "main.hmoca");
-    fs.writeFileSync(入口, "import \"./lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
+    fs.writeFileSync(入口, "import \"./lib.hmoca\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
     const 默认单 = loadUnit(入口);
     const 宿主单 = loadUnit(入口, { reader: 宿主读 });
     const 算 = (rt) => rt.callFunction(rt.functions.get("main"), [], null);

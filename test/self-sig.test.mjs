@@ -1,7 +1,7 @@
 // Signature-level acceptance: the Himeyuri signature reader against the JavaScript one.
 //
 // What is compared is the signature - pub, name, parameters with their types, the return type, the
-// effects. The body is deliberately out of scope (see the note at the top of self/sig.hmyr): the
+// effects. The body is deliberately out of scope (see the note at the top of self/sig.hmoca): the
 // tokenizer drops newlines, and newlines are what separate statements. A reader that pretended to
 // understand bodies would be inventing statement boundaries it cannot see.
 import fs from "node:fs";

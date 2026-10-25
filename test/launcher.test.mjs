@@ -1,4 +1,4 @@
-// 启动器的验收：node bin/hmyr.mjs 把 .hmyr 交给语言自己。
+// 启动器的验收：node bin/hmyr.mjs 把 .hmoca 交给语言自己。
 //
 // 最要紧的一条是「跑的是自举那一层」的证据：记录那种节点宿主支持、而自举曾经造不出来
 // （它当时报的是「这一版还不造记录」）。现在自举能造记录了，于是那一段改成了
@@ -77,7 +77,7 @@ try {
   }
   {
     // 帧那一份：长度前缀 + 类型字节 + 载荷，小端。规矩来自 oak-barrels 的协议第 3 节。
-    // 它只 import protocol.hmyr，而 protocol 内部又 import 了 tuples ——
+    // 它只 import protocol.hmoca，而 protocol 内部又 import 了 tuples ——
     // 于是这一条同时钉住「间接 import 会被跟随」（自举的加载器曾经不跟）。
     const r = 启动([path.join(ROOT, "conformance/lib-protocol.hmoca")]);
     ok("帧库十九条断言全过（退出码零）", r.status === 0 && String(r.stdout).trim() === "0",

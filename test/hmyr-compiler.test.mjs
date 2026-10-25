@@ -1,11 +1,11 @@
 // HMYR 自己的编译器：同一个程序交给两位编译者，跑出同一个答案。
 //
 // 为什么这一套重要：目标是「src/ 可以删掉」，而 src/ 里最后一块借来的东西
-// 就是编译器。self/compile.hmyr 是把它搬进语言自己的第一步，
+// 就是编译器。self/compile.hmoca 是把它搬进语言自己的第一步，
 // 而「搬对了没有」只能用一个能跑的问题来答：两位编译者交出的字节码，
 // 在两台机器上跑，四个数字是不是同一个。
 //
-// 现在 self/compile.hmyr 只能编一个子集（算术、比较、字面量、按名字调用、
+// 现在 self/compile.hmoca 只能编一个子集（算术、比较、字面量、按名字调用、
 // return、let/var、if）。超出子集它会明说「还编不了」，而不是悄悄编错 ——
 // 这一套只测子集里的东西，并且承认子集的边界。
 import fs from "node:fs";
@@ -28,7 +28,7 @@ const ok = (label, condition, detail = "") => {
 
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-compiler-"));
 
-// HMYR 那台编译器：跑 self/compile.hmyr，拿它交出来的函数表。
+// HMYR 那台编译器：跑 self/compile.hmoca，拿它交出来的函数表。
 const 编 = (() => {
   const rt = runUnit(loadUnit(path.join(ROOT, "self/compile.hmoca")), { stage0: true, stepLimit: 300000000 });
   const 编源码 = rt.functions.get("编源码");
@@ -117,9 +117,9 @@ console.log("二、HMYR 编译器编出来的字节码也能由 C 那台机器�
   const 源码 = "fn 加(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  if 加(20, 22) == 42 {\n    return 1\n  }\n  return 0\n}\n";
   const a = 编(源码);
   ok("子集里的程序编得出来", !a.错, a.错 || "");
-  // 真实一点的那个：examples/twice.hmyr 有两个函数、print、字符串拼接与中文。
+  // 真实一点的那个：examples/twice.hmoca 有两个函数、print、字符串拼接与中文。
   const 真 = 编(fs.readFileSync(path.join(ROOT, "examples/twice.hmoca"), "utf8"));
-  ok("examples/twice.hmyr 也编得出来", !真.错, 真.错 || "");
+  ok("examples/twice.hmoca 也编得出来", !真.错, 真.错 || "");
   if (!a.错) {
     const 码路 = path.join(临, "by-hmyr.hmoks");
     fs.writeFileSync(码路, 写程序(a.程序));
@@ -156,10 +156,10 @@ console.log("三、超出子集时明说，而不是悄悄编错");
 console.log("四、自编译：HMYR 编出的编译器，跑起来还能编");
 {
   // 这一节是「编译器搬进 HMYR」的硬证据：
-  // 用 self/compile.hmyr 去编 self/compile.hmyr 自己（连它的 import 链一起），
+  // 用 self/compile.hmoca 去编 self/compile.hmoca 自己（连它的 import 链一起），
   // 产物跑起来的输出，与原来那份编译器的自测输出相同。
   const unit = loadUnit(path.join(ROOT, "self/compile.hmoca"));
-  ok("self/compile.hmyr 读得进", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
+  ok("self/compile.hmoca 读得进", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
   if (unit.ok) {
     let 源码 = "";
     for (const f of unit.order) 源码 += fs.readFileSync(f, "utf8") + "\n";

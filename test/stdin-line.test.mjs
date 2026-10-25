@@ -38,7 +38,7 @@ const 有编译器 = (() => {
 
 console.log("二、cat 用这一格读 stdin");
 const 源路 = path.join(ROOT, "self/cat.hmoca");
-ok("self/cat.hmyr 在", fs.existsSync(源路));
+ok("self/cat.hmoca 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
 

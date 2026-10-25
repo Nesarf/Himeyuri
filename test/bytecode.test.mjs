@@ -38,7 +38,7 @@ console.log("一、六份 self/ 全部编译通过");
   // 这个数随自举层的规模走：每加一个函数它就长一个（见 design/LIB.txt）。
   ok("一百八十个函数", 函数数 === 180, String(函数数));
   // 槽数与指令数也随规模走。函数数从 151 长到 173，是加载器那一串（加载走、只加载、造模块、
-  // 翻表达式、造整棵 …）搬进 self/run.hmyr 的结果；指令数因此跨过一万。
+  // 翻表达式、造整棵 …）搬进 self/run.hmoca 的结果；指令数因此跨过一万。
   // 早先长个的一次是自举层里 is_dir 的分派分支：
   // 它又多一个局部变量，于是单帧最大槽数从 31 抬到 32。
   ok("单帧最大槽数 32", 槽最大 === 32, String(槽最大));
@@ -55,7 +55,7 @@ console.log("二、六条真实路径：两条执行路径给同一个答案");
   写("bad.hmoca", "let a = \nreturn a\n");
   fs.mkdirSync(path.join(临, "mod"), { recursive: true });
   fs.writeFileSync(path.join(临, "mod/lib.hmoca"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
-  写("mod/main.hmoca", "import \"./lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
+  写("mod/main.hmoca", "import \"./lib.hmoca\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
 
   const 跑 = (目标, 用字节码) => {
     const 出 = { w: "", e: "" };

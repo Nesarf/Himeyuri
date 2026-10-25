@@ -33,7 +33,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 function load() {
-  // 这一份源码故意不带 main：self/fmt.hmyr 要 import 它，两个 main 合在一起只有一个能活。
+  // 这一份源码故意不带 main：self/fmt.hmoca 要 import 它，两个 main 合在一起只有一个能活。
   // 而 Runtime.run 要求有入口，所以在测试这一侧补一个空的。
   const source = fs.readFileSync(path.join(ROOT, "self/parse.hmoca"), "utf8") + "\nfn main() -> Int { return 0 }\n";
   const diagnostics = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };

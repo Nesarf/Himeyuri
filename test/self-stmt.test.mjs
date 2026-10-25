@@ -1,6 +1,6 @@
 // Statement-level acceptance: the Himeyuri statement reader against the JavaScript one, shape by shape.
 //
-// The chain and the tokenizer come in through the loader, because stmt.hmyr says what it depends on.
+// The chain and the tokenizer come in through the loader, because stmt.hmoca says what it depends on.
 // The JavaScript side is reduced to the same four shapes, and positions are dropped from both.
 import fs from "node:fs";
 import path from "node:path";

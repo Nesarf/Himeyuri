@@ -146,7 +146,7 @@ console.log("图像：把像素布导出的 PNG 交给 native 后端");
 {
   const fs2 = (await import("node:fs")).default;
   const 图 = "E:/DaShaoHuo/cache/tmp/surface-img.png";
-  // 子进程里要加载的那几个 mjs 与 pixel.hmyr 都按仓库自身位置算，不写死盘符。
+  // 子进程里要加载的那几个 mjs 与 pixel.hmoca 都按仓库自身位置算，不写死盘符。
   const 仓根 = new URL("..", import.meta.url);
   const 仓根斜 = 仓根.pathname.slice(1);
   // 先借像素那条路造一张 16x10 的图

@@ -24,7 +24,7 @@ const ok = (label, condition, detail = "") => {
 
 console.log("一、格式化器的源码读得动");
 const 源路 = path.join(ROOT, "self/fmt.hmoca");
-ok("self/fmt.hmyr 在", fs.existsSync(源路));
+ok("self/fmt.hmoca 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
 const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));
@@ -98,8 +98,8 @@ if (!有编译器) {
       const 出 = path.join(临, 名 + ".hmoca");
       fs2.writeFileSync(出, String(a.stdout || ""), "utf8");
       const u = loadUnit(出);
-      ok(名 + ".hmyr 缩进之后编得动", u.ok, JSON.stringify(u.diagnostics.errors.slice(0, 1).map((e) => e.code)));
-      ok(名 + ".hmyr 再排一次不变", 幂等, "");
+      ok(名 + ".hmoca 缩进之后编得动", u.ok, JSON.stringify(u.diagnostics.errors.slice(0, 1).map((e) => e.code)));
+      ok(名 + ".hmoca 再排一次不变", 幂等, "");
     }
   }
   fs.rmSync(临, { recursive: true, force: true });

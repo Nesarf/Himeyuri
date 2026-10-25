@@ -5,7 +5,7 @@
 //   二、本地没有、import 里有 —— 应答的 uri 必须指向那个文件
 //   三、哪边都没有 —— 交回 null，不是交回一个错
 //
-// 这里用的是两份真文件：base.hmyr import 了 other.hmyr，并调用里面的函数。
+// 这里用的是两份真文件：base.hmoca import 了 other.hmoca，并调用里面的函数。
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -23,7 +23,7 @@ const 临 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-lspmod-");
 const 别路 = path.join(临, "other.hmoca");
 const 基路 = path.join(临, "base.hmoca");
 fs.writeFileSync(别路, "fn 别的(a: Int) -> Int {\n  return a\n}\n");
-fs.writeFileSync(基路, "import \"./other.hmyr\"\n\nfn 本地的() -> Int {\n  return 别的(1)\n}\n");
+fs.writeFileSync(基路, "import \"./other.hmoca\"\n\nfn 本地的() -> Int {\n  return 别的(1)\n}\n");
 const 基址 = pathToFileURL(基路).href;
 const 别址 = pathToFileURL(别路).href;
 
@@ -52,9 +52,9 @@ const 拆应答 = (buf) => {
 const 消息们 = [
   { jsonrpc: "2.0", id: 1, method: "initialize", params: {} },
   { jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: 基址, languageId: "hmyr", version: 1, text: fs.readFileSync(基路, "utf8") } } },
-  // 2：别的 —— 只在 other.hmyr 里
+  // 2：别的 —— 只在 other.hmoca 里
   { jsonrpc: "2.0", id: 2, method: "textDocument/definition", params: { textDocument: { uri: 基址 }, position: { line: 3, character: 9 } } },
-  // 3：本地的 —— 只在 base.hmyr 里
+  // 3：本地的 —— 只在 base.hmoca 里
   { jsonrpc: "2.0", id: 3, method: "textDocument/definition", params: { textDocument: { uri: 基址 }, position: { line: 2, character: 4 } } },
   // 4：哪边都没有
   { jsonrpc: "2.0", id: 4, method: "textDocument/definition", params: { textDocument: { uri: 基址 }, position: { line: 3, character: 13 } } },
@@ -108,7 +108,7 @@ console.log("四、自举那一份也跳得过去");
 
     const 码路 = path.join(临二, "lsp.hmoks");
     const 码r = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/lsp.hmoca"), 码路], { encoding: "utf8" });
-    ok("self/lsp.hmyr 编得出字节码", 码r.status === 0 && fs.existsSync(码路), String(码r.stderr || "").slice(0, 160));
+    ok("self/lsp.hmoca 编得出字节码", 码r.status === 0 && fs.existsSync(码路), String(码r.stderr || "").slice(0, 160));
 
     const 自 = spawnSync(exe, [码路], { input: Buffer.concat(消息们.map(装框)), encoding: "buffer", timeout: 120000 });
     const 自答 = 拆应答(自.stdout);

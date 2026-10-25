@@ -25,7 +25,7 @@ const ok = (label, condition, detail = "") => {
 
 console.log("一、工具的源码读得动");
 const 源路 = path.join(ROOT, "self/deflate.hmoca");
-ok("self/deflate.hmyr 在", fs.existsSync(源路));
+ok("self/deflate.hmoca 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
 const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))), 编译模块(unit.modules.get(unit.order[unit.order.length - 1])));

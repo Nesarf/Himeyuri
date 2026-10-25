@@ -1,7 +1,7 @@
 // 语言服务器的补全：HMYR 那一份与 src/lsp.mjs 对同一份文档必须交出同一张候选表。
 //
 // 两边都用真进程跑，与 lspsymbol 那套同一条路：宿主是 node src/lsp.mjs --stdio，
-// 自举那一边是 C 那台的 exe 跑 self/lsp.hmyr 编出来的字节码。
+// 自举那一边是 C 那台的 exe 跑 self/lsp.hmoca 编出来的字节码。
 // 只比 completion 那一条应答的全貌 —— initialize 里的版本号本来就不同，不该拿它当差异。
 //
 // 一条容易错的地方：补全的 kind 用 CompletionItemKind（函数是 3），
@@ -79,7 +79,7 @@ ok("C 那台编得动", 编r.status === 0, String(编r.stderr || "").slice(0, 12
 
 const 码路 = path.join(临, "lsp.hmoks");
 const 码r = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/lsp.hmoca"), 码路], { encoding: "utf8" });
-ok("self/lsp.hmyr 编得出字节码", 码r.status === 0 && fs.existsSync(码路), String(码r.stderr || "").slice(0, 120));
+ok("self/lsp.hmoca 编得出字节码", 码r.status === 0 && fs.existsSync(码路), String(码r.stderr || "").slice(0, 120));
 
 console.log("一、宿主那一份的应答");
 const 宿 = spawnSync(process.execPath, [path.join(ROOT, "src/lsp.mjs"), "--stdio"], { input: 输入, encoding: "buffer", timeout: 60000 });

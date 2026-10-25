@@ -48,7 +48,7 @@ console.log("一、print 写进命名管道，那头收得到");
       sock.on("end", () => {
         服务端.close();
         const 出 = Buffer.concat(收到).toString("utf8");
-        // 末尾那一个 0 是自举层打印的目标程序返回值（self/run.hmyr 一直这么做），不是多余的。
+        // 末尾那一个 0 是自举层打印的目标程序返回值（self/run.hmoca 一直这么做），不是多余的。
         ok("管道那头收到了两行", 出.startsWith("第一行\n第二行\n"), JSON.stringify(出));
         ok("末尾那一行没有丢", 出.includes("第二行\n"), JSON.stringify(出.slice(-12)));
         ok("程序返回值也走同一个出口", 出.trimEnd().endsWith("0"), JSON.stringify(出));

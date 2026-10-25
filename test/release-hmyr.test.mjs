@@ -19,7 +19,7 @@ const ok = (label, condition, detail = "") => {
 
 console.log("一、源码读得动、编得过");
 const 源路 = path.join(ROOT, "self/release.hmoca");
-ok("self/release.hmyr 在", fs.existsSync(源路));
+ok("self/release.hmoca 在", fs.existsSync(源路));
 const 层 = loadUnit(源路);
 ok("加载没有诊断", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
 if (层.ok) {

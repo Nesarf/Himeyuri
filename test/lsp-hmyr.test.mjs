@@ -1,7 +1,7 @@
 // HMYR 写的语言服务器：JSON-RPC 走标准输入与标准输出。
 //
 // 它现在会两件事：握手（initialize / shutdown / exit）与列符号（didOpen 之后
-// documentSymbol）。列符号靠的是自举侧那一套前端 —— self/sig.hmyr 的 all_signatures，
+// documentSymbol）。列符号靠的是自举侧那一套前端 —— self/sig.hmoca 的 all_signatures，
 // 读的是真正的 token 流，不是在编辑器插件里另养一个解析器。
 //
 // 一条边界钉在这里：Content-Length 数的是字节。回话里一旦出现中文，
@@ -24,7 +24,7 @@ const ok = (label, condition, detail = "") => {
 
 console.log("一、语言服务器的源码读得动");
 const 源路 = path.join(ROOT, "self/lsp.hmoca");
-ok("self/lsp.hmyr 在", fs.existsSync(源路));
+ok("self/lsp.hmoca 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
 const 份们 = unit.order.map((文件) => 编译模块(unit.modules.get(文件)));

@@ -77,7 +77,7 @@ try {
   const 模块 = path.join(临, "mod");
   fs.mkdirSync(模块, { recursive: true });
   fs.writeFileSync(path.join(模块, "lib.hmoca"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
-  fs.writeFileSync(path.join(模块, "main.hmoca"), "import \"./lib.hmyr\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
+  fs.writeFileSync(path.join(模块, "main.hmoca"), "import \"./lib.hmoca\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
 
   const 全部语句 = new Set(), 全部表达式 = new Set(), 全部内置 = new Set();
   const 收 = (r) => { r.语句.forEach((x) => 全部语句.add(x)); r.表达式.forEach((x) => 全部表达式.add(x)); r.内置.forEach((x) => 全部内置.add(x)); return r; };

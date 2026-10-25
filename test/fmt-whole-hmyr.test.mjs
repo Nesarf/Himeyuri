@@ -1,4 +1,4 @@
-// 整文件排版：self/fmt.hmyr 与 src/format.mjs 对同一批真实文件的输出相比。
+// 整文件排版：self/fmt.hmoca 与 src/format.mjs 对同一批真实文件的输出相比。
 //
 // 两件事分开验，因为它们本来就不同：
 //   一、没有注释的文件里，两者应当逐字节相同；
@@ -51,7 +51,10 @@ console.log("二、有注释的文件：自举那一份把注释留下，宿主�
 
 console.log("三、行尾的 carriage return 不会漏进输出");
 {
-  const 源 = 读("conformance/lib-strings.hmoca"); // 这份文件本身是 CRLF
+  // 输入由这一节自己造：要验的是「排版器不把 CR 漏出去」，那件事不该依赖
+  // 仓库里某一份文件的换行方式 —— 那份文件现在是 LF，而判据以前写着「它本身是 CRLF」，
+  // 于是这一条红得毫无道理：被测的东西没坏，只是它踩的那块地板换了。
+  const 源 = 读("conformance/lib-strings.hmoca").replace(/\r?\n/g, "\r\n");
   ok("输入确实是 CRLF", 源.includes("\r\n"));
   const 甲 = 自举整(源);
   ok("输出里没有 CR", !甲.includes("\r"), 甲.includes("\r") ? "第一处 CR 在第 " + (甲.split("\n").findIndex((l) => l.includes("\r")) + 1) + " 行" : "");

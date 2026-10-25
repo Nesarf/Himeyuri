@@ -1,7 +1,7 @@
 // write_text：规格里有它，而两处求值器一直没转发。这一套钉住它真的写得出来，
 // 也钉住「写进去的与读回来的同一个」。
 //
-// 它用最小求值器直接跑 conformance/write-text.hmyr，而不经启动器 ——
+// 它用最小求值器直接跑 conformance/write-text.hmoca，而不经启动器 ——
 // 因为自举层现在还不认目标程序的效果声明，凡是声明 effects(file) 的程序在那一层会撞 R0201。
 // 那是加载/求值那一侧的缺口，记在 design/LIB.txt 的「还缺什么」里。
 import fs from "node:fs";

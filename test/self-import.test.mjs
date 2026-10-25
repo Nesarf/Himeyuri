@@ -36,7 +36,7 @@ console.log("二、认不出的当没有");
   // 注释里的 import 不算：注释是给人看的，不是给解析器看的。
   ok("注释里的不算", JSON.stringify(认('// import "./假.hmoca"\n')) === "[]", JSON.stringify(认('// import "./假.hmoca"\n')));
   ok("拼错的也不算", JSON.stringify(认('importx "./a.hmoca"\n')) === "[]");
-  ok("没有引号的也不算", JSON.stringify(认("import ./a.hmyr\n")) === "[]");
+  ok("没有引号的也不算", JSON.stringify(认("import ./a.hmoca\n")) === "[]");
 }
 
 console.log("三、顺序按出现");

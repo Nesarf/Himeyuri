@@ -40,7 +40,7 @@ try {
     const unit = loadUnit(alpha);
     const conflicts = unit.diagnostics.items.filter((d) => d.code === "HMYR-W0302");
     ok("two modules declaring 'shared' is a warning", conflicts.length === 1, conflicts.map((d) => d.message).join(" | "));
-    ok("and the message names both files", /beta\.hmyr/.test(conflicts[0]?.message || "") && /alpha\.hmyr/.test(conflicts[0]?.message || ""), conflicts[0]?.message);
+    ok("and the message names both files", /beta\.hmoca/.test(conflicts[0]?.message || "") && /alpha\.hmoca/.test(conflicts[0]?.message || ""), conflicts[0]?.message);
   }
 
   console.log("\nloaded once, however many times it is asked for");
@@ -63,7 +63,7 @@ try {
   {
     const unit = loadUnit(left);
     ok("a cycle is an error", codes(unit).includes("HMYR-E0301"), codes(unit).join(","));
-    ok("and it says which file was already being loaded", /left\.hmyr|right\.hmyr/.test(unit.diagnostics.items.find((d) => d.code === "HMYR-E0301")?.message || ""),
+    ok("and it says which file was already being loaded", /left\.hmoca|right\.hmoca/.test(unit.diagnostics.items.find((d) => d.code === "HMYR-E0301")?.message || ""),
       unit.diagnostics.items.find((d) => d.code === "HMYR-E0301")?.message);
     ok("it does not load forever", unit.order.length <= 2, describeUnit(unit));
   }
@@ -83,9 +83,9 @@ try {
 
   console.log("\nthe real thing: the bootstrapping files");
   {
-    // self/lex.hmyr and self/chain.hmyr both define slice, is_space and starts_with. The loader should
+    // self/lex.hmoca and self/chain.hmoca both define slice, is_space and starts_with. The loader should
     // report that when they are loaded as one unit - which is the finding that made step one necessary.
-    // chain.hmyr now declares its dependency on lex.hmyr, so the no-dependency case has to be a file
+    // chain.hmoca now declares its dependency on lex.hmoca, so the no-dependency case has to be a file
     // that genuinely has none.
     const unit = loadUnit(path.join(ROOT, "kpb/piece.hmoca"));
     ok("a file with no imports loads on its own", unit.ok, codes(unit).join(","));

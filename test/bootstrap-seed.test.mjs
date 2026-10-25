@@ -31,7 +31,7 @@ console.log("一、种子在仓库里，而且它是一份能跑的东西");
   ok("bootstrap/pack.hmtn 在", fs.existsSync(种子路));
   if (fs.existsSync(种子路)) {
     const 字节 = fs.readFileSync(种子路);
-    ok("它是个 .hmyrb（开头是魔数）", 字节.slice(0, 5).toString("latin1") === "HMYRB", JSON.stringify(字节.slice(0, 5).toString("latin1")));
+    ok("它是个 .hmoks（开头是魔数）", 字节.slice(0, 5).toString("latin1") === "HMYRB", JSON.stringify(字节.slice(0, 5).toString("latin1")));
     ok("它不大（四十千字节上下）", 字节.length > 30000 && 字节.length < 60000, String(字节.length));
   }
 }
@@ -42,7 +42,7 @@ console.log("二、gcc 加上种子，重建出种子自己（这条路里没有
   if (!有gcc) {
     console.log("  跳过  这台机器上没有 gcc");
   } else if (!process.env.HMYR_HEAVY) {
-    // 分批之后从九千兆降到三千六百兆（pack.hmyr 现在一份一份编），但仍不轻。
+    // 分批之后从九千兆降到三千六百兆（pack.hmoca 现在一份一份编），但仍不轻。
     console.log("  跳过  重建种子这一格约三点七吉字节：设 HMYR_HEAVY=1 才跑");
     console.log("        剩下的账在 design/COMPILER.txt：指令累积仍是平方级，要按块收。");
   } else if (!fs.existsSync(种子路)) {
@@ -84,7 +84,7 @@ console.log("三、种子跑得动真实程序（它不只是能重建自己）"
   if (!有gcc || !fs.existsSync(种子路)) {
     console.log("  跳过  没有 gcc 或没有种子");
   } else if (!process.env.HMYR_HEAVY) {
-    // 这一节编的是 eval 与 run 那条链，单份 eval.hmyr 就有五百三十八行，
+    // 这一节编的是 eval 与 run 那条链，单份 eval.hmoca 就有五百三十八行，
     // 一份一份编仍会超过四吉的上限（实测撞过）。
     console.log("  跳过  编自举层这一格超过四吉字节：设 HMYR_HEAVY=1 与 HMYR_MEM_LIMIT=0 才跑");
   } else {
@@ -92,10 +92,10 @@ console.log("三、种子跑得动真实程序（它不只是能重建自己）"
     const exe = path.join(临, "hmyr.exe");
     const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     if (c.status === 0) {
-      // 用种子造一份「跑程序的自举层」：种子本身就是编译器，编出来的是 run.hmyr 那条链。
+      // 用种子造一份「跑程序的自举层」：种子本身就是编译器，编出来的是 run.hmoca 那条链。
       const 链 = ["lex", "chain", "stmt", "body", "eval", "run"].map((n) => path.join(ROOT, "self", n + ".hmoca"));
       const 层 = path.join(临, "self.hmoks");
-      // 这一节编的是 eval 与 run 那条链，单份 eval.hmyr 有五百三十八行，
+      // 这一节编的是 eval 与 run 那条链，单份 eval.hmoca 有五百三十八行，
       // 而它是「一份一份编」里最大的一份 —— 不开回收时峰值已经贴着四吉的上限。
       // 所以这里开回收、并且把上限放开：回收不改变答案，只改变账。
       const r = spawnSync(exe, [种子路, 层, ...链], { encoding: "utf8", timeout: 900000, env: { ...process.env, HMYR_STEPS: "4000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" } });

@@ -1,7 +1,7 @@
 // 并行的验收：同时起几件事，而判定仍回到语言里做。
 //
 // 并行发生在那个子进程里（见 design/CONCURRENCY.txt 的补记），
-// 所以这里验的是「结果完整、对应关系清楚、能被 json.hmyr 读出来」。
+// 所以这里验的是「结果完整、对应关系清楚、能被 json.hmoca 读出来」。
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
@@ -30,7 +30,7 @@ console.log("两条命令同时跑");
   ok("结果不是空", String(r.text).length > 10);
   // 交给语言自己的 JSON 解析器
   const 树 = call("解析", [r.text])[0];
-  ok("json.hmyr 读得动这份结果", 树.kind === "o", JSON.stringify(树).slice(0, 60));
+  ok("json.hmoca 读得动这份结果", 树.kind === "o", JSON.stringify(树).slice(0, 60));
   const 条 = call("字段", [树, "items"]);
   ok("里面有 items", 条.kind === "a", JSON.stringify(条).slice(0, 40));
   ok("两条都在", 条.value.length === 2, String(条.value.length));

@@ -17,7 +17,7 @@ const ok = (label, condition, detail = "") => {
 
 console.log("一、源码读得动");
 const 源路 = path.join(ROOT, "self/bitops.hmoca");
-ok("self/bitops.hmyr 在", fs.existsSync(源路));
+ok("self/bitops.hmoca 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
 
