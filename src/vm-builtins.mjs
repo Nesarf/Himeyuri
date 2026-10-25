@@ -17,10 +17,18 @@ import { 类元组, 类记录 } from "./vm-values.mjs";
 // 也不再自己判断「这是不是数」——换掉标量时要改的是那一份文件。
 import * as 数 from "./numbers.mjs";
 
+// 线程句柄表：一个 worker 一行。
+//
+// 它放在模块级而不是机器里，因为线程表跟进程走、不跟机器走 ——
+// 一个进程里能起的线程数是进程的事，不是某一台虚拟机的事。
+// 这也是「两台字节码机各跑一段、互不干扰」与「一个进程里有几个线程」
+// 之所以是两件事的原因。
+const 线程们 = new Map();
+let 下一个线程号 = 1;
+
 // CRC32 的表：256 项，第一次用时生成。与 src/eval.mjs 和 C 那台同一张表
 // （多项式 0xEDB88320），于是三处对同一串字节给出同一个值。
-let 校验表缓存 = null;
-const 取校验表 = () => {
+let 校验表缓存 = null;const 取校验表 = () => {
   if (校验表缓存) return 校验表缓存;
   const 表 = [];
   for (let n = 0; n < 256; n++) {
@@ -109,13 +117,66 @@ export const 内置表 = {
     const d = String(vm.成串(a[1]));
     return new 类元组(s.split(d).map((x) => vm.文.由宿主(x)));
   } },
-  // ---- 线程：这一份没有独立实例 ----
-  // 跨核要一个独立的机器实例，而字节码这一份的执行状态是模块级共享的。
-  // 如实说没有：spawn 交回 -1，join 与 cancel 报 R0221，count 交回 0。
-  thr_spawn: { 效果: "thread", 做: () => 数.造(-1) },
-  thr_join: { 做: (vm) => vm.坏("HMYR-R0221", "no thread handle: this machine has no thread capability") },
-  thr_cancel: { 效果: "thread", 做: (vm) => vm.坏("HMYR-R0221", "no thread handle: this machine has no thread capability") },
-  thr_count: { 做: () => 数.造(0) },
+  // ---- 线程：一个 worker 一个线程，结果经文件送达 ----
+  // 与宿主那一侧同一套做法（见 src/eval.mjs 的线程那一段）。差别只在 worker 里
+  // 跑的是哪台机器：这一份跑字节码机（src/thr-worker-vm.mjs），所以「同一段源码
+  // 在另一个线程上得到同一个答案」是同一台机器给的，不是另一台替它答的。
+  //
+  // 两处为什么照抄而不抽出共用：宿主那份用的是 rt.cap，这份用的是 vm.cap，
+  // 而两边的失败语义不同（一个抛、一个交回停机记录）。抽出来的共用要同时满足
+  // 两种，那层抽象比两份各三十行更难读。
+  thr_spawn: { 效果: "thread", 做: (vm, a) => {
+    const source = String(vm.成串(a[0]));
+    const entry = String(vm.成串(a[1]));
+    const id = 下一个线程号++;
+    // 这一份不 import node:，所以不取 process.pid —— 用时间戳加序号起名。
+    // 同一进程里序号本来就不重复；跨进程撞名的概率低到可以接受，
+    // 而真撞了也只是两份临时结果互相覆盖 —— 那种情形下两边跑的是同一段程序。
+    const outPath = vm.cap.path.join(vm.cap.env.temp(), "hmyr-vmthread-" + Date.now().toString(36) + "-" + id + ".json");
+    const flag = vm.cap.thread.signal();
+    const handle = { id, flag, outPath, worker: null };
+    handle.worker = vm.cap.thread.spawn(new URL("./thr-worker-vm.mjs", import.meta.url), { source, entry, outPath, flag });
+    // 起不来就交回 -1（一个无效句柄）。那不是「拒绝」，是这个线程压根没出生，
+    // 而调用方拿到 -1 之后 join 会得到 R0221 —— 一条路，不是两条。
+    if (!handle.worker) return 数.造(-1);
+    handle.worker.on("error", () => vm.cap.thread.store(handle.flag, 9));
+    // 不让一个还活着的线程拖住整个进程：宿主该退就退。
+    if (typeof handle.worker.unref === "function") handle.worker.unref();
+    handle.worker.on("exit", (code) => {
+      if (vm.cap.thread.load(handle.flag) === 0) vm.cap.thread.store(handle.flag, code === 0 ? 1 : 9);
+    });
+    线程们.set(id, handle);
+    return 数.造(id);
+  } },
+  thr_join: { 做: (vm, a) => {
+    const id = Math.floor(vm.成数(a[0]));
+    const h = 线程们.get(id);
+    if (!h) return vm.坏("HMYR-R0221", "no such thread handle: " + id);
+    const 限 = a[1] === undefined || a[1] === null ? 30000 : Math.floor(vm.成数(a[1]));
+    const 到 = Date.now() + 限;
+    while (vm.cap.thread.load(h.flag) === 0) {
+      const 剩 = 到 - Date.now();
+      if (剩 <= 0) return vm.坏("HMYR-R0222", "thread " + id + " did not finish within " + 限 + "ms");
+      vm.cap.thread.wait(h.flag, Math.min(剩, 50));
+    }
+    let 结果 = null;
+    try { 结果 = JSON.parse(String(vm.cap.file.read(h.outPath))); } catch (err) { 结果 = null; }
+    try { vm.cap.file.remove(h.outPath); } catch (err) { /* 已经没了就算清过 */ }
+    线程们.delete(id);
+    // 线程里失败时交回空串，与宿主那一侧同一个选择：失败不是这一门语言的值。
+    if (!结果 || !结果.ok) return vm.文.由宿主("");
+    return vm.文.由宿主(String(结果.text));
+  } },
+  thr_cancel: { 效果: "thread", 做: (vm, a) => {
+    const id = Math.floor(vm.成数(a[0]));
+    const h = 线程们.get(id);
+    if (!h) return vm.坏("HMYR-R0221", "no such thread handle: " + id);
+    try { if (h.worker) h.worker.terminate(); } catch (err) { /* 已经没了就算停住 */ }
+    try { vm.cap.file.remove(h.outPath); } catch (err) { /* 同上 */ }
+    线程们.delete(id);
+    return 数.造(id);
+  } },
+  thr_count: { 做: (vm) => 数.造(Array.from(线程们.values()).filter((h) => vm.cap.thread.load(h.flag) === 0).length) },
   // arena：三区模型的桩，字段是函数值；这一份也没有一等函数值。
   arena: { 做: (vm) => vm.坏("HMYR-R0104", "arena is a stub for the zone model: its fields are functions, and this machine has no first-class functions") },
   // 字节元组转文本：按 UTF-8 解码。read_stdin_bytes 交回字节，而请求体是 UTF-8。

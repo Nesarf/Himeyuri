@@ -90,11 +90,10 @@ const SUITES = [
   ["writetext", "test/write-text.test.mjs", "SPEC 2.5 - write_text writes and reads back the same text, and an undeclared effect refuses instead of writing"],
   ["codefile", "test/code-file.test.mjs", "SPEC M4 - bytecode survives a file round trip: same names, same slots, same effects, same instructions, same answer"],
   ["cvm", "test/c-vm.test.mjs", "SPEC M4 - a machine that is not JavaScript executes the same bytecode and prints the same thing (skipped when the host has no C compiler)"],
-  // 目标验收：线程在两台字节码机上现在都没有。红着是它的用处 ——
-  // 它把「有线程之后两台该给出同一个答案」写成可跑的东西，而不是一句计划。
-  // 第三条真值在 2026-10-25 量到：不只 C 那台缺，JS 的字节码机也缺
-  // （src/vm-builtins.mjs 里那四条就是「如实说没有」），理由不同，缺一样。
-  ["threadscvm", "test/threads-c-vm.test.mjs", "SPEC M4 - threads on both bytecode machines: two threads alive at once, hard isolation, and a handle that is gone after join (known missing: neither machine has threads yet)", { knownMissing: "两台字节码机都还没有线程：C 那台的执行状态是文件级全局，JS 那台在 vm-builtins 里就没写" }],
+  // 目标验收：线程在两台字节码机上。JS 那台 2026-10-25 做了（worker 里跑同一台
+  // 字节码机），C 那台还缺 —— 它的执行状态是文件级全局。红着是它的用处：
+  // 它把「两台该给出同一个答案」写成可跑的东西，而今天只有一台给出答案。
+  ["threadscvm", "test/threads-c-vm.test.mjs", "SPEC M4 - threads on both bytecode machines: two threads alive at once, hard isolation, and a handle that is gone after join (known missing: the JS machine has them now, the C machine still does not)", { knownMissing: "C 那台还没有线程：它的执行状态是文件级全局，要第二台机器就得先实例化" }],
   ["cli", "test/cli.test.mjs", "SPEC M4 - the launcher: one command from source to running, with no JavaScript in between (skipped when the host has no C compiler)"],
   ["arm", "test/arm.test.mjs", "SPEC M4 - the same C machine compiled for a bare-metal Cortex-M4: the desktop assumptions sit behind conditionals, the image links against a linker script and a startup file, and it runs on either arm-none-eabi-gcc or armclang (skipped when neither is present)"],
   ["board", "test/board.test.mjs", "SPEC M4 - the board path walked on a desk: bytecode in memory, a platform installed, output into a buffer"],
