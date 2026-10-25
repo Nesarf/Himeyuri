@@ -1,10 +1,14 @@
 // 从 data/ucd/ 生成 C 那台要的归一化数据（分解、组合类、组合对）。
 //
-// 未完成（2026-10-24）：三行的小语料能跑出结构，而真语料的前三千行在「排除表」那一段
-// 就停下 —— 报 HMYR-R0150（给一个没有 var 声明的名字赋值），还没定位到具体那一句。
-// 另外全分解只收了六条（应当三百七十九条），那是第二个 bug。两件都记在 design/INDEX.txt 第七节。
-// 在小语料上验过的东西：argv 取参、按行切分、码点解析、十六进制写回（那里原来的
-// `v - (v / 16) * 16` 在浮点除法不精确时会算出负的极小值，已改成 `v % 16` 加 floor）。
+// 验收：test/ucd-nfc-hmyr.test.mjs 把它跑在字节码机上，与 vm/ucd-nfc.h（JS 那位的产物）
+// 比字节 —— 144299 字节、4060 行，逐字节相同。
+//
+// 一路上修掉的四处，都记在 design/INDEX.txt：
+//   一、`v - (v / 16) * 16` 在双精度下会算出负的极小值 —— 改成 `v % 16` 加 floor；
+//   二、`let` 声明又赋值（槽 38 的 首类）—— 编译器开 HMYR_SLOTS=1 一查即知；
+//   三、栈的「弹出」用了 slice —— 而 slice 对元组切的是它写成文字之后的字符串，
+//       于是元组变成 "["（全分解因此只收六条）—— 改成递归；
+//   四、插入排序里「当前不必后移」时把 b 减到 -1，于是它被写到位置 0 —— 改成标志跳出。
 //
 // 这是 tools/ucd-nfc.mjs 的 HMYR 版，也是「语料生成」这一项的第二支。
 // 验收方式与第一支相同：两份实现喂同一段小样本，产物必须逐字节相同。
@@ -41,7 +45,6 @@ fn 十六进制值(文: String) -> Int {
 }
 
 fn 十六进制写法(n: Int) -> String {
-  print("HEX<" + str(n) + ">" + chr(10))
   if n == 0 { return "0" }
   let 表 = "0123456789ABCDEF"
   var 出 = ""
@@ -86,6 +89,25 @@ fn 切码点(文: String) -> Int {
   return 出
 }
 
+// 把一条分解展开到底。
+//
+// 为什么用递归而不是显式的栈：这一门语言的 slice 只切字符串 —— 对元组它会先把元组写成
+// 文字再切（slice((7,8,9),0,1) 交回 "["），于是「弹出栈顶」那一步会把元组变成字符串。
+// 递归没有这个动作，累积仍走元组拼接，而每一份分解都很短。
+fn 全展开(cp: Int, 直表: Int, 出: Int) -> Int {
+  if index_has(直表, str(cp)) {
+    let 部 = index_get(直表, str(cp))
+    var acc = 出
+    var k = 0
+    while k < len(部) {
+      acc = 全展开(部[k], 直表, acc)
+      k = k + 1
+    }
+    return acc
+  }
+  return 出 + (cp,)
+}
+
 fn main() -> Int effects(file, process) {
   let 参 = argv()
   // 参[0] 是脚本自己的路径；真实参数从 1 起（与第一支同一套规矩）
@@ -94,9 +116,7 @@ fn main() -> Int effects(file, process) {
   var 出文件 = "vm/ucd-nfc.h"
   if len(参) > 2 { 出文件 = 参[2] }
 
-  print("A 开始" + chr(10))
   let 源码 = read_text(数据目录 + "/UnicodeData.txt")
-  print("B 读到 " + str(len(源码)) + chr(10))
 
   var 直分解 = index_new()      // 码点 → 分解后的元组
   var 组合类 = index_new()      // 码点 → 组合类
@@ -128,48 +148,25 @@ fn main() -> Int effects(file, process) {
     i = i + 1
   }
 
-  print("C 扫描完 序数 " + str(序数) + " 序列[0]=" + str(序列[0]) + " 序列[1]=" + str(序列[1]) + chr(10))
   // ---- 全分解：递归到底 ----
   var 全分解 = index_new()
   var 最长 = 0
   var j = 0
   while j < 序数 {
     let cp = 序列[j]
-    var 栈 = (cp,)
-    var 出 = ()
-    var 停 = false
-    while len(栈) > 0 && 停 == false {
-      let 当 = 栈[len(栈) - 1]
-      栈 = slice(栈, 0, len(栈) - 1)
-      if index_has(直分解, str(当)) {
-        let 直 = index_get(直分解, str(当))
-        // 按原顺序把分解压回去：先压后面的，弹出来才是前面的
-        var k = len(直) - 1
-        while k >= 0 {
-          栈 = 栈 + (直[k],)
-          k = k - 1
-        }
-      } else {
-        出 = 出 + (当,)
-      }
-      if len(出) > 8 { 停 = true }
-    }
-    if 停 == false {
-      全分解 = index_set(全分解, str(cp), 出)
-      if len(出) > 最长 { 最长 = len(出) }
+    let 全 = 全展开(cp, 直分解, ())
+    if len(全) <= 8 {
+      全分解 = index_set(全分解, str(cp), 全)
+      if len(全) > 最长 { 最长 = len(全) }
     }
     j = j + 1
   }
-
-  print("D 全分解完 " + str(index_len(全分解)) + chr(10))
   // ---- 排除表 ----
   let 排文 = read_text(数据目录 + "/CompositionExclusions.txt")
   var 排掉 = index_new()
   let 排们 = split(排文, chr(10))
   var m = 0
-  print("G 排除表 " + str(len(排们)) + " 行" + chr(10))
   while m < len(排们) {
-    print("G" + str(m) + " " + chr(10))
     var 净 = 排们[m]
     // 去掉注释
     let 井 = split(净, "#")
@@ -203,13 +200,15 @@ fn main() -> Int effects(file, process) {
     }
     n = n + 1
   }
-  print("E 组合收集完 " + str(组合数) + chr(10))
   // 插入排序：数组交换是 O(1)，而组合对约一千条 —— 这一步原来是冒泡加元组重建，走不动
   var a = 1
   while a < 组合数 {
     let 当前 = 组合[a]
     var b = a - 1
-    while b >= 0 {
+    var 走 = true
+    // 由标志跳出，不能把 b 减到 -1 —— 那样「当前本不必移动」的情形会被写到位置 0，
+    // 于是已排好的前半段被覆盖（实测：三百多条组合对里出现重复行，顺序也乱了）。
+    while b >= 0 && 走 {
       let 看 = 组合[b]
       var 大 = false
       if 看[0] > 当前[0] { 大 = true }
@@ -218,14 +217,13 @@ fn main() -> Int effects(file, process) {
         设(组合, b + 1, 看)
         b = b - 1
       } else {
-        b = 0 - 1
+        走 = false
       }
     }
     设(组合, b + 1, 当前)
     a = a + 1
   }
 
-  print("F 排序完" + chr(10))
   // ---- 写出 ----
   var 文本 = "/* Unicode 的归一化数据，C 那台机器用（NFC 要的那三样）。\n"
   文本 = 文本 + " *\n"
@@ -247,19 +245,20 @@ fn main() -> Int effects(file, process) {
   var p = 0
   while p < 序数 {
     let cp = 序列[p]
-    if p < 4 { print("p" + str(p) + " cp=" + str(cp) + chr(10)) }
     if index_has(全分解, str(cp)) {
       let 全 = index_get(全分解, str(cp))
-    if p < 3 { print("P" + str(p) + " cp=" + str(cp) + " 全=" + str(全) + chr(10)) }
-      var 填 = (0, 0, 0, 0)
-      var q = 0
-      while q < len(全) && q < 4 {
-        填 = slice(填, 0, q) + (全[q],) + slice(填, q + 1, 4)
-        q = q + 1
-      }
+      // 四个变量代替「用 slice 改元组」—— 原因同上：slice 对元组评的是文字。
+      var 填0 = 0
+      var 填1 = 0
+      var 填2 = 0
+      var 填3 = 0
+      if len(全) > 0 { 填0 = 全[0] }
+      if len(全) > 1 { 填1 = 全[1] }
+      if len(全) > 2 { 填2 = 全[2] }
+      if len(全) > 3 { 填3 = 全[3] }
       文本 = 文本 + "  {0x" + 十六进制写法(cp) + "u, " + str(len(全)) + "u, {"
-      文本 = 文本 + "0x" + 十六进制写法(填[0]) + "u, 0x" + 十六进制写法(填[1]) + "u, "
-      文本 = 文本 + "0x" + 十六进制写法(填[2]) + "u, 0x" + 十六进制写法(填[3]) + "u}},\n"
+      文本 = 文本 + "0x" + 十六进制写法(填0) + "u, 0x" + 十六进制写法(填1) + "u, "
+      文本 = 文本 + "0x" + 十六进制写法(填2) + "u, 0x" + 十六进制写法(填3) + "u}},\n"
     }
     p = p + 1
   }
