@@ -21,6 +21,24 @@
  * Run:    ./hmyr-vm program.hmyrb
  */
 
+/* 线程局部：这一台机器里「每台一份」的那几样状态。
+ *
+ * 为什么不给每个函数加一个 Hmyr机器 * 参数：那要动十三个函数的签名与它们全部的
+ * 调用点，而换来的只是「同一个东西换个写法」。让「哪一台机器」成为一个线程局部的
+ * 全局指针，现有代码一行不发生改变，而每个线程看到的是自己那一份 ——
+ * 那正是「实例」要的效果，也是这一步唯一需要的效果。
+ *
+ * 板子那一支不编线程，TLS 也就不必存在：裸机上 __thread 要一个 TLS 段，
+ * Cortex-M 上没有，所以那边这个宏是空的（那台机器仍然只有一个实例，也只需要一个）。
+ */
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+#define 线程局部
+#elif defined(_MSC_VER)
+#define 线程局部 __declspec(thread)
+#else
+#define 线程局部 __thread
+#endif
+
 /* 内置种子：桌面那一支把整份编译器编进来，于是这个可执行文件自带编译能力。
  * 板子上不编它 —— 那台没有文件系统，也用不到 cli_main；而且几百千字节的常量
  * 会把 flash 塞满，那不是「最小机器层」该有的样子。 */
@@ -179,14 +197,14 @@ static char **列目录(const char *utf8, uint32_t *out_n) {
  * 打开 HMYR_MEM 就在退出时打印一行。默认不出声：平常跑程序的人不需要看它。
  * 名字带前缀是因为 free 进来的指针要往回收那八个字节，四个都换掉了。
  */
-static size_t g_mem_live = 0;
-static size_t g_mem_peak = 0;
+static 线程局部 size_t g_mem_live = 0;
+static 线程局部 size_t g_mem_peak = 0;
 
 /* 分配上限。默认四吉字节 —— 这台机器没有回收，于是一个平方级的累积能把
  * 整台机器的内存吃满，而「没有 GC」不等于「可以吃满」。
  * 超过就明确退出（退出码 71），不让操作系统去收拾。
  * HMYR_MEM_LIMIT 改这个数（兆字节）；给 0 表示不限，只给查的人用。 */
-static size_t g_mem_limit = (size_t)4 * 1024 * 1024 * 1024;
+static 线程局部 size_t g_mem_limit = (size_t)4 * 1024 * 1024 * 1024;
 
 /* 让路：这台机器不只跑这一个程序。可用物理内存低于这道水位时先歇一下，
  * 等别人走完再分配；一直低就明确退出 —— 把内存吃满会触发系统那一层的内存压缩，
@@ -194,7 +212,7 @@ static size_t g_mem_limit = (size_t)4 * 1024 * 1024 * 1024;
 #define 水位 ((size_t)1536 * 1024 * 1024)
 #define 每查一次 ((size_t)1024 * 1024)
 
-static size_t g_mem_since_check = 0;
+static 线程局部 size_t g_mem_since_check = 0;
 
 static size_t 空闲物理(void) {
 #ifdef _WIN32
@@ -584,7 +602,7 @@ typedef struct {
 /* 主机：一台进程里必然有的那一个。线程要的是「第二台」，所以 g_机 是指针 ——
  * 这一刀只换形状，行为一个字节都不变（宿主那一份在 main 之前没人碰它）。 */
 static Hmyr机器 主机;
-static Hmyr机器 *g_机 = &主机;
+static 线程局部 Hmyr机器 *g_机 = &主机;
 
 /* ---- 索引：一个按键查的东西 ------------------------------------------
  *
@@ -633,7 +651,7 @@ static Value v_bool(int b) { Value v = v_null(); v.tag = T_BOOL; v.boolean = b ?
  * 默认不开。HMYR_GC=1 打开，阈值默认 32 MB（HMYR_GC_BYTES 改）。
  * 实现见 run_func 之前那一段：它要知道帧链与根在哪儿。
  */
-static int g_gc开 = 0;
+static 线程局部 int g_gc开 = 0;
 static void *gc_分配(size_t 字节, int 种类);
 static uint16_t *gc_串分配(size_t 码元数);
 
@@ -1160,8 +1178,8 @@ typedef struct Func {
 } Func;
 
 /* A name pool: every string a caller might need to compare by name. */
-static uint16_t **pool_p;
-static uint32_t *pool_len;
+static 线程局部 uint16_t **pool_p;
+static 线程局部 uint32_t *pool_len;
 static uint32_t pool_n, pool_cap;
 
 static int64_t pool_add(const uint16_t *p, uint32_t len) {
@@ -1549,8 +1567,8 @@ static void trace_dump(void) {
  * 崩掉之前留下的最后一行，就是那段递归的名字。
  * HMYR_MAX_DEPTH=N：到 N 层就自己停下并说明（桌面用；板子上 getenv 是空的）。
  */
-static uint32_t g_深度 = 0;
-static uint32_t g_最深 = 0;
+static 线程局部 uint32_t g_深度 = 0;
+static 线程局部 uint32_t g_最深 = 0;
 static int g_depth_on = 0;
 static uint32_t g_depth_cap = 0;
 
@@ -1615,8 +1633,8 @@ static int truthy(Value v) {
   return 1;
 }
 
-static int g_failed = 0;
-static char g_fail_msg[512];
+static 线程局部 int g_failed = 0;
+static 线程局部 char g_fail_msg[512];
 
 /* 当前正在跑的函数。诊断用：一条指令的 pc 只在它自己的函数里有意义，
  * 所以报错时要能说出「哪个函数、第几条」。 */
