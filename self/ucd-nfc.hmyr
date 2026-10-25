@@ -1,0 +1,295 @@
+// 从 data/ucd/ 生成 C 那台要的归一化数据（分解、组合类、组合对）。
+//
+// 未完成（2026-10-24）：三行的小语料能跑出结构，而真语料的前三千行在「排除表」那一段
+// 就停下 —— 报 HMYR-R0150（给一个没有 var 声明的名字赋值），还没定位到具体那一句。
+// 另外全分解只收了六条（应当三百七十九条），那是第二个 bug。两件都记在 design/INDEX.txt 第七节。
+// 在小语料上验过的东西：argv 取参、按行切分、码点解析、十六进制写回（那里原来的
+// `v - (v / 16) * 16` 在浮点除法不精确时会算出负的极小值，已改成 `v % 16` 加 floor）。
+//
+// 这是 tools/ucd-nfc.mjs 的 HMYR 版，也是「语料生成」这一项的第二支。
+// 验收方式与第一支相同：两份实现喂同一段小样本，产物必须逐字节相同。
+//
+// 与第一支的差别：这一支要**回头查**（全分解递归、组合类、排除表），
+// 所以它用上了索引 —— design/INDEX.txt 那五条内置的第一个真实用户。
+//
+// UnicodeData.txt 本身就是按码点升序的，于是「排序」这一步可以省掉：
+// 收集的时候就是升序，写出的时候照样是升序。
+//
+// 用法：hmyr self/ucd-nfc.hmyr <data/ucd 目录> <输出文件>
+
+fn 十六进制值(文: String) -> Int {
+  var v = 0
+  var i = 0
+  while i < len(文) {
+    let c = 文[i]
+    var d = 0 - 1
+    var k = 0
+    while k < 10 {
+      if c == "0123456789"[k] { d = k }
+      k = k + 1
+    }
+    var k2 = 0
+    while k2 < 6 {
+      if c == "abcdef"[k2] { d = 10 + k2 }
+      if c == "ABCDEF"[k2] { d = 10 + k2 }
+      k2 = k2 + 1
+    }
+    if d >= 0 { v = v * 16 + d }
+    i = i + 1
+  }
+  return v
+}
+
+fn 十六进制写法(n: Int) -> String {
+  if n == 0 { return "0" }
+  let 表 = "0123456789ABCDEF"
+  var 出 = ""
+  var v = n
+  // 取模与 floor 都要用：这一门语言的数字只有双精度，`v - (v / 16) * 16` 在浮点除法不精确时
+  // 会算出负的极小值（实测 -2e-323），而它当下标就是越界。
+  while v > 0 {
+    出 = 表[v % 16] + 出
+    v = floor(v / 16)
+  }
+  return 出
+}
+
+// 去首尾空白
+fn 修剪(文: String) -> String {
+  var 起 = 0
+  var 止 = len(文)
+  var 走 = true
+  while 起 < 止 && 走 {
+    let c = 文[起]
+    if c == " " || c == chr(9) || c == chr(13) { 起 = 起 + 1 } else { 走 = false }
+  }
+  var 完 = 止
+  var 走2 = true
+  while 完 > 起 && 走2 {
+    let c = 文[完 - 1]
+    if c == " " || c == chr(9) || c == chr(13) { 完 = 完 - 1 } else { 走2 = false }
+  }
+  return slice(文, 起, 完)
+}
+
+// 按空格切开，丢掉空段。分解那一列是一串十六进制码点。
+fn 切码点(文: String) -> Int {
+  var 出 = ()
+  var 部 = split(文, " ")
+  var i = 0
+  while i < len(部) {
+    let 段 = 修剪(部[i])
+    if len(段) > 0 { 出 = 出 + (十六进制值(段),) }
+    i = i + 1
+  }
+  return 出
+}
+
+fn main() -> Int effects(file, process) {
+  let 参 = argv()
+  // 参[0] 是脚本自己的路径；真实参数从 1 起（与第一支同一套规矩）
+  var 数据目录 = "data/ucd"
+  if len(参) > 1 { 数据目录 = 参[1] }
+  var 出文件 = "vm/ucd-nfc.h"
+  if len(参) > 2 { 出文件 = 参[2] }
+
+  print("A 开始" + chr(10))
+  let 源码 = read_text(数据目录 + "/UnicodeData.txt")
+  print("B 读到 " + str(len(源码)) + chr(10))
+
+  var 直分解 = index_new()      // 码点 → 分解后的元组
+  var 组合类 = index_new()      // 码点 → 组合类
+  // 码点列表用可变数组：元组拼接是 O(n²)，这份语料有好几万行，走不到一半就撞步数上限。
+  let 行们 = split(源码, chr(10))
+  var 序列 = 数组(行们)         // 长度够用，实际填 序数 个
+  var 序数 = 0
+
+  var i = 0
+  while i < len(行们) {
+    let 行 = 行们[i]
+    if len(行) > 0 {
+      let 段 = split(行, ";")
+      if len(段) >= 15 {
+        let cp = 十六进制值(段[0])
+        let ccc = to_int(段[3])
+        if ccc != 0 { 组合类 = index_set(组合类, str(cp), ccc) }
+        let 分 = 修剪(段[5])
+        if len(分) > 0 {
+          // 兼容分解（尖括号开头）不属于 NFC
+          if 分[0] != "<" {
+            直分解 = index_set(直分解, str(cp), 切码点(分))
+            设(序列, 序数, cp)
+            序数 = 序数 + 1
+          }
+        }
+      }
+    }
+    i = i + 1
+  }
+
+  print("C 扫描完 序数 " + str(序数) + chr(10))
+  // ---- 全分解：递归到底 ----
+  var 全分解 = index_new()
+  var 最长 = 0
+  var j = 0
+  while j < 序数 {
+    let cp = 序列[j]
+    var 栈 = (cp,)
+    var 出 = ()
+    var 停 = false
+    while len(栈) > 0 && 停 == false {
+      let 当 = 栈[len(栈) - 1]
+      栈 = slice(栈, 0, len(栈) - 1)
+      if index_has(直分解, str(当)) {
+        let 直 = index_get(直分解, str(当))
+        // 按原顺序把分解压回去：先压后面的，弹出来才是前面的
+        var k = len(直) - 1
+        while k >= 0 {
+          栈 = 栈 + (直[k],)
+          k = k - 1
+        }
+      } else {
+        出 = 出 + (当,)
+      }
+      if len(出) > 8 { 停 = true }
+    }
+    if 停 == false {
+      全分解 = index_set(全分解, str(cp), 出)
+      if len(出) > 最长 { 最长 = len(出) }
+    }
+    j = j + 1
+  }
+
+  print("D 全分解完 " + str(index_len(全分解)) + chr(10))
+  // ---- 排除表 ----
+  let 排文 = read_text(数据目录 + "/CompositionExclusions.txt")
+  var 排掉 = index_new()
+  let 排们 = split(排文, chr(10))
+  var m = 0
+  print("G 排除表 " + str(len(排们)) + " 行" + chr(10))
+  while m < len(排们) {
+    print("G" + str(m) + " " + chr(10))
+    var 净 = 排们[m]
+    // 去掉注释
+    let 井 = split(净, "#")
+    if len(井) > 0 { 净 = 修剪(井[0]) }
+    if len(净) > 0 {
+      let 首 = split(净, " ")
+      if len(首) > 0 {
+        let 段 = 修剪(首[0])
+        if len(段) > 0 { 排掉 = index_set(排掉, str(十六进制值(段)), 1) }
+      }
+    }
+    m = m + 1
+  }
+
+  // ---- 组合对：(前, 后) → 合成后的码点，按两个输入排序 ----
+  var 组合 = 数组(行们)
+  var 组合数 = 0
+  var n = 0
+  while n < 序数 {
+    let cp = 序列[n]
+    let 直 = index_get(直分解, str(cp))
+    if len(直) == 2 {
+      if index_has(排掉, str(cp)) == false {
+        let 首类 = 0
+        if index_has(组合类, str(直[0])) { 首类 = index_get(组合类, str(直[0])) }
+        if 首类 == 0 {
+          设(组合, 组合数, (直[0], 直[1], cp))
+          组合数 = 组合数 + 1
+        }
+      }
+    }
+    n = n + 1
+  }
+  print("E 组合收集完 " + str(组合数) + chr(10))
+  // 插入排序：数组交换是 O(1)，而组合对约一千条 —— 这一步原来是冒泡加元组重建，走不动
+  var a = 1
+  while a < 组合数 {
+    let 当前 = 组合[a]
+    var b = a - 1
+    while b >= 0 {
+      let 看 = 组合[b]
+      var 大 = false
+      if 看[0] > 当前[0] { 大 = true }
+      if 看[0] == 当前[0] && 看[1] > 当前[1] { 大 = true }
+      if 大 {
+        设(组合, b + 1, 看)
+        b = b - 1
+      } else {
+        b = 0 - 1
+      }
+    }
+    设(组合, b + 1, 当前)
+    a = a + 1
+  }
+
+  print("F 排序完" + chr(10))
+  // ---- 写出 ----
+  var 文本 = "/* Unicode 的归一化数据，C 那台机器用（NFC 要的那三样）。\n"
+  文本 = 文本 + " *\n"
+  文本 = 文本 + " * 由 tools/ucd-nfc.mjs 从 data/ucd/ 的语料生成，别手改。\n"
+  文本 = 文本 + " * 表里没有韩文音节：那是一段算法，写在 hmyr.c 里。\n"
+  文本 = 文本 + " * 验收在 test/c-vm.test.mjs 第十一节：每个码点归一之后应当是什么，\n"
+  文本 = 文本 + " * 以及把分解与组合串起来的那几种形状。\n"
+  文本 = 文本 + " */\n"
+  文本 = 文本 + "#ifndef HMYR_UCD_NFC_H\n#define HMYR_UCD_NFC_H\n#include <stdint.h>\n#include <stddef.h>\n\n"
+  文本 = 文本 + "/* 一条规范分解：码点、全分解之后有几个码点、最多四个。\n"
+  文本 = 文本 + " * 四个够用 —— 全码点里最长的那一道正好是四个，生成器遇到更长的会自己停下。 */\n"
+  文本 = 文本 + "typedef struct {\n  uint32_t cp;\n  uint16_t n;\n  uint32_t u[4];\n} HmyrDecompEntry;\n\n"
+  文本 = 文本 + "/* 一个组合类：只有非零的那些进来，零是默认值。 */\n"
+  文本 = 文本 + "typedef struct {\n  uint32_t cp;\n  uint8_t ccc;\n} HmyrCccEntry;\n\n"
+  文本 = 文本 + "/* 一个组合对：(前一个, 后一个) → 合成之后的那个码点。按两个输入排好序。 */\n"
+  文本 = 文本 + "typedef struct {\n  uint32_t a;\n  uint32_t b;\n  uint32_t cp;\n} HmyrCompEntry;\n\n"
+
+  文本 = 文本 + "static const HmyrDecompEntry ucd_decomp[] = {\n"
+  var p = 0
+  while p < 序数 {
+    let cp = 序列[p]
+    if index_has(全分解, str(cp)) {
+      let 全 = index_get(全分解, str(cp))
+      var 填 = (0, 0, 0, 0)
+      var q = 0
+      while q < len(全) && q < 4 {
+        填 = slice(填, 0, q) + (全[q],) + slice(填, q + 1, 4)
+        q = q + 1
+      }
+      文本 = 文本 + "  {0x" + 十六进制写法(cp) + "u, " + str(len(全)) + "u, {"
+      文本 = 文本 + "0x" + 十六进制写法(填[0]) + "u, 0x" + 十六进制写法(填[1]) + "u, "
+      文本 = 文本 + "0x" + 十六进制写法(填[2]) + "u, 0x" + 十六进制写法(填[3]) + "u}},\n"
+    }
+    p = p + 1
+  }
+  文本 = 文本 + "};\n\n"
+  文本 = 文本 + "static const size_t ucd_decomp_count = " + str(index_len(全分解)) + ";\n\n"
+
+  文本 = 文本 + "static const HmyrCccEntry ucd_ccc[] = {\n"
+  let 类键 = index_keys(组合类)
+  var r = 0
+  while r < len(类键) {
+    let 键 = 类键[r]
+    文本 = 文本 + "  {0x" + 十六进制写法(to_int(键)) + "u, " + str(index_get(组合类, 键)) + "u},\n"
+    r = r + 1
+  }
+  文本 = 文本 + "};\n\n"
+  文本 = 文本 + "static const size_t ucd_ccc_count = " + str(index_len(组合类)) + ";\n\n"
+
+  文本 = 文本 + "static const HmyrCompEntry ucd_comp[] = {\n"
+  var s = 0
+  while s < 组合数 {
+    let 条 = 组合[s]
+    文本 = 文本 + "  {0x" + 十六进制写法(条[0]) + "u, 0x" + 十六进制写法(条[1]) + "u, 0x" + 十六进制写法(条[2]) + "u},\n"
+    s = s + 1
+  }
+  文本 = 文本 + "};\n\n"
+  文本 = 文本 + "static const size_t ucd_comp_count = " + str(组合数) + ";\n\n"
+
+  文本 = 文本 + "#endif\n"
+  write_text(出文件, 文本)
+
+  print("分解 " + str(index_len(全分解)) + " 条（最长 " + str(最长) + " 个码点）")
+  print("组合类 " + str(index_len(组合类)) + " 条")
+  print("组合对 " + str(组合数) + " 个（排除表 " + str(index_len(排掉)) + " 个）")
+  print("→ " + 出文件 + "  " + str(len(文本) / 1024) + " KB")
+  return 0
+}
