@@ -19,7 +19,10 @@ import { 本机能力 } from "./capabilities.mjs";
 import { 藏路径, 在用脱敏 } from "./redact.mjs";
 import { lex } from "./lexer.mjs";
 import { parse } from "./parser.mjs";
-import { 有序, 下整 } from "./numbers.mjs";
+import {
+  有序, 下整,
+  加 as 数加, 减 as 数减, 乘 as 数乘, 除 as 数除, 余 as 数余, 比 as 数比, 是零 as 数零,
+} from "./numbers.mjs";
 import { 展开模块 } from "./expand.mjs";
 
 // 尾调用的标记：函数体最后一件事是调用另一个函数时，抛它而不是真的压栈。
@@ -354,15 +357,17 @@ export class Runtime {
         // description build a sequence recursively instead of listing every element by hand.
         if (Array.isArray(a) && Array.isArray(b)) return [...a, ...b];
         if (typeof a === "string" || typeof b === "string") return this.asString(a) + this.asString(b);
-        return this.asNumber(a) + this.asNumber(b);
-      case "-": return this.asNumber(a) - this.asNumber(b);
-      case "*": return this.asNumber(a) * this.asNumber(b);
+        return 数加(this.asNumber(a), this.asNumber(b));
+      // 算术与比较都走 src/numbers.mjs 那一处定义：换实现只有一个落点，
+      // 也就没有「宿主的裸运算还留在某一条路上」这种事。
+      case "-": return 数减(this.asNumber(a), this.asNumber(b));
+      case "*": return 数乘(this.asNumber(a), this.asNumber(b));
       case "/":
-        if (this.asNumber(b) === 0) this.fail("HMYR-R0120", "division by zero");
-        return this.asNumber(a) / this.asNumber(b);
+        if (数零(this.asNumber(b))) this.fail("HMYR-R0120", "division by zero");
+        return 数除(this.asNumber(a), this.asNumber(b));
       case "%":
-        if (this.asNumber(b) === 0) this.fail("HMYR-R0120", "division by zero");
-        return this.asNumber(a) % this.asNumber(b);
+        if (数零(this.asNumber(b))) this.fail("HMYR-R0120", "division by zero");
+        return 数余(this.asNumber(a), this.asNumber(b));
       case "==": return this.equal(a, b);
       case "!=": return !this.equal(a, b);
       case "<": return this.compare(a, b) < 0;
@@ -389,7 +394,7 @@ export class Runtime {
   truthy(v) { return !(v === false || v === null || v === 0 || v === ""); }
   equal(a, b) { return typeof a === typeof b ? a === b : this.asString(a) === this.asString(b); }
   compare(a, b) {
-    if (typeof a === "number" && typeof b === "number") return a < b ? -1 : a > b ? 1 : 0;
+    if (typeof a === "number" && typeof b === "number") return 数比(a, b);
     if (typeof a === "string" && typeof b === "string") return a < b ? -1 : a > b ? 1 : 0;
     this.fail("HMYR-R0131", "cannot compare " + describe(a) + " with " + describe(b));
   }

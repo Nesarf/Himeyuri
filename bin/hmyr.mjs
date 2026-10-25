@@ -141,8 +141,10 @@ const 用宿主 = 参数.includes("--host-eval");
 // 两件事拆开：字符串的底（默认码元序列）与数的算术（默认宿主，因为自家那份慢三百倍）。
 // 拆开是为了量的时候分得清是哪一件引起的 —— 合在一个开关里，红了也不知道该收回哪一个。
 const 自家标量 = !参数.includes("--host-scalars");
-const 自家算术 = 参数.includes("--own-arithmetic");
-if (自家算术) 数.用自家算术(true);
+// 自家算术现在是默认；--host-arithmetic 退回宿主那一条（对照与排查用）。
+// --own-arithmetic 仍然接受，那是同一个意思，留着不报错。
+const 自家算术 = !参数.includes("--host-arithmetic");
+if (!自家算术) 数.用自家算术(false);
 if (参数.includes("--redact") || process.env.HMYR_REDACT === "1") 设脱敏(true);
 
 // 带值的开关要从两处剔掉：开关本身与它后面那一个值。
