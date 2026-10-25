@@ -44,8 +44,9 @@ function 取引导() {
   const 最新 = 源最新时间();
   const 有字节 = fs.existsSync(字节路) && 最新 > 0 && fs.statSync(字节路).mtimeMs >= 最新;
   if (有字节) {
-    // 深度：尾调用之后 tokenize 那条不再吃栈，四千层对「造一棵树」绰绰有余；
-    // 再高会撞 JS 栈（这台机器上 12000 就撞过）。
+    // 字节码优先：同样一份 self/run.hmyr，解释器要近三秒，而 vm 跑同一份字节只要零点几秒。
+    // 当初这条路撞栈是因为虚拟机没有尾调用；148a1c7 补上之后，深度不再是问题。
+    // 深度留四千：尾调用之后 tokenize 不涨栈，而再高会撞 JS 栈（12000 撞过）。
     const vm = new 虚拟机(读程序(fs.readFileSync(字节路)), {
       capabilities: 本机能力(), stepLimit: 40000000000, maxDepth: 4000,
     });
