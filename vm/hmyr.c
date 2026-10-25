@@ -1736,11 +1736,25 @@ static uint16_t *gc_串分配(size_t 码元数) {
   return (uint16_t *)gc_分配((码元数 ? 码元数 : 1) * sizeof(uint16_t), 1);
 }
 
-static size_t gc_收集(void) {
-  size_t 前 = g_gc字节;
-  size_t 前数 = g_gc数;
-  if (g_gc日志) fprintf(stderr, "gc: 开始 前 %llu 字节 %llu 块\n",
-                        (unsigned long long)前, (unsigned long long)前数);
+/* ---- 回收的根：一处列出 ---------------------------------------------
+ *
+ * design/SELFRUN.txt 那一格（把状态收进一个 Hmyr机器 结构）的第一刀就是这里：
+ * 先让「根在哪儿」有一个名字，再谈把它搬进结构。两件事分开的理由是它们各自能验 ——
+ * 这一刀不改变行为，只把那五处散在 gc_收集 里的压标收到一个函数里。
+ *
+ * 根有五类，共同点是「解释器还活着，所以这些东西不能收」：
+ *
+ *   操作栈   g_stack 那一段：每一帧的槽都在里面
+ *   argv     g_argv：程序参数本身是值
+ *   键队列   g_keys：终端输入推进去的那一串
+ *   帧链     g_帧链：每一帧的槽数组（标的是块本身，不只是槽里的值）
+ *   函数表   funcs：指令里带着常量值
+ *
+ * 判据：这五类全在，且 gc_收集 里不再出现第二处压标。
+ * 第二刀（Hmyr根 结构）要改的就是这一份 —— 到那时这里的每一行变成 g_根.xxx，
+ * 而 gc_收集 一行都不用动。
+ */
+static void gc_标根(void) {
   for (uint32_t i = 0; i < g_stack_n; i++) gc_标值(g_stack[i]);
   gc_标值(g_argv);
   for (int i = 0; i < g_key数; i++) gc_标值(g_keys[(g_key头 + i) % KEY_环]);
@@ -1753,6 +1767,14 @@ static size_t gc_收集(void) {
     Func *fn = &funcs[i];
     for (uint32_t j = 0; j < fn->ncode; j++) gc_标值(fn->code[j].val);
   }
+}
+
+static size_t gc_收集(void) {
+  size_t 前 = g_gc字节;
+  size_t 前数 = g_gc数;
+  if (g_gc日志) fprintf(stderr, "gc: 开始 前 %llu 字节 %llu 块\n",
+                        (unsigned long long)前, (unsigned long long)前数);
+  gc_标根();
   /* 显式栈把标记走完：每弹一个块，把它里面的值再压进去。
    * 字符串块是叶子 —— 它的载荷是码元，不是 Value，不能按 Value 去读。 */
   while (g_标数 > 0) {

@@ -24,17 +24,22 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 源路 = path.join(ROOT, "vm/hmyr.c");
 const 行们 = fs.readFileSync(源路, "utf8").split(/\r?\n/);
 
-// 文件级声明：行首就是 static，且到那个分号为止。多行的声明（带换行的初始化）
-// 在这里只取第一行 —— 这一份要的是清单与量级，不是一份完整的 C 解析器。
+// 文件级声明：行首就是 static，且是「变量声明」而不是函数或原型 ——
+// 判据是行里没有括号。多行的初始化（带换行的数组）在这里只取第一行，
+// 这一份要的是清单与量级，不是一份完整的 C 解析器。
+//
+// 早一版按类型名排除（void / Value），于是 static Value *g_stack 被误伤了 ——
+// 而它正是一个根。排除条件按形状写，不按类型名写。
 const 声明 = [];
 for (let i = 0; i < 行们.length; i++) {
   const 行 = 行们[i];
-  const m = /^static\s+(?!void\b|Value\b|int\s+main)([A-Za-z_][\w\s*]*?)\s+([^\s();=]+)\s*(?:=|;|\[)/.exec(行);
-  if (!m) continue;
+  if (!/^static\s/.test(行)) continue;
   if (/^static\s+const\b/.test(行)) continue;          // 常量不是状态
-  if (/\)\s*\{?\s*$/.test(行)) continue;               // 函数定义
-  if (/^static\s+(?:[A-Za-z_]\w*\s+)*[A-Za-z_]\w*\s*\(/.test(行)) continue;  // 原型
-  声明.push({ 行号: i + 1, 名字: m[2].replace(/^\*+/, "").replace(/\[.*$/, ""), 原文: 行.trim() });
+  const 体 = 行.replace(/\/\*.*$/, "").trim();
+  if (体.includes("(")) continue;                      // 函数、原型、函数指针的形参
+  const m = /^static\s+[\w\s*]+?([A-Za-z_\u4e00-\u9fff][\w\u4e00-\u9fff]*)\s*(?:\[[^\]]*\])?\s*(?:=|;)/.exec(体);
+  if (!m) continue;
+  声明.push({ 行号: i + 1, 名字: m[1], 原文: 体 });
 }
 
 // 去重：同一个名字只留第一处（有的变量分两段声明，比如 ARM 桩与非 ARM 各一份）。
