@@ -298,6 +298,30 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
     "}",
   ]);
   ok("交出去之后再存进记录，不报", 查(先交出).length === 0, JSON.stringify(查(先交出)));
+
+  // §4.2 的第二个形态，而且它比记录字面量更贴原例（kept = b）：块被写进一条索引。
+  // 索引可变，所以它活得比这个函数久；而区不会 —— close 一到块就没了，索引里剩下一个死引用。
+  const 存索引 = 行们([
+    "fn f(表: Int) -> Int {",
+    "  let a = arena()",
+    "  let b = a.alloc(8)",
+    "  index_set(表, \"kept\", b)",
+    "  a.close()",
+    "  return 0",
+    "}",
+  ]);
+  ok("块存进索引给 R0304", 查(存索引).some((d) => d.code === "HMYR-R0304"), JSON.stringify(查(存索引)));
+
+  const 存索引值 = 行们([
+    "fn f(表: Int) -> Int {",
+    "  let a = arena()",
+    "  let b = a.alloc(8)",
+    "  index_set(表, \"size\", b.size)",
+    "  a.close()",
+    "  return 0",
+    "}",
+  ]);
+  ok("索引里存的是字段值就不报", 查(存索引值).length === 0, JSON.stringify(查(存索引值)));
 }
 
 fs.rmSync(临, { recursive: true, force: true });

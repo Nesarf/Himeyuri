@@ -184,6 +184,22 @@ export function 区检查(ast, 选项 = {}) {
             "the number of rounds. Build it once outside the loop if the blocks do not need to be separate",
             n);
         }
+        // §4.2 的第二个形态，而且它比记录字面量更贴原例（kept = b）：块被写进一条索引。
+        // 索引是可变的，所以它能活得比这个函数久 —— 而区不会：close 一到，块就没了，
+        // 索引里留下的是一个指向死块的引用。判据只看「第三个参数是不是块」，不要类型系统。
+        if (n.callee && n.callee.kind === "Ident" && n.callee.name === "index_set") {
+          const 存的名 = 名字((n.args || [])[2]);
+          if (存的名) {
+            const 命中 = 块属于谁(存的名);
+            if (命中.length) {
+              报("error", "HMYR-R0304",
+                "'" + 存的名 + "' is a block of the arena '" + 命中[0].场名 + "' and this stores it in an index: " +
+                "the index can outlive this function and the arena cannot follow it, so what stays behind is a " +
+                "reference to a dead block. Hand it over with " + 命中[0].场名 + ".freeze(" + 存的名 +
+                ") if it is meant to travel", n);
+            }
+          }
+        }
         const 调 = 方法调用(n);
         if (调 && 场.has(调.目标)) {
           const 参名 = 名字(调.参数[0]);
