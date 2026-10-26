@@ -268,7 +268,7 @@ console.log("七、关闭之后的使用");
 
 console.log("八、跨函数的转移（只看签名上那个 own）");
 {
-  // 把持有格交给一个 own 参数的函数，等于交了所有权 —— 之后再动它就是 use-after-move。
+  // 把持有格交给一个 own 参数的函数，等于交了所有权 —— 之后再动它就是 was moved into。
   const 转移后用 = 行们([
     "fn 收下(own 格: Int) -> Int {",
     "  return 0",
@@ -282,7 +282,7 @@ console.log("八、跨函数的转移（只看签名上那个 own）");
     "  return 0",
     "}",
   ]);
-  ok("own 参数传出去之后再用被拒", 有(查(转移后用), "use-after-move"), JSON.stringify(查(转移后用)));
+  ok("own 参数传出去之后再用被拒", 有(查(转移后用), "was moved into"), JSON.stringify(查(转移后用)));
 
   // borrow 参数不转移所有权 —— 调用之后源这边仍然归自己，继续用是对的。
   const 借出后 = 行们([

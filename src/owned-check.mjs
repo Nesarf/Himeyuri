@@ -20,10 +20,7 @@
 
 export const 检查码 = "HMYR-E0321";
 
-const 空 = "empty";
-const 满 = "full";
-const 关 = "closed";
-const 移 = "moved";
+import { 转移, 空, 满, 关, 移 } from "./owned-state.mjs";
 
 const 是方法调用 = (n) =>
   n && n.kind === "Call" && n.callee && n.callee.kind === "Field" &&
@@ -93,35 +90,16 @@ function 处理方法调用(调, 状态, 报) {
     return false;
   }
   const 现在 = 状态.get(名);
-  // 转移出去之后再动它，是 use-after-move。这一条能看，是因为参数上写了 own：
-  // 那个词说的是「所有权进去了」，于是源这边之后就不该再有它。
-  if (现在 === 移) {
-    报("'" + 名 + "' was moved into another function earlier; touching it here afterwards is use-after-move", 调);
+  // 判定本身不在这里 —— 它在 src/owned-state.mjs，那是唯一真相，
+  // 而 tools/owned-state.hmoca 是它的 HMYR 镜像（两份对同一批输入必须给出同一份判定）。
+  // 这里只负责把动作翻译过去、把交回的错拼成一句诊断。
+  const 判 = 转移(现在, 方法);
+  if (判.错) {
+    报("'" + 名 + "' " + 判.错 + "; and that is knowable at load time", 调);
     return true;
   }
-  // 关了之后不能再放也不能再取 —— 那两条在运行期是 R0305，而这里看得见。
-  if (现在 === 关 && (方法 === "放" || 方法 === "取")) {
-    报("'" + 名 + "' was closed before this point; using it after close is R0305 at run time, and it is knowable now", 调);
-    return true;
-  }
-  if (方法 === "关") {
-    // 重复关是幂等的（运行期也是），所以只记状态，不报。
-    if (现在 !== 关) 状态.set(名, 关);
-    return true;
-  }
-  if (方法 === "放") {
-    if (现在 === 满) {
-      报("'" + 名 + "' already holds a value here; putting a second one is R0305 at run time, and it is knowable now", 调);
-    } else {
-      状态.set(名, 满);
-    }
-  } else {
-    if (现在 === 空) {
-      报("'" + 名 + "' is empty here; taking from it is R0306 at run time, and it is knowable now", 调);
-    } else {
-      状态.set(名, 空);
-    }
-  }
+  if (判.态 === null) 状态.delete(名);
+  else 状态.set(名, 判.态);
   return true;
 }
 

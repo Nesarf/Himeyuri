@@ -1,0 +1,75 @@
+// owned 的状态机，HMYR 写的镜像（src/owned-state.mjs 是那一份真相）。
+//
+// 它从标准输入读一串「状态 动作」，每行一对，交回每一步的判定。
+// 输出格式与 JS 那份逐字相同 —— test/owned-state.test.mjs 拿同一批序列喂两边，
+// 再逐行比对。那是「自举」这句话在这里能有的可验形状：
+// 不是把整个检查器重写，而是把它的判定用两种语言各写一遍，让它们对答案。
+//
+//   empty 放      -> full  ok
+//   full 放       -> full  already-holds-a-value
+//   full 取       -> empty ok
+//   empty 取      -> empty is-empty
+//   full 关       -> closed ok
+//   closed 关     -> closed ok
+//   closed 放     -> closed use-after-close
+//   moved 取      -> moved use-after-move
+
+fn 转移(态: String, 动作: String) -> Int {
+  // 交回一个二元组：(新状态, 错误词或空串)。
+  // 顺序与 JS 那份一样：先看「已转移」，再看「关」是幂等的，再看「已关」，最后是两个动作。
+  if 态 == "moved" { return (态, "was moved into another function earlier") }
+  if 动作 == "关" { return ("closed", "") }
+  if 态 == "closed" { return (态, "was closed before this point") }
+  if 动作 == "放" {
+    if 态 == "full" { return (态, "already holds a value here") }
+    return ("full", "")
+  }
+  if 动作 == "取" {
+    if 态 == "empty" { return (态, "is empty here") }
+    return ("empty", "")
+  }
+  return (态, "unknown action")
+}
+
+fn main() -> Int effects(process, file) {
+  var 没读到 = read_stdin_line()
+  while 没读到.结束 == false {
+    let 行 = 没读到.行
+    if len(行) > 0 {
+      // 一行两段，中间一个空格。切法用手写的，因为 split 空分隔会留空段。
+      let 空位 = 找空位(行, 0)
+      if 空位 < 0 {
+        print("bad-line" + chr(10))
+      } else {
+        let 态 = 前段(行, 空位, 0, "")
+        let 动作 = 后段从(行, 空位 + 1, 0, "")
+        let r = 转移(态, 动作)
+        print(r[0] + " " + 错或好(r[1]) + chr(10))
+      }
+    }
+    没读到 = read_stdin_line()
+  }
+  return 0
+}
+
+fn 找空位(s: String, i: Int) -> Int {
+  if i >= len(s) { return 0 - 1 }
+  if s[i] == " " { return i }
+  return 找空位(s, i + 1)
+}
+
+fn 前段(s: String, 止: Int, i: Int, acc: String) -> String {
+  if i >= 止 { return acc }
+  return 前段(s, 止, i + 1, acc + s[i])
+}
+
+fn 后段从(s: String, 起: Int, i: Int, acc: String) -> String {
+  let 位 = 起 + i
+  if 位 >= len(s) { return acc }
+  return 后段从(s, 起, i + 1, acc + s[位])
+}
+
+fn 错或好(词: String) -> String {
+  if 词 == "" { return "ok" }
+  return 词
+}
