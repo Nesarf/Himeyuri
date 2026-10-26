@@ -64,6 +64,11 @@ export function loadUnit(entry, options = {}) {
     return { ...解, ast };
   });
 
+  // 跨模块的借用分析要两张跨模块的表：被调者可能先在别的模块里装载过。
+  // 它们按装载顺序累积 —— 所以「被调者先装载」时能看透，「后装载」时看不见。
+  // 那是单趟遍历的局限，写在 design/MEMORY.txt 第 2 节，而不是假装它不存在。
+  const 跨模块 = { 签名: new Map(), 脏: new Map() };
+
   function visit(file) {
     const abs = cap.path.resolve(file);
     if (modules.has(abs)) return;                       // loaded once, and that is the only time
@@ -100,14 +105,6 @@ export function loadUnit(entry, options = {}) {
       }
     }
 
-    // owned 的单次使用（design/MEMORY.txt 第 2 节）：放两次、取两次这一类能静态看的错，
-    // 在装载时拦。三个开关各管一件事，理由与区那一条同：会误报的检查会被关掉。
-    if (options.ownedCheck !== false) {
-      for (const d of 持有格检查(ast, { 文件: short(abs) })) {
-        diagnostics.error(d.code, d.message, d.line, d.column);
-      }
-    }
-
     for (const imp of ast.imports) {
       const target = resolveImport(cap, abs, imp.path);
       if (!target) {
@@ -133,6 +130,15 @@ export function loadUnit(entry, options = {}) {
     loading.delete(abs);
     modules.set(abs, ast);
     order.push(abs);
+
+    // owned 的四层检查（design/MEMORY.txt 第 2 节）。它放在 import 之后，因为
+    // 跨模块的借用分析要读「被调者那一侧」的结果 —— 而那要在被调模块装载完之后才有。
+    // 顺序换了，本模块的错还是一样报；换来的是「跨模块看得见」。
+    if (options.ownedCheck !== false) {
+      for (const d of 持有格检查(ast, { 文件: short(abs), 外部: 跨模块 })) {
+        diagnostics.error(d.code, d.message, d.line, d.column);
+      }
+    }
   }
 
   visit(entry);

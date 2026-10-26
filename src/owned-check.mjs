@@ -48,9 +48,16 @@ export function 持有格检查(ast, 选项 = {}) {
 
   // 签名表：哪些函数把某个参数标成了 own。转移只对它们成立 ——
   // borrow 与普通参数的调用之后，源这边的格子仍然归自己，继续用是对的。
+  //
+  // 外面那张表（选项.外部）是跨模块用的：被调者可能在别的模块里先装载过。
+  // 本模块的名字优先（扁平函数表里也是先到者赢），所以先写本模块、再补外面的。
   const 签名表 = new Map();
   for (const decl of ast.decls) {
     if (decl.kind === "Fn") 签名表.set(decl.name, decl.params || []);
+  }
+  const 外部 = 选项.外部;
+  if (外部 && 外部.签名) {
+    for (const [名, 参们] of 外部.签名) if (!签名表.has(名)) 签名表.set(名, 参们);
   }
 
   for (const decl of ast.decls) {
@@ -58,10 +65,17 @@ export function 持有格检查(ast, 选项 = {}) {
     走块(decl.body.statements || [], new Map(), 报, 签名表);
   }
 
+  // 本模块的签名与脏要交给下一个模块 —— 那是「跨模块」这件事的全部内容。
+  if (外部 && 外部.签名 && 外部.脏) {
+    for (const decl of ast.decls) {
+      if (decl.kind === "Fn") 外部.签名.set(decl.name, decl.params || []);
+    }
+  }
+
   // 第四层：借用的承诺要在被调者那一侧兑现，而且沿调用链走到底。
   // 上面几层都在调用者那一侧看 ——「borrow 之后我还能继续用」，那是信任；
   // 这一层验承诺本身，于是它变成证明。
-  查借用承诺(ast, 签名表, 报);
+  查借用承诺(ast, 签名表, 报, 外部);
   return 出;
 }
 
@@ -226,8 +240,16 @@ function 句子里提到的名字(n, 出 = new Set()) {
 //
 // 这一层只看同一模块的调用。跨模块要等模块那一层有名字解析；动态目标
 // （把函数当值传）在这门语言里今天没有，所以那两个缺口不在这里。
-function 查借用承诺(ast, 签名表, 报) {
+function 查借用承诺(ast, 签名表, 报, 外部) {
   const 函数们 = ast.decls.filter((d) => d.kind === "Fn" && d.body);
+
+  // 查脏要同时看本模块与外面那张表 —— 被调者可能在别的模块里先装载过。
+  const 查脏 = (名) => {
+    const 本地 = 脏.get(名);
+    if (本地) return 本地;
+    if (外部 && 外部.脏) return 外部.脏.get(名);
+    return undefined;
+  };
 
   // 参数名到位置。
   const 位置表 = new Map();      // 函数名 -> Map(参数名, 位置)
@@ -291,7 +313,7 @@ function 查借用承诺(ast, 签名表, 报) {
         if (本脏.has(位)) continue;
         for (const 目 of 目标们) {
           const [名, 位文] = 目.split("#");
-          if (脏.get(名) && 脏.get(名).has(Number(位文))) { 本脏.add(位); 变了 = true; break; }
+          if (查脏(名) && 查脏(名).has(Number(位文))) { 本脏.add(位); 变了 = true; break; }
         }
       }
     }
@@ -305,7 +327,7 @@ function 查借用承诺(ast, 签名表, 报) {
     (d.params || []).forEach((p, i) => { if (p && p.passing === "borrow") 借来位.add(i); });
     if (借来位.size === 0) continue;
 
-    const 真脏 = 脏.get(d.name);
+    const 真脏 = 查脏(d.name) || new Set();
     const 该报 = new Set([...借来位].filter((i) => 真脏.has(i)));
     if (该报.size === 0) continue;
 
@@ -340,5 +362,16 @@ function 查借用承诺(ast, 签名表, 报) {
       return false;
     };
     走(d.body);
+  }
+
+  // 交接：本模块算出来的脏进外面那张表，下一个模块就看得到。
+  // 这是「跨模块」的全部内容 —— 单趟、按装载顺序，而「被调者在后面才装载」
+  // 这件事这一层看不见，理由写在 design/MEMORY.txt 第 2 节。
+  if (外部 && 外部.脏) {
+    for (const [名, 位们] of 脏) {
+      const 已有 = 外部.脏.get(名);
+      if (!已有) 外部.脏.set(名, new Set(位们));
+      else for (const 位 of 位们) 已有.add(位);
+    }
   }
 }

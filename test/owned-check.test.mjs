@@ -444,6 +444,54 @@ console.log("十、沿调用链走到底（传递闭包）");
   ok("环里有人改就报", 有(查(环里有改), "all the way down"), JSON.stringify(查(环里有改)));
 }
 
+console.log("十一、跨模块（按装载顺序累积）");
+{
+  // 借用分析要跨模块，而跨模块的全部内容是两张表按装载顺序累积：
+  // 签名与脏。所以这一节验的是「被调者在别的模块里先装载过，这一层看得见它」。
+  //
+  // 看不见的那一半写在 design/MEMORY.txt 第 2 节：单趟遍历，被调者若在后装载，
+  // 检查它的时候还不知道它脏不脏。那不是遗漏，是这一层的方式。
+  const 乙 = 投(行们([
+    "fn 改(格: Int) -> Int {",
+    "  格.放(1)",
+    "  return 0",
+    "}",
+  ]), "乙.hmoca");
+
+  const 甲 = 投(行们([
+    "import \"./乙.hmoca\"",
+    "",
+    "fn 借(borrow 格: Int) -> Int {",
+    "  改(格)",
+    "  return 0",
+    "}",
+  ]), "甲.hmoca");
+
+  const 单 = loadUnit(甲);
+  ok("跨模块的转移被看见",
+   单.diagnostics.errors.some((e) => e.code === "HMYR-E0321" && /all the way down|changes it/.test(e.message)),
+   JSON.stringify(单.diagnostics.errors.map((e) => e.code + " " + e.message.slice(0, 60))));
+
+  // 干净的被调者：同样跨模块，但那边什么都不动 —— 不该报。
+  const 净 = 投(行们([
+    "fn 看(格: Int) -> Int {",
+    "  return 0",
+    "}",
+  ]), "净.hmoca");
+  const 甲净 = 投(行们([
+    "import \"./净.hmoca\"",
+    "",
+    "fn 借(borrow 格: Int) -> Int {",
+    "  看(格)",
+    "  return 0",
+    "}",
+  ]), "甲净.hmoca");
+  const 单净 = loadUnit(甲净);
+  ok("跨模块的干净调用不报",
+   单净.diagnostics.errors.filter((e) => e.code === "HMYR-E0321").length === 0,
+   JSON.stringify(单净.diagnostics.errors.map((e) => e.code)));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
