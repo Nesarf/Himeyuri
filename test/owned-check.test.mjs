@@ -266,6 +266,57 @@ console.log("七、关闭之后的使用");
   ok("重复关不报", 查(重复关).length === 0, JSON.stringify(查(重复关)));
 }
 
+console.log("八、跨函数的转移（只看签名上那个 own）");
+{
+  // 把持有格交给一个 own 参数的函数，等于交了所有权 —— 之后再动它就是 use-after-move。
+  const 转移后用 = 行们([
+    "fn 收下(own 格: Int) -> Int {",
+    "  return 0",
+    "}",
+    "",
+    "fn 用() -> Int {",
+    "  let 格 = owned()",
+    "  格.放(1)",
+    "  收下(格)",
+    "  格.放(2)",
+    "  return 0",
+    "}",
+  ]);
+  ok("own 参数传出去之后再用被拒", 有(查(转移后用), "use-after-move"), JSON.stringify(查(转移后用)));
+
+  // borrow 参数不转移所有权 —— 调用之后源这边仍然归自己，继续用是对的。
+  const 借出后 = 行们([
+    "fn 看一眼(borrow 格: Int) -> Int {",
+    "  return 0",
+    "}",
+    "",
+    "fn 用() -> Int {",
+    "  let 格 = owned()",
+    "  格.放(1)",
+    "  看一眼(格)",
+    "  格.取()",
+    "  return 0",
+    "}",
+  ]);
+  ok("borrow 参数之后还能用", 查(借出后).length === 0, JSON.stringify(查(借出后)));
+
+  // 普通参数（没写 own 也没写 borrow）也不当成转移 —— 这一层不猜。
+  const 普通参 = 行们([
+    "fn 收下(格: Int) -> Int {",
+    "  return 0",
+    "}",
+    "",
+    "fn 用() -> Int {",
+    "  let 格 = owned()",
+    "  格.放(1)",
+    "  收下(格)",
+    "  格.取()",
+    "  return 0",
+    "}",
+  ]);
+  ok("没写 own 的参数不算转移", 查(普通参).length === 0, JSON.stringify(查(普通参)));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

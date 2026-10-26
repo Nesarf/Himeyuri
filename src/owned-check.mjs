@@ -23,6 +23,7 @@ export const 检查码 = "HMYR-E0321";
 const 空 = "empty";
 const 满 = "full";
 const 关 = "closed";
+const 移 = "moved";
 
 const 是方法调用 = (n) =>
   n && n.kind === "Call" && n.callee && n.callee.kind === "Field" &&
@@ -45,9 +46,16 @@ export function 持有格检查(ast, 选项 = {}) {
   };
   if (!ast || !Array.isArray(ast.decls)) return 出;
 
+  // 签名表：哪些函数把某个参数标成了 own。转移只对它们成立 ——
+  // borrow 与普通参数的调用之后，源这边的格子仍然归自己，继续用是对的。
+  const 签名表 = new Map();
+  for (const decl of ast.decls) {
+    if (decl.kind === "Fn") 签名表.set(decl.name, decl.params || []);
+  }
+
   for (const decl of ast.decls) {
     if (decl.kind !== "Fn" || !decl.body) continue;
-    走块(decl.body.statements || [], new Map(), 报);
+    走块(decl.body.statements || [], new Map(), 报, 签名表);
   }
   return 出;
 }
@@ -66,6 +74,12 @@ function 处理方法调用(调, 状态, 报) {
     return false;
   }
   const 现在 = 状态.get(名);
+  // 转移出去之后再动它，是 use-after-move。这一条能看，是因为参数上写了 own：
+  // 那个词说的是「所有权进去了」，于是源这边之后就不该再有它。
+  if (现在 === 移) {
+    报("'" + 名 + "' was moved into another function earlier; touching it here afterwards is use-after-move", 调);
+    return true;
+  }
   // 关了之后不能再放也不能再取 —— 那两条在运行期是 R0305，而这里看得见。
   if (现在 === 关 && (方法 === "放" || 方法 === "取")) {
     报("'" + 名 + "' was closed before this point; using it after close is R0305 at run time, and it is knowable now", 调);
@@ -104,7 +118,7 @@ function 合并状态(甲, 乙) {
 }
 
 // 一个直行序列：按顺序更新状态表，遇到错就报，遇到看不透的东西就降级。
-function 走块(语句们, 状态, 报) {
+function 走块(语句们, 状态, 报, 签名表) {
   for (const 句 of 语句们) {
     if (!句) continue;
 
@@ -124,6 +138,28 @@ function 走块(语句们, 状态, 报) {
     const 调 = 句.kind === "ExprStmt" ? 句.expr : (句.kind === "Assign" ? 句.value : null);
     if (处理方法调用(调, 状态, 报)) continue;
 
+    // 跨函数的转移：调用一个把某参数标成 own 的函数，而实参是一条被追踪的持有格时，
+    // 源这边就是「已经交出去了」。这是借用分析的第一步 —— 它只用签名上那个词，
+    // 不去看被调函数体里到底做了什么。所以它是一个承诺，不是一个证明。
+    //
+    // 而普通参数（没写 own 也没写 borrow）要降级：被调函数可能往里放了东西，
+    // 静态这一层看不见。实测撞到的正是这个 —— 一个 `造(盒)` 在别处往盒里放了值，
+    // 回到调用者这边还以为它是空的，于是把一次合法的取判成了 R0306。
+    // borrow 保持：那个词的意思就是「只借不改」，信它。
+    if (调 && 调.kind === "Call" && 调.callee && 调.callee.kind === "Ident" && 签名表.has(调.callee.name)) {
+      const 参数们 = 签名表.get(调.callee.name) || [];
+      const 实参们 = 调.args || [];
+      for (let i = 0; i < 实参们.length; i++) {
+        const 形 = 参数们[i];
+        const 实 = 实参们[i];
+        if (!实 || 实.kind !== "Ident" || !状态.has(实.name)) continue;
+        const 传法 = 形 ? 形.passing : null;
+        if (传法 === "own") 状态.set(实.name, 移);
+        else if (传法 !== "borrow") 状态.delete(实.name);
+      }
+      continue;
+    }
+
     // 分支与循环。两只形状都要认：宿主那一层的 parser 给的是语句（kind 就是 If / While），
     // 而子集那一层给的是表达式（ExprStmt 的 expr 是 If / While）。
     // 只认一只的话，另一只上这一节等于没跑 —— 而它会「碰巧」通过，因为走到降级那条路。
@@ -134,9 +170,9 @@ function 走块(语句们, 状态, 报) {
     if (控制 && 控制.kind === "If") {
       // 两条路径各走一遍（用的是同一份状态的拷贝），再按「都一样才保得住」汇合。
       // 没有 else 的那一支，另一侧就是原状态 —— 那是「可能没走」的意思。
-      const 甲 = 走块(控制.then ? (控制.then.statements || []) : [], new Map(状态), 报);
+      const 甲 = 走块(控制.then ? (控制.then.statements || []) : [], new Map(状态), 报, 签名表);
       const 乙 = 控制.otherwise
-        ? 走块(控制.otherwise.statements || [], new Map(状态), 报)
+        ? 走块(控制.otherwise.statements || [], new Map(状态), 报, 签名表)
         : new Map(状态);
       const 合 = 合并状态(甲, 乙);
       状态.clear();
@@ -145,7 +181,7 @@ function 走块(语句们, 状态, 报) {
     }
     if (控制 && 控制.kind === "While") {
       // 零次与多次都要算：体走一遍得出「走过之后」，再与「没走」的那份汇合。
-      const 体 = 走块(控制.body ? (控制.body.statements || []) : [], new Map(状态), 报);
+      const 体 = 走块(控制.body ? (控制.body.statements || []) : [], new Map(状态), 报, 签名表);
       const 合 = 合并状态(状态, 体);
       状态.clear();
       for (const [键, 态] of 合) 状态.set(键, 态);
