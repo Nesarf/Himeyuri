@@ -16,6 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 写容器 } from "../src/ittgn.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 具 = path.join(ROOT, "bin", "hmyr.mjs");
@@ -28,6 +29,8 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 const 跑 = (参, cwd = 临) => spawnSync(process.execPath, [具, 源码, ...参], { encoding: "utf8", cwd, timeout: 120000 });
+// 跑文件：不带子命令，直接给 hmyr 一个目标 —— 那正是「容器能跑」要验的那条路。
+const 跑文件 = (参, cwd = 临) => spawnSync(process.execPath, [具, ...参], { encoding: "utf8", cwd, timeout: 120000 });
 
 const 造 = (相对, 字节) => {
   const 全 = path.join(临, 相对);
@@ -125,6 +128,36 @@ console.log("五、路径里的中文（UTF-8 那一层）");
   ok("按中文名取得回", (取.stdout || "").includes("取了"), (取.stdout || "").slice(0, 120));
   const 回 = fs.readFileSync(path.join(临, "回中.bin"));
   ok("字节一致（中文路径）", Buffer.compare(回, Buffer.from(样)) === 0, Array.from(回).join(","));
+}
+
+console.log("六、容器能直接跑");
+{
+  const 源 = "fn main() -> Int {\n  print(\"从容器里跑出来了\" + chr(10))\n  return 0\n}\n";
+  造("跑/main.hmoca", [...Buffer.from(源, "utf8")]);
+  const 直 = 跑文件(["跑/main.hmoca"]);
+  ok("直接跑那份源码有输出", (直.stdout || "").includes("从容器里跑出来了"), JSON.stringify((直.stdout || "").slice(0, 60)));
+  const 装 = 跑(["--装", "跑.hm-ittgn-krgn-m", "跑/main.hmoca"]);
+  ok("装得成（为了跑）", (装.stdout || "").includes("装了"), (装.stdout || "").slice(0, 100));
+  const 通 = 跑文件(["跑.hm-ittgn-krgn-m"]);
+  ok("跑容器与跑源码输出一样", (通.stdout || "") === (直.stdout || ""), JSON.stringify([直.stdout, 通.stdout]));
+  ok("而且真的跑出了那句话", (通.stdout || "").includes("从容器里跑出来了"), JSON.stringify((通.stdout || "").slice(0, 80)));
+}
+
+console.log("七、HMYR 写的与 JS 写的，字节相同");
+{
+  // 同一批成员，一边用 self/ittgn.hmoca 的「装」，一边用 src/ittgn.mjs 的「写容器」。
+  // 两份落在同一个格式上，字节能比就是一个硬判据 —— 比「两边都跑得通」硬得多。
+  造("比/a.txt", [1, 2, 3]);
+  造("比/b.txt", [4, 5]);
+  const 甲 = "比甲.hm-ittgn-krgn-m";
+  跑(["--装", 甲, "比/a.txt", "比/b.txt"]);
+  写容器(path.join(临, "比乙.hm-ittgn-krgn-m"), [
+    { 名: "比/a.txt", 数据: Buffer.from([1, 2, 3]) },
+    { 名: "比/b.txt", 数据: Buffer.from([4, 5]) },
+  ]);
+  const 甲字节 = fs.readFileSync(path.join(临, 甲));
+  const 乙字节 = fs.readFileSync(path.join(临, "比乙.hm-ittgn-krgn-m"));
+  ok("两份字节相同", Buffer.compare(甲字节, 乙字节) === 0, 甲字节.length + " 对 " + 乙字节.length);
 }
 
 fs.rmSync(临, { recursive: true, force: true });
