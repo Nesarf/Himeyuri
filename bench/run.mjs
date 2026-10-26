@@ -35,6 +35,9 @@ const 编码 = (源, 出) => {
 编码(path.join(ROOT, "bench/deflate-firstbyte-array.hmoca"), path.join(临, "firstbyte-array.hmoks"));
 编码(path.join(ROOT, "bench/deflate-firstbyte-tuple.hmoca"), path.join(临, "firstbyte-tuple.hmoks"));
 编码(path.join(ROOT, "self/deflate.hmoca"), path.join(临, "threebyte-array.hmoks"));
+// 第四份与前两份不是同一个对照：前三份换的是桶结构，这一份换的是 stored 块的拼装方式
+// （元组拼接 对 区里的块）。它放在这里，是因为它要量的是同一件事：同一算法换个写法值不值。
+编码(path.join(ROOT, "bench/deflate-press-block.hmoca"), path.join(临, "press-block.hmoks"));
 
 const 清场 = () => spawnSync("taskkill", ["/IM", "hmyr-bench.exe", "/F"], { encoding: "utf8" });
 
@@ -76,6 +79,9 @@ const 两份 = [
   ["首字节桶 · 元组（256）", path.join(临, "firstbyte-tuple.hmoks")],
   ["首字节桶 · 数组（256）", path.join(临, "firstbyte-array.hmoks")],
   ["三字节桶 · 数组（4096）", path.join(临, "threebyte-array.hmoks")],
+  // 这一项换的不是桶：它把 stored 块的拼装从元组拼接换成区里按块下标写。
+  // design/MEMORY.txt 第八节记着它慢约 6% —— 这一行是那次的复查入口。
+  ["stored 块 · 区（1024）", path.join(临, "press-block.hmoks")],
 ];
 
 console.log("样本 " + 数据.length + " 字节，各跑 " + 次数 + " 次");
@@ -87,7 +93,7 @@ for (const [名, 码路] of 两份) {
 清场();
 
 console.log("");
-console.log("| 桶 | 中位数 | 最小 | 最大 | 均值 | 方差 |");
+console.log("| 变体 | 中位数 | 最小 | 最大 | 均值 | 方差 |");
 console.log("| --- | --- | --- | --- | --- | --- |");
 for (const [名] of 两份) {
   const s = 结果[名];
