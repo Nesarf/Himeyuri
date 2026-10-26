@@ -974,11 +974,14 @@ static 索引 *索引造(void) {
   索引 *t;
   if (g_gc开) {
     t = (索引 *)gc_分配(sizeof(索引), 3);   /* 种类 3：里面只有指针与计数，没有 Value */
+    /* 判空要在 memset 之前：写成「先 memset 再统一判空」时，裸机那一份的 -Wnonnull
+     * 会说「argument 1 null where non-null expected」，而它说的是实情。 */
+    if (!t) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
     memset(t, 0, sizeof(索引));
   } else {
     t = (索引 *)hm_calloc(1, sizeof(索引));
+    if (!t) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
   }
-  if (!t) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
   t->已排 = 1;
   return t;
 }
@@ -1181,14 +1184,18 @@ enum {
   OP_ADD, OP_ASSIGN, OP_BOOL, OP_CALLB, OP_CALLF, OP_CONST, OP_DIV, OP_EQ,
   OP_FIELD, OP_GE, OP_GLOBAL, OP_GT, OP_INDEX, OP_JMP, OP_JMPF, OP_JMPF_KEEP,
   OP_JMPT, OP_JMPT_KEEP, OP_LE, OP_LOAD, OP_LT, OP_MOD, OP_MUL, OP_NE,
-  OP_NEG, OP_NOT, OP_POP, OP_RECORD, OP_RET, OP_STORE, OP_SUB, OP_TUPLE
+  OP_NEG, OP_NOT, OP_POP, OP_RECORD, OP_RET, OP_STORE, OP_SUB, OP_TUPLE,
+  /* 新指令追加在末尾，旧号不动 —— 与 src/code-file.mjs 的 操作码表 同一规矩。
+   * 插在中间的样子不是「读不懂」，而是整段错位（offset 27185 那次就是它）。 */
+  OP_CALLM
 };
 
 static const char *op_names[] = {
   "ADD", "ASSIGN", "BOOL", "CALLB", "CALLF", "CONST", "DIV", "EQ",
   "FIELD", "GE", "GLOBAL", "GT", "INDEX", "JMP", "JMPF", "JMPF_KEEP",
   "JMPT", "JMPT_KEEP", "LE", "LOAD", "LT", "MOD", "MUL", "NE",
-  "NEG", "NOT", "POP", "RECORD", "RET", "STORE", "SUB", "TUPLE"
+  "NEG", "NOT", "POP", "RECORD", "RET", "STORE", "SUB", "TUPLE",
+  "CALLM"
 };
 
 typedef struct {
@@ -1341,7 +1348,7 @@ static void load_program(const uint8_t *bytes, size_t len) {
           in->b = n;
           break;
         }
-        case OP_CALLB: case OP_CALLF: {
+        case OP_CALLB: case OP_CALLF: case OP_CALLM: {
           uint32_t n; const uint16_t *p = rd_str(&r, &n);
           in->a = pool_add(p, n);
           in->b = rd_u16(&r);
@@ -2118,6 +2125,156 @@ static Value run_func(Func *f, Value *args, int nargs);
 
 /* Builtins. Each returns 1 on success and stores into *out; 0 means "not a
  * builtin I know", and the failure is already recorded. */
+/* ---- 区：三区模型在 C 这一台的记账 ----
+ *
+ * 表示与另外两台同构：区是一条索引，块也是一条索引。内部键用 ASCII —— 而程序可见的
+ * 是三个字段（zone / size / live）与五个方法；内部键不是契约（自举层与字节码那台
+ * 用中文键，这一台用 ASCII）。三台的可观察行为相同就够了。
+ *
+ * 为什么索引而不是记录：记录不可变，而 close 要改状态 —— 那是这件事的全部理由。 */
+
+static uint32_t 宽化(const char *s, uint16_t *buf, uint32_t cap) {
+  uint32_t i = 0;
+  while (s[i] && i + 1 < cap) { buf[i] = (uint16_t)(unsigned char)s[i]; i++; }
+  buf[i] = 0;
+  return i;
+}
+
+static void 区放键(索引 *t, const char *键, Value 值) {
+  uint16_t b[32];
+  索引放(t, b, 宽化(键, b, 32), 值);
+}
+
+static int 区取键(索引 *t, const char *键, Value *out) {
+  uint16_t b[32];
+  int 处 = 索引找(t, b, 宽化(键, b, 32));
+  if (处 < 0) return 0;
+  *out = t->项[处].值;
+  return 1;
+}
+
+/* 一个 T_STR 是不是那串 ASCII。 */
+static int 串是字(Value v, const char *字) {
+  uint32_t n = 0;
+  if (v.tag != T_STR || !v.s) return 0;
+  while (字[n]) n++;
+  if (v.slen != n) return 0;
+  for (uint32_t i = 0; i < n; i++) if (v.s[i] != (uint16_t)(unsigned char)字[i]) return 0;
+  return 1;
+}
+
+/* 池里那段方法名是不是那串 ASCII。 */
+static int 名是字(const uint16_t *p, uint32_t n, const char *字) {
+  uint32_t m = 0;
+  while (字[m]) m++;
+  if (n != m || !p) return 0;
+  for (uint32_t i = 0; i < n; i++) if (p[i] != (uint16_t)(unsigned char)字[i]) return 0;
+  return 1;
+}
+
+static Value 区新建(void) {
+  Value v = v_null();
+  v.tag = T_INDEX;
+  v.idx = 索引造();
+  区放键(v.idx, "kind", ascii_text("zone"));
+  区放键(v.idx, "closed", v_num(0));
+  区放键(v.idx, "next", v_num(1));
+  区放键(v.idx, "alive", v_num(0));
+  return v;
+}
+
+/* 区上的方法。交回 1 表示 out 可以用，0 表示已经 fail 过。 */
+static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *args, int nargs, Value *out) {
+  Value 类;
+  if (主.tag != T_INDEX || !主.idx || !区取键(主.idx, "kind", &类) || !串是字(类, "zone")) {
+    fail("HMYR-R0302", "this machine only accepts method calls on a zone");
+    return 0;
+  }
+  if (名是字(名, 名长, "held")) {
+    Value 活;
+    if (!区取键(主.idx, "alive", &活)) 活 = v_num(0);
+    *out = 活;
+    return 1;
+  }
+  if (名是字(名, 名长, "alloc")) {
+    Value 关, 下一个, 活;
+    if (nargs != 1) { fail("HMYR-R0101", "arena.alloc wants one argument"); return 0; }
+    if (!区取键(主.idx, "closed", &关) || 关.tag != T_NUM || 关.num != 0) {
+      fail("HMYR-R0302", "arena.alloc: that arena is already closed");
+      return 0;
+    }
+    if (!区取键(主.idx, "next", &下一个)) 下一个 = v_num(1);
+    {
+      double 号 = 下一个.num;
+      char 键[16];
+      Value 块 = v_null();
+      块.tag = T_INDEX;
+      块.idx = 索引造();
+      区放键(块.idx, "kind", ascii_text("block"));
+      区放键(块.idx, "zone", ascii_text("arena"));
+      区放键(块.idx, "size", args[0]);
+      区放键(块.idx, "live", v_num(1));
+      区放键(块.idx, "id", v_num(号));
+      snprintf(键, sizeof 键, "b%.0f", 号);
+      区放键(主.idx, 键, 块);
+      区放键(主.idx, "next", v_num(号 + 1));
+      if (!区取键(主.idx, "alive", &活)) 活 = v_num(0);
+      区放键(主.idx, "alive", v_num(活.num + 1));
+      *out = 块;
+      return 1;
+    }
+  }
+  if (名是字(名, 名长, "close")) {
+    /* 交出去的那些归托管，close 不带它们走 —— 那正是 freeze 的全部意义。 */
+    Value 下一个;
+    int 总 = 1;
+    if (区取键(主.idx, "next", &下一个)) 总 = (int)下一个.num;
+    for (int i = 1; i < 总; i++) {
+      char 键[16];
+      Value 块, zone;
+      snprintf(键, sizeof 键, "b%d", i);
+      if (!区取键(主.idx, 键, &块) || 块.tag != T_INDEX || !块.idx) continue;
+      if (区取键(块.idx, "zone", &zone) && 串是字(zone, "arena")) 区放键(块.idx, "live", v_num(0));
+    }
+    区放键(主.idx, "closed", v_num(1));
+    区放键(主.idx, "alive", v_num(0));
+    *out = v_num(0);
+    return 1;
+  }
+  if (名是字(名, 名长, "freeze") || 名是字(名, 名长, "adopt")) {
+    int 是交出 = 名是字(名, 名长, "freeze");
+    Value 关, 块, zone, 活;
+    if (nargs != 1) { fail("HMYR-R0101", 是交出 ? "arena.freeze wants one argument" : "arena.adopt wants one argument"); return 0; }
+    if (!区取键(主.idx, "closed", &关) || 关.tag != T_NUM || 关.num != 0) {
+      fail("HMYR-R0302", 是交出 ? "arena.freeze: that arena is already closed" : "arena.adopt: that arena is already closed");
+      return 0;
+    }
+    块 = args[0];
+    if (块.tag != T_INDEX || !块.idx || !区取键(块.idx, "zone", &zone)) {
+      fail(是交出 ? "HMYR-R0302" : "HMYR-R0303",
+           是交出 ? "arena.freeze was given a block this arena does not own"
+                  : "arena.adopt: that block was not handed to the managed zone");
+      return 0;
+    }
+    if (是交出 && !串是字(zone, "arena")) {
+      fail("HMYR-R0302", "arena.freeze was given a block this arena does not own");
+      return 0;
+    }
+    if (!是交出 && !串是字(zone, "managed")) {
+      fail("HMYR-R0303", "arena.adopt: that block was not handed to the managed zone");
+      return 0;
+    }
+    区放键(块.idx, "zone", ascii_text(是交出 ? "managed" : "arena"));
+    区放键(块.idx, "live", v_num(1));
+    if (!区取键(主.idx, "alive", &活)) 活 = v_num(0);
+    区放键(主.idx, "alive", v_num(活.num + (是交出 ? -1 : 1)));
+    *out = 块;
+    return 1;
+  }
+  fail("HMYR-R0302", "there is no such method on a zone");
+  return 0;
+}
+
 static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   if (name_is(name_idx, "print") || name_is(name_idx, "print_err")) {
     /* 编译那一段的 print 改道到标准错误：启动器编源码时种子会打印「N 个字节」，
@@ -3548,11 +3705,11 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     return 1;
   }
 #endif
-  /* arena：三区模型的桩，三个字段都是函数值，而这一台没有一等函数值。
-   * 用 R0104（没有这个内置）而不是另开编号：它确实没有。 */
+  /* arena：区在这一台也是真的了（2026-10-27）。交回的是一条索引；
+   * 五个方法由 OP_CALLM 分派到 调区方法 —— 与另外两台同一套判词。 */
   if (name_is(name_idx, "arena")) {
-    fail("HMYR-R0104",
-         "arena is a stub for the zone model: its three fields are functions, and this machine has no first-class functions");
+    if (nargs != 0) { fail("HMYR-R0101", "arena takes no arguments"); return 1; }
+    *out = 区新建();
     return 1;
   }
   if (name_is(name_idx, "argv")) {
@@ -3743,6 +3900,12 @@ static Value run_func(Func *f, Value *args, int nargs) {
       }
       case OP_FIELD: {
         Value t = pop();
+        /* 区与块是索引，它们的字段也要能读（b.zone / b.size / b.live）。
+         * 记录先问、索引后问：同名时记录赢，与另外两台同一顺序。 */
+        if (t.tag == T_INDEX && t.idx) {
+          int 处 = 索引找(t.idx, pool_p[in->a], pool_len[in->a]);
+          if (处 >= 0) { push(t.idx->项[处].值); pc++; break; }
+        }
         if (t.tag != T_RECORD) {
           /* 说清楚是哪个字段、哪条指令、拿到的是什么 —— 「no field on that value」
            * 只说了一半，而查的时候要的是另一半。 */
@@ -3833,6 +3996,26 @@ static Value run_func(Func *f, Value *args, int nargs) {
         free(args);
         if (g_failed) FRAME_RET(v_null());
         push(out); pc++; break;
+      }
+      case OP_CALLM: {
+        /* 方法调用：主在参数之下。分派交给 调区方法 —— 与另外两台同一套判词，
+         * 因为「三台机器同一个答案」靠的是判词相同，不是实现相同。 */
+        uint32_t n = (uint32_t)in->b;
+        if (g_机->stack_n < base + (uint32_t)n + 1) {
+          fail("HMYR-R0110", "a method call wants a receiver and its arguments");
+          FRAME_RET(v_null());
+        }
+        {
+          Value 主 = g_机->stack[g_机->stack_n - n - 1];
+          Value *args = (Value *)malloc((size_t)(n ? n : 1) * sizeof(Value));
+          for (uint32_t i = 0; i < n; i++) args[i] = g_机->stack[g_机->stack_n - n + i];
+          g_机->stack_n -= (n + 1);
+          Value out = v_null();
+          调区方法(主, pool_p[in->a], pool_len[in->a], args, (int)n, &out);
+          free(args);
+          if (g_failed) FRAME_RET(v_null());
+          push(out); pc++; break;
+        }
       }
       case OP_CALLF: {
         int64_t 位 = find_func_index(in->a);

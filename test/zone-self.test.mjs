@@ -191,6 +191,46 @@ console.log("六、字节码那台也跑得动（--compile），与解释那台�
     JSON.stringify([编行, 释行.slice(0, 编行.length)]));
 }
 
+console.log("七、C 那台也认得区（要 gcc 编一次）");
+{
+  // C 那台的启动器给源码时先用内置种子编，再跑 —— 所以这一节走的是「种子 → 字节码 → 机器」整条链。
+  // 它比的是与字节码机逐行相同：那两台跑的是同一份字节码，分派却各写了一份。
+  const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
+  if (!有gcc) {
+    console.log("  跳过  这台机器上没有 gcc —— C 那台那一侧不验");
+  } else {
+    const exe = path.join(临, "hmyr-c.exe");
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe,
+      path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
+    ok("C 那台编得出来", 编.status === 0, String(编.stderr || "").slice(0, 160));
+
+    const p = 投(行们([
+      "fn main() -> Int {",
+      "  let a = arena()",
+      "  let b = a.alloc(16)",
+      "  let c = a.alloc(8)",
+      "  print(\"zone=\" + b.zone + \" size=\" + str(b.size) + chr(10))",
+      "  print(\"held=\" + str(a.held()) + chr(10))",
+      "  a.freeze(b)",
+      "  print(\"held=\" + str(a.held()) + chr(10))",
+      "  print(\"c.live=\" + str(c.live) + chr(10))",
+      "  a.close()",
+      "  print(\"b.live=\" + str(b.live) + chr(10))",
+      "  return 0",
+      "}",
+    ]), "壬.hmoca");
+
+    const 机 = 跑(["--compile", p]);
+    const 台 = spawnSync(exe, [p], {
+      encoding: "utf8", cwd: 临, timeout: 300000,
+      env: { ...process.env, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000" },
+    });
+    ok("C 那台跑得动", 台.status === 0, JSON.stringify({ status: 台.status, err: (台.stderr || "").slice(0, 200) }));
+    ok("而且与字节码机逐行相同", JSON.stringify(行(台.stdout)) === JSON.stringify(行(机.stdout)),
+      JSON.stringify([行(台.stdout), 行(机.stdout)]));
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

@@ -115,6 +115,8 @@ fn 操作码(op: String) -> Int {
   if op == "STORE" { return 29 }
   if op == "SUB" { return 30 }
   if op == "TUPLE" { return 31 }
+  // 新号追加在末尾，旧号不动 —— 见 src/code-file.mjs 那一行说明。
+  if op == "CALLM" { return 32 }
   return 0 - 1
 }
 
@@ -143,6 +145,8 @@ fn 放指令(状态: Int, 码: Int) -> Int {
   // 反过来的症状不是「读不出来」，而是读出来一个两码元的名字，然后整段错位。
   if 码.op == "CALLF" { return 放u16(放串(收, 码.a), 码.b) }
   if 码.op == "CALLB" { return 放u16(放串(收, 码.a), 码.b) }
+  // 方法调用与那两个同一个形状：名字串在前，实参数在后。
+  if 码.op == "CALLM" { return 放u16(放串(收, 码.a), 码.b) }
   if 码.op == "FIELD" { return 放串(收, 码.a) }
   if 码.op == "TUPLE" { return 放u16(收, 码.a) }
   if 码.op == "RECORD" {
