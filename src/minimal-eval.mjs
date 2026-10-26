@@ -30,6 +30,12 @@ import { 藏路径, 在用脱敏 } from "./redact.mjs";
 import { 有序, 下整 } from "./numbers.mjs";
 const 步限 = 5_000_000;
 const 深限 = 500;
+
+// 线程：这一份自己一张表。与 eval.mjs 的 THREADS 分开，因为两台求值器可能同时
+// 跑在一个进程里，而句柄编号不该跨机器复用 —— 复用的话，一边 join 会把另一边
+// 的线程等掉。
+const THREADS = new Map();
+let nextThreadId = 0;
 const 循环闸 = 1000000;
 
 // 一个绑定：值 + 可不可改。let 不可改、var 可改，而 assign 要走到「拥有这个名字」的那一层去改。
@@ -218,11 +224,61 @@ const 内置 = {
   },
   locale_env: (rt) => rt.cap.env.localeGuess(),
   console_codepage: (rt) => rt.cap.env.codepage(),
-  // ---- 线程：这一份没有独立实例 ----
-  thr_spawn: (rt) => -1,
-  thr_join: (rt) => rt.坏("HMYR-R0221", "no thread handle: this machine has no thread capability"),
-  thr_cancel: (rt) => rt.坏("HMYR-R0221", "no thread handle: this machine has no thread capability"),
-  thr_count: () => 0,
+  // ---- 线程：这一份起的是最小求值器自己的工人（thr-worker-min.mjs） ----
+  // 与宿主那份是同一套做法，差别只在工人里跑哪台机器 —— 所以「同一段源码在
+  // 另一个线程上得到同一个答案」是这台机器给的，不是另一台替它答的。
+  //
+  // 起与停要 thread 效果；等与数是读（与宿主那份同）。
+  thr_spawn: (rt, a) => {
+    const 源码 = rt.成串(a[0]);
+    const 入口 = rt.成串(a[1]);
+    // 档位的线程池那一项：0 表示不设限，也就是普通 .hmoca 的情形。
+    const 上限 = rt.cap.thread.上限 || 0;
+    if (上限 > 0 && THREADS.size >= 上限) {
+      rt.坏("HMYR-R0223", "thread pool is full: " + THREADS.size + " alive, limit " + 上限 + "（steady 那一档只给一个线程槽；要更多就用 hmhsr 那一档）");
+    }
+    const id = nextThreadId++;
+    const 出 = rt.cap.path.join(rt.cap.env.temp(), "hmyr-minthread-" + Date.now().toString(36) + "-" + id + ".json");
+    const flag = rt.cap.thread.signal();
+    const handle = { id, flag, outPath: 出, worker: null };
+    handle.worker = rt.cap.thread.spawn(new URL("./thr-worker-min.mjs", import.meta.url), { source: 源码, entry: 入口, outPath: 出, flag });
+    // 起不来就交回 -1：那不是「拒绝」，是这个线程压根没出生，
+    // 而调用方拿到 -1 之后 join 会得到 R0221 —— 一条路，不是两条。
+    if (!handle.worker) return -1;
+    handle.worker.on("error", () => rt.cap.thread.store(handle.flag, 9));
+    if (typeof handle.worker.unref === "function") handle.worker.unref();
+    handle.worker.on("exit", (code) => { if (rt.cap.thread.load(handle.flag) === 0) rt.cap.thread.store(handle.flag, code === 0 ? 1 : 9); });
+    THREADS.set(id, handle);
+    return id;
+  },
+  thr_join: (rt, a) => {
+    const id = Math.floor(rt.成数(a[0]));
+    const h = THREADS.get(id);
+    if (!h) rt.坏("HMYR-R0221", "no such thread handle: " + id);
+    const 超时 = a[1] === undefined || a[1] === null ? 30000 : Math.floor(rt.成数(a[1]));
+    const 到 = Date.now() + 超时;
+    while (rt.cap.thread.load(h.flag) === 0) {
+      const 剩 = 到 - Date.now();
+      if (剩 <= 0) rt.坏("HMYR-R0222", "thread " + id + " did not finish within " + 超时 + "ms");
+      rt.cap.thread.wait(h.flag, 剩 < 50 ? 剩 : 50);
+    }
+    let 结果 = null;
+    try { 结果 = JSON.parse(rt.cap.file.read(h.outPath).toString("utf8")); } catch (err) { 结果 = null; }
+    rt.cap.file.remove(h.outPath);
+    THREADS.delete(id);
+    if (!结果) return "";
+    return 结果.ok ? String(结果.text) : "";
+  },
+  thr_cancel: (rt, a) => {
+    const id = Math.floor(rt.成数(a[0]));
+    const h = THREADS.get(id);
+    if (!h) rt.坏("HMYR-R0221", "no such thread handle: " + id);
+    try { if (h.worker) h.worker.terminate(); } catch (err) { /* 已经没了就算停住 */ }
+    rt.cap.file.remove(h.outPath);
+    THREADS.delete(id);
+    return id;
+  },
+  thr_count: (rt) => Array.from(THREADS.values()).filter((h) => rt.cap.thread.load(h.flag) === 0).length,
   // arena：三区模型的桩，字段是函数值；这一份也没有一等函数值。
   arena: (rt) => rt.坏("HMYR-R0104", "arena is a stub for the zone model: its fields are functions, and this machine has no first-class functions"),
   // 跑一个程序：一份记录，五个字段。跑不起来也照实报告，不抛。
