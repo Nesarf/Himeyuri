@@ -98,6 +98,9 @@ const PROSE = new Map([
   ["3", "the borrowed-ideas table: confirmed by the standard library existing, not by a case"],
   // 2.7 的判据在五个专门的套件里，而且它们要四台机器都同意 —— 这一份 runner 跑不了那条。
   ["2.7", "the three zones and module-level names: exercised by test/zone, zone-static, zone-self, owned and global-var, which run on four machines rather than through this runner"],
+  // 2.8 与 2.9 同理：一个要四套语言档案，一个要真的起线程，这一份 runner 两样都没有。
+  ["2.8", "the locale profiles: exercised by test/locale, i18n and corpus, which switch profiles and run whole-table corpora rather than going through this runner"],
+  ["2.9", "concurrency: exercised by test/threads-cvm and the thr suites, which need real threads; this runner is synchronous and has none"],
   ["4", "the chapter heading itself"],
   ["4.1", "the not-doing list: prohibitions on syntax, most of which the grammar already makes impossible"],
   ["4.2", "conformance itself: this suite is the evidence"],
