@@ -231,6 +231,48 @@ console.log("七、C 那台：分配真的少了（堆账是判据）");
   }
 }
 
+console.log("八、禁 panic：除法与取模的分母");
+{
+  // 分母是零的时候机器会停下来，而实时回调里没有地方可以展开栈。
+  // 这一层只认一种证据：字面量且为正。变量、字段、表达式都不算 —— 宁可拒。
+  const 除变量 = 行们([
+    "fn 回调(n: Int) -> Int realtime {",
+    "  return 10 / n",
+    "}",
+  ]);
+  ok("除以变量被拒", 有(查(除变量), "cannot prove positive"), JSON.stringify(查(除变量)));
+
+  const 取模变量 = 行们([
+    "fn 回调(n: Int) -> Int realtime {",
+    "  return 10 % n",
+    "}",
+  ]);
+  ok("对变量取模被拒", 有(查(取模变量), "cannot prove positive"), JSON.stringify(查(取模变量)));
+
+  const 除零 = 行们([
+    "fn 回调() -> Int realtime {",
+    "  return 10 / 0",
+    "}",
+  ]);
+  ok("除以字面量零也被拒", 有(查(除零), "cannot prove positive"), JSON.stringify(查(除零)));
+
+  // 正例：字面量正数分母，这一层证得了。
+  const 除正数 = 行们([
+    "fn 回调(n: Int) -> Int realtime {",
+    "  return n / 2",
+    "}",
+  ]);
+  ok("除以字面量正数不报", 查(除正数).length === 0, JSON.stringify(查(除正数)));
+
+  // 而没声明 realtime 的普通函数不受这一条约束 —— 门只对实时开。
+  const 普通函数 = 行们([
+    "fn 普通(n: Int) -> Int {",
+    "  return 10 / n",
+    "}",
+  ]);
+  ok("普通函数的除法不报", 查(普通函数).length === 0, JSON.stringify(查(普通函数)));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

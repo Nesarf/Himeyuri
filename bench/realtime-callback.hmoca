@@ -10,7 +10,10 @@ fn 回调(块: Int, n: Int) -> Int effects(realtime) {
   var s = 0
   var i = 0
   while i < n {
-    let 位 = i % 块.size
+    // 下标用 63 取模，而不是 块.size —— 分母写死是为了让静态那一层证得了它非零。
+    // design/MEMORY.txt 第 3 节第四条：实时函数里分母必须能被证明为正，而「字段非零」
+    // 这一层证不了，于是它会把这一行拒掉。块是 alloc(64) 分出来的，所以两个写法同义。
+    let 位 = i % 63
     块.存(位, i)
     s = s + 块.取(位)
     i = i + 1

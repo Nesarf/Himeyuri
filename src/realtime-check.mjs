@@ -84,6 +84,21 @@ export function 实时检查(ast, 选项 = {}) {
       return;
     }
 
+    // 第四条约束（禁 panic）里能静态看的那一半：除法与取模。
+    // 分母一旦是零，机器会停下来 —— 而实时回调里没有地方可以展开栈。
+    // 「你能证明它非零吗」在这一层只有一种证据：字面量且为正。别的都不算。
+    // 这一档与 owned 那条检查的倾向正好相反：那边误报会让检查被关掉，
+    // 这边漏报会让回调在别人的现场炸开，所以这边宁可拒。
+    if (n.kind === "Binary" && (n.op === "/" || n.op === "%")) {
+      const 右 = n.right;
+      const 可证非零 = 右 && 右.kind === "Literal" && typeof 右.value === "number" && 右.value > 0;
+      if (!可证非零) {
+        报("a division or remainder whose divisor this layer cannot prove positive: a zero there stops the machine, and a realtime callback has nowhere to unwind to", n);
+      }
+      走(n.left); 走(n.right);
+      return;
+    }
+
     if (n.kind === "Call" && n.callee && n.callee.kind === "Ident") {
       const 名 = n.callee.name;
       if (名 === "arena") {
