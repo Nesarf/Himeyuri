@@ -361,6 +361,10 @@ const 编译函数 = (decl) => {
     for (let i = 0; i < 列.length; i++) 语句(列[i], !!留值 && i === 列.length - 1);
   };
 
+  // 顶层常量的初始化：编成这个函数的开头一段。VM 在调 main 之前调这个函数一次。
+  // 顺序上必须在「函数体」之前 —— 常量先站稳，函数才跑得动。
+  for (const 声 of decl.顶层常量 || []) { 表达(声.value); 发("SETGLOBAL", 声.name); }
+
   语句们((decl.body && decl.body.statements) || []);
   发("CONST", null);
   发("RET");
@@ -382,6 +386,10 @@ const 内置名 = new Set(["abs", "arena", "argv", "chdir", "chr", "console_code
   "index_new", "index_set", "index_get", "index_has", "index_len", "index_keys",
   "pack_value", "read_line", "read_lines", "校验和", "数组", "设", "位与", "位或", "位异或", "位非", "位右移", "位加", "位循环右移", "位循环左移"]);
 
+// 顶层常量那一段代码挂在这个名字下。它带两个下划线：不是给用户写的名字，
+// 而宿主那边（vm 与 C 那台）都按同一个名字找它。改它要两处一起改。
+export const 顶层段名 = "__hmyr_top__";
+
 // 模块 → 一个程序：函数表 + 全局常量表 + 顶层指令（用来登记常量）。
 export const 编译模块 = (ast) => {
   const 函数们 = new Map();   // 名 -> 编译结果
@@ -390,6 +398,11 @@ export const 编译模块 = (ast) => {
     if (decl.kind === "Fn") 函数们.set(decl.name, 编译函数(decl));
     else if (decl.kind === "Const") 全局们.push(decl);
     else throw new 编译错("这一份只认 fn 与 const 声明：" + decl.kind);
+  }
+  // 有常量就有一段初始化。它走的是普通函数那条路（编译、装栈、RET 交回 nil），
+  // 这样两台机器不必为一个「顶层段」各长一套机制 —— 少一套机制就少一处分叉。
+  if (全局们.length) {
+    函数们.set(顶层段名, 编译函数({ name: 顶层段名, params: [], body: null, 顶层常量: 全局们 }));
   }
   // 多份模块合成一个程序时，一个名字只能有一段代码——重名在加载器那边已经警告过，
   // 这里不覆盖：先到的那一份赢，与「后到的覆盖」相反，所以要说清。

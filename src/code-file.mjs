@@ -28,7 +28,7 @@ export const 操作码表 = [
   "ADD", "ASSIGN", "BOOL", "CALLB", "CALLF", "CONST", "DIV", "EQ", "FIELD", "GE",
   "GLOBAL", "GT", "INDEX", "JMP", "JMPF", "JMPF_KEEP", "JMPT", "JMPT_KEEP", "LE",
   "LOAD", "LT", "MOD", "MUL", "NE", "NEG", "NOT", "POP", "RECORD", "RET", "STORE",
-  "SUB", "TUPLE", "CALLM",
+  "SUB", "TUPLE", "CALLM", "SETGLOBAL",
 ];
 
 export const 码 = new Map(操作码表.map((名, i) => [名, i]));
@@ -41,7 +41,7 @@ export const 立即数形状 = {
   EQ: "none", NE: "none", LT: "none", LE: "none", GT: "none", GE: "none",
   JMP: "u32", JMPF: "u32", JMPT: "u32", JMPF_KEEP: "u32", JMPT_KEEP: "u32",
   TUPLE: "u16", RECORD: "record", FIELD: "name", INDEX: "none",
-  CALLB: "call", CALLF: "call", CALLM: "call", RET: "none",
+  CALLB: "call", CALLF: "call", CALLM: "call", SETGLOBAL: "name", RET: "none",
 };
 
 class 写者 {

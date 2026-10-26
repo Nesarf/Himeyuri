@@ -14,7 +14,7 @@
 // 也不再自己判断「这是不是数」。字符串的码元操作同理，在 src/text.mjs。
 // 换掉标量那件事要改的就是这两份文件。
 import { 内置表, 调区方法 } from "./vm-builtins.mjs";
-import { 编译模块, 合并程序 } from "./bytecode.mjs";
+import { 编译模块, 合并程序, 顶层段名 } from "./bytecode.mjs";
 import * as 数 from "./numbers.mjs";
 import * as 文 from "./text.mjs";
 import { 按选项取, 收进来 } from "./text-impl.mjs";
@@ -118,6 +118,13 @@ export class 虚拟机 {
   // 这一层不再抛，于是「失败」是一条要读的返回值，而不是一个要接的异常。
   调用(名, 实参, 调用者效果) {
     if (this.停机) return { ok: false, ...this.停机 };
+    // 顶层常量那一段：调 main 之前先跑一次。它只在 main 那一次触发，于是「常量先站稳、
+    // 函数才跑」这条顺序由这一句兑现，而不是靠每个调用者记得。
+    if (名 === "main" && !this.顶层跑过 && this.程序.函数们.has(顶层段名)) {
+      this.顶层跑过 = true;
+      const 序 = this.调用(顶层段名, [], 调用者效果);
+      if (!序.ok) return 序;
+    }
     // 参数是从外面交进来的值，字符串要按当前的底收一遍。
     // 少了这一步，码元序列那台会把一个宿主串塞进值域，被调函数的第一句 len() 就报 R0140。
     // 判「是不是宿主串」要走 text.mjs 那一份，不在这里写 typeof —— 与那两个执行器同一条规矩。
@@ -180,6 +187,9 @@ export class 虚拟机 {
           if (!this.全局.has(指令.a)) { this.坏("HMYR-R0104", "there is no name '" + 指令.a + "' in scope"); return null; }
           压(this.全局.get(指令.a)); pc++; break;
         }
+        // 顶层常量的登记：值在栈顶，名字是立即数。写进全局表的只有这一条指令 ——
+        // 用户代码里的赋值（ASSIGN）只碰槽，所以「全局可变」这件事并没有因此打开。
+        case "SETGLOBAL": this.全局.set(指令.a, 弹()); pc++; break;
         case "BOOL": 压(真(弹(), this.文)); pc++; break;
         case "NEG": 压(数.反(this.成数(弹()))); pc++; break;
         case "NOT": 压(!真(弹(), this.文)); pc++; break;
