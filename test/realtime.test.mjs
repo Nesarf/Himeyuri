@@ -12,6 +12,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { 切 } from "../src/subset-lex.mjs";
 import { 子集解 } from "../src/subset-parse.mjs";
@@ -191,6 +192,43 @@ console.log("六、真语法：fn f() realtime");
     "}",
   ]);
   ok("旧的 effects(realtime) 也认", 有(查(旧写法), "arena()"), JSON.stringify(查(旧写法)));
+}
+
+console.log("七、C 那台：分配真的少了（堆账是判据）");
+{
+  // 上面六节都在验「写得对不对」。这一节验「跑起来少了多少」——
+  // 而它能验的方式只有一个：C 那台的堆账（HMYR_MEM 在退出时打到 stderr）。
+  //
+  // 判据是「低于二十万字节」。实测值约十二万，而**从堆上取槽之前是一百一十三万**。
+  // 这个数不是精确的承诺，是一条回归防线：谁把槽数组搬回堆上，它立刻会红。
+  const 有gcc = (() => {
+    try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
+  })();
+  if (!有gcc) {
+    console.log("  跳过  这台机器上没有 gcc —— 堆账那一侧不验");
+  } else {
+    const exe = path.join(临, "hmyr-rt.exe");
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-Wl,--stack,67108864", "-o", exe,
+      path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
+    ok("C 那台编得出来", 编.status === 0, String(编.stderr || "").slice(0, 160));
+
+    const 码 = path.join(临, "callback.hmoks");
+    const 源 = path.join(ROOT, "bench", "realtime-callback.hmoca");
+    const 编程序 = spawnSync(process.execPath, [path.join(ROOT, "tools", "emit-code.mjs"), 源, 码],
+      { encoding: "utf8" });
+    ok("回调编得出来", 编程序.status === 0, String(编程序.stderr || "").slice(0, 160));
+
+    if (编.status === 0 && 编程序.status === 0) {
+      const r = spawnSync(exe, [码], {
+        encoding: "utf8", timeout: 600000,
+        env: { ...process.env, HMYR_STEPS: "4000000000", HMYR_GC: "1", HMYR_MEM: "1", HMYR_MEM_LIMIT: "0" },
+      });
+      const 账 = /(\d+)\s*(?:字节|bytes)/.exec(String(r.stderr || ""));
+      const 字节 = 账 ? Number(账[1]) : -1;
+      ok("跑得动", r.status === 0, JSON.stringify({ status: r.status, err: String(r.stderr || "").slice(0, 140) }));
+      ok("堆账低于二十万字节", 字节 > 0 && 字节 < 200000, String(字节));
+    }
+  }
 }
 
 fs.rmSync(临, { recursive: true, force: true });
