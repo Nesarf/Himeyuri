@@ -166,6 +166,13 @@ console.log("九、启动器：默认这条路也拦，而它不挡别人");
   const 普 = 投(行们(["fn main() -> Int {", '  print("照跑" + chr(10))', "  return 0", "}"]), "主普.hmoca");
   const 丙 = 跑([普]);
   ok("普通程序照跑", (丙.stdout || "").includes("照跑"), JSON.stringify((丙.stdout || "").slice(0, 80)));
+
+  // 缺口二的一个半边：字节码编译器不认方法调用（它只认按名字调用），这本是它的实现限制。
+  // 而那条错原来不带码，于是 --compile 这一路会露出栈 —— 崩了也退出非零，
+  // 所以只看退出码会把「说了一句编号」与「栈」混成同一件事。判据落在有没有栈帧上。
+  const 编 = 跑(["--compile", 投(行们(["fn main() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return 7", "}"]), "主编.hmoca")]);
+  ok("--compile 上给的是编号而不是栈", (编.stderr || "").includes("HMYR-R0110"), JSON.stringify((编.stderr || "").slice(0, 120)));
+  ok("而且没有栈帧", !/(^|\n)\s+at /.test(编.stderr || ""), JSON.stringify((编.stderr || "").slice(0, 120)));
 }
 
 fs.rmSync(临, { recursive: true, force: true });

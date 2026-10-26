@@ -53,18 +53,28 @@ if (process.argv.includes("--compile")) {
     for (const e of 层.diagnostics.errors) console.error(e.code + " " + e.message);
     process.exit(1);
   }
-  const vm = 跑字节码(层, {
-    capabilities: 本机能力(),
-    argv: [目标, ...其余.slice(1)],
-    stepLimit: Number(process.env.HMYR_STEPS || 50000000),
-    // 与解释那条路同一个默认：字符串住在码元序列里。
-    字符串用码元序列: !process.argv.includes("--host-scalars"),
-  });
-  vm.write = (s) => process.stdout.write(s);
-  vm.writeErr = (s) => process.stderr.write(s);
-  const r = vm.调用("main", [], null);
-  if (!r.ok) { console.error(r.码 + " " + r.话); process.exit(1); }
-  process.exit(typeof r.值 === "number" ? Math.trunc(r.值) : 0);
+  try {
+    const vm = 跑字节码(层, {
+      capabilities: 本机能力(),
+      argv: [目标, ...其余.slice(1)],
+      stepLimit: Number(process.env.HMYR_STEPS || 50000000),
+      // 与解释那条路同一个默认：字符串住在码元序列里。
+      字符串用码元序列: !process.argv.includes("--host-scalars"),
+    });
+    vm.write = (s) => process.stdout.write(s);
+    vm.writeErr = (s) => process.stderr.write(s);
+    const r = vm.调用("main", [], null);
+    if (!r.ok) { console.error(r.码 + " " + r.话); process.exit(1); }
+    process.exit(typeof r.值 === "number" ? Math.trunc(r.值) : 0);
+  } catch (e) {
+    // 编译器遇到它不认的形状（比如一个字段调用）时抛的是 编译错，而它带编号。
+    // 一个会露出栈的启动器，对读它的人没有用处 —— 那句话已经写在下面装载自举层的地方。
+    if (e && e.code && String(e.code).startsWith("HMYR-")) {
+      console.error(e.code + " " + e.message);
+      process.exit(1);
+    }
+    throw e;
+  }
 }
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
