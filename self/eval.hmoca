@@ -423,6 +423,39 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     }
     return 好(格)
   }
+  // FFI 的最小形状（design/FFI.txt 第四节）：一段不拷贝的窗口。
+  // 用索引表示：kind = "view"，三个字段 源 / 起 / 长。与另两台同一套判词。
+  if 名 == "bytes_view" {
+    if len(值们) != 3 { return 坏("bytes_view 要三个参数") }
+    let 源 = 值们[0]
+    let 起 = to_int(值们[1])
+    let 长 = to_int(值们[2])
+    if 起 < 0 || 长 < 0 || 起 + 长 > len(源) {
+      return 坏("HMYR-R0151 bytes_view: 范围在外面（" + str(len(源)) + "）")
+    }
+    let 窗 = index_new()
+    index_set(窗, "kind", "view")
+    index_set(窗, "源", 源)
+    index_set(窗, "起", 起)
+    index_set(窗, "长", 长)
+    return 好(窗)
+  }
+  if 名 == "view_len" {
+    if len(值们) != 1 { return 坏("view_len 要一个参数") }
+    if index_has(值们[0], "kind") == false { return 坏("HMYR-R0152 view_len: 这不是窗口") }
+    if index_get(值们[0], "kind") != "view" { return 坏("HMYR-R0152 view_len: 这不是窗口") }
+    return 好(index_get(值们[0], "长"))
+  }
+  if 名 == "view_get" {
+    if len(值们) != 2 { return 坏("view_get 要两个参数") }
+    if index_has(值们[0], "kind") == false { return 坏("HMYR-R0152 view_get: 这不是窗口") }
+    if index_get(值们[0], "kind") != "view" { return 坏("HMYR-R0152 view_get: 这不是窗口") }
+    let 长 = index_get(值们[0], "长")
+    let i = to_int(值们[1])
+    if i < 0 || i >= 长 { return 坏("HMYR-R0151 view_get: " + str(i) + " 在窗口外面（" + str(长) + "）") }
+    let 源 = index_get(值们[0], "源")
+    return 好(源[index_get(值们[0], "起") + i])
+  }
   // 原始字节：嵌入与打包要它。这一层只转发，读不到由下面那一层说。
   if 名 == "read_bytes" {
     let 欠读 = 要效果(环境, "file", "read_bytes")

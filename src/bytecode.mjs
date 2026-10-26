@@ -385,7 +385,7 @@ const 内置名 = new Set(["abs", "arena", "argv", "chdir", "chr", "console_code
   "record_new", "repo_path", "run_program", "slice", "sleep_ms", "split", "str", "temp_path", "term_clear",
   "term_color", "term_escape", "term_hide", "term_show", "term_size", "thr_cancel", "thr_count", "thr_join",
   "thr_spawn", "to_int", "to_lower", "to_upper", "write_text", "write_bytes", "bytes_to_text", "f64_bytes",
-  "index_new", "index_set", "index_get", "index_has", "index_len", "index_keys",
+  "bytes_view", "view_len", "view_get", "index_new", "index_set", "index_get", "index_has", "index_len", "index_keys",
   "pack_value", "read_line", "read_lines", "校验和", "数组", "设", "位与", "位或", "位异或", "位非", "位右移", "位加", "位循环右移", "位循环左移"]);
 
 // 顶层常量那一段代码挂在这个名字下。它带两个下划线：不是给用户写的名字，

@@ -703,6 +703,38 @@ const BUILTINS = {
     m.set(rt.asString(args[1]), args[2]);
     return m;
   },
+  // ---- FFI 的最小形状（design/FFI.txt 第四节）----
+  // bytes_view 交出一段窗口，不拷贝。它是三个答案里第一个的可执行形状：
+  // 「谁分配」的答案是原来那块，「谁释放」不需要新机制，「怎么过界」窗口是字节不是字符串。
+  //
+  // 窗口是一个普通对象（kind = "view"），三个字段：源、起、长。
+  // 它不可下标 —— 读它要过 view_get / view_len。理由是不给 Index 那一支加类型分派，
+  // 而分派少一处，四台就少一处对不齐的地方。
+  bytes_view: (rt, a) => {
+    const 源 = a[0];
+    const 起 = rt.asNumber(a[1]);
+    const 长 = rt.asNumber(a[2]);
+    const 是字节 = Array.isArray(源) || (源 && typeof 源 === "object" && typeof 源.length === "number");
+    if (!是字节) rt.fail("HMYR-R0152", "bytes_view wants bytes (a tuple or an array), found " + describe(源));
+    if (!Number.isInteger(起) || !Number.isInteger(长) || 起 < 0 || 长 < 0 || 起 + 长 > 源.length) {
+      rt.fail("HMYR-R0151", "bytes_view range " + 起 + "+" + 长 + " is outside the bytes (" + 源.length + ")");
+    }
+    return { kind: "view", 源, 起, 长 };
+  },
+  view_len: (rt, a) => {
+    const w = a[0];
+    if (!w || w.kind !== "view") rt.fail("HMYR-R0152", "view_len wants a window, found " + describe(w));
+    return w.长;
+  },
+  view_get: (rt, a) => {
+    const w = a[0];
+    if (!w || w.kind !== "view") rt.fail("HMYR-R0152", "view_get wants a window, found " + describe(w));
+    const i = rt.asNumber(a[1]);
+    if (!Number.isInteger(i) || i < 0 || i >= w.长) {
+      rt.fail("HMYR-R0151", "view_get " + i + " is outside the window (" + w.长 + ")");
+    }
+    return w.源[w.起 + i];
+  },
   index_get: (rt, args) => {
     const m = args[0];
     if (!(m instanceof Map)) rt.fail("HMYR-R0219", "index_get wants an index, found " + describe(m));

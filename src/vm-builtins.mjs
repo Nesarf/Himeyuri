@@ -403,6 +403,46 @@ export const 内置表 = {
     表.m.set(vm.成串(a[1]), a[2]);
     return 表;
   } },
+  // ---- FFI 的最小形状（design/FFI.txt 第四节）：窗口，零拷贝 ----
+  // 这一台用索引表示窗口：kind = "view"，三个字段 源 / 起 / 长。
+  // 与宿主求值器那一台同一套判词，于是「越界给 R0151」在两台上是同一个答案。
+  bytes_view: { 做: (vm, a) => {
+    const 源 = a[0];
+    const 起 = vm.成数(a[1]);
+    const 长 = vm.成数(a[2]);
+    if (!源 || (源.tag !== "tuple" && 源.tag !== "array")) {
+      return vm.坏("HMYR-R0152", "bytes_view wants bytes (a tuple or an array)");
+    }
+    const 总 = 源.items.length;
+    if (!Number.isInteger(起) || !Number.isInteger(长) || 起 < 0 || 长 < 0 || 起 + 长 > 总) {
+      return vm.坏("HMYR-R0151", "bytes_view range is outside the bytes (" + 总 + ")");
+    }
+    const m = new Map();
+    m.set("kind", "view");
+    m.set("源", 源);
+    m.set("起", 起);
+    m.set("长", 长);
+    return { tag: "index", m };
+  } },
+  view_len: { 做: (vm, a) => {
+    const w = a[0];
+    if (!w || w.tag !== "index" || w.m.get("kind") !== "view") {
+      return vm.坏("HMYR-R0152", "view_len wants a window");
+    }
+    return 数.造(w.m.get("长"));
+  } },
+  view_get: { 做: (vm, a) => {
+    const w = a[0];
+    if (!w || w.tag !== "index" || w.m.get("kind") !== "view") {
+      return vm.坏("HMYR-R0152", "view_get wants a window");
+    }
+    const i = vm.成数(a[1]);
+    const 长 = w.m.get("长");
+    if (!Number.isInteger(i) || i < 0 || i >= 长) {
+      return vm.坏("HMYR-R0151", "view_get is outside the window (" + 长 + ")");
+    }
+    return w.m.get("源").items[w.m.get("起") + i];
+  } },
   index_get: { 做: (vm, a) => {
     const 表 = a[0];
     if (!表 || 表.tag !== "index") return vm.坏("HMYR-R0219", "index_get wants an index, found " + 述(表, vm.文));
