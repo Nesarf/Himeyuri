@@ -177,6 +177,17 @@ fn 新区() -> Int {
   return 区
 }
 
+// 一个持有格：只装零个或一个值，取出即转移（design/MEMORY.txt 第 2 节）。
+// 取出之后 装 变回 0，于是「两处都声称拥有它」在运行期不成立。
+fn 新持有格() -> Int {
+  let 格 = index_new()
+  index_set(格, "kind", "owner")
+  index_set(格, "装", 0)
+  index_set(格, "值", ())
+  index_set(格, "关", 0)
+  return 格
+}
+
 fn 分配块(区: Int, 大小: Int) -> Int {
   if index_get(区, "关") != 0 { return 坏("HMYR-R0302 arena.alloc: that arena is already closed") }
   let 号 = index_get(区, "下一个")
@@ -255,6 +266,37 @@ fn 求方法(主: Int, 名: String, 参: Int) -> Int {
         return 好(())
       }
       return 坏("块上没有这个方法：" + 名)
+    }
+  }
+  // 持有格上的四个动作（owned）。取出即转移：取走之后 装 变回 0。
+  if index_has(主, "kind") {
+    if index_get(主, "kind") == "owner" {
+      let 关了 = index_get(主, "关")
+      if 名 == "放" {
+        if len(参) != 1 { return 坏("放 要一个参数") }
+        if 关了 != 0 { return 坏("HMYR-R0305 owned.放: 这条格已经关了") }
+        if index_get(主, "装") != 0 { return 坏("HMYR-R0305 owned.放: 这一格已经有值了，先取走") }
+        index_set(主, "装", 1)
+        index_set(主, "值", 参[0])
+        return 好(主)
+      }
+      if 名 == "取" {
+        if len(参) != 0 { return 坏("取 不要参数") }
+        if 关了 != 0 { return 坏("HMYR-R0305 owned.取: 这条格已经关了") }
+        if index_get(主, "装") != 1 { return 坏("HMYR-R0306 owned.取: 这一格是空的") }
+        let v = index_get(主, "值")
+        index_set(主, "装", 0)
+        index_set(主, "值", ())
+        return 好(v)
+      }
+      if 名 == "有" { return 好(index_get(主, "装")) }
+      if 名 == "关" {
+        index_set(主, "装", 0)
+        index_set(主, "值", ())
+        index_set(主, "关", 1)
+        return 好(())
+      }
+      return 坏("持有格上没有这个方法：" + 名)
     }
   }
   if index_has(主, "种") == false { return 坏("这一版只认区与块上的方法：" + 名) }
@@ -358,6 +400,11 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   if 名 == "arena" {
     if len(值们) != 0 { return 坏("arena 不要参数") }
     return 好(新区())
+  }
+  // owned：单一所有者的持有格。四个动作由 求方法 的 owner 分支分派。
+  if 名 == "owned" {
+    if len(值们) != 0 { return 坏("owned 不要参数") }
+    return 好(新持有格())
   }
   // 原始字节：嵌入与打包要它。这一层只转发，读不到由下面那一层说。
   if 名 == "read_bytes" {

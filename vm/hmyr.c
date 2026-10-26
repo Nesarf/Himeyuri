@@ -2226,10 +2226,25 @@ static Value 区新建(void) {
   return v;
 }
 
-/* 方法名是中文（存 / 取），而 名是字 只比 ASCII —— 所以这两个单独按码点比。
- * 存 = U+5B58，取 = U+53D6。 */
+/* 方法名是中文（存 / 取 / 放 / 有 / 关），而 名是字 只比 ASCII —— 所以这些按码点比。
+ * 存 = U+5B58，取 = U+53D6，放 = U+653E，有 = U+6709，关 = U+5173。 */
 static int 是存(const uint16_t *p, uint32_t n) { return n == 1 && p && p[0] == 0x5B58; }
 static int 是取(const uint16_t *p, uint32_t n) { return n == 1 && p && p[0] == 0x53D6; }
+static int 是放(const uint16_t *p, uint32_t n) { return n == 1 && p && p[0] == 0x653E; }
+static int 是有字(const uint16_t *p, uint32_t n) { return n == 1 && p && p[0] == 0x6709; }
+static int 是关字(const uint16_t *p, uint32_t n) { return n == 1 && p && p[0] == 0x5173; }
+
+/* 一个持有格：只装零个或一个值（design/MEMORY.txt 第 2 节）。
+ * 内部键用 ASCII —— 与这一台其他内部键同一条规矩。 */
+static Value 持有格新建(void) {
+  Value v = v_null();
+  v.tag = T_INDEX;
+  v.idx = 索引造();
+  区放键(v.idx, "kind", ascii_text("owner"));
+  区放键(v.idx, "holds", v_num(0));
+  区放键(v.idx, "closed", v_num(0));
+  return v;
+}
 
 /* 区与块上的方法。交回 1 表示 out 可以用，0 表示已经 fail 过。 */
 static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *args, int nargs, Value *out) {
@@ -2268,6 +2283,48 @@ static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *
       return 1;
     }
     fail("HMYR-R0302", "there is no such method on a block");
+    return 0;
+  }
+  /* 持有格上的四个动作（owned）。取出即转移：取走之后 holds 变回 0。 */
+  if (主.tag == T_INDEX && 主.idx && 区取键(主.idx, "kind", &类) && 串是字(类, "owner")) {
+    Value 关值, 装值;
+    int 关了 = 0;
+    if (区取键(主.idx, "closed", &关值) && 关值.tag == T_NUM && 关值.num != 0) 关了 = 1;
+    if (是放(名, 名长)) {
+      if (nargs != 1) { fail("HMYR-R0101", "放 wants one value"); return 0; }
+      if (关了) { fail("HMYR-R0305", "owned.放: this holder is already closed"); return 0; }
+      if (区取键(主.idx, "holds", &装值) && 装值.tag == T_NUM && 装值.num != 0) {
+        fail("HMYR-R0305", "owned.放: this holder already owns a value; take it out first");
+        return 0;
+      }
+      区放键(主.idx, "val", args[0]);
+      区放键(主.idx, "holds", v_num(1));
+      *out = 主;
+      return 1;
+    }
+    if (是取(名, 名长)) {
+      if (nargs != 0) { fail("HMYR-R0101", "取 wants no arguments"); return 0; }
+      if (关了) { fail("HMYR-R0305", "owned.取: this holder is already closed"); return 0; }
+      if (!区取键(主.idx, "holds", &装值) || 装值.tag != T_NUM || 装值.num == 0) {
+        fail("HMYR-R0306", "owned.取: this holder is empty");
+        return 0;
+      }
+      if (!区取键(主.idx, "val", out)) *out = v_null();
+      区放键(主.idx, "holds", v_num(0));
+      return 1;
+    }
+    if (是有字(名, 名长)) {
+      *out = v_num(0);
+      if (区取键(主.idx, "holds", &装值) && 装值.tag == T_NUM) *out = 装值;
+      return 1;
+    }
+    if (是关字(名, 名长)) {
+      区放键(主.idx, "holds", v_num(0));
+      区放键(主.idx, "closed", v_num(1));
+      *out = v_null();
+      return 1;
+    }
+    fail("HMYR-R0302", "there is no such method on an owned holder");
     return 0;
   }
   if (主.tag != T_INDEX || !主.idx || !区取键(主.idx, "kind", &类) || !串是字(类, "zone")) {
@@ -3801,6 +3858,12 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   if (name_is(name_idx, "arena")) {
     if (nargs != 0) { fail("HMYR-R0101", "arena takes no arguments"); return 1; }
     *out = 区新建();
+    return 1;
+  }
+  /* owned：单一所有者的持有格（design/MEMORY.txt 第 2 节）。 */
+  if (name_is(name_idx, "owned")) {
+    if (nargs != 0) { fail("HMYR-R0101", "owned takes no arguments"); return 1; }
+    *out = 持有格新建();
     return 1;
   }
   if (name_is(name_idx, "argv")) {

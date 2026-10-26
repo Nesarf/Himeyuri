@@ -1149,6 +1149,39 @@ const BUILTINS = {
       held: () => held.length,
     };
   },
+  // owned：三区里那个「单一所有者」（design/MEMORY.txt 第 2 节）。
+  //
+  // 一个持有格只装零个或一个值，取出即转移 —— 取走之后源那边空了，于是
+  // 「两个变量都声称拥有它」在运行期不成立。这是「单一所有者」能落的最小形状：
+  // 作用域结束不会自动释放（语言没有作用域钩子），编译期也不检查转移（那要借用分析）。
+  //
+  // 方法用中文，与块的 存/取 同一条命名；arena 那五个是英文，因为它们是先来的。
+  owned: (rt) => {
+    const 格 = { 装: false, 值: null, 关了: false };
+    格.放 = function (v) {
+      if (this.关了) rt.fail("HMYR-R0305", "owned.放: this holder is already closed");
+      if (this.装) rt.fail("HMYR-R0305", "owned.放: this holder already owns a value; take it out first");
+      this.装 = true;
+      this.值 = v;
+      return this;
+    };
+    格.取 = function () {
+      if (this.关了) rt.fail("HMYR-R0305", "owned.取: this holder is already closed");
+      if (!this.装) rt.fail("HMYR-R0306", "owned.取: this holder is empty");
+      const v = this.值;
+      this.装 = false;
+      this.值 = null;
+      return v;
+    };
+    格.有 = function () { return this.装; };
+    格.关 = function () {
+      this.装 = false;
+      this.值 = null;
+      this.关了 = true;
+      return null;
+    };
+    return 格;
+  },
 };
 
 export function run(source, options = {}) {

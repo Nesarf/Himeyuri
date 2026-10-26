@@ -187,6 +187,9 @@ export const 内置表 = {
   // （self/eval.hmoca）同一个表示，因为 close 要改状态而记录不可变。
   // 六个方法由 vm.mjs 的 CALLM 分派，分派表在文件末尾的 调区方法。
   arena: { 做: () => 新区() },
+  // owned：单一所有者的持有格（design/MEMORY.txt 第 2 节）。
+  // 只装零个或一个值，取出即转移。四个动作由 调区方法 的 owner 分支分派。
+  owned: { 做: () => 新持有格() },
   // 字节元组转文本：按 UTF-8 解码。read_stdin_bytes 交回字节，而请求体是 UTF-8。
   bytes_to_text: { 做: (vm, a) => {
     const 项们 = a[0].items;
@@ -624,6 +627,16 @@ export function 新区() {
   return { tag: "index", m };
 }
 
+// 一个持有格：只装零个或一个值。取出即转移 —— 取走之后源这边空了。
+export function 新持有格() {
+  const m = new Map();
+  m.set("kind", "owner");
+  m.set("装", 0);
+  m.set("值", null);
+  m.set("关", 0);
+  return { tag: "index", m };
+}
+
 // 交回 {值} 或 {码, 错}。码缺省是 R0302 —— 「拿到的不是那个区里活着的块」那一条。
 export function 调区方法(主, 名, 参) {
   // 块上的方法：存与取。块的上下文只有它自己，所以这两支必须挂在块上 ——
@@ -650,9 +663,38 @@ export function 调区方法(主, 名, 参) {
     }
     return { 错: "块上没有这个方法：" + 名 };
   }
+  // 持有格上的四个动作（owned）。与区、块同一层：kind = owner。
+  // 取出即转移：取走之后 装 变回 0，于是「两个变量都声称拥有它」不成立。
+  if (主 && 主.tag === "index" && 主.m.get("kind") === "owner") {
+    const 关 = 主.m.get("关");
+    if (名 === "放") {
+      if (参.length !== 1) return { 错: "放 要一个参数" };
+      if (关 !== 0) return { 码: "HMYR-R0305", 错: "owned.放: this holder is already closed" };
+      if (主.m.get("装") !== 0) return { 码: "HMYR-R0305", 错: "owned.放: this holder already owns a value; take it out first" };
+      主.m.set("装", 1);
+      主.m.set("值", 参[0]);
+      return { 值: 主 };
+    }
+    if (名 === "取") {
+      if (参.length !== 0) return { 错: "取 不要参数" };
+      if (关 !== 0) return { 码: "HMYR-R0305", 错: "owned.取: this holder is already closed" };
+      if (主.m.get("装") !== 1) return { 码: "HMYR-R0306", 错: "owned.取: this holder is empty" };
+      const v = 主.m.get("值");
+      主.m.set("装", 0);
+      主.m.set("值", null);
+      return { 值: v };
+    }
+    if (名 === "有") return { 值: 主.m.get("装") };
+    if (名 === "关") {
+      主.m.set("装", 0);
+      主.m.set("值", null);
+      主.m.set("关", 1);
+      return { 值: null };
+    }
+    return { 错: "持有格上没有这个方法：" + 名 };
+  }
   if (!是区(主)) return { 错: "这一版只认区与块上的方法：" + 名 };
-  const m = 主.m;
-  if (名 === "alloc") {
+  const m = 主.m;  if (名 === "alloc") {
     if (参.length !== 1) return { 错: "alloc 要一个参数" };
     if (m.get("关") !== 0) return { 错: "arena.alloc: that arena is already closed" };
     const 号 = m.get("下一个");

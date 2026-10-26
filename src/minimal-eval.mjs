@@ -281,6 +281,9 @@ const 内置 = {
   thr_count: (rt) => Array.from(THREADS.values()).filter((h) => rt.cap.thread.load(h.flag) === 0).length,
   // arena：三区模型的桩，字段是函数值；这一份也没有一等函数值。
   arena: (rt) => rt.坏("HMYR-R0104", "arena is a stub for the zone model: its fields are functions, and this machine has no first-class functions"),
+  // owned：与 arena 一样是桩。自举层自己实现区与所有权（self/eval.hmoca），
+  // 而这一份跑的是自举层，它不用这两个 —— 七处内置表的账要对得上，所以这里留一格。
+  owned: (rt) => rt.坏("HMYR-R0104", "owned is a stub on this machine for the same reason arena is"),
   // 跑一个程序：一份记录，五个字段。跑不起来也照实报告，不抛。
   run_program: (rt, a) => {
     const 命令 = rt.成串(a[0]);

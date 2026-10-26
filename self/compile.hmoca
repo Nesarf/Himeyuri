@@ -165,6 +165,7 @@ fn 是内置(名: String) -> Bool {
   // 补：宿主那份名单有、这张表以前漏掉的。2026-10-25 一次补齐。
   // 依据是 tools/seed-gap.mjs：它量的正是「种子认得哪些内置」，而种子就是这个函数的字节码。
   if 名 == "arena" { return true }
+  if 名 == "owned" { return true }
   if 名 == "bytes_to_text" { return true }
   if 名 == "chdir" { return true }
   if 名 == "console_codepage" { return true }

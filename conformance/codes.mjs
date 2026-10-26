@@ -75,6 +75,8 @@ export const CODES = [
   { code: "HMYR-W0301", stage: "link", checkedBy: "test/module.test.mjs", meaning: "an import that is not a path; the package manager owns that" },
   { code: "HMYR-W0302", stage: "link", checkedBy: "test/module.test.mjs", meaning: "two modules declare the same name, and the flat table means the later one wins" },
   { code: "HMYR-E0320", stage: "link", checkedBy: "test/realtime.test.mjs", meaning: "a function that declares the realtime profile does something that profile forbids: it allocates in the managed zone, touches the file, process or thread world, owns a loop whose condition is a constant true value, or calls a function that does not declare realtime itself" },
+  { code: "HMYR-R0305", stage: "run", checkedBy: "test/owned.test.mjs", meaning: "an owned holder was asked to hold a value twice, or was used after it was closed: a holder owns one value at a time and stops working once closed" },
+  { code: "HMYR-R0306", stage: "run", checkedBy: "test/owned.test.mjs", meaning: "an owned holder was asked for a value it does not hold: taking is also the transfer, so an empty holder has nothing to give" },
   // Planned: registered so the identifier is reserved and searchable, exempt from the "every registered
   // code is emitted" check until the zone model of design/MEMORY.txt exists.
   // The escape code was registered as planned while the zone model had only its bookkeeping half.
