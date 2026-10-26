@@ -459,9 +459,9 @@ const 取校验表 = () => {
 
 // A builtin that touches the outside world is a capability, and it is checked at the call site against
 // what the calling function declared. Without this, "effects" would only apply to functions we wrote.
-// 内置碰哪一类世界。实时档位那一条静态检查（src/realtime-check.mjs）也要这张表 ——
-// 它说「哪些内置是阻塞的」。所以这张表导出：一处定义，两处读。
-export const BUILTIN_EFFECTS = { read_text: "file", read_bytes: "file", read_dir: "file", is_dir: "file", write_text: "file", run_program: "process", chdir: "process", argv: "process", file_exists: "file", print_err: "process", thr_spawn: "thread", thr_cancel: "thread" };
+// 内置碰哪一类世界。src/realtime-check.mjs 带着自己的一份（它不 import 这里 ——
+// 一份检查器不该把宿主求值器拖进依赖图），所以改这张表时那一份也要跟着改。
+const BUILTIN_EFFECTS = { read_text: "file", read_bytes: "file", read_dir: "file", is_dir: "file", write_text: "file", run_program: "process", chdir: "process", argv: "process", file_exists: "file", print_err: "process", thr_spawn: "thread", thr_cancel: "thread" };
 
 /** 编码表按需读入并缓存：表是「字符 -> 字节」，从本运行时的解码器推出来的。
  *

@@ -16,12 +16,20 @@
 // 「有界」那条只拒常量真值：`while i < n` 是不是真的有界，要数据流分析，而这一份不做。
 // 那是 §7 里记着的那条「先只做静态拒绝，不做完整证明」。
 
-import { BUILTIN_EFFECTS } from "./eval.mjs";
-
+// 哪些内置会等世界。这张表与 src/eval.mjs 的 BUILTIN_EFFECTS 是同一件事的两种用途：
+// 那边管「调用时检查效果」，这边管「实时档位不许碰」。这里带一份自己的，而不是
+// import 那边的 —— 一份检查器不该把整个宿主求值器拖进依赖图，而 host-deps 那套
+// 正是盯着「运行时到底向宿主要了什么」的。两处一起改，是这一对表的代价。
 export const 实时 = "realtime";
 
-// 碰了就谈不上「零停顿」的那几类。读文件不是分配，但它会等系统。
-const 阻塞效果 = new Set(["file", "process", "thread"]);
+const 阻塞内置 = new Map([
+  ["read_text", "file"], ["read_bytes", "file"], ["read_dir", "file"], ["is_dir", "file"],
+  ["write_text", "file"], ["file_exists", "file"],
+  ["run_program", "process"], ["chdir", "process"], ["argv", "process"], ["print_err", "process"],
+  ["thr_spawn", "thread"], ["thr_cancel", "thread"],
+]);
+
+const 阻塞类别 = (名) => 阻塞内置.get(名) || null;
 
 const 是常量真 = (n) => {
   if (!n) return false;
@@ -80,8 +88,8 @@ export function 实时检查(ast, 选项 = {}) {
       const 名 = n.callee.name;
       if (名 === "arena") {
         报("arena() allocates in the managed zone; a realtime function must use an arena built before the callback started", n);
-      } else if (Object.prototype.hasOwnProperty.call(BUILTIN_EFFECTS, 名) && 阻塞效果.has(BUILTIN_EFFECTS[名])) {
-        报("'" + 名 + "' touches the " + BUILTIN_EFFECTS[名] + " world, and a realtime function may not wait on anything", n);
+      } else if (阻塞类别(名) !== null) {
+        报("'" + 名 + "' touches the " + 阻塞类别(名) + " world, and a realtime function may not wait on anything", n);
       } else if (用户函数.has(名) && !实时们.has(名)) {
         报("'" + 名 + "' does not declare " + 实时 + ", so this call would run past the point where the promise stops", n);
       }

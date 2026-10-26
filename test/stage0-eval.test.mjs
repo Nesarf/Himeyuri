@@ -111,14 +111,15 @@ try {
   ok("正好五种", 实语句.length === 5, 实语句.join(" "));
   ok("而它们是那五种", JSON.stringify(实语句) === JSON.stringify(应语句), 实语句.join(" "));
 
-  console.log("四、内置：十六个");
+  console.log("四、内置：十七个");
   // 这一栏漏过一次：第一版只跑了六条路径，里面没有一条用记录，于是表里少了
   // record_new / field_get / field_has。补上记录那条之后才齐。
   // 把它抓出来的是启动器在 stage0 模式下跑那个记录程序时抛的一句，而不是任何一份文档。
-  const 应内置 = ["argv", "chr", "field_get", "field_has", "file_exists", "is_letter", "is_mark", "len", "nfc", "print", "print_err", "read_text", "record_new", "slice", "str", "to_int"];
+  // 2026-10-27 又长一个：区与所有权格子都用 index_new 建它们的记账表。
+  const 应内置 = ["argv", "chr", "field_get", "field_has", "file_exists", "index_new", "is_letter", "is_mark", "len", "nfc", "print", "print_err", "read_text", "record_new", "slice", "str", "to_int"];
   const 实内置 = [...全部内置].sort();
-  ok("正好十六个", 实内置.length === 16, 实内置.join(" "));
-  ok("而它们是那十六个", JSON.stringify(实内置) === JSON.stringify(应内置), 实内置.join(" "));
+  ok("正好十七个", 实内置.length === 17, 实内置.join(" "));
+  ok("而它们是那十七个", JSON.stringify(实内置) === JSON.stringify(应内置), 实内置.join(" "));
   // 一条值得单说的：slice 既是 self/ 里定义的函数，又真的按内置执行（内置优先）。
   ok("slice 被算成内置（同名用户函数调用不到它）", 全部内置.has("slice"), 实内置.join(" "));
   // 记录那一组三个：造记录、取字段、问字段在不在。

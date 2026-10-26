@@ -33,14 +33,16 @@ const 全部 = 源们.join("\n");
 
 const 计 = (词) => (全部.match(new RegExp("\\b" + 词 + "\\b", "g")) || []).length;
 
-console.log("一、宿主全局：正好这十项");
+console.log("一、宿主全局：正好这十二项");
 {
-  const 应 = ["String", "Error", "Array", "Math", "JSON", "Map", "Set", "Object", "Number", "TextDecoder"];
+  // Date 与 URL 是线程那一路要的（等超时、把 worker 的路径交给 spawn），
+  // 它们不是「偷偷多要」而是被用在了明处，所以列进来而不是删掉。
+  const 应 = ["String", "Error", "Array", "Math", "JSON", "Map", "Set", "Object", "Number", "TextDecoder", "Date", "URL"];
   const 候补 = ["Object", "Array", "String", "Number", "Boolean", "Math", "JSON", "Date", "Map", "Set",
     "WeakMap", "WeakSet", "RegExp", "Error", "TypeError", "RangeError", "Symbol", "Promise", "Buffer",
     "URL", "TextDecoder", "TextEncoder", "Intl", "globalThis", "console", "require"];
   const 实 = 候补.filter((名) => 计(名) > 0).sort();
-  ok("正好十项", 实.length === 10, 实.join(" "));
+  ok("正好十二项", 实.length === 12, 实.join(" "));
   ok("而它们是那十项", JSON.stringify(实) === JSON.stringify([...应].sort()), 实.join(" "));
   // 三项值得各自钉一句，因为它们是「本可以出现而没出现」的那一类。
   ok("没有 Promise（执行器是同步的）", 计("Promise") === 0);
