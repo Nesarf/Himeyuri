@@ -61,11 +61,38 @@ export const 写容器 = (路, 成员们) => {
   return { ok: true, 大小: fs.statSync(路).size };
 };
 
-// 解到临时目录，并挑一个入口。
-//
-// 入口的挑法按 design/FILETYPE.txt 第二节的第二节：先源码后字节码，名字先 main
+// 成员名归一：容器里存的是「包内路径」，而装的时候人给的常是宿主路径 ——
+// 于是盘符与开头的斜杠要去掉，它不该被当成宿主上的绝对路径。
+// 归完之后仍然含 .. 的，一律拒：那是往外走，不管它本来想指哪儿。
+export const 归一成员名 = (名) => {
+  let 出 = String(名).split("\\").join("/");
+  出 = 出.replace(/^[A-Za-z]:/, "").replace(/^\/+/, "");
+  return 出;
+};
+
+// 摊开到一个目录。启动器与转换工具共用这一份 —— 两处各写一遍的话，
+// 「路径要不要归一」「跳出目录拦不拦」这种规矩迟早会分叉。
+export const 摊开 = (成员们, 目录) => {
+  const 根 = path.resolve(目录);
+  for (const m of 成员们) {
+    const 名 = 归一成员名(m.名);
+    const 段们 = 名.split("/").filter((x) => x.length > 0);
+    if (段们.length === 0 || 段们.includes("..")) {
+      return { ok: false, 错: "HMYR-E0417 成员路径不合法：" + m.名 };
+    }
+    const 归 = path.resolve(目录, 名);
+    if (归 !== 根 && !归.startsWith(根 + path.sep)) {
+      return { ok: false, 错: "HMYR-E0417 成员路径跳出容器：" + m.名 };
+    }
+    fs.mkdirSync(path.dirname(归), { recursive: true });
+    fs.writeFileSync(归, m.数据);
+  }
+  return { ok: true };
+};
+
+// 入口的挑法按 design/FILETYPE.txt 第四节：先源码后字节码，名字先 main
 // 后与包同名，都没有就取同阶的第一个。挑不出来不是崩溃，是一句说得清的话。
-const 找入口 = (目录, 包路) => {
+export const 找入口 = (目录, 包路) => {
   const 包名 = path.basename(包路).replace(new RegExp("\\" + 容器后缀 + "$", "i"), "");
   const 候选 = [];
   const 走 = (d) => {
@@ -89,17 +116,8 @@ export const 解容器 = (包路) => {
   const r = 读容器(包路);
   if (!r.ok) return r;
   const 目录 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-ittgn-"));
-  const 根 = path.resolve(目录);
-  for (const m of r.成员们) {
-    const 归 = path.resolve(目录, m.名);
-    // 成员名是从文件里读出来的，所以它不能被无条件相信：跳出目录的那一种要拦下来，
-    // 否则一个包就能往它想去的地方写文件。
-    if (归 !== 根 && !归.startsWith(根 + path.sep)) {
-      return { ok: false, 错: "HMYR-E0417 成员路径跳出容器：" + m.名 };
-    }
-    fs.mkdirSync(path.dirname(归), { recursive: true });
-    fs.writeFileSync(归, m.数据);
-  }
+  const 开 = 摊开(r.成员们, 目录);
+  if (!开.ok) return 开;
   const 入口 = 找入口(目录, 包路);
   if (!入口) return { ok: false, 错: "HMYR-E0418 容器里没有可跑的入口（要先有 hmoca 或 hmoks 成员）" };
   return { ok: true, 目录, 入口, 成员们: r.成员们 };

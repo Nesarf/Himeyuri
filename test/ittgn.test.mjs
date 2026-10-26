@@ -160,6 +160,43 @@ console.log("七、HMYR 写的与 JS 写的，字节相同");
   ok("两份字节相同", Buffer.compare(甲字节, 乙字节) === 0, 甲字节.length + " 对 " + 乙字节.length);
 }
 
+console.log("八、转换到 zip：入口释放出来，内容只摊一份");
+{
+  // design/FILETYPE.txt 第四节那一条：容器 → 压缩包时，运行逻辑释放成 hmsnp 与 hmhsr，
+  // 放在根目录，两者共用同一份内容。所以这里数的不是「能不能解开」，而是
+  // 「成员只摊了几份」「两个入口在不在根」「拿其中一个跑不跑得出同样的输出」。
+  const 源 = "fn main() -> Int {\n  print(\"从 zip 里跑出来了\" + chr(10))\n  return 0\n}\n";
+  造("转/main.hmoca", [...Buffer.from(源, "utf8")]);
+  const 装 = 跑(["--装", "转.hm-ittgn-krgn-m", "转/main.hmoca"]);
+  ok("先装成容器", (装.stdout || "").includes("装了"), (装.stdout || "").slice(0, 100));
+
+  const 转 = spawnSync(process.execPath, [path.join(ROOT, "tools", "ittgn-to-zip.mjs"),
+    path.join(临, "转.hm-ittgn-krgn-m"), path.join(临, "转.zip")], { encoding: "utf8", cwd: 临 });
+  ok("转得出 zip", 转.status === 0, (转.stderr || "").slice(0, 160));
+  ok("说了入口取自哪儿", (转.stdout || "").includes("入口取自"), (转.stdout || "").slice(0, 120));
+
+  const 解 = path.join(临, "解开的");
+  fs.mkdirSync(解, { recursive: true });
+  const 开 = spawnSync("powershell", ["-NoProfile", "-Command",
+    "Expand-Archive -Path '" + path.join(临, "转.zip") + "' -DestinationPath '" + 解 + "' -Force"],
+  { encoding: "utf8" });
+  ok("解得出", fs.existsSync(解), String(开.status));
+  ok("成员在里面", fs.existsSync(path.join(解, "转", "main.hmoca")));
+  ok("hmsnp 在根目录", fs.existsSync(path.join(解, "转.hmsnp")));
+  ok("hmhsr 在根目录", fs.existsSync(path.join(解, "转.hmhsr")));
+
+  // 零份副本：成员不因为有两个入口就摊两份。
+  const 数 = (d) => fs.readdirSync(d, { withFileTypes: true })
+    .reduce((s, e) => s + (e.isDirectory() ? 数(path.join(d, e.name)) : 1), 0);
+  ok("摊开的文件一共三个（内容一份 + 两个入口）", 数(解) === 3, String(数(解)));
+
+  const 跑入口 = (名) => spawnSync(process.execPath, [具, path.join(解, 名)], { encoding: "utf8", cwd: 解, timeout: 120000 });
+  const 甲 = 跑入口("转.hmsnp");
+  const 乙 = 跑入口("转.hmhsr");
+  ok("hmsnp 跑出那句话", (甲.stdout || "").includes("从 zip 里跑出来了"), JSON.stringify((甲.stdout || "").slice(0, 80)));
+  ok("hmhsr 跑出同样的话", (乙.stdout || "") === (甲.stdout || ""), JSON.stringify([甲.stdout, 乙.stdout]));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
