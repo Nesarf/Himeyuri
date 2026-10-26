@@ -33,7 +33,7 @@ const 走目录 = (相对) => {
     if (跳过.has(项.name)) continue;
     const 子 = 相对 ? 相对 + "/" + 项.name : 项.name;
     if (项.isDirectory()) 走目录(子);
-    else if (项.是源码(name)) hmyr们.push(子);
+    else if (项.name.endsWith(".hmoca")) hmyr们.push(子);
   }
 };
 走目录("");
