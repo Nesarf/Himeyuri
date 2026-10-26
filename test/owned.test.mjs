@@ -137,6 +137,37 @@ console.log("三、四台同一段");
   }
 }
 
+console.log("四、作用域结束释放（自举层那一条路）");
+{
+  // 一个函数在自己那一帧里建持有格，再把它交出去。交出去之后它不该被造它的帧关掉 ——
+  // 「转移」的第二层意思是：所有权连同「本帧退出时会关掉它」一起交给了这一格。
+  //
+  // 这一条是实测撞到的冲突：先只做了「帧退出一律关」，于是 盒.取() 拿到的是一条
+  // 关掉的格子，再取就吃 R0305。判据留在这里，免得那一步被后来的改动抹回去。
+  const p = 投(行们([
+    "fn 造(盒: Int) -> Int {",
+    "  let 格 = owned()",
+    "  格.放(7)",
+    "  盒.放(格)",
+    "  return 0",
+    "}",
+    "",
+    "fn main() -> Int effects(process) {",
+    "  let 盒 = owned()",
+    "  造(盒)",
+    "  let 格 = 盒.取()",
+    "  print(\"再取=\" + str(格.取()) + chr(10))",
+    "  return 0",
+    "}",
+  ]), "己.hmoca");
+  const r = 跑([p]);
+  ok("交出去的格子还能取（转移把登记也带走了）", 行(r.stdout).includes("再取=7"),
+    JSON.stringify({ status: r.status, out: 行(r.stdout), err: (r.stderr || "").slice(0, 140) }));
+
+  // 「帧退出把没交出去的关掉」这一半在语言里看不见：不交出去，外面就没有引用。
+  // 所以这一条的判据只能覆盖转移那一侧 —— 那一句写在 design/MEMORY.txt 第 2 节。
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

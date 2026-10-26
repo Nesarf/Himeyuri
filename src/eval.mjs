@@ -76,6 +76,10 @@ export class Runtime {
     this.write = options.write || ((line) => this.output.push(line));
     this.steps = 0;
     this.depth = 0;
+    // 作用域结束自动释放（design/MEMORY.txt 第 2 节）：每进一次函数帧压一层，
+    // 帧退出时把这一层里登记的所有 owned 持有格关掉。只到帧级，不到块级 ——
+    // 这门语言没有块钩子，而「一次调用一圈」已经是能写进判据的最小形状。
+    this.持有格栈 = [];
     // stage0：只允许上面那三张表里的东西。它存在的理由是让「需求表」可执行——
     // 一份写着「只需要这些」的文档只能被人读完点头，而一个会拦下来的求值器能证明它。
     this.stage0 = options.stage0 === true;
@@ -180,11 +184,19 @@ export class Runtime {
       this.fail("HMYR-R0101", "function '" + decl.name + "' expects " + decl.params.length + " argument(s), got " + args.length);
     }
     const inner = this.allowed(decl.effects);
+    this.持有格栈.push([]);
     try {
       return decl.body ? this.execBlock(decl.body, scope, inner) : null;
     } catch (e) {
       if (e instanceof Return) return e.value;
       throw e;
+    } finally {
+      // 帧退出：这一帧里建的持有格一律关掉，包括提前 return 与抛出的那两条路。
+      // 「关」是幂等的（已经关了的再关一次什么也不做），所以外面显式关过也没关系。
+      const 本帧 = this.持有格栈.pop() || [];
+      for (const 格 of 本帧) {
+        if (!格.关了) { 格.装 = false; 格.值 = null; 格.关了 = true; }
+      }
     }
   }
 
@@ -1184,6 +1196,10 @@ const BUILTINS = {
       this.关了 = true;
       return null;
     };
+    // 登记到当前帧：帧退出时会被自动关掉。所以在函数里建的持有格不必自己关 ——
+    // 而它一旦交出去（返回给调用者），那边就该在自己这一帧里重新拥有它。
+    const 栈 = rt.持有格栈;
+    if (栈 && 栈.length > 0) 栈[栈.length - 1].push(格);
     return 格;
   },
 };

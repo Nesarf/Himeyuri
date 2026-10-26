@@ -248,7 +248,7 @@ fn 收回来(区: Int, 块: Int) -> Int {
 
 // 方法分派。这一版只认区上的方法 —— 别的值当主时给一句说得清的话，不崩：
 // 而它不会崩的理由是 index_has 对不是索引的值交回 false，而不是抛。
-fn 求方法(主: Int, 名: String, 参: Int) -> Int {
+fn 求方法(环境: Int, 主: Int, 名: String, 参: Int) -> Int {
   // 块上的方法：存与取。块的上下文只有它自己，所以这两支必须挂在块上。
   if index_has(主, "kind") {
     if index_get(主, "kind") == "block" {
@@ -281,6 +281,13 @@ fn 求方法(主: Int, 名: String, 参: Int) -> Int {
         if index_get(主, "装") != 0 { return 坏("HMYR-R0305 owned.放: 这一格已经有值了，先取走") }
         index_set(主, "装", 1)
         index_set(主, "值", 参[0])
+        // 放进去的若是一条持有格，它就离开本帧的登记表 —— 「转移」的第二层意思：
+        // 所有权连同「本帧退出时会关掉它」这件事一起交给了这一格。
+        // 少了这一句，把一个格子交出去之后它会被造它的那一帧关掉（那是实测撞到的冲突）。
+        let 全 = 查找(环境, "全局")
+        if 全.found {
+          index_set(全.value, "持有格们", 去掉项从(index_get(全.value, "持有格们"), 参[0], 0, ()))
+        }
         return 好(主)
       }
       if 名 == "取" {
@@ -329,7 +336,7 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if 主.ok == false { return 主 }
     let 参 = 求参数(节点.args, 环境)
     if 参.ok == false { return 参 }
-    return 求方法(主.value, 节点.callee.name, 参.value)
+    return 求方法(环境, 主.value, 节点.callee.name, 参.value)
   }
   if 节点.callee.kind != "Ident" { return 坏("这一版只认按名字调用") }
   let 名 = 节点.callee.text
@@ -407,7 +414,14 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   // owned：单一所有者的持有格。四个动作由 求方法 的 owner 分支分派。
   if 名 == "owned" {
     if len(值们) != 0 { return 坏("owned 不要参数") }
-    return 好(新持有格())
+    let 格 = 新持有格()
+    // 登记到当前帧：帧退出时会被自动关掉（见 关本帧持有格从）。
+    let 全 = 查找(环境, "全局")
+    if 全.found {
+      let 已有 = index_get(全.value, "持有格们")
+      index_set(全.value, "持有格们", 已有 + (格,))
+    }
+    return 好(格)
   }
   // 原始字节：嵌入与打包要它。这一层只转发，读不到由下面那一层说。
   if 名 == "read_bytes" {
@@ -789,7 +803,23 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   if 欠 != "" { return 坏("HMYR-R0201 调 " + 名 + " 要 " + 欠 + " 效果，而调用它的函数没有声明") }
   if len(参名们) != len(值们) { return 坏("参数个数不对：" + 名 + " 要 " + str(len(参名们)) + " 个，给了 " + str(len(值们))) }
   let 体环境 = 绑参数(环境, 参名们, 值们, 0)
+  // 帧边界：进来时把「本帧持有格」清空（上一帧那份先记下来），退出时关掉这一帧登记的。
+  // 只到帧级，不到块级 —— 这门语言没有块钩子，而「一次调用一圈」是能写进判据的最小形状。
+  let 全 = 查找(环境, "全局")
+  var 上一帧 = ()
+  var 有表 = false
+  if 全.found {
+    上一帧 = index_get(全.value, "持有格们")
+    index_set(全.value, "持有格们", ())
+    有表 = true
+  }
   let r = 执行块(体内, 更新(体环境, "效果", 子效))
+  var 本帧 = ()
+  if 有表 {
+    本帧 = index_get(全.value, "持有格们")
+    index_set(全.value, "持有格们", 上一帧)
+    关本帧持有格从(本帧, 0)
+  }
   if r.ok == false { return 坏(r.text) }
   if r.done == true { return 好(r.value) }
   return 好(())
@@ -1156,9 +1186,32 @@ fn 装常量从(环境: Int, 常量们: Int, i: Int) -> Int {
 fn 跑程序带常量与参(语句们: Int, 函数们: Int, 常量们: Int, 参们: Int, 效们: Int) -> Int {
   let 有函数 = 装函数从((), 函数们, 0)
   // 那张共享的小表先放进去：装常量时（以及运行时赋值）都靠它。
-  let 有表 = 更新(有函数, "全局", index_new())
+  let 全 = index_new()
+  // 「本帧登记的持有格」也住这张表里，因为这一层的环境是纯传递的：
+  // 一个更新返回一份新环境，所以「往当前帧登记一个格子」这件事只有共享索引装得下。
+  index_set(全, "持有格们", ())
+  let 有表 = 更新(有函数, "全局", 全)
   let 有常量 = 装常量从(有表, 常量们, 0)
   return 执行块(语句们, 更新(更新(有常量, "argv", 参们), "效果", 效们))
+}
+
+// 把一个值从元组里去掉（只去第一个相等的）。持有格交出去时用。
+fn 去掉项从(们: Int, 值: Int, i: Int, acc: Int) {
+  if i >= len(们) { return acc }
+  if 们[i] == 值 { return 去掉项从(们, 值, i + 1, acc) }
+  return 去掉项从(们, 值, i + 1, acc + (们[i],))
+}
+
+fn 去掉项(们: Int, 值: Int) -> Int {
+  return 去掉项从(们, 值, 0, ())
+}
+
+// 把当前帧登记的持有格一个不留地关掉。帧退出时调用（design/MEMORY.txt 第 2 节）。
+// 登记表里只有持有格，所以这里不判类型 —— 判错类型的地方在 求方法 的 owner 分支。
+fn 关本帧持有格从(格们: Int, i: Int) {
+  if i >= len(格们) { return () }
+  index_set(格们[i], "关", 1)
+  return 关本帧持有格从(格们, i + 1)
 }
 
 // 造记录：先把每个值求出来，再交给 record_of。
