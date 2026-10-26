@@ -110,6 +110,23 @@ console.log("四、不是容器的东西要认出来");
   ok("魔术不对要报错", (r.stdout || "").includes("不是容器"), (r.stdout || "").slice(0, 80));
 }
 
+console.log("五、路径里的中文（UTF-8 那一层）");
+{
+  // 容器里存的是字节，而 write_bytes 只走 0 到 255 —— 直接按码点写会把中文截断成问号。
+  // 所以路径过一次 UTF-8：这里是那一层的验收，比的是「取回来的名字与原来一样」。
+  const 样 = [9, 8, 7, 6];
+  造("数据/名字.txt", 样);
+  const 包 = "中.hm-ittgn-krgn-m";
+  const r = 跑(["--装", 包, "数据/名字.txt"]);
+  ok("中文路径装得进", r.status === 0 || (r.stdout || "").includes("装了"), (r.stdout || "").slice(0, 120));
+  const 列 = 跑(["--列", 包]);
+  ok("列出来的名字与原来一样", (列.stdout || "").includes("数据/名字.txt"), (列.stdout || "").slice(0, 160));
+  const 取 = 跑(["--取", 包, "数据/名字.txt", "回中.bin"]);
+  ok("按中文名取得回", (取.stdout || "").includes("取了"), (取.stdout || "").slice(0, 120));
+  const 回 = fs.readFileSync(path.join(临, "回中.bin"));
+  ok("字节一致（中文路径）", Buffer.compare(回, Buffer.from(样)) === 0, Array.from(回).join(","));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

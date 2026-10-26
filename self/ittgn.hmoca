@@ -9,14 +9,17 @@
 //      写成成员的样子是「转换一次多一份副本」，往返两次就是四份。
 //   三、字节原样进出。不压缩、不改行尾、不猜编码 —— 容器只管装。
 //
+// 路径走 UTF-8：容器里存的是字节，而 write_bytes 只走 0 到 255 的值 ——
+// 直接按码点写的话，中文会被悄悄写坏（低位截断，读回来是两个问号）。
+// 所以装的时候编成 UTF-8，列与取的时候解回来。
+//
 // 格式（小端）：
 //   "HMYRITTGN"   9 字节魔数
 //   版本          1 字节（1）
 //   成员数        2 字节
 //   每个成员：
-//     路径长      2 字节
-//     路径        N 字节（只允许 ASCII —— write_bytes 只收 0 到 255 的值，
-//                 中文路径在这里会失真，所以最小形状先拒绝它，而不是悄悄写坏）
+//     路径长      2 字节（UTF-8 编码之后的字节数）
+//     路径        N 字节（UTF-8）
 //     数据长      4 字节
 //     数据        M 字节
 //
@@ -40,31 +43,63 @@ fn 斜杠数(s: String) -> Int {
   return n
 }
 
-fn 全ASCII(s: String) -> Bool {
-  var i = 0
-  while i < len(s) {
-    if ord(slice(s, i, i + 1)) > 255 { return false }
-    i = i + 1
-  }
-  return true
-}
-
-fn 串字节(s: String) {
+// 码点 → UTF-8 字节。手写而不是找现成的：容器要存的是「字节」，
+// 而这一层能拿到的只有码点。
+fn 串UTF8(s: String) {
   var 出 = ()
   var i = 0
   while i < len(s) {
-    出 = 出 + (ord(slice(s, i, i + 1)),)
+    let cp = ord(slice(s, i, i + 1))
+    if cp < 128 {
+      出 = 出 + (cp,)
+    } else {
+      if cp < 2048 {
+        出 = 出 + (192 + (cp - (cp % 64)) / 64, 128 + cp % 64)
+      } else {
+        if cp < 65536 {
+          出 = 出 + (224 + (cp - (cp % 4096)) / 4096, 128 + ((cp - (cp % 64)) / 64) % 64, 128 + cp % 64)
+        } else {
+          出 = 出 + (240 + (cp - (cp % 262144)) / 262144, 128 + ((cp - (cp % 4096)) / 4096) % 64, 128 + ((cp - (cp % 64)) / 64) % 64, 128 + cp % 64)
+        }
+      }
+    }
     i = i + 1
   }
   return 出
 }
 
-fn 字节串(字节们, 起: Int, 止: Int) -> String {
+// UTF-8 字节 → 码点 → 字符串。与上面那一份成对。
+fn UTF8串(字节们, 起: Int, 止: Int) -> String {
   var s = ""
   var i = 起
   while i < 止 {
-    s = s + chr(字节们[i])
+    let b0 = 字节们[i]
+    var cp = 0
+    var 续 = 0
+    if b0 < 128 {
+      cp = b0
+    } else {
+      if (b0 - (b0 % 32)) / 32 == 6 {
+        cp = b0 % 32
+        续 = 1
+      } else {
+        if (b0 - (b0 % 16)) / 16 == 14 {
+          cp = b0 % 16
+          续 = 2
+        } else {
+          cp = b0 % 8
+          续 = 3
+        }
+      }
+    }
     i = i + 1
+    var k = 0
+    while k < 续 && i < 止 {
+      cp = cp * 64 + (字节们[i] % 64)
+      i = i + 1
+      k = k + 1
+    }
+    s = s + chr(cp)
   }
   return s
 }
@@ -112,7 +147,7 @@ fn 扫(字节们) {
   var i = 0
   while i < 数 {
     let 名长 = 读16(字节们, 位)
-    let 名 = 字节串(字节们, 位 + 2, 位 + 2 + 名长)
+    let 名 = UTF8串(字节们, 位 + 2, 位 + 2 + 名长)
     let 长位 = 位 + 2 + 名长
     let 数据长 = 读32(字节们, 长位)
     let 起 = 长位 + 4
@@ -127,10 +162,6 @@ fn 装(包路: String, 文件们) -> Int effects(file) {
   var i = 0
   while i < len(文件们) {
     let 名 = 文件们[i]
-    if !全ASCII(名) {
-      print("HMYR-E0412 最小形状只收 ASCII 路径：" + 名 + chr(10))
-      return 4
-    }
     if 以尾(名, ".hmsnp") || 以尾(名, ".hmhsr") {
       print("HMYR-E0410 容器里不能放 " + 名 + "：入口是容器的逻辑，不是成员" + chr(10))
       return 4
@@ -141,12 +172,13 @@ fn 装(包路: String, 文件们) -> Int effects(file) {
     }
     i = i + 1
   }
-  var 段们 = (串字节("HMYRITTGN"), (1,), 小16(len(文件们)))
+  var 段们 = (串UTF8("HMYRITTGN"), (1,), 小16(len(文件们)))
   i = 0
   while i < len(文件们) {
     let 名 = 文件们[i]
+    let 名字节 = 串UTF8(名)
     let 数据 = read_bytes(名)
-    段们 = 段们 + (小16(len(名)), 串字节(名), 小32(len(数据)), 数据)
+    段们 = 段们 + (小16(len(名字节)), 名字节, 小32(len(数据)), 数据)
     i = i + 1
   }
   write_bytes(包路, 段们)
@@ -156,7 +188,7 @@ fn 装(包路: String, 文件们) -> Int effects(file) {
 
 fn 列(包路: String) -> Int effects(file) {
   let 字节们 = read_bytes(包路)
-  if len(字节们) < 12 || 字节串(字节们, 0, 9) != "HMYRITTGN" {
+  if len(字节们) < 12 || UTF8串(字节们, 0, 9) != "HMYRITTGN" {
     print("HMYR-E0413 这不是容器：" + 包路 + chr(10))
     return 4
   }
@@ -172,7 +204,7 @@ fn 列(包路: String) -> Int effects(file) {
 
 fn 取(包路: String, 名: String, 出: String) -> Int effects(file) {
   let 字节们 = read_bytes(包路)
-  if len(字节们) < 12 || 字节串(字节们, 0, 9) != "HMYRITTGN" {
+  if len(字节们) < 12 || UTF8串(字节们, 0, 9) != "HMYRITTGN" {
     print("HMYR-E0413 这不是容器：" + 包路 + chr(10))
     return 4
   }
