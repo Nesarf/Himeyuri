@@ -1179,6 +1179,14 @@ const BUILTINS = {
       if (this.装) rt.fail("HMYR-R0305", "owned.放: this holder already owns a value; take it out first");
       this.装 = true;
       this.值 = v;
+      // 放进去的若是一条持有格，它就从当前帧的登记表里移走 —— 「转移」的第二层意思。
+      // 与自举层、字节码机、C 那台同一条规则；少了它，交出去的格子会被造它的帧关掉。
+      const 栈 = rt.持有格栈;
+      if (栈 && 栈.length > 0) {
+        const 本帧 = 栈[栈.length - 1];
+        const at = 本帧.indexOf(v);
+        if (at >= 0) 本帧.splice(at, 1);
+      }
       return this;
     };
     格.取 = function () {

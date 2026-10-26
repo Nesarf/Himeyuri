@@ -137,14 +137,14 @@ console.log("三、四台同一段");
   }
 }
 
-console.log("四、作用域结束释放（自举层那一条路）");
+console.log("四、作用域结束释放（四台同一段）");
 {
   // 一个函数在自己那一帧里建持有格，再把它交出去。交出去之后它不该被造它的帧关掉 ——
   // 「转移」的第二层意思是：所有权连同「本帧退出时会关掉它」一起交给了这一格。
   //
   // 这一条是实测撞到的冲突：先只做了「帧退出一律关」，于是 盒.取() 拿到的是一条
   // 关掉的格子，再取就吃 R0305。判据留在这里，免得那一步被后来的改动抹回去。
-  const p = 投(行们([
+  const 源 = 行们([
     "fn 造(盒: Int) -> Int {",
     "  let 格 = owned()",
     "  格.放(7)",
@@ -159,10 +159,35 @@ console.log("四、作用域结束释放（自举层那一条路）");
     "  print(\"再取=\" + str(格.取()) + chr(10))",
     "  return 0",
     "}",
-  ]), "己.hmoca");
-  const r = 跑([p]);
-  ok("交出去的格子还能取（转移把登记也带走了）", 行(r.stdout).includes("再取=7"),
-    JSON.stringify({ status: r.status, out: 行(r.stdout), err: (r.stderr || "").slice(0, 140) }));
+  ]);
+  const p = 投(源, "己.hmoca");
+
+  const 甲 = 跑([p]);
+  const 甲行 = 行(甲.stdout);
+  ok("默认路径：交出去的格子还能取", 甲行.includes("再取=7"),
+    JSON.stringify({ status: 甲.status, out: 甲行, err: (甲.stderr || "").slice(0, 140) }));
+
+  const 乙 = 跑(["--host-eval", p]);
+  ok("--host-eval 同一段", (乙.stdout || "") === (甲.stdout || ""),
+    JSON.stringify([(乙.stdout || "").slice(0, 80), (甲.stdout || "").slice(0, 80)]));
+
+  const 丙 = 跑(["--compile", p]);
+  const 丙行 = 行(丙.stdout);
+  ok("--compile 同一段", 丙.status === 0 && JSON.stringify(丙行) === JSON.stringify(甲行.slice(0, 丙行.length)),
+    JSON.stringify([丙行, 甲行.slice(0, 丙行.length)]));
+
+  const exe = path.join(临, "hmyr-c.exe");
+  if (fs.existsSync(exe)) {
+    const 丁 = spawnSync(exe, [p], {
+      encoding: "utf8", cwd: 临, timeout: 300000,
+      env: { ...process.env, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000" },
+    });
+    const 丁行 = 行(丁.stdout);
+    ok("C 那台同一段", 丁.status === 0 && JSON.stringify(丁行) === JSON.stringify(甲行.slice(0, 丁行.length)),
+      JSON.stringify({ status: 丁.status, out: 丁行, err: (丁.stderr || "").slice(0, 140) }));
+  } else {
+    console.log("  跳过  C 那台没编出来 —— 第四台不验");
+  }
 
   // 「帧退出把没交出去的关掉」这一半在语言里看不见：不交出去，外面就没有引用。
   // 所以这一条的判据只能覆盖转移那一侧 —— 那一句写在 design/MEMORY.txt 第 2 节。

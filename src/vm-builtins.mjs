@@ -189,7 +189,14 @@ export const 内置表 = {
   arena: { 做: () => 新区() },
   // owned：单一所有者的持有格（design/MEMORY.txt 第 2 节）。
   // 只装零个或一个值，取出即转移。四个动作由 调区方法 的 owner 分支分派。
-  owned: { 做: () => 新持有格() },
+  // owned：单一所有者的持有格（design/MEMORY.txt 第 2 节）。四条动作由 调区方法 的
+  // owner 分支分派；建出来的格子登记到当前帧，帧退出时会被关掉。
+  owned: { 做: (vm) => {
+    const 格 = 新持有格();
+    const 帧 = vm && vm.当前帧;
+    if (帧 && 帧.持有格们) 帧.持有格们.push(格);
+    return 格;
+  } },
   // 字节元组转文本：按 UTF-8 解码。read_stdin_bytes 交回字节，而请求体是 UTF-8。
   bytes_to_text: { 做: (vm, a) => {
     const 项们 = a[0].items;
@@ -638,7 +645,7 @@ export function 新持有格() {
 }
 
 // 交回 {值} 或 {码, 错}。码缺省是 R0302 —— 「拿到的不是那个区里活着的块」那一条。
-export function 调区方法(主, 名, 参) {
+export function 调区方法(主, 名, 参, vm) {
   // 块上的方法：存与取。块的上下文只有它自己，所以这两支必须挂在块上 ——
   // 而「块」在表示上是索引（kind = block），与区同一层。
   if (主 && 主.tag === "index" && 主.m.get("kind") === "block") {
@@ -673,6 +680,13 @@ export function 调区方法(主, 名, 参) {
       if (主.m.get("装") !== 0) return { 码: "HMYR-R0305", 错: "owned.放: this holder already owns a value; take it out first" };
       主.m.set("装", 1);
       主.m.set("值", 参[0]);
+      // 放进去的若是一条持有格，它就从当前帧的登记表里移走 —— 「转移」的第二层意思，
+      // 与自举层那一条同形。少了它，交出去的格子会被造它的帧关掉。
+      const 帧 = vm && vm.当前帧;
+      if (帧 && 帧.持有格们) {
+        const at = 帧.持有格们.indexOf(参[0]);
+        if (at >= 0) 帧.持有格们.splice(at, 1);
+      }
       return { 值: 主 };
     }
     if (名 === "取") {

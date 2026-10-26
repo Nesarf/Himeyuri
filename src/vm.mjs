@@ -70,6 +70,8 @@ export class 虚拟机 {
     this.步限 = 选项.stepLimit || 5_000_000;
     this.深限 = 选项.maxDepth || 500;
     this.深 = 0;
+    // 当前帧：owned 建格子时登记到它上面，帧退出时按它关（design/MEMORY.txt 第 2 节）。
+    this.当前帧 = null;
     // 停机：null 表示还在跑；否则是 { 码, 话 }。
     // 它就是「错误」在这台机器上的全部表示——一个标志，加上一条可以读的话。
     this.停机 = null;
@@ -151,9 +153,25 @@ export class 虚拟机 {
         this.坏("HMYR-R0101", "function '" + 名 + "' expects " + 函.参数量 + " argument(s), got " + 参数.length);
         return { ok: false, ...this.停机 };
       }
-      const 帧 = { 槽: new Array(函.槽数).fill(null).map(() => ({ v: null, 可写: true })), 效果: new Set(函.效果) };
+      const 帧 = { 槽: new Array(函.槽数).fill(null).map(() => ({ v: null, 可写: true })), 效果: new Set(函.效果), 持有格们: [] };
       for (let i = 0; i < 参数.length; i++) 帧.槽[i] = { v: 参数[i], 可写: true };
-      const 值 = this.执行(函.码, 帧);
+      const 上帧 = this.当前帧;
+      this.当前帧 = 帧;
+      let 值;
+      try {
+        值 = this.执行(函.码, 帧);
+      } finally {
+        this.当前帧 = 上帧;
+        // 帧退出：这一帧里建的持有格一律关掉（design/MEMORY.txt 第 2 节）。
+        // 与自举层同一条形状：交出去的已经在「放」那一步从登记表里移走了。
+        for (const 格 of 帧.持有格们) {
+          if (格 && 格.tag === "index" && 格.m.get("kind") === "owner" && 格.m.get("关") === 0) {
+            格.m.set("装", 0);
+            格.m.set("值", null);
+            格.m.set("关", 1);
+          }
+        }
+      }
       return this.停机 ? { ok: false, ...this.停机 } : { ok: true, 值 };
     } finally { this.深--; }
   }
@@ -363,7 +381,7 @@ export class 虚拟机 {
           for (let i = 0; i < n; i++) 参.push(弹());
           参.reverse();
           const 主 = 弹();
-          const r = 调区方法(主, 指令.a, 参);
+          const r = 调区方法(主, 指令.a, 参, this);
           if (r.错) { this.坏(r.码 || "HMYR-R0302", r.错); return null; }
           压(r.值);
           pc++;

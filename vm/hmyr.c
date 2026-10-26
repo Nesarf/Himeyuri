@@ -1707,10 +1707,18 @@ static 线程局部 int64_t g_last_field = -1;
  * 板子上不编这一块：地址表在桌面占两兆左右的静态内存，而板子的堆
  * 只有几十千字节。那一台本来也遇不到三吉字节级的自编译。
  */
+/* 一帧里最多登记这么多个 owned 持有格。超出的话不登记（那一格就退回到「要自己关」）。
+ * 32 是这一层愿意付的上界：登记表是栈上的固定数组，不分配 —— 这条路径不该为它分配。 */
+#define 帧持有格上限 32
+
 typedef struct 帧记录 {
   Value *slots;
   uint32_t 槽数;
   struct 帧记录 *上;
+  /* 作用域结束释放（design/MEMORY.txt 第 2 节）：这一帧里建的持有格，栈退出时一律关掉。
+   * 交出去的会在「放」那一步从这里移走 —— 转移的第二层意思。 */
+  Value 持有格们[帧持有格上限];
+  uint32_t 持有格数;
 } 帧记录;
 
 
@@ -2246,6 +2254,35 @@ static Value 持有格新建(void) {
   return v;
 }
 
+/* 把这一帧登记的持有格一个不留地关掉（design/MEMORY.txt 第 2 节）。
+ * 已经关了的不再碰 —— 外面显式关过是正常的。 */
+static void 关本帧持有格(帧记录 *帧) {
+  for (uint32_t i = 0; i < 帧->持有格数; i++) {
+    Value 格 = 帧->持有格们[i];
+    if (格.tag != T_INDEX || !格.idx) continue;
+    Value 关值;
+    if (区取键(格.idx, "closed", &关值) && 关值.tag == T_NUM && 关值.num != 0) continue;
+    区放键(格.idx, "holds", v_num(0));
+    区放键(格.idx, "val", v_null());
+    区放键(格.idx, "closed", v_num(1));
+  }
+  帧->持有格数 = 0;
+}
+
+/* 从当前帧的登记表里移走一条（交出去的时候用）。 */
+static void 移出本帧持有格(Value 格) {
+  帧记录 *帧 = g_机->帧链;
+  if (!帧) return;
+  for (uint32_t i = 0; i < 帧->持有格数; i++) {
+    Value 候选 = 帧->持有格们[i];
+    if (候选.tag == T_INDEX && 候选.idx && 格.tag == T_INDEX && 候选.idx == 格.idx) {
+      for (uint32_t k = i; k + 1 < 帧->持有格数; k++) 帧->持有格们[k] = 帧->持有格们[k + 1];
+      帧->持有格数--;
+      return;
+    }
+  }
+}
+
 /* 区与块上的方法。交回 1 表示 out 可以用，0 表示已经 fail 过。 */
 static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *args, int nargs, Value *out) {
   Value 类;
@@ -2299,6 +2336,9 @@ static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *
       }
       区放键(主.idx, "val", args[0]);
       区放键(主.idx, "holds", v_num(1));
+      /* 放进去的若是一条持有格，它就从本帧的登记表里移走 ——
+       * 「转移」的第二层意思，与另三台同形（design/MEMORY.txt 第 2 节）。 */
+      移出本帧持有格(args[0]);
       *out = 主;
       return 1;
     }
@@ -3863,7 +3903,10 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   /* owned：单一所有者的持有格（design/MEMORY.txt 第 2 节）。 */
   if (name_is(name_idx, "owned")) {
     if (nargs != 0) { fail("HMYR-R0101", "owned takes no arguments"); return 1; }
-    *out = 持有格新建();
+    Value 格 = 持有格新建();
+    帧记录 *帧 = g_机->帧链;
+    if (帧 && 帧->持有格数 < 帧持有格上限) 帧->持有格们[帧->持有格数++] = 格;
+    *out = 格;
     return 1;
   }
   if (name_is(name_idx, "argv")) {
@@ -3903,11 +3946,19 @@ static Value run_func(Func *f, Value *args, int nargs) {
   帧.slots = slots;
   帧.槽数 = f->nslots;
   帧.上 = g_机->帧链;
+  帧.持有格数 = 0;
   g_机->帧链 = &帧;
 #if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
   if (g_gc开 && g_gc字节 > g_gc阈值) gc_收集();
 #endif
-#define FRAME_RET(x) do { g_机->帧链 = 帧.上; return (x); } while (0)
+/* 帧退出：先把这一帧登记的持有格关掉，再还原帧链。
+ * 两条规则（design/MEMORY.txt 第 2 节）：登记在进帧时清零，交出去的在「放」那一步移走，
+ * 所以这里剩下的一律是「没交出去」的，关掉正是对的。 */
+#define FRAME_RET(x) do { \
+    关本帧持有格(&帧); \
+    g_机->帧链 = 帧.上; \
+    return (x); \
+  } while (0)
   uint32_t base = g_机->stack_n;
   /* 进帧时把基线交给 pop：从那以后弹栈不会越过它。
    * 退出时要还原 —— 否则回到调用者之后，它自己也弹不动自己压的东西了。 */
