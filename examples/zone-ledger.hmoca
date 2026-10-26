@@ -1,0 +1,35 @@
+// 一个用区的例子：把一份「名字:数值」的清单过一遍。
+//
+// 区该被用的形状是「一次开始、一次结束、中间随手分」—— 所以这里每段分一块，
+// 走完就整区关掉。而报告那一块要活过区，所以它先被交出去（freeze）。
+//
+// 四台机器跑它，输出逐行相同：
+//   默认（自举层解释）、--host-eval（宿主求值器）、--compile（字节码机）、
+//   以及 C 那台（vm/hmyr.c，用种子编了再跑）。
+// 判据在 test/zone-self.test.mjs 的第八节。
+
+fn main() -> Int effects(process) {
+  let 清单 = "阿一:12|乙:7|丙:30|丁:5|"
+  let 区 = arena()
+  var 起点 = 0
+  var 行数 = 0
+  var 总长 = 0
+  var i = 0
+  while i < len(清单) {
+    if 清单[i] == "|" {
+      let 块 = 区.alloc(i - 起点)
+      行数 = 行数 + 1
+      总长 = 总长 + 块.size
+      起点 = i + 1
+    }
+    i = i + 1
+  }
+  // 报告这一块要活过区：先交出去，它才不会被 close 带走。
+  let 报告 = 区.alloc(16)
+  区.freeze(报告)
+  print("行=" + str(行数) + " 总长=" + str(总长) + chr(10))
+  print("关之前 held=" + str(区.held()) + chr(10))
+  区.close()
+  print("关之后 报告.live=" + str(报告.live) + " zone=" + 报告.zone + chr(10))
+  return 0
+}

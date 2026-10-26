@@ -231,6 +231,42 @@ console.log("七、C 那台也认得区（要 gcc 编一次）");
   }
 }
 
+console.log("八、一个真程序：四台机器同一段");
+{
+  // examples/zone-ledger.hmoca：过一遍清单，每段分一块，走完 close，报告那块先交出去。
+  // 这一节把它当成判据 —— 前七节的程序都是为判据写的，而这一份是给人读的。
+  const 例 = path.join(ROOT, "examples", "zone-ledger.hmoca");
+  ok("示例在", fs.existsSync(例), 例);
+
+  const 甲 = 跑([例]);
+  const 甲行 = 行(甲.stdout);
+  ok("默认跑得动", 甲.status === 0, JSON.stringify({ status: 甲.status, err: (甲.stderr || "").slice(0, 120) }));
+  ok("读数对（四行、总长十五）", 甲行.includes("行=4 总长=15"), JSON.stringify(甲行));
+  ok("交出去的那块活过了区", 甲行.includes("关之后 报告.live=1 zone=managed"), JSON.stringify(甲行));
+
+  const 乙 = 跑(["--host-eval", 例]);
+  ok("--host-eval 同一段", (乙.stdout || "") === (甲.stdout || ""), JSON.stringify([(乙.stdout || "").slice(0, 120), (甲.stdout || "").slice(0, 120)]));
+
+  const 丙 = 跑(["--compile", 例]);
+  const 丙行 = 行(丙.stdout);
+  ok("--compile 同一段", 丙.status === 0 && JSON.stringify(丙行) === JSON.stringify(甲行.slice(0, 丙行.length)),
+    JSON.stringify([丙行, 甲行.slice(0, 丙行.length)]));
+
+  // 第四台用第七节编出来的那个 exe；没编出来就跳过，不假装验过。
+  const exe = path.join(临, "hmyr-c.exe");
+  if (!fs.existsSync(exe)) {
+    console.log("  跳过  C 那台没编出来 —— 第四台不验");
+  } else {
+    const 丁 = spawnSync(exe, [例], {
+      encoding: "utf8", cwd: 临, timeout: 300000,
+      env: { ...process.env, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000" },
+    });
+    const 丁行 = 行(丁.stdout);
+    ok("C 那台同一段", 丁.status === 0 && JSON.stringify(丁行) === JSON.stringify(甲行.slice(0, 丁行.length)),
+      JSON.stringify({ status: 丁.status, out: 丁行, err: (丁.stderr || "").slice(0, 160) }));
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
