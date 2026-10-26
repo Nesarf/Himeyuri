@@ -4008,6 +4008,42 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = args[2];
     return 1;
   }
+  /* fmt_number(值, 档案)：按档案格式化数字（design/LOCALES.txt 那一节）。
+   * 中文按四位分组（万进位），其余按三位；小数点是句点、负号前置 —— 所以只动
+   * 整数部分的分隔符。这一台也不转发，自己拼：四台各写一份，才有「四台一致」可验。 */
+  if (name_is(name_idx, "fmt_number")) {
+    if (nargs != 2) { fail("HMYR-R0101", "fmt_number wants two arguments"); return 1; }
+    if (args[0].tag != T_NUM || args[1].tag != T_STR) {
+      fail("HMYR-R0101", "fmt_number wants a number and a profile name");
+      return 1;
+    }
+    static const char *前缀 = "zh-CN.";
+    int 四位 = 0;
+    if (args[1].slen >= 6) {
+      四位 = 1;
+      for (int k = 0; k < 6; k++) {
+        if (args[1].s[k] != (uint16_t)(unsigned char)前缀[k]) { 四位 = 0; break; }
+      }
+    }
+    char 文[64];
+    数字成文(args[0].num, 文, sizeof 文);
+    char 出[96];
+    int 长 = (int)strlen(文), j = 0;
+    int 负 = (长 > 0 && 文[0] == '-') ? 1 : 0;
+    int 点 = 长;
+    for (int k = 负; k < 长; k++) if (文[k] == '.') { 点 = k; break; }
+    if (负) 出[j++] = '-';
+    for (int k = 负; k < 点; k++) {
+      if (k > 负 && (点 - k) % (四位 ? 4 : 3) == 0) 出[j++] = ',';
+      出[j++] = 文[k];
+    }
+    for (int k = 点; k < 长; k++) 出[j++] = 文[k];
+    出[j] = 0;
+    uint16_t *p = 串存((size_t)(j ? j : 1));
+    for (int k = 0; k < j; k++) p[k] = (uint16_t)(unsigned char)出[k];
+    *out = v_str(p, (uint32_t)j);
+    return 1;
+  }
   /* owned：单一所有者的持有格（design/MEMORY.txt 第 2 节）。 */
   if (name_is(name_idx, "owned")) {
     if (nargs != 0) { fail("HMYR-R0101", "owned takes no arguments"); return 1; }

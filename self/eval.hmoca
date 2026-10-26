@@ -171,6 +171,43 @@ fn 要效果(环境: Int, 效: String, 名: String) -> String {
 // 与宿主那一份（src/eval.mjs 的 arena）的差别只有表示：那边是 JS 对象，这边是索引。
 // 判据是「两台机器的判词一样」，不是「两台机器的内部一样」。
 
+// 每 每组 位插一个逗号，只动整数部分。
+// 三条规矩：分组看档案、小数点是句点、负号前置 —— 所以它只改整数部分的分隔符。
+fn 加千分位(文: String, 每组: Int) -> String {
+  var 负 = false
+  var 体 = 文
+  if len(文) > 0 && slice(文, 0, 1) == "-" {
+    负 = true
+    // slice 的第三个参数是「止」不是「长」—— 写成 len(文) - 1 会吃掉最后一位，
+    // 而那正是第一版的样子（-1234567 变成了 -12,3456）。
+    体 = slice(文, 1, len(文))
+  }
+  let 点 = 找点从(体, 0)
+  var 整 = 体
+  var 尾 = ""
+  if 点 >= 0 {
+    整 = slice(体, 0, 点)
+    尾 = slice(体, 点, len(体))
+  }
+  var 出 = ""
+  var i = 0
+  while i < len(整) {
+    if i > 0 {
+      if (len(整) - i) % 每组 == 0 { 出 = 出 + "," }
+    }
+    出 = 出 + 整[i]
+    i = i + 1
+  }
+  if 负 { return "-" + 出 + 尾 }
+  return 出 + 尾
+}
+
+fn 找点从(体: String, i: Int) -> Int {
+  if i >= len(体) { return 0 - 1 }
+  if 体[i] == "." { return i }
+  return 找点从(体, i + 1)
+}
+
 fn 新区() -> Int {
   let 区 = index_new()
   index_set(区, "种", "区")
@@ -469,6 +506,17 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     // 所以那一侧在这里没有同一句话可给：source-not-writable 在自举层是「设() 报错」。
     设(源, 位, 值们[2])
     return 好(值们[2])
+  }
+  // fmt_number(值, 档案)：按档案格式化数字（design/LOCALES.txt 那一节）。
+  // 与另两台同一套规矩：中文按四位分组（万进位），其余按三位；小数点是句点。
+  // 这一台不转发，自己拼 —— 因为它要证明的是「这条规矩在 HMYR 里也写得出来」。
+  if 名 == "fmt_number" {
+    if len(值们) != 2 { return 坏("fmt_number 要两个参数") }
+    let 文 = str(值们[0])
+    let 档 = 值们[1]
+    var 每组 = 3
+    if len(档) >= 6 && slice(档, 0, 6) == "zh-CN." { 每组 = 4 }
+    return 好(加千分位(文, 每组))
   }
   // 原始字节：嵌入与打包要它。这一层只转发，读不到由下面那一层说。
   if 名 == "read_bytes" {

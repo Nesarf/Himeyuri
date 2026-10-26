@@ -290,6 +290,7 @@ const 内置 = {
   view_len: (rt) => rt.坏("HMYR-R0104", "view_len is a stub on this machine for the same reason arena is"),
   view_get: (rt) => rt.坏("HMYR-R0104", "view_get is a stub on this machine for the same reason arena is"),
   view_set: (rt) => rt.坏("HMYR-R0104", "view_set is a stub on this machine for the same reason arena is"),
+  fmt_number: (rt) => rt.坏("HMYR-R0104", "fmt_number is a stub on this machine for the same reason arena is"),
   // 跑一个程序：一份记录，五个字段。跑不起来也照实报告，不抛。
   run_program: (rt, a) => {
     const 命令 = rt.成串(a[0]);

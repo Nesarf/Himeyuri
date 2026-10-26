@@ -461,6 +461,26 @@ export const 内置表 = {
     源.items[w.m.get("起") + i] = a[2];
     return a[2];
   } },
+  // fmt_number(值, 档案)：按档案格式化数字（design/LOCALES.txt 那一节）。
+  // 中文按四位分组（万进位），其余按三位；小数点是句点。与宿主那一台同一套规矩，
+  // 而两个实现都得各写一份 —— 它们是两台独立的机器，共享一份代码就没有「两台一致」可验了。
+  fmt_number: { 做: (vm, a) => {
+    const 值 = vm.成数(a[0]);
+    const 档 = vm.成串(a[1]);
+    const 每组 = 档.startsWith("zh-CN.") ? 4 : 3;
+    const 文 = 数.成文(值);
+    const 负 = 文.startsWith("-");
+    const 体 = 负 ? 文.slice(1) : 文;
+    const 点 = 体.indexOf(".");
+    const 整 = 点 >= 0 ? 体.slice(0, 点) : 体;
+    const 尾 = 点 >= 0 ? 体.slice(点) : "";
+    let 出 = "";
+    for (let i = 0; i < 整.length; i++) {
+      if (i > 0 && (整.length - i) % 每组 === 0) 出 += ",";
+      出 += 整[i];
+    }
+    return vm.文.由宿主((负 ? "-" : "") + 出 + 尾);
+  } },
   index_get: { 做: (vm, a) => {
     const 表 = a[0];
     if (!表 || 表.tag !== "index") return vm.坏("HMYR-R0219", "index_get wants an index, found " + 述(表, vm.文));

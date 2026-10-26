@@ -2,7 +2,10 @@
 //
 // 要紧的是最后一条：**档案绝不影响语法与求值**。所以这里除了查表与切换，
 // 还要验「同一段程序在不同档案下算出同一个结果」。
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
 import { lex } from "../src/lexer.mjs";
@@ -105,6 +108,68 @@ console.log("数字的写法不进档案（第五条在输出那一头）");
   const 甲 = 跑一次("zh-CN.gbk");
   const 乙 = 跑一次("en-US.utf8");
   ok("两个档案下数字写成同一串", 甲 === 乙 && 甲 === "3.5|1234567\n", JSON.stringify([甲, 乙]));
+}
+
+console.log("fmt_number：按档案格式化，而四台一致");
+{
+  // 它是纯函数（只读档案的字面、不碰世界），所以四台不一致就是 bug —— 与 str 一样。
+  // 于是这一节要跑四台：默认、--host-eval、--compile、C。
+  const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-fmt-"));
+  const 源 = path.join(临, "f.hmoca");
+  fs.writeFileSync(源, [
+    "fn main() -> Int effects(process) {",
+    "  print(fmt_number(1234567, \"zh-CN.utf8\") + chr(10))",
+    "  print(fmt_number(1234567, \"en-US.utf8\") + chr(10))",
+    "  print(fmt_number(0 - 1234567, \"zh-CN.gbk\") + chr(10))",
+    "  print(fmt_number(3.5, \"zh-CN.utf8\") + chr(10))",
+    "  print(fmt_number(999, \"en-US.utf8\") + chr(10))",
+    "  return 0",
+    "}",
+  ].join("\n") + "\n", "utf8");
+  const 具 = path.join(ROOT, "bin", "hmyr.mjs");
+  const 跑 = (参) => spawnSync(process.execPath, [具, ...参], { encoding: "utf8", cwd: 临, timeout: 300000 });
+  const 行 = (s) => String(s || "").split("\n").map((x) => x.trimEnd()).filter((x) => x.length > 0);
+
+  const 甲 = 跑([源]);
+  const 甲行 = 行(甲.stdout);
+  const 应 = ["123,4567", "1,234,567", "-123,4567", "3.5", "999"];
+  ok("默认路径：中文四位分组", 甲行[0] === 应[0], JSON.stringify(甲行));
+  ok("默认路径：英文三位分组", 甲行[1] === 应[1], JSON.stringify(甲行));
+  ok("默认路径：负数前置不减位", 甲行[2] === 应[2], JSON.stringify(甲行));
+  ok("默认路径：小数点是句点", 甲行[3] === 应[3], JSON.stringify(甲行));
+  ok("默认路径：不到一组就不加逗号", 甲行[4] === 应[4], JSON.stringify(甲行));
+
+  const 乙 = 跑(["--host-eval", 源]);
+  ok("--host-eval 同一段", JSON.stringify(行(乙.stdout)) === JSON.stringify(甲行),
+    JSON.stringify([行(乙.stdout), 甲行]));
+
+  const 丙 = 跑(["--compile", 源]);
+  const 丙行 = 行(丙.stdout);
+  ok("--compile 同一段", 丙.status === 0 && JSON.stringify(丙行) === JSON.stringify(甲行.slice(0, 丙行.length)),
+    JSON.stringify([丙行, 甲行.slice(0, 丙行.length)]));
+
+  const 有gcc = (() => {
+    try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
+  })();
+  if (有gcc) {
+    const exe = path.join(临, "hmyr-c.exe");
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-Wl,--stack,67108864", "-o", exe,
+      path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
+    if (编.status === 0) {
+      const 码 = path.join(临, "f.hmoks");
+      const 编程序 = spawnSync(process.execPath, [path.join(ROOT, "tools", "emit-code.mjs"), 源, 码], { encoding: "utf8" });
+      if (编程序.status === 0) {
+        const 台 = spawnSync(exe, [码], { encoding: "utf8", timeout: 300000,
+          env: { ...process.env, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000" } });
+        const 台行 = 行(台.stdout);
+        ok("C 那台同一段", 台.status === 0 && JSON.stringify(台行) === JSON.stringify(甲行.slice(0, 台行.length)),
+          JSON.stringify({ status: 台.status, out: 台行 }));
+      }
+    }
+  } else {
+    console.log("  跳过  这台机器上没有 gcc —— 第四台不验");
+  }
+  fs.rmSync(临, { recursive: true, force: true });
 }
 
 console.log("");

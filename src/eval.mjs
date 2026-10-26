@@ -475,6 +475,26 @@ const 取校验表 = () => {
 // what the calling function declared. Without this, "effects" would only apply to functions we wrote.
 // 内置碰哪一类世界。src/realtime-check.mjs 带着自己的一份（它不 import 这里 ——
 // 一份检查器不该把宿主求值器拖进依赖图），所以改这张表时那一份也要跟着改。
+// 千分位：把一个已经写好的数字串按每 N 位插逗号。
+// 三条规矩（design/LOCALES.txt 的 fmt_number 那一节）：
+//   分组   中文按四位（万进位），其余按三位
+//   小数点 一律句点，不是本地化项
+//   负号   前置 "-"，不本地化
+// 所以它只动整数部分的分隔符，别的字符一律照抄。
+export function 加千分位(文, 每组) {
+  const 负 = 文.startsWith("-");
+  const 体 = 负 ? 文.slice(1) : 文;
+  const 点 = 体.indexOf(".");
+  const 整 = 点 >= 0 ? 体.slice(0, 点) : 体;
+  const 尾 = 点 >= 0 ? 体.slice(点) : "";
+  let 出 = "";
+  for (let i = 0; i < 整.length; i++) {
+    if (i > 0 && (整.length - i) % 每组 === 0) 出 += ",";
+    出 += 整[i];
+  }
+  return (负 ? "-" : "") + 出 + 尾;
+}
+
 const BUILTIN_EFFECTS = { read_text: "file", read_bytes: "file", read_dir: "file", is_dir: "file", write_text: "file", run_program: "process", chdir: "process", argv: "process", file_exists: "file", print_err: "process", thr_spawn: "thread", thr_cancel: "thread" };
 
 /** 编码表按需读入并缓存：表是「字符 -> 字节」，从本运行时的解码器推出来的。
@@ -749,6 +769,14 @@ const BUILTINS = {
     }
     w.源[w.起 + i] = a[2];
     return a[2];
+  },
+  // fmt_number(值, 档案)：按档案格式化数字。它不是 str —— 那条分界让
+  // 「一个数字是什么意思」与「它长什么样」分开（design/LOCALES.txt）。
+  // 中文档案按四位分组（万进位），其余按三位；小数点是句点，不是本地化项。
+  fmt_number: (rt, a) => {
+    const 值 = rt.asNumber(a[0]);
+    const 档 = rt.asString(a[1]);
+    return 加千分位(String(值), 档.startsWith("zh-CN.") ? 4 : 3);
   },
   index_get: (rt, args) => {
     const m = args[0];
