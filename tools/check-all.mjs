@@ -149,6 +149,8 @@ const SUITES = [
   // 改名第一步的验收：新名与旧名指的是同一件事，两台机器都得认两套拼法。
   // 第二步（批量 git mv）之后这一套仍然该绿 —— 那时它证明的是「旧的接了没」。
   ["names", "test/names.test.mjs", "design/FILETYPE.txt - the rename's first step: .hmyr with .hmoca, .hmyrb with .hmoks, and .hmtn for the seed, all naming the same things on both machines"],
+  // 两档：hmsnp 与 hmhsr 是同一份内容的两档入口，档位由名字定。
+  ["profile", "test/profile.test.mjs", "design/FILETYPE.txt section four - the two entries really differ: the profile comes from the suffix, steady and elastic land on different resource presets, a plain .hmoca keeps the number it always had, and both run to the same output"],
   // 容器格式的骨架：三条规矩都是格式的一部分，所以各有判据。
   ["ittgn", "test/ittgn.test.mjs", "design/FILETYPE.txt - the container format's skeleton: bytes go in and come out unchanged, depth is counted per container with a ceiling of twelve, and hmsnp or hmhsr is refused as a member because those two are the container's own logic"],
   ["deflate", "test/deflate.test.mjs", "SPEC M7 - deflate stored blocks written in Himeyuri: round trip, and zlib reads the stream without being told anything"],

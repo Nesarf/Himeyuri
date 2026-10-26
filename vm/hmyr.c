@@ -4054,11 +4054,19 @@ static int 找种子(char *buf, size_t cap, const char *argv0) {
 
 /* 步限：默认五百万步。跑解释器替程序执行要几十倍，所以从环境变量放宽 ——
  * 编译那一段则直接按放宽的那个数算，因为「编一份源码」本来就不是小活。 */
-static int 步限从环境(void) {
+static int 步限从环境(const char *目标) {
   const char *sl = getenv("HMYR_STEPS");
   if (sl) {
     long v = atol(sl);
     if (v > 0) return (int)(v > 2000000000L ? 2000000000L : v);
+  }
+  /* 档位：看名字，不看内容 —— 与 JS 那侧的 tools/file-kind.mjs 同一条规矩。
+   * 五百万是这一份一直以来的默认，两亿是启动器主路径一直以来的默认，
+   * 所以两档各自落在「已经存在的两个数」上，不是新编出来的。 */
+  if (目标) {
+    size_t n = strlen(目标);
+    if (n > 6 && strcmp(目标 + n - 6, ".hmhsr") == 0) return 200000000;
+    if (n > 6 && strcmp(目标 + n - 6, ".hmsnp") == 0) return 5000000;
   }
   return 5000000;
 }
@@ -4247,6 +4255,9 @@ static void 清线程(线程上下文 *c) {
 static int 是源码路径(const char *p) {
   size_t n = strlen(p);
   if (n > 6 && strcmp(p + n - 6, ".hmoca") == 0) return 1;
+  /* 两档的入口也是源码，只是档位不同：内容照样要交给种子去编。 */
+  if (n > 6 && strcmp(p + n - 6, ".hmsnp") == 0) return 1;
+  if (n > 6 && strcmp(p + n - 6, ".hmhsr") == 0) return 1;
   return 0;
 }
 
@@ -4288,7 +4299,7 @@ static int cli_main(int argc, char **argv) {
     char **参 = (char **)malloc(sizeof(char *) * (size_t)(nrest > 0 ? nrest : 1));
     if (!参) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
     for (int i = 0; i < nrest; i++) 参[i] = argv[i + 2];
-    int 码 = run_bytecode(临时, argv[1], nrest, 参, 步限从环境());
+    int 码 = run_bytecode(临时, argv[1], nrest, 参, 步限从环境(argv[1]));
     /* HMYR_KEEP 留着那份字节码：查「编错了还是跑错了」的时候，
      * 手上有那份文件与没有，是完全两件事。 */
     if (!getenv("HMYR_KEEP")) {
@@ -4369,7 +4380,7 @@ static char **切宽命令行(int *argc_out) {
  */
 int hmyr_运行(const char *路径, int 参数量, char **参数) {
   int nrest = 参数量 > 0 ? 参数量 - 1 : 0;
-  return run_bytecode(路径, 路径, nrest, 参数, 步限从环境());
+  return run_bytecode(路径, 路径, nrest, 参数, 步限从环境(路径));
 }
 
 #ifndef HMYR_LIB
@@ -4443,6 +4454,6 @@ int main(int argc, char **argv) {
       return 码;
     }
   }
-  return run_bytecode(argv[1], argv[1], argc - 2, argv + 2, 步限从环境());
+  return run_bytecode(argv[1], argv[1], argc - 2, argv + 2, 步限从环境(argv[1]));
 }
 #endif  /* HMYR_LIB：库那一侧不要 main，要的是 hmyr_运行 */
