@@ -188,13 +188,37 @@ console.log("八、转换到 zip：入口释放出来，内容只摊一份");
   // 零份副本：成员不因为有两个入口就摊两份。
   const 数 = (d) => fs.readdirSync(d, { withFileTypes: true })
     .reduce((s, e) => s + (e.isDirectory() ? 数(path.join(d, e.name)) : 1), 0);
-  ok("摊开的文件一共三个（内容一份 + 两个入口）", 数(解) === 3, String(数(解)));
+  // 四个：内容一份、两个入口、外加一张成员表（反方向靠它还原成员名与顺序）。
+  ok("摊开的文件一共四个（内容一份 + 两个入口 + 成员表）", 数(解) === 4, String(数(解)));
 
   const 跑入口 = (名) => spawnSync(process.execPath, [具, path.join(解, 名)], { encoding: "utf8", cwd: 解, timeout: 120000 });
   const 甲 = 跑入口("转.hmsnp");
   const 乙 = 跑入口("转.hmhsr");
   ok("hmsnp 跑出那句话", (甲.stdout || "").includes("从 zip 里跑出来了"), JSON.stringify((甲.stdout || "").slice(0, 80)));
   ok("hmhsr 跑出同样的话", (乙.stdout || "") === (甲.stdout || ""), JSON.stringify([甲.stdout, 乙.stdout]));
+}
+
+console.log("九、往返：容器 → zip → 容器，字节相同");
+{
+  // 反方向是靠转换时留下的成员表走回来的。判据只有一条，而且很硬：逐字节比。
+  // 「解得出、跑得动」都太松 —— 一个往返把成员名或顺序改掉，那些全都会绿。
+  造("往/main.hmoca", [...Buffer.from("fn main() -> Int {\n  print(\"往返\" + chr(10))\n  return 0\n}\n", "utf8")]);
+  造("往/notes.txt", [0, 255, 42]);
+  const 原 = "往.hm-ittgn-krgn-m";
+  const 装 = 跑(["--装", 原, "往/main.hmoca", "往/notes.txt"]);
+  ok("先装成容器", (装.stdout || "").includes("装了 2"), (装.stdout || "").slice(0, 100));
+
+  const 转 = spawnSync(process.execPath, [path.join(ROOT, "tools", "ittgn-to-zip.mjs"),
+    path.join(临, 原), path.join(临, "往.zip")], { encoding: "utf8", cwd: 临 });
+  ok("转成 zip", 转.status === 0, (转.stderr || "").slice(0, 160));
+
+  const 回 = spawnSync(process.execPath, [path.join(ROOT, "tools", "ittgn-from-zip.mjs"),
+    path.join(临, "往.zip"), path.join(临, "回.hm-ittgn-krgn-m")], { encoding: "utf8", cwd: 临 });
+  ok("收回容器", 回.status === 0, (回.stderr || "").slice(0, 160));
+
+  const 甲 = fs.readFileSync(path.join(临, 原));
+  const 乙 = fs.readFileSync(path.join(临, "回.hm-ittgn-krgn-m"));
+  ok("往返之后逐字节相同", Buffer.compare(甲, 乙) === 0, 甲.length + " 对 " + 乙.length);
 }
 
 fs.rmSync(临, { recursive: true, force: true });

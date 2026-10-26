@@ -33,6 +33,23 @@ fn 以尾(s: String, 尾: String) -> Bool {
   return slice(s, len(s) - len(尾), len(s)) == 尾
 }
 
+// 成员名归一：容器里存的是「包内路径」，而人给的常是宿主路径（E:\a\b）。
+// 盘符、开头的斜杠、反斜杠都要处理掉 —— 否则解包那一层归一了、装这一层没归一，
+// 两边对同一个包给出不同的成员名，往返一次就分家。
+fn 归一名(s: String) -> String {
+  var 出 = ""
+  var i = 0
+  if len(s) >= 2 && slice(s, 1, 2) == ":" { i = 2 }
+  while i < len(s) {
+    let c = slice(s, i, i + 1)
+    if c == "\\" { 出 = 出 + "/" } else { 出 = 出 + c }
+    i = i + 1
+  }
+  var j = 0
+  while j < len(出) && slice(出, j, j + 1) == "/" { j = j + 1 }
+  return slice(出, j, len(出))
+}
+
 fn 斜杠数(s: String) -> Int {
   var n = 0
   var i = 0
@@ -161,7 +178,7 @@ fn 扫(字节们) {
 fn 装(包路: String, 文件们) -> Int effects(file) {
   var i = 0
   while i < len(文件们) {
-    let 名 = 文件们[i]
+    let 名 = 归一名(文件们[i])
     if 以尾(名, ".hmsnp") || 以尾(名, ".hmhsr") {
       print("HMYR-E0410 容器里不能放 " + 名 + "：入口是容器的逻辑，不是成员" + chr(10))
       return 4
@@ -175,9 +192,10 @@ fn 装(包路: String, 文件们) -> Int effects(file) {
   var 段们 = (串UTF8("HMYRITTGN"), (1,), 小16(len(文件们)))
   i = 0
   while i < len(文件们) {
-    let 名 = 文件们[i]
+    let 原始 = 文件们[i]
+    let 名 = 归一名(原始)
     let 名字节 = 串UTF8(名)
-    let 数据 = read_bytes(名)
+    let 数据 = read_bytes(原始)
     段们 = 段们 + (小16(len(名字节)), 名字节, 小32(len(数据)), 数据)
     i = i + 1
   }

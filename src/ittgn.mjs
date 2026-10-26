@@ -12,6 +12,10 @@ const 魔数 = "HMYRITTGN";
 const 版 = 1;
 export const 容器后缀 = ".hm-ittgn-krgn-m";
 
+// 转换到 zip 时，根目录留的那张成员表叫什么名字。反方向靠它还原成员名与顺序 ——
+// 没有它就只能猜「这个 hmsnp 原本叫什么」，而猜出来的东西往返两次会分家。
+export const 成员表名 = "hm-ittgn-krgn-m.txt";
+
 export const 是容器 = (名) => String(名 || "").toLowerCase().endsWith(容器后缀);
 
 // 只读，不落地。给「列」与「验」用。
