@@ -153,6 +153,11 @@ export function parse(tokens, options = {}) {
     if (atPunct("->")) { advance(); returns = parseType(); }
     let effects = null;
     if (at("keyword", "effects")) effects = parseEffects();
+    // realtime：档位修饰符，不是效果。写在效果之后、函数体之前。
+    // 它原来是借 effects(realtime) 写的 —— 那是把约束放进权限位（见 design/MEMORY.txt
+    // 第 3 节那处将就）。现在它有自己的位置，而效果检查不必再为它开特例。
+    let realtime = false;
+    if (at("ident", "realtime")) { advance(); realtime = true; }
     const contracts = { requires: [], ensures: [] };
     // A contract may be written on its own line - the formatter does exactly that - so newlines are
     // allowed before and between them.
@@ -164,7 +169,7 @@ export function parse(tokens, options = {}) {
       if (at("newline")) skipNewlines();
     }
     const body = atPunct("{") ? parseBlock() : null;
-    return { kind: "Fn", name: name ? name.value : "<error>", typeParams, params, returns, effects, contracts, body, pub: false, line: kw.line, column: kw.column };
+    return { kind: "Fn", name: name ? name.value : "<error>", typeParams, params, returns, effects, realtime, contracts, body, pub: false, line: kw.line, column: kw.column };
   }
 
   function parseTypeParams() {

@@ -161,6 +161,38 @@ console.log("五、整仓现有 .hmoca 零误报");
   ok("没有一份是读不动而跳过的", 读不动 === 0, String(读不动));
 }
 
+console.log("六、真语法：fn f() realtime");
+{
+  // 档位原来借 effects(realtime) 写在权限位上。现在它有自己的位置 ——
+  // 而旧写法仍然认，因为仓库里还有按那个写的文档与程序。
+  const 反例 = 行们([
+    "fn 回调() -> Int realtime {",
+    "  let a = arena()",
+    "  return 0",
+    "}",
+  ]);
+  ok("真语法也认得（托管分配被拒）", 有(查(反例), "arena()"), JSON.stringify(查(反例)));
+
+  const 正例 = 行们([
+    "fn 回调(n: Int) -> Int realtime {",
+    "  return n + 1",
+    "}",
+    "",
+    "fn main(n: Int) -> Int {",
+    "  return 回调(n)",
+    "}",
+  ]);
+  ok("真语法的正例不报", 查(正例).length === 0, JSON.stringify(查(正例)));
+
+  const 旧写法 = 行们([
+    "fn 回调() -> Int effects(realtime) {",
+    "  let a = arena()",
+    "  return 0",
+    "}",
+  ]);
+  ok("旧的 effects(realtime) 也认", 有(查(旧写法), "arena()"), JSON.stringify(查(旧写法)));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

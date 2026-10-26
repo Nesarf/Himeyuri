@@ -1,6 +1,6 @@
 // 子集 parser：Stage 0 的第二层。token 进，树出。
 //
-// 现状：两件事都对上了（2026-10-20）——树，六份共 14887 个节点，逐个相同（形状与位置）；
+// 现状：两件事都对上了（2026-10-20）——树，六份共 14903 个节点，逐个相同（形状与位置）；
 // 以及错误路径上的话（与宿主同一批码、同一个位置）。
 //
 // 它的立场是认得窄而说清：遇到不认的构造就报出来，而不是猜一个树。
@@ -223,9 +223,12 @@ export const 子集解 = (tokens, options = {}) => {
     if (是标("->")) { 进(); returns = 解析类型(); }
     let effects = null;
     if (是("keyword", "effects")) effects = 解析效果们();
+    // realtime：档位修饰符，与宿主那一份同一个位置与同一个形状。
+    let realtime = false;
+    if (是("ident", "realtime")) { 进(); realtime = true; }
     if (!是标("{")) 不认("子集的函数必须有函数体：" + (名 ? 名.value : "?"));
     const body = 解析块();
-    return { kind: "Fn", name: 名 ? 名.value : "<error>", typeParams: [], params, returns, effects, contracts: { requires: [], ensures: [] }, body, pub: false, line: kw.line, column: kw.column };
+    return { kind: "Fn", name: 名 ? 名.value : "<error>", typeParams: [], params, returns, effects, realtime, contracts: { requires: [], ensures: [] }, body, pub: false, line: kw.line, column: kw.column };
   }
 
   function 解析参数们() {

@@ -56,7 +56,11 @@ export function 实时检查(ast, 选项 = {}) {
   for (const decl of ast.decls) {
     if (decl.kind !== "Fn") continue;
     用户函数.add(decl.name);
-    if (Array.isArray(decl.effects) && decl.effects.includes(实时)) 实时们.add(decl.name);
+    // 真语法（fn f() realtime）与旧的 effects(realtime) 两只都认：
+    // 后者是把档位写在权限位上的那段将就，而仓库里还有按那个写法写的文档与程序。
+    const 真语法 = decl.realtime === true;
+    const 旧写法 = Array.isArray(decl.effects) && decl.effects.includes(实时);
+    if (真语法 || 旧写法) 实时们.add(decl.name);
   }
   if (实时们.size === 0) return 出;
 
