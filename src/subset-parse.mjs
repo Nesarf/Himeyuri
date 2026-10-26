@@ -165,14 +165,30 @@ export const 子集解 = (tokens, options = {}) => {
   function 解析声明() {
     if (是("keyword", "fn")) return 解析函数();
     if (是("ident", "macro")) return 解析宏();
+    if (是("keyword", "const")) return 解析常量();
     // 这几样宿主读得动，而这一份还不认——边界，抛。
-    if (是("keyword", "type") || 是("keyword", "const") || 是("keyword", "effect") || 是("keyword", "pub")) {
-      不认("子集只认 fn 声明，见到 " + 说明(看()));
+    if (是("keyword", "type") || 是("keyword", "effect") || 是("keyword", "pub")) {
+      不认("子集不认这个声明，见到 " + 说明(看()));
     }
     // 而这些宿主也报「不能以它开始一个声明」，于是报同一个码。
     报("HMYR-E0103", "不能以 " + 说明(看()) + " 开始一个声明");
     恢复();
     return null;
+  }
+
+  // 顶层 const：宿主那一支在 src/parser.mjs 的 parseConst，这一份照它。
+  //
+  // 它原来是「认得窄」清单上的一条，而它正是「模块级 const 持有索引」的入口 ——
+  // 索引可变，const 只约束名字不重新绑定，于是「一个活得比函数久的容器」有了，
+  // design/MEMORY.txt 的 §4.2 也就不必等一种新语法。
+  // 认 const 不等于认 type / effect / pub：那三样仍然抛，边界还在原处。
+  function 解析常量() {
+    const kw = 进();
+    const 名 = 要("ident", "常量名");
+    要标("=", "常量名之后");
+    const value = 解析表达式();
+    收句();
+    return { kind: "Const", name: 名 ? 名.value : "<error>", value, line: kw.line, column: kw.column };
   }
 
   // 宏：macro 名(参数们) = 表达式 —— 与宿主那份同一个形状，展开也共用 src/expand.mjs。

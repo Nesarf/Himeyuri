@@ -89,7 +89,9 @@ console.log("四、默认那条不静默：它不认的构造直接抛，而不�
     fs.writeFileSync(文件, "type T = Int\n");
     let 错 = "";
     try { loadUnit(文件); } catch (e) { 错 = e.message; }
-    ok("默认那条抛错（type 声明）", 错.includes("只认 fn"), 错 || "（没有抛）");
+    // 措辞跟着边界走：这一份现在认 const 了，于是「只认 fn」那句话不再准确，
+    // 改成「不认这个声明」。判据落在「它说了自己不认什么」上，不在某一句原话上。
+    ok("默认那条抛错（type 声明）", 错.includes("不认这个声明"), 错 || "（没有抛）");
     // 而宿主那一条读得动同一份文件：两条路的差别就在这儿，明写着。
     const 宿主 = loadUnit(文件, { reader: 宿主读 });
     ok("宿主那一条读得动", 宿主.ok, JSON.stringify(宿主.diagnostics.errors.map((e) => e.code)));

@@ -83,8 +83,7 @@ console.log("二、位置是逐个对过的，不是大致对");
 
 console.log("二、它认得窄，而窄这件事是明说的");
 for (const [标, 源, 该说的] of [
-  ["type 声明", "type T = Int\n", "只认 fn"],
-  ["const 声明", "const X = 1\n", "只认 fn"],
+  ["type 声明", "type T = Int\n", "不认这个声明"],
   ["match", "fn f() -> Int { return match 1 { 1 => 2 } }\n", "match"],
   ["泛型", "fn f<T>(a: T) -> Int { return 1 }\n", "类型参数"],
   ["可空类型", "fn f(a: Int?) -> Int { return 1 }\n", "可空"],
@@ -160,6 +159,12 @@ console.log("七、两处后补的两侧同形：arena() 与 own/borrow 参数")
   const 参树 = 子集解(切(参源)).ast.decls[0].params;
   ok("passing 记的是 own 与 borrow", 参树[0].passing === "own" && 参树[1].passing === "borrow",
     JSON.stringify(参树.map((p) => p.passing)));
+
+  // 顶层 const 也是后补的一支。它原来是「认得窄」清单上的一条，而它正是
+  // 「模块级 const 持有索引」的入口 —— design/MEMORY.txt §4.2 要的那个容器就是它。
+  const 常源 = "const 表 = index_new()\n\nfn f() -> Int {\n  return 1\n}\n";
+  const 常差 = 第一个不同(宿主树(常源), 子集解(切(常源)).ast);
+  ok("顶层 const 两侧相同", 常差 === null, 常差 || "");
 }
 
 console.log("");
