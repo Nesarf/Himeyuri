@@ -242,6 +242,41 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
     "}",
   ]);
   ok("传字段不算传块", 查(传字段).length === 0, JSON.stringify(查(传字段)));
+
+  // 4.2 的另一半：块被存进一条记录。记录可以交出去、可以返回，而区留在原地 ——
+  // 那块就活过了它的区。这是原例（存到模块级变量）在今天写法里最近的形状。
+  const 存记录 = 行们([
+    "fn f() -> Int {",
+    "  let a = arena()",
+    "  let b = a.alloc(8)",
+    "  let 盒 = { kept: b }",
+    "  a.close()",
+    "  return 0",
+    "}",
+  ]);
+  ok("块存进记录给 R0304", 查(存记录).some((d) => d.code === "HMYR-R0304" && d.severity === "error"), JSON.stringify(查(存记录)));
+
+  const 存大小 = 行们([
+    "fn f() -> Int {",
+    "  let a = arena()",
+    "  let b = a.alloc(8)",
+    "  let 盒 = { 大小: b.size }",
+    "  a.close()",
+    "  return 0",
+    "}",
+  ]);
+  ok("记录里存的是字段值就不报", 查(存大小).length === 0, JSON.stringify(查(存大小)));
+
+  const 先交出 = 行们([
+    "fn f() -> Int {",
+    "  let a = arena()",
+    "  let b = a.alloc(8)",
+    "  a.freeze(b)",
+    "  let 盒 = { kept: b }",
+    "  return 0",
+    "}",
+  ]);
+  ok("交出去之后再存进记录，不报", 查(先交出).length === 0, JSON.stringify(查(先交出)));
 }
 
 fs.rmSync(临, { recursive: true, force: true });

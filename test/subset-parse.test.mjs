@@ -89,7 +89,6 @@ for (const [标, 源, 该说的] of [
   ["泛型", "fn f<T>(a: T) -> Int { return 1 }\n", "类型参数"],
   ["可空类型", "fn f(a: Int?) -> Int { return 1 }\n", "可空"],
   ["参数默认值", "fn f(a: Int = 1) -> Int { return a }\n", "默认值"],
-  ["own 参数", "fn f(own a: Int) -> Int { return 1 }\n", "own"],
   ["带参数的效果", "fn f() effects(io(x)) { }\n", "带参数的效果"],
   ["带类型的 let", "fn f() { let a: Int = 1 }\n", "带类型的 let"],
   ["没有函数体", "fn f() -> Int\n", "函数体"],
@@ -137,7 +136,7 @@ console.log("六、它自己的注释写着现在的账");
   ok("注释写了数出来的声明种类", 文.includes("只有 fn，180 个"), "在");
 }
 
-console.log("七、arena() 两侧同形（它在词法里是关键字，所以两侧各有一支）");
+console.log("七、两处后补的两侧同形：arena() 与 own/borrow 参数");
 {
   // 子集这一支是后补的：在此之前它只有「认得窄而说清」那半边 —— arena 被词法认成关键字，
   // 却在表达式层无处可去，于是 arena 程序在主路径上是语法错。补的时候照宿主那一支逐字段抄。
@@ -152,6 +151,15 @@ console.log("七、arena() 两侧同形（它在词法里是关键字，所以�
   // 不带括号也认：宿主那一支允许它，两侧分叉的话，「arena 当对象用」这种写法会在一边成一边败。
   const 无括 = 子集解(切("fn f() -> Int {\n  let a = arena\n  return 0\n}\n")).ast.decls[0].body.statements[0].value;
   ok("不带括号也是同一个 Call", 无括.kind === "Call" && 无括.callee.name === "arena" && 无括.args.length === 0, JSON.stringify(无括));
+
+  // own 与 borrow 原来是「子集不认」的一条，而宿主认得 —— 于是任何带这两个标注的程序
+  // 在装载时就被判成语法错，死得还像源码坏了。现在两侧同形，passing 也照抄。
+  const 参源 = "fn f(own a: Bytes, borrow b: Bytes) -> Int {\n  return 1\n}\n";
+  const 参差 = 第一个不同(宿主树(参源), 子集解(切(参源)).ast);
+  ok("own/borrow 参数两侧相同", 参差 === null, 参差 || "");
+  const 参树 = 子集解(切(参源)).ast.decls[0].params;
+  ok("passing 记的是 own 与 borrow", 参树[0].passing === "own" && 参树[1].passing === "borrow",
+    JSON.stringify(参树.map((p) => p.passing)));
 }
 
 console.log("");

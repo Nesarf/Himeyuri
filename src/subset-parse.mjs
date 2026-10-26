@@ -214,12 +214,17 @@ export const 子集解 = (tokens, options = {}) => {
   function 解析参数们() {
     const list = [];
     while (!是标(")") && !是("eof")) {
-      if (是("keyword", "own") || 是("keyword", "borrow")) 不认("子集不含 own/borrow 参数");
+      // own 与 borrow 是参数上的两个标注，不是「子集不认的写法」。宿主那一份在
+      // parseParams 里把 passing 记下来，这一份照抄 —— 少这一支的话，任何带 own 或
+      // borrow 的程序在装载时就被判成语法错，而那与「这台机器不支持它」是两句话：
+      // 前者说的是源码坏了，后者说的是能力不到。
+      let passing = null;
+      if (是("keyword", "own") || 是("keyword", "borrow")) passing = 进().value;
       const 名 = 要("ident", "参数名");
       要标(":", "参数名之后");
       const type = 解析类型();
       if (是标("=")) 不认("子集不含参数默认值");
-      if (名) list.push({ name: 名.value, type, passing: null, fallback: null, line: 名.line, column: 名.column });
+      if (名) list.push({ name: 名.value, type, passing, fallback: null, line: 名.line, column: 名.column });
       if (是标(",")) 进(); else break;
     }
     return list;

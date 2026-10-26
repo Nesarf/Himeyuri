@@ -109,6 +109,27 @@ export function 区检查(ast, 选项 = {}) {
         return;
       }
 
+      // 4.2 的「不许静默换区」，今天写得出来的那个形态：块被存进一条记录。
+      // 记录可以交出去、可以返回，而区留在原地 —— 于是块跑出了区。
+      // 设计稿的原例是「存到模块级变量」，而语言没有那个东西；记录字面量是同一件事
+      // 在今天的写法里最近的形状，而且它可静态看见，不用类型系统。
+      if (n.kind === "Record") {
+        for (const f of n.fields || []) {
+          const 名 = 名字(f.value);
+          if (!名) continue;
+          const 命中 = 块属于谁(名);
+          if (命中.length) {
+            报("error", "HMYR-R0304",
+              "'" + 名 + "' is a block of the arena '" + 命中[0].场名 + "' and this stores it in a record: " +
+              "the record can be handed on or returned while the arena stays behind, so the block would " +
+              "outlive the zone that owns it. Hand it over with " + 命中[0].场名 + ".freeze(" + 名 +
+              ") if it is meant to travel", f.value);
+          }
+        }
+        for (const f of n.fields || []) 走(f.value, 在循环里, 直行);
+        return;
+      }
+
       if (n.kind === "Let" || n.kind === "Var") {
         if (是arena调用(n.value)) 建场(n.name);
         else {
