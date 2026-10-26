@@ -1715,6 +1715,10 @@ typedef struct 帧记录 {
   Value *slots;
   uint32_t 槽数;
   struct 帧记录 *上;
+  /* 槽数组是从堆上取的（GC 的块），还是这一帧栈上的那一块。
+   * 根扫描要分开走：堆上的标它自己，栈上的标它里面的值 —— 混着来会去查一张
+   * 栈地址不在其中的表，那是一次访问违规，而它只在递归深、刚好走到 GC 时才现形。 */
+  int 槽在堆;
   /* 作用域结束释放（design/MEMORY.txt 第 2 节）：这一帧里建的持有格，栈退出时一律关掉。
    * 交出去的会在「放」那一步从这里移走 —— 转移的第二层意思。 */
   Value 持有格们[帧持有格上限];
@@ -1865,9 +1869,13 @@ static void gc_标根(void) {
   gc_标值(g_机->argv);
   for (int i = 0; i < g_机->键数; i++) gc_标值(g_机->键们[(g_机->键头 + i) % KEY_环]);
   for (帧记录 *f = g_机->帧链; f; f = f->上) {
-    /* 标的是「槽数组」这一个块本身：它也是 alloc_values 分配的，
-     * 只标槽里的值会让清扫把它自己收掉 —— 那是「活着的东西被回收」的典型形状。 */
-    gc_压标(gc_查(f->slots));
+    /* 堆上的槽数组是 alloc_values 的块，要标它自己 —— 只标槽里的值会让清扫把它收掉。
+     * 栈上的那一块不在块表里：标它里面的每个值，别去查表（查了就是访问违规）。 */
+    if (f->槽在堆) {
+      gc_压标(gc_查(f->slots));
+    } else {
+      for (uint32_t i = 0; i < f->槽数; i++) gc_标值(f->slots[i]);
+    }
   }
   for (uint32_t i = 0; i < g_机->函数数; i++) {
     Func *fn = &g_机->函数们[i];
@@ -3932,6 +3940,13 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   }
 }
 
+/* 实时档位的那一半（design/MEMORY.txt 第 3 节）：一个函数的槽数组不再一律从托管堆取。
+ * 槽数不超过这个上界时，用栈上的那一块 —— 那条路径一次分配都不做，
+ * 于是「实时回调里不经过托管」在机器这一层成立，而不只是写在文档里。
+ * 超界的函数照旧走堆：那说明它太大，而静默截断比慢更糟。
+ * 40 这个数来自自举层的实测（单帧最大 34 槽），留了一点余量。 */
+#define 帧槽上限 40
+
 static Value run_func(Func *f, Value *args, int nargs) {
   if (g_failed) return v_null();
   if (nargs != (int)f->nargs) {
@@ -3939,7 +3954,10 @@ static Value run_func(Func *f, Value *args, int nargs) {
     return v_null();
   }
   记深度(f, g_机->当前函数);
-  Value *slots = alloc_values(f->nslots);
+  Value 槽栈[帧槽上限];
+  int 用栈 = (f->nslots <= 帧槽上限);
+  Value *slots = 用栈 ? 槽栈 : alloc_values(f->nslots);
+  if (用栈) memset(slots, 0, sizeof(Value) * (size_t)f->nslots);
   for (int i = 0; i < nargs && i < (int)f->nslots; i++) slots[i] = args[i];
   /* 帧链：GC 靠它看见递归中的槽；出口要还原，否则它指向一个已经没了的栈帧。 */
   帧记录 帧;
@@ -3947,6 +3965,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
   帧.槽数 = f->nslots;
   帧.上 = g_机->帧链;
   帧.持有格数 = 0;
+  帧.槽在堆 = !用栈;
   g_机->帧链 = &帧;
 #if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
   if (g_gc开 && g_gc字节 > g_gc阈值) gc_收集();
