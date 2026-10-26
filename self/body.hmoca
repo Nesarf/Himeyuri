@@ -140,6 +140,55 @@ fn next_fn(tokens: Int, i: Int) -> Int {
   return next_fn(tokens, i + 1)
 }
 
+// 顶层声明只认两个词：fn 与 const。词法把它们都标成 ident，
+// 而 stmt 那边判关键字也是看 text（is_word 不看 kind），这里照同一条规矩。
+fn next_decl(tokens: Int, i: Int) -> Int {
+  if i >= len(tokens) { return -1 }
+  let t = tokens[i]
+  if t.kind == "ident" && (t.text == "fn" || t.text == "const") { return i }
+  return next_decl(tokens, i + 1)
+}
+
+// 一行在哪里结束。顶层 const 的值到行尾为止 —— 而 chain 交回的 next 是
+// 「用掉了几个 token」，不负责替你断行，所以这里先切出一段交给它。
+fn 行尾位(tokens: Int, i: Int) -> Int {
+  if i >= len(tokens) { return i }
+  if tokens[i].kind == "newline" { return i }
+  return 行尾位(tokens, i + 1)
+}
+
+fn 等号位(tokens: Int, i: Int, 末: Int) -> Int {
+  if i >= 末 { return -1 }
+  // 只看 text，不看 kind —— 与 stmt 的 is_word 同一条规矩。
+  // 词法给 = 的 kind 与这里原先假设的不一样，而「等号是哪一个字」这件事只看文字就够了。
+  if tokens[i].text == "=" { return i }
+  return 等号位(tokens, i + 1, 末)
+}
+
+// 切一段 token。为什么不用 slice：slice 只收字符串（宿主那一份先 asString），
+// 而 tokens 是元组 —— 拿它切出来的东西不是 token 数组，后面的 chain 会崩在
+// 「no field 'kind' on that value」上。顶层常量很少，所以这里的拼接不成问题。
+fn 切段(tokens: Int, 起: Int, 止: Int, acc: Int) -> Int {
+  if 起 >= 止 { return acc }
+  return 切段(tokens, 起 + 1, 止, acc + (tokens[起],))
+}
+
+// 一条 const 声明：交回 {name, value, next}。value 是 chain 搭出来的表达式节点。
+//
+// 它只认「const 名 = 表达式」这一种写法 —— 与宿主那一份 parseConst 同一个形状。
+// 认不出来的部分（没有等号、表达式搭不起来）交回 -1，让上层跳过而不是猜。
+fn 常量在(tokens: Int, at: Int) {
+  let 末 = 行尾位(tokens, at + 1)
+  let 等 = 等号位(tokens, at + 2, 末)
+  if 等 < 0 { return {name: "", value: -1, next: 末 + 1} }
+  // 名字在(tokens, i) 看的是 tokens[i+1] —— 它是为「从 fn 的位置取名」写的。
+  // 所以这里传 at（const 自己的位置），不能再 +1：那会让它去看等号，名字永远是空。
+  let 名 = 名字在(tokens, at)
+  let 子 = 切段(tokens, 等 + 1, 末, ())
+  let 值 = chain(子)
+  return {name: 名, value: 值.node, next: 末 + 1}
+}
+
 fn 名字在(tokens: Int, i: Int) -> String {
   if i + 1 < len(tokens) && tokens[i + 1].kind == "ident" { return tokens[i + 1].text }
   return ""
@@ -265,13 +314,20 @@ fn 返回类型在(tokens: Int, 起: Int, 末: Int) {
   return ()
 }
 
-fn decls_from(tokens: Int, i: Int, acc: Int) {
-  let at = next_fn(tokens, i)
-  if at < 0 { return {fns: acc, next: len(tokens)} }
+fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
+  let at = next_decl(tokens, i)
+  if at < 0 { return {fns: acc, consts: 常量们, next: len(tokens)} }
   let 位 = tokens[at]
+  // const 走另一条路：它没有函数体，值到行尾为止，而名字与值一起收进常量表。
+  // 这张表是「模块级 const 持有索引」那一件事的通道 —— 也就是三区模型 §4.2 要的容器。
+  if 位.text == "const" {
+    let 常 = 常量在(tokens, at)
+    if 常.name == "" { return decls_from(tokens, 常.next, acc, 常量们) }
+    return decls_from(tokens, 常.next, acc, 常量们 + ((常.name, 常.value),))
+  }
   let 名 = 名字在(tokens, at)
   let open = find_body(tokens, at + 1)
-  if open < 0 { return {fns: acc, next: len(tokens)} }
+  if open < 0 { return {fns: acc, consts: 常量们, next: len(tokens)} }
   let got = each(tokens, open + 1, ())
   // 六件：名字、参数名们、语句们、效果名们、行、列。
   // 位置加在**末尾**，所以读 选[2] 与 选[3] 的老代码一行都不用改 ——
@@ -280,12 +336,12 @@ fn decls_from(tokens: Int, i: Int, acc: Int) {
   let 效们 = 效果们(tokens, at + 1, open)
   // 第七件是返回类型。它加在末尾，所以读 选[2] 与 选[3] 的老代码一行都不用改。
   let 返型 = 返回类型在(tokens, at + 1, open)
-  return decls_from(tokens, got.next, acc + ((名, 参名们, got.list, 效们, 位.line, 位.column, 返型),))
+  return decls_from(tokens, got.next, acc + ((名, 参名们, got.list, 效们, 位.line, 位.column, 返型),), 常量们)
 }
 
-// 交回 {fns: ((名字, 参数名们, 语句们, 效果名们, 行, 列), …), next}。
+// 交回 {fns: ((名字, 参数名们, 语句们, 效果名们, 行, 列), …), consts: ((名字, 值), …), next}。
 fn parse_decls(tokens: Int) -> Int {
-  return decls_from(tokens, 0, ())
+  return decls_from(tokens, 0, (), ())
 }
 
 fn main() -> Int {

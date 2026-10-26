@@ -63,8 +63,8 @@ for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
 }
 // 这两个数随自举层的规模走。读转义那一处补了函数，于是它们从 123 与 6285 长到这里；
 // 算术那一组进求值器的分派时又长了 182 个节点（min 与 max 各走一遍循环）。
-ok("合计 186 个函数声明", 函数总数 === 186, String(函数总数));
-ok("合计 13601 个节点", 节点总数 === 13601, String(节点总数));
+ok("合计 195 个函数声明", 函数总数 === 195, String(函数总数));
+ok("合计 14103 个节点", 节点总数 === 14103, String(节点总数));
 
 console.log("二、位置是逐个对过的，不是大致对");
 {
@@ -129,10 +129,10 @@ console.log("六、它自己的注释写着现在的账");
 {
   const 文 = fs.readFileSync(path.join(ROOT, "src/subset-parse.mjs"), "utf8");
   ok("注释写了六种语句", 文.includes("let / var / assign / return / ExprStmt / Block"), "在");
-  ok("注释写了位置也对齐了", 文.includes("六份共 13601 个节点，逐个相同"), "在");
+  ok("注释写了位置也对齐了", 文.includes("六份共 14103 个节点，逐个相同"), "在");
   ok("注释写了那一处照抄的怪处", 文.includes("字段名之后那个 token"), "在");
   ok("注释写了它的立场", 文.includes("认得窄而说清"), "在");
-  ok("注释写了数出来的声明种类", 文.includes("只有 fn，186 个"), "在");
+  ok("注释写了数出来的声明种类", 文.includes("只有 fn，195 个"), "在");
 }
 
 console.log("七、两处后补的两侧同形：arena() 与 own/borrow 参数");

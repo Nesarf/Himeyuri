@@ -37,14 +37,23 @@ fn 跑并打印(源码: String) -> Int effects(process) {
 //
 // 与上面那条「跑一个表达式」的路并存：表达式用 scan（不保留换行），程序用 scan_lines。
 // 两条路的产出形状不同，所以不能混着用——这一点写在明处。
-// 源码里有没有声明：只认「行首（可带空白）是 fn」这一种，够用了。
+// 源码里有没有声明：行首（可带空白、可夹注释）是 fn 或 const。
 // 判断它，是为了让「程序以声明为单位」这件事真的成立——有声明就不再包壳。
+fn 跳到行尾(s: String, i: Int) -> Int {
+  if i >= len(s) { return i }
+  if s[i] == chr(10) { return i + 1 }
+  return 跳到行尾(s, i + 1)
+}
+
 fn 行首是声明从(s: String, i: Int) -> Bool {
   if i >= len(s) { return false }
   let c = s[i]
   if c == " " || c == "\t" || c == "\n" || c == "\r" { return 行首是声明从(s, i + 1) }
-  if c == "/" { return false }
+  // 注释行要跳过。一份文件以注释开头是常态，而「以注释开头」不等于「不是声明」——
+  // 早先这里遇到 / 就直接说 false，于是 const 那一份示例被包成裸语句，const 成了函数体里的一句。
+  if c == "/" && i + 1 < len(s) && s[i + 1] == "/" { return 行首是声明从(s, 跳到行尾(s, i)) }
   if i + 1 < len(s) && s[i] == "f" && s[i + 1] == "n" { return true }
+  if i + 4 < len(s) && s[i] == "c" && s[i + 1] == "o" && s[i + 2] == "n" && s[i + 3] == "s" && s[i + 4] == "t" { return true }
   return false
 }
 
@@ -67,7 +76,7 @@ fn 跑程序文字(源码: String) -> String {
     if len(全部.fns) == 0 { return "错：声明里没有 fn" }
     let 选 = 选函数(全部.fns, "main")
     let 体 = 选[2]   // 声明现在是（名字, 参数名们, 语句们），语句们是第三件
-    let r = 跑程序带函数(体, 全部.fns)
+    let r = 跑程序带常量与参(体, 全部.fns, 全部.consts, (), ())
     if r.ok == false { return "错：" + r.text }
     return str(r.value)
   }
@@ -443,6 +452,15 @@ fn 合并从(已收: Int, 源码们: Int, i: Int) -> Int {
   return 合并从(已收 + 全部.fns, 源码们, i + 1)
 }
 
+// 常量要单独合并：它们的值要在装环境的时候求值，而函数表里放不下那一步。
+// 顺序是 import 的顺序 —— 依赖在前，所以被依赖的常量先装。
+fn 合并常量从(已收: Int, 源码们: Int, i: Int) -> Int {
+  if i >= len(源码们) { return 已收 }
+  let tokens = scan_lines(去导入(源码们[i]))
+  let 全部 = parse_decls(tokens)
+  return 合并常量从(已收 + 全部.consts, 源码们, i + 1)
+}
+
 // ---- 认 import：从源码里取出它引的那几个路径 ----
 //
 // 这一段以前在宿主那边（bin/hmyr.mjs 里一个正则）。搬到这里，是因为
@@ -527,7 +545,8 @@ fn 跑模块们(源码们: Int, 参们: Int) -> String {
   // 选[3] 是 main 自己声明的效果 —— 它决定这个程序能碰什么。
   var 主效 = ()
   if len(选) > 3 { 主效 = 选[3] }
-  let r = 跑程序带函数与参(选[2], 函数们, 参们, 主效)
+  let 常量们 = 合并常量从((), 源码们, 0)
+  let r = 跑程序带常量与参(选[2], 函数们, 常量们, 参们, 主效)
   if r.ok == false { return "错：" + r.text }
   return str(r.value)
 }
