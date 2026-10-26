@@ -626,7 +626,31 @@ export function 新区() {
 
 // 交回 {值} 或 {码, 错}。码缺省是 R0302 —— 「拿到的不是那个区里活着的块」那一条。
 export function 调区方法(主, 名, 参) {
-  if (!是区(主)) return { 错: "这一版只认区上的方法：" + 名 };
+  // 块上的方法：存与取。块的上下文只有它自己，所以这两支必须挂在块上 ——
+  // 而「块」在表示上是索引（kind = block），与区同一层。
+  if (主 && 主.tag === "index" && 主.m.get("kind") === "block") {
+    const 容量 = 主.m.get("size");
+    const 格 = 主.m.get("格");
+    if (名 === "存") {
+      if (参.length !== 2) return { 错: "存 要两个参数" };
+      const 位 = 参[0];
+      if (typeof 位 !== "number" || 位 < 0 || 位 >= 容量) {
+        return { 码: "HMYR-R0151", 错: "slot " + 位 + " is outside this block (size " + 容量 + ")" };
+      }
+      格.m.set(String(位), 参[1]);
+      return { 值: 主 };
+    }
+    if (名 === "取") {
+      if (参.length !== 1) return { 错: "取 要一个参数" };
+      const 位 = 参[0];
+      if (typeof 位 !== "number" || 位 < 0 || 位 >= 容量) {
+        return { 码: "HMYR-R0151", 错: "slot " + 位 + " is outside this block (size " + 容量 + ")" };
+      }
+      return { 值: 格.m.has(String(位)) ? 格.m.get(String(位)) : null };
+    }
+    return { 错: "块上没有这个方法：" + 名 };
+  }
+  if (!是区(主)) return { 错: "这一版只认区与块上的方法：" + 名 };
   const m = 主.m;
   if (名 === "alloc") {
     if (参.length !== 1) return { 错: "alloc 要一个参数" };
@@ -634,10 +658,13 @@ export function 调区方法(主, 名, 参) {
     const 号 = m.get("下一个");
     const 块 = new Map();
     块.set("种", "块");
+    块.set("kind", "block");
     块.set("zone", "arena");
     块.set("size", 参[0]);
     块.set("live", 1);
     块.set("号", 号);
+    // 块的格子：按下标的可变内容。没有它，块只有大小，于是「把值放进区里」写不出来。
+    块.set("格", { tag: "index", m: new Map() });
     m.set("块" + 号, { tag: "index", m: 块 });
     m.set("下一个", 号 + 1);
     m.set("活", m.get("活") + 1);

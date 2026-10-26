@@ -316,6 +316,65 @@ console.log("九、模块级 const 持有索引：四台同一段（§4.2 的原
   }
 }
 
+console.log("十、块能存内容（区不只会记账）");
+{
+  // 到这一轮之前，块只有 size / live / zone —— 于是「把中间值放进区里」这件事
+  // 在语言里写不出来，而区因此只能做账。块现在有一格一格的内容：b.存(i, v) 与 b.取(i)。
+  //
+  // 这一节只比存过的格子与越界；「未写的格子」不比 —— nil 在自举层与字节码那台
+  // 的字符串化本来就不一样（[] 与 nil），那是既有的差异，不该由这一节来抓。
+  const 源 = 行们([
+    "fn main() -> Int effects(process) {",
+    "  let a = arena()",
+    "  let b = a.alloc(4)",
+    "  b.存(0, 42)",
+    "  b.存(1, \"文字\")",
+    "  print(\"取0=\" + str(b.取(0)) + chr(10))",
+    "  print(\"取1=\" + b.取(1) + chr(10))",
+    "  a.close()",
+    "  return 0",
+    "}",
+  ]);
+  const p = 投(源, "子.hmoca");
+
+  const 甲 = 跑([p]);
+  const 甲行 = 行(甲.stdout);
+  ok("默认路径：存了能取回", 甲.status === 0 && 甲行.includes("取0=42") && 甲行.includes("取1=文字"),
+    JSON.stringify({ status: 甲.status, out: 甲行 }));
+
+  const 乙 = 跑(["--compile", p]);
+  const 乙行 = 行(乙.stdout);
+  ok("--compile 同一段", 乙.status === 0 && JSON.stringify(乙行) === JSON.stringify(甲行.slice(0, 乙行.length)),
+    JSON.stringify([乙行, 甲行.slice(0, 乙行.length)]));
+
+  const exe = path.join(临, "hmyr-c.exe");
+  if (fs.existsSync(exe)) {
+    const 丁 = spawnSync(exe, [p], {
+      encoding: "utf8", cwd: 临, timeout: 300000,
+      env: { ...process.env, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000" },
+    });
+    const 丁行 = 行(丁.stdout);
+    ok("C 那台同一段", 丁.status === 0 && JSON.stringify(丁行) === JSON.stringify(甲行.slice(0, 丁行.length)),
+      JSON.stringify({ status: 丁.status, out: 丁行 }));
+  } else {
+    console.log("  跳过  C 那台没编出来 —— 第四台不验");
+  }
+
+  // 越界：编得过去，跑起来要有一句编号，而不是把值写到别处。
+  const 越界 = 投(行们([
+    "fn main() -> Int effects(process) {",
+    "  let a = arena()",
+    "  let b = a.alloc(2)",
+    "  b.存(5, 1)",
+    "  print(\"没有拦住\" + chr(10))",
+    "  return 0",
+    "}",
+  ]), "丑.hmoca");
+  const 丙 = 跑([越界]);
+  const 全出 = (丙.stdout || "") + (丙.stderr || "");
+  ok("越界给 R0151", 全出.includes("R0151") && !全出.includes("没有拦住"), JSON.stringify(全出.slice(0, 160)));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

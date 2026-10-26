@@ -182,10 +182,14 @@ fn 分配块(区: Int, 大小: Int) -> Int {
   let 号 = index_get(区, "下一个")
   let 块 = index_new()
   index_set(块, "种", "块")
+  index_set(块, "kind", "block")
   index_set(块, "zone", "arena")
   index_set(块, "size", 大小)
   index_set(块, "live", 1)
   index_set(块, "号", 号)
+  // 块的格子：按下标的可变内容。没有它，块只有大小，于是「把值放进区里」写不出来 ——
+  // 而那也是区一直只能记账的理由。
+  index_set(块, "格", index_new())
   index_set(区, "块" + str(号), 块)
   index_set(区, "下一个", 号 + 1)
   index_set(区, "活", index_get(区, "活") + 1)
@@ -231,8 +235,30 @@ fn 收回来(区: Int, 块: Int) -> Int {
 // 方法分派。这一版只认区上的方法 —— 别的值当主时给一句说得清的话，不崩：
 // 而它不会崩的理由是 index_has 对不是索引的值交回 false，而不是抛。
 fn 求方法(主: Int, 名: String, 参: Int) -> Int {
-  if index_has(主, "种") == false { return 坏("这一版只认区上的方法：" + 名) }
-  if index_get(主, "种") != "区" { return 坏("这一版只认区上的方法：" + 名) }
+  // 块上的方法：存与取。块的上下文只有它自己，所以这两支必须挂在块上。
+  if index_has(主, "kind") {
+    if index_get(主, "kind") == "block" {
+      let 容量 = index_get(主, "size")
+      if 名 == "存" {
+        if len(参) != 2 { return 坏("存 要两个参数") }
+        if 参[0] < 0 { return 坏("HMYR-R0151 这个格子不在块里（容量 " + str(容量) + "）") }
+        if 参[0] >= 容量 { return 坏("HMYR-R0151 这个格子不在块里（容量 " + str(容量) + "）") }
+        index_set(index_get(主, "格"), str(参[0]), 参[1])
+        return 好(主)
+      }
+      if 名 == "取" {
+        if len(参) != 1 { return 坏("取 要一个参数") }
+        if 参[0] < 0 { return 坏("HMYR-R0151 这个格子不在块里（容量 " + str(容量) + "）") }
+        if 参[0] >= 容量 { return 坏("HMYR-R0151 这个格子不在块里（容量 " + str(容量) + "）") }
+        let 格 = index_get(主, "格")
+        if index_has(格, str(参[0])) { return 好(index_get(格, str(参[0]))) }
+        return 好(())
+      }
+      return 坏("块上没有这个方法：" + 名)
+    }
+  }
+  if index_has(主, "种") == false { return 坏("这一版只认区与块上的方法：" + 名) }
+  if index_get(主, "种") != "区" { return 坏("这一版只认区与块上的方法：" + 名) }
   if 名 == "alloc" {
     if len(参) != 1 { return 坏("alloc 要一个参数") }
     return 分配块(主, 参[0])

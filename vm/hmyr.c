@@ -2198,8 +2198,7 @@ static int 区取键(索引 *t, const char *键, Value *out) {
 }
 
 /* 一个 T_STR 是不是那串 ASCII。 */
-static int 串是字(Value v, const char *字) {
-  uint32_t n = 0;
+static int 串是字(Value v, const char *字) {  uint32_t n = 0;
   if (v.tag != T_STR || !v.s) return 0;
   while (字[n]) n++;
   if (v.slen != n) return 0;
@@ -2227,11 +2226,52 @@ static Value 区新建(void) {
   return v;
 }
 
-/* 区上的方法。交回 1 表示 out 可以用，0 表示已经 fail 过。 */
+/* 方法名是中文（存 / 取），而 名是字 只比 ASCII —— 所以这两个单独按码点比。
+ * 存 = U+5B58，取 = U+53D6。 */
+static int 是存(const uint16_t *p, uint32_t n) { return n == 1 && p && p[0] == 0x5B58; }
+static int 是取(const uint16_t *p, uint32_t n) { return n == 1 && p && p[0] == 0x53D6; }
+
+/* 区与块上的方法。交回 1 表示 out 可以用，0 表示已经 fail 过。 */
 static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *args, int nargs, Value *out) {
   Value 类;
+  /* 块上的方法：存与取。块的上下文只有它自己，所以这两支必须挂在块上。 */
+  if (主.tag == T_INDEX && 主.idx && 区取键(主.idx, "kind", &类) && 串是字(类, "block")) {
+    Value 容量值, 格;
+    double 容量 = 0;
+    if (!区取键(主.idx, "size", &容量值) || 容量值.tag != T_NUM) 容量 = 0;
+    else 容量 = 容量值.num;
+    if (!区取键(主.idx, "slots", &格) || 格.tag != T_INDEX || !格.idx) {
+      fail("HMYR-R0110", "this block has no slots");
+      return 0;
+    }
+    if (是存(名, 名长)) {
+      char 键[24];
+      if (nargs != 2) { fail("HMYR-R0101", "存 wants (slot, value)"); return 0; }
+      if (args[0].tag != T_NUM || args[0].num < 0 || args[0].num >= 容量) {
+        fail("HMYR-R0151", "that slot is outside this block");
+        return 0;
+      }
+      snprintf(键, sizeof 键, "s%.0f", args[0].num);
+      区放键(格.idx, 键, args[1]);
+      *out = 主;
+      return 1;
+    }
+    if (是取(名, 名长)) {
+      char 键[24];
+      if (nargs != 1) { fail("HMYR-R0101", "取 wants (slot)"); return 0; }
+      if (args[0].tag != T_NUM || args[0].num < 0 || args[0].num >= 容量) {
+        fail("HMYR-R0151", "that slot is outside this block");
+        return 0;
+      }
+      snprintf(键, sizeof 键, "s%.0f", args[0].num);
+      if (!区取键(格.idx, 键, out)) *out = v_null();
+      return 1;
+    }
+    fail("HMYR-R0302", "there is no such method on a block");
+    return 0;
+  }
   if (主.tag != T_INDEX || !主.idx || !区取键(主.idx, "kind", &类) || !串是字(类, "zone")) {
-    fail("HMYR-R0302", "this machine only accepts method calls on a zone");
+    fail("HMYR-R0302", "this machine only accepts method calls on a zone or a block");
     return 0;
   }
   if (名是字(名, 名长, "held")) {
@@ -2259,6 +2299,13 @@ static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *
       区放键(块.idx, "size", args[0]);
       区放键(块.idx, "live", v_num(1));
       区放键(块.idx, "id", v_num(号));
+      /* 块的格子：按下标的可变内容。没有它块只有大小，于是「把值放进区里」写不出来。 */
+      {
+        Value 格 = v_null();
+        格.tag = T_INDEX;
+        格.idx = 索引造();
+        区放键(块.idx, "slots", 格);
+      }
       snprintf(键, sizeof 键, "b%.0f", 号);
       区放键(主.idx, 键, 块);
       区放键(主.idx, "next", v_num(号 + 1));

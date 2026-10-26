@@ -339,6 +339,15 @@ export class Runtime {
       const decl = this.functions.get(node.callee.name);
       if (decl) return this.callFunction(decl, args, effects);
     }
+    // 方法调用：接收者要跟着传下去。少了 apply 这一步，块上的 存/取 就取不到
+    // 自己是哪一块 —— 而那是它唯一的上下文。区的方法不需要它（它们是闭包），
+    // 块的方法需要（一块内存的内容只属于那一块）。
+    if (node.callee.kind === "Field") {
+      const 主 = this.evalExpr(node.callee.target, scope, effects);
+      const 法 = 主 === null || 主 === undefined ? undefined : 主[node.callee.name];
+      if (typeof 法 === "function") return 法.apply(主, args);
+      this.fail("HMYR-R0107", "that value is not callable");
+    }
     const callee = this.evalExpr(node.callee, scope, effects);
     if (typeof callee === "function") return callee(...args);
     this.fail("HMYR-R0107", "that value is not callable");
@@ -1085,7 +1094,24 @@ const BUILTINS = {
     };
     return {
       alloc: (n) => {
-        const block = { size: typeof n === "number" ? n : 0, live: true, zone: "arena" };
+        const 容量 = typeof n === "number" ? n : 0;
+        // 块现在有内容：一个按容量开的格子数组。以前它只有 size 与 live，
+        // 于是「把中间值放进区里」这件事在语言里写不出来 —— 而区因此只能记账。
+        // 用 function 而不是箭头：存/取 要靠 this 知道自己是哪一块。
+        const block = { size: 容量, live: true, zone: "arena", 格: new Array(Math.max(0, 容量)).fill(null) };
+        block.存 = function (i, v) {
+          if (typeof i !== "number" || i < 0 || i >= this.size) {
+            rt.fail("HMYR-R0151", "slot " + i + " is outside this block (size " + this.size + ")");
+          }
+          this.格[i] = v;
+          return this;
+        };
+        block.取 = function (i) {
+          if (typeof i !== "number" || i < 0 || i >= this.size) {
+            rt.fail("HMYR-R0151", "slot " + i + " is outside this block (size " + this.size + ")");
+          }
+          return this.格[i];
+        };
         区拥有者.set(block, 我);
         held.push(block);
         return block;
