@@ -58,14 +58,10 @@ export function 持有格检查(ast, 选项 = {}) {
     走块(decl.body.statements || [], new Map(), 报, 签名表);
   }
 
-  // 第四层：借用的承诺要在被调者那一侧兑现。
-  // 上面几层都在调用者那一侧看 ——「borrow 之后我还能继续用」，那是信任。
-  // 这一层走到被调函数体里，看它有没有真的不动那个参数，于是信任变成证明的一半：
-  // 承诺写在自己身上，就由自己这一侧来验。
-  for (const decl of ast.decls) {
-    if (decl.kind !== "Fn" || !decl.body) continue;
-    查借用承诺(decl, 签名表, 报);
-  }
+  // 第四层：借用的承诺要在被调者那一侧兑现，而且沿调用链走到底。
+  // 上面几层都在调用者那一侧看 ——「borrow 之后我还能继续用」，那是信任；
+  // 这一层验承诺本身，于是它变成证明。
+  查借用承诺(ast, 签名表, 报);
   return 出;
 }
 
@@ -216,50 +212,133 @@ function 句子里提到的名字(n, 出 = new Set()) {
   return 出;
 }
 
-// 借用的承诺，在被调者这一侧验。
+// 借用的承诺，在被调者这一侧验 —— 而且沿调用链走到底。
 //
-// 前三层都在调用者那一侧：borrow 之后源这边的状态保持不变 —— 那是「信任」。
-// 这一层走进函数体，看它有没有真的不动那个参数，于是信任有了证明的一半。
-// 另一半（跨两层以上的传递）仍然不做，与 §7 那条「不做完整证明」同一处。
-function 查借用承诺(decl, 签名表, 报) {
-  const 借来的 = new Set(
-    (decl.params || []).filter((p) => p && p.passing === "borrow").map((p) => p.name),
-  );
-  if (借来的.size === 0) return;
+// 前三层都在调用者那一侧：borrow 之后源这边的状态保持不变，那是「信任」。
+// 这一层验承诺：一个标了 borrow 的参数，若它（或它被传下去之后的某一层）被改了，
+// 就在最初那一侧报。
+//
+// 做法是一张「位置级」的图：不在名字上算，在参数位置上算，因为传递靠位置。
+//   脏[F][i]      函数 F 的第 i 个参数被改过（直接改，或交给了 own 参数）
+//   传[F][i]      函数 F 的第 i 个参数被传给了 (G, j)
+// 然后迭代到不动点：传目标脏，则自己也脏。迭代次数上界是函数个数 ——
+// 环（A 传给 B、B 又传回 A）因此不会让这里转圈。
+//
+// 这一层只看同一模块的调用。跨模块要等模块那一层有名字解析；动态目标
+// （把函数当值传）在这门语言里今天没有，所以那两个缺口不在这里。
+function 查借用承诺(ast, 签名表, 报) {
+  const 函数们 = ast.decls.filter((d) => d.kind === "Fn" && d.body);
 
-  const 走 = (n) => {
-    if (!n || typeof n !== "object") return;
-    if (Array.isArray(n)) { for (const x of n) 走(x); return; }
+  // 参数名到位置。
+  const 位置表 = new Map();      // 函数名 -> Map(参数名, 位置)
+  for (const d of 函数们) {
+    const m = new Map();
+    (d.params || []).forEach((p, i) => { if (p && p.name) m.set(p.name, i); });
+    位置表.set(d.name, m);
+  }
 
-    if (n.kind === "Call" && n.callee) {
-      // 借来的名字被当成方法的主：X.放 / X.取 / X.关。
-      const 主 = n.callee.kind === "Field" ? n.callee.target : null;
-      if (主 && 主.kind === "Ident" && 借来的.has(主.name)) {
-        const 方法 = n.callee.name;
-        if (方法 === "放" || 方法 === "取" || 方法 === "关") {
-          报("'" + 主.name + "' is borrowed here, and this function calls " + 方法 + " on it: a borrow promises to leave what it borrows alone", n);
+  const 脏 = new Map();          // 函数名 -> Set(位置)
+  const 传 = new Map();          // 函数名 -> Map(位置 -> Set("名#位置"))
+  for (const d of 函数们) { 脏.set(d.name, new Set()); 传.set(d.name, new Map()); }
+
+  const 记脏 = (名, 位) => { const s = 脏.get(名); if (s) s.add(位); };
+  const 记传 = (名, 位, 目标, 目标位) => {
+    const m = 传.get(名);
+    if (!m) return;
+    if (!m.has(位)) m.set(位, new Set());
+    m.get(位).add(目标 + "#" + 目标位);
+  };
+
+  // 第一遍：直接改与直接传。
+  for (const d of 函数们) {
+    const 位们 = 位置表.get(d.name);
+    const 走 = (n) => {
+      if (!n || typeof n !== "object") return;
+      if (Array.isArray(n)) { for (const x of n) 走(x); return; }
+      if (n.kind === "Call" && n.callee) {
+        const 主 = n.callee.kind === "Field" ? n.callee.target : null;
+        if (主 && 主.kind === "Ident" && 位们.has(主.name)) {
+          const 方法 = n.callee.name;
+          if (方法 === "放" || 方法 === "取" || 方法 === "关") 记脏(d.name, 位们.get(主.name));
         }
-      }
-      // 借来的名字被交给一个 own 参数：那等于把它交出去。
-      if (n.callee.kind === "Ident" && 签名表.has(n.callee.name)) {
-        const 形们 = 签名表.get(n.callee.name) || [];
-        const 实们 = n.args || [];
-        for (let i = 0; i < 实们.length; i++) {
-          const 形 = 形们[i];
-          const 实 = 实们[i];
-          if (!形 || 形.passing !== "own") continue;
-          if (实 && 实.kind === "Ident" && 借来的.has(实.name)) {
-            报("'" + 实.name + "' is borrowed here, and it is handed to an own parameter: that moves what this function only borrowed", n);
+        if (n.callee.kind === "Ident" && 签名表.has(n.callee.name)) {
+          const 形们 = 签名表.get(n.callee.name) || [];
+          const 实们 = n.args || [];
+          for (let i = 0; i < 实们.length; i++) {
+            const 实 = 实们[i];
+            if (!实 || 实.kind !== "Ident" || !位们.has(实.name)) continue;
+            const 形 = 形们[i];
+            if (形 && 形.passing === "own") 记脏(d.name, 位们.get(实.name));
+            else 记传(d.name, 位们.get(实.name), n.callee.name, i);
           }
         }
       }
-    }
+      for (const [k, v] of Object.entries(n)) {
+        if (k === "line" || k === "column" || k === "kind") continue;
+        走(v);
+      }
+    };
+    走(d.body);
+  }
 
-    for (const [k, v] of Object.entries(n)) {
-      if (k === "line" || k === "column" || k === "kind") continue;
-      走(v);
+  // 第二遍：迭代到不动点。上界是函数个数 —— 环不会让它转圈。
+  for (let 轮 = 0; 轮 <= 函数们.length; 轮++) {
+    let 变了 = false;
+    for (const d of 函数们) {
+      const m = 传.get(d.name);
+      const 本脏 = 脏.get(d.name);
+      for (const [位, 目标们] of m) {
+        if (本脏.has(位)) continue;
+        for (const 目 of 目标们) {
+          const [名, 位文] = 目.split("#");
+          if (脏.get(名) && 脏.get(名).has(Number(位文))) { 本脏.add(位); 变了 = true; break; }
+        }
+      }
     }
-  };
+    if (!变了) break;
+  }
 
-  走(decl.body);
+  // 第三遍：报在最初那一侧 —— 对象是那个标了 borrow 的参数。
+  for (const d of 函数们) {
+    const 位们 = 位置表.get(d.name);
+    const 借来位 = new Set();
+    (d.params || []).forEach((p, i) => { if (p && p.passing === "borrow") 借来位.add(i); });
+    if (借来位.size === 0) continue;
+
+    const 真脏 = 脏.get(d.name);
+    const 该报 = new Set([...借来位].filter((i) => 真脏.has(i)));
+    if (该报.size === 0) continue;
+
+    // 报在第一个「动它」或「传它」的地方，而不是函数头 —— 那样读的人才知道是哪一步。
+    const 走 = (n) => {
+      if (!n || typeof n !== "object") return false;
+      if (Array.isArray(n)) { for (const x of n) if (走(x)) return true; return false; }
+      if (n.kind === "Call" && n.callee) {
+        const 主 = n.callee.kind === "Field" ? n.callee.target : null;
+        if (主 && 主.kind === "Ident" && 位们.has(主.name) && 该报.has(位们.get(主.name))) {
+          const 方法 = n.callee.name;
+          if (方法 === "放" || 方法 === "取" || 方法 === "关") {
+            报("'" + 主.name + "' is borrowed, and this function calls " + 方法 + " on it: a borrow promises to leave what it borrows alone", n);
+            return true;
+          }
+        }
+        if (n.callee.kind === "Ident" && 签名表.has(n.callee.name)) {
+          const 实们 = n.args || [];
+          for (let i = 0; i < 实们.length; i++) {
+            const 实 = 实们[i];
+            if (!实 || 实.kind !== "Ident" || !位们.has(实.name)) continue;
+            if (!该报.has(位们.get(实.name))) continue;
+            报("'" + 实.name + "' is borrowed, and it goes into '" + n.callee.name + "' here, which changes it: a borrow promises to leave it alone all the way down", n);
+            return true;
+          }
+        }
+      }
+      for (const [k, v] of Object.entries(n)) {
+        if (k === "line" || k === "column" || k === "kind") continue;
+        if (走(v)) return true;
+      }
+      return false;
+    };
+    走(d.body);
+  }
 }

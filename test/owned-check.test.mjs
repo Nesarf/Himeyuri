@@ -327,7 +327,7 @@ console.log("九、借用的承诺在被调者那一侧兑现");
     "  return 0",
     "}",
   ]);
-  ok("borrow 参数上放被拒", 有(查(借了又放), "is borrowed here"), JSON.stringify(查(借了又放)));
+  ok("borrow 参数上放被拒", 有(查(借了又放), "is borrowed"), JSON.stringify(查(借了又放)));
 
   const 借了又取 = 行们([
     "fn 看(borrow 格: Int) -> Int {",
@@ -335,7 +335,7 @@ console.log("九、借用的承诺在被调者那一侧兑现");
     "  return 0",
     "}",
   ]);
-  ok("borrow 参数上取被拒", 有(查(借了又取), "is borrowed here"), JSON.stringify(查(借了又取)));
+  ok("borrow 参数上取被拒", 有(查(借了又取), "is borrowed"), JSON.stringify(查(借了又取)));
 
   const 借了又关 = 行们([
     "fn 看(borrow 格: Int) -> Int {",
@@ -343,7 +343,7 @@ console.log("九、借用的承诺在被调者那一侧兑现");
     "  return 0",
     "}",
   ]);
-  ok("borrow 参数上关被拒", 有(查(借了又关), "is borrowed here"), JSON.stringify(查(借了又关)));
+  ok("borrow 参数上关被拒", 有(查(借了又关), "is borrowed"), JSON.stringify(查(借了又关)));
 
   // 借来的东西再交给一个 own 参数，等于把它交出去了 —— 那也是动了它。
   const 借出再转移 = 行们([
@@ -356,7 +356,7 @@ console.log("九、借用的承诺在被调者那一侧兑现");
     "  return 0",
     "}",
   ]);
-  ok("borrow 传进 own 参数被拒", 有(查(借出再转移), "that moves what this function only borrowed"), JSON.stringify(查(借出再转移)));
+  ok("borrow 传进 own 参数被拒", 有(查(借出再转移), "all the way down"), JSON.stringify(查(借出再转移)));
 
   // 正例：借了不动。
   const 只看 = 行们([
@@ -374,6 +374,74 @@ console.log("九、借用的承诺在被调者那一侧兑现");
     "}",
   ]);
   ok("普通参数上放不报", 查(普通参数动).length === 0, JSON.stringify(查(普通参数动)));
+}
+
+console.log("十、沿调用链走到底（传递闭包）");
+{
+  // 一层深看不出来的那种：甲把借来的东西交给乙，乙又交给丙，而丙改了它。
+  const 三层 = 行们([
+    "fn 丙(格: Int) -> Int {",
+    "  格.放(1)",
+    "  return 0",
+    "}",
+    "",
+    "fn 乙(格: Int) -> Int {",
+    "  丙(格)",
+    "  return 0",
+    "}",
+    "",
+    "fn 甲(borrow 格: Int) -> Int {",
+    "  乙(格)",
+    "  return 0",
+    "}",
+  ]);
+  ok("三层之外被改也报在最初那一侧", 有(查(三层), "all the way down"), JSON.stringify(查(三层)));
+
+  // 干净的三层：一路都没动它，就不该报。
+  const 干净三层 = 行们([
+    "fn 丙(格: Int) -> Int {",
+    "  return 0",
+    "}",
+    "",
+    "fn 乙(格: Int) -> Int {",
+    "  丙(格)",
+    "  return 0",
+    "}",
+    "",
+    "fn 甲(borrow 格: Int) -> Int {",
+    "  乙(格)",
+    "  return 0",
+    "}",
+  ]);
+  ok("干净的三层不报", 查(干净三层).length === 0, JSON.stringify(查(干净三层)));
+
+  // 环：甲传给乙，乙又传回甲。检查器不许转圈，也不许漏掉「环里有人改」。
+  const 环里没改 = 行们([
+    "fn 乙(格: Int) -> Int {",
+    "  甲(格)",
+    "  return 0",
+    "}",
+    "",
+    "fn 甲(borrow 格: Int) -> Int {",
+    "  乙(格)",
+    "  return 0",
+    "}",
+  ]);
+  ok("环上没人改就不报（而且不转圈）", 查(环里没改).length === 0, JSON.stringify(查(环里没改)));
+
+  const 环里有改 = 行们([
+    "fn 乙(格: Int) -> Int {",
+    "  甲(格)",
+    "  格.放(1)",
+    "  return 0",
+    "}",
+    "",
+    "fn 甲(borrow 格: Int) -> Int {",
+    "  乙(格)",
+    "  return 0",
+    "}",
+  ]);
+  ok("环里有人改就报", 有(查(环里有改), "all the way down"), JSON.stringify(查(环里有改)));
 }
 
 fs.rmSync(临, { recursive: true, force: true });
