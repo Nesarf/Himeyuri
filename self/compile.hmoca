@@ -313,7 +313,10 @@ fn 表达(节点: Int, 状态: Int) {
     if 节点.text == "true" { return {ok: true, 状态: 发(状态, {op: "CONST", a: true})} }
     if 节点.text == "false" { return {ok: true, 状态: 发(状态, {op: "CONST", a: false})} }
     let 号 = 找槽(状态.名表, 节点.text)
-    if 号 < 0 { return {ok: false, 错: "没有这个槽：" + 节点.text} }
+    // 槽里没有就是全局：模块级 const 走这一条。宿主那一份（src/bytecode.mjs）
+    // 一直是这么做的 —— 「if (!有) 发 GLOBAL」—— 而这一份少了它，于是任何读
+    // 模块级常量的函数都编不出来，报的却是「没有这个槽」，那句话会让人去查作用域。
+    if 号 < 0 { return {ok: true, 状态: 发(状态, {op: "GLOBAL", a: 节点.text})} }
     return {ok: true, 状态: 发(状态, {op: "LOAD", a: 号})}
   }
   if 种 == "Binary" {
@@ -578,10 +581,33 @@ fn 编函数们(函数们: Int, i: Int, acc: Int) {
   return 编函数们(函数们, i + 1, acc + (r.函数,))
 }
 
+// 顶层常量：每一条编成「初始化式 → SETGLOBAL 名字」。
+// 它们被收进一个零参数的函数，机器在调 main 之前跑它一次 —— 名字与宿主那一份
+// （src/bytecode.mjs 的 顶层段名）是同一串，改一处要两处一起改。
+fn 编常量们(常量们: Int, i: Int, 状态们: Int) {
+  if i >= len(常量们) { return {ok: true, 状态: 状态们} }
+  let 项 = 常量们[i]
+  let r = 表达(项[1], 状态们)
+  if r.ok == false { return {ok: false, 错: "常量 " + 项[0] + "：" + r.错} }
+  return 编常量们(常量们, i + 1, 发(r.状态, {op: "SETGLOBAL", a: 项[0]}))
+}
+
+fn 编顶层段(常量们: Int) {
+  let r = 编常量们(常量们, 0, 状态((), (), 0, ()))
+  if r.ok == false { return r }
+  let 码 = 拼平(r.状态) + ({op: "CONST", a: ()}, {op: "RET"})
+  return {ok: true, 函数: {名: "__hmyr_top__", 参数量: 0, 槽数: r.状态.槽, 效果: (), 码: 码}}
+}
+
 // 入口：源码 → 函数表。
 fn 编源码(源码: String) -> Int {
   let 声明们 = parse_decls(scan_lines(源码))
-  return 编函数们(声明们.fns, 0, ())
+  let r = 编函数们(声明们.fns, 0, ())
+  if r.ok == false { return r }
+  if len(声明们.consts) == 0 { return r }
+  let 顶 = 编顶层段(声明们.consts)
+  if 顶.ok == false { return 顶 }
+  return {ok: true, 函数们: r.函数们 + (顶.函数,)}
 }
 
 fn main() -> Int {

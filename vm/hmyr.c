@@ -1187,7 +1187,7 @@ enum {
   OP_NEG, OP_NOT, OP_POP, OP_RECORD, OP_RET, OP_STORE, OP_SUB, OP_TUPLE,
   /* 新指令追加在末尾，旧号不动 —— 与 src/code-file.mjs 的 操作码表 同一规矩。
    * 插在中间的样子不是「读不懂」，而是整段错位（offset 27185 那次就是它）。 */
-  OP_CALLM
+  OP_CALLM, OP_SETGLOBAL
 };
 
 static const char *op_names[] = {
@@ -1195,7 +1195,7 @@ static const char *op_names[] = {
   "FIELD", "GE", "GLOBAL", "GT", "INDEX", "JMP", "JMPF", "JMPF_KEEP",
   "JMPT", "JMPT_KEEP", "LE", "LOAD", "LT", "MOD", "MUL", "NE",
   "NEG", "NOT", "POP", "RECORD", "RET", "STORE", "SUB", "TUPLE",
-  "CALLM"
+  "CALLM", "SETGLOBAL"
 };
 
 typedef struct {
@@ -1332,7 +1332,7 @@ static void load_program(const uint8_t *bytes, size_t len) {
         case OP_CONST: read_value(&r, &in->val); break;
         case OP_LOAD: case OP_ASSIGN: in->a = rd_u16(&r); break;
         case OP_STORE: in->a = rd_u16(&r); in->b = rd_u8(&r); break;
-        case OP_GLOBAL: case OP_FIELD: {
+        case OP_GLOBAL: case OP_FIELD: case OP_SETGLOBAL: {
           uint32_t n; const uint16_t *p = rd_str(&r, &n); in->a = pool_add(p, n); break;
         }
         case OP_JMP: case OP_JMPF: case OP_JMPT: case OP_JMPF_KEEP: case OP_JMPT_KEEP:
@@ -2031,6 +2031,50 @@ static int values_equal(Value a, Value b) {
   if (a.tag != b.tag) return 0;
   if (a.tag == T_BOOL) return a.boolean == b.boolean;
   if (a.tag == T_NULL) return 1;
+  return 0;
+}
+
+/* ---- 全局：顶层 const 的落地 ----
+ *
+ * 数量很少（一个模块几条常量），所以用线性数组加名字比较，不做哈希。
+ * 名字指向常量池，而池在程序生命周期里不释放 —— 所以这里存指针是安全的。
+ *
+ * 只有一条指令写它：SETGLOBAL，而那条指令只由顶层段发出。用户代码的赋值
+ * （ASSIGN）只碰槽，所以这一份没有打开「全局可变」这件事。 */
+typedef struct {
+  const uint16_t *名;
+  uint32_t 名长;
+  Value 值;
+} 全局项;
+
+static 全局项 *g_全局项 = NULL;
+static int g_全局数 = 0, g_全局容 = 0;
+
+static void 全局放(const uint16_t *名, uint32_t 名长, Value 值) {
+  for (int i = 0; i < g_全局数; i++) {
+    if (g_全局项[i].名长 != 名长) continue;
+    uint32_t 同 = 1;
+    for (uint32_t k = 0; k < 名长; k++) if (g_全局项[i].名[k] != 名[k]) { 同 = 0; break; }
+    if (同) { g_全局项[i].值 = 值; return; }
+  }
+  if (g_全局数 + 1 > g_全局容) {
+    g_全局容 = g_全局容 ? g_全局容 * 2 : 16;
+    g_全局项 = (全局项 *)realloc(g_全局项, sizeof(全局项) * (size_t)g_全局容);
+    if (!g_全局项) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  }
+  g_全局项[g_全局数].名 = 名;
+  g_全局项[g_全局数].名长 = 名长;
+  g_全局项[g_全局数].值 = 值;
+  g_全局数++;
+}
+
+static int 全局取(const uint16_t *名, uint32_t 名长, Value *出) {
+  for (int i = 0; i < g_全局数; i++) {
+    if (g_全局项[i].名长 != 名长) continue;
+    uint32_t 同 = 1;
+    for (uint32_t k = 0; k < 名长; k++) if (g_全局项[i].名[k] != 名[k]) { 同 = 0; break; }
+    if (同) { *出 = g_全局项[i].值; return 1; }
+  }
   return 0;
 }
 
@@ -3801,7 +3845,20 @@ static Value run_func(Func *f, Value *args, int nargs) {
         }
         slots[in->a] = pop(); pc++; break;
       case OP_POP: pop(); pc++; break;
-      case OP_GLOBAL: { fail("HMYR-R0104", "globals are not in this machine yet"); FRAME_RET(v_null()); }
+      case OP_GLOBAL: {
+        Value 值;
+        if (!全局取(pool_p[in->a], pool_len[in->a], &值)) {
+          fail("HMYR-R0104", "there is no such global name in scope");
+          FRAME_RET(v_null());
+        }
+        push(值); pc++; break;
+      }
+      /* 顶层常量的登记：值在栈顶，名字是立即数。只有顶层段发这一条。 */
+      case OP_SETGLOBAL: {
+        Value 值 = pop();
+        全局放(pool_p[in->a], pool_len[in->a], 值);
+        pc++; break;
+      }
       case OP_BOOL: { Value v = pop(); push(v_bool(truthy(v))); pc++; break; }
       case OP_NEG: { Value v = pop(); int ok = 0; double d = as_num(v, &ok);
         if (!ok) { fail("HMYR-R0130", "expected a number"); FRAME_RET(v_null()); } push(v_num(-d)); pc++; break; }
@@ -4536,6 +4593,28 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
   }
   if (cli && nrest > 0) entry = cli;
   if (!entry) { fprintf(stderr, "HMYR-E0009 no main in %s\n", path); return 1; }
+
+  /* 顶层段：调 main 之前先跑一次。名字与 src/bytecode.mjs 的 顶层段名 是同一串 ——
+   * 改一处要两处一起改。它由编译器生成，只在有模块级 const 的模块里存在。 */
+  g_全局数 = 0;
+  {
+    Func *top = NULL;
+    const char *字 = "__hmyr_top__";
+    uint32_t 字长 = 12;
+    for (uint32_t i = 0; i < g_机->函数数; i++) {
+      Func *f = &g_机->函数们[i];
+      if (f->name_len != 字长) continue;
+      uint32_t 同 = 1;
+      for (uint32_t k = 0; k < 字长; k++) {
+        if (f->name[k] != (uint16_t)(unsigned char)字[k]) { 同 = 0; break; }
+      }
+      if (同) { top = f; break; }
+    }
+    if (top) {
+      (void)run_func(top, NULL, 0);
+      if (g_failed) { fprintf(stderr, "%s\n", g_fail_msg); return 1; }
+    }
+  }
 
   Value r = run_func(entry, NULL, 0);
   if (g_trace_on) trace_dump();
