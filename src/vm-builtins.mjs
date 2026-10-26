@@ -443,6 +443,24 @@ export const 内置表 = {
     }
     return w.m.get("源").items[w.m.get("起") + i];
   } },
+  view_set: { 做: (vm, a) => {
+    const w = a[0];
+    if (!w || w.tag !== "index" || w.m.get("kind") !== "view") {
+      return vm.坏("HMYR-R0152", "view_set wants a window");
+    }
+    const i = vm.成数(a[1]);
+    const 长 = w.m.get("长");
+    if (!Number.isInteger(i) || i < 0 || i >= 长) {
+      return vm.坏("HMYR-R0152", "view_set is outside the window (" + 长 + ")");
+    }
+    // 只有数组（可变）能写 —— 与 设 同一条判据、同一套码。
+    const 源 = w.m.get("源");
+    if (!源 || 源.tag !== "array") {
+      return vm.坏("HMYR-R0151", "view_set: the window was opened on bytes that cannot be written");
+    }
+    源.items[w.m.get("起") + i] = a[2];
+    return a[2];
+  } },
   index_get: { 做: (vm, a) => {
     const 表 = a[0];
     if (!表 || 表.tag !== "index") return vm.坏("HMYR-R0219", "index_get wants an index, found " + 述(表, vm.文));

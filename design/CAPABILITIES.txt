@@ -162,10 +162,11 @@
 
   十二、FFI 的最小形状
 
-      bytes_view / view_len / view_get
+      bytes_view / view_len / view_get / view_set
 
       实现现状（2026-10-27）：三段。bytes_view(字节们, 起, 长) 交出一段不拷贝的窗口；
-      view_len(w) 报长度；view_get(w, i) 读一个字节。越界给 R0151，类型不对给 R0152。
+      view_len(w) 报长度；view_get(w, i) 读一个字节，view_set(w, i, v) 写一个字节。
+      越界给 R0152，类型不对给 R0152，源不可写给 R0151 —— 与「设()」同一套码。
       窗口不是新内存 —— 它记着源、起、长，读的时候才去源上取。
 
       这一格是 design/FFI.txt 那三个答案的可执行形状，而不是完整的 FFI：

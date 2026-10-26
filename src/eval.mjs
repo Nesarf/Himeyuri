@@ -735,6 +735,21 @@ const BUILTINS = {
     }
     return w.源[w.起 + i];
   },
+  view_set: (rt, a) => {
+    const w = a[0];
+    if (!w || w.kind !== "view") rt.fail("HMYR-R0152", "view_set wants a window, found " + describe(w));
+    const i = rt.asNumber(a[1]);
+    if (!Number.isInteger(i) || i < 0 || i >= w.长) {
+      rt.fail("HMYR-R0152", "view_set " + i + " is outside the window (" + w.长 + ")");
+    }
+    // 只有可变的源能写 —— 与 设() 同一条判据、同一套码。
+    // 元组是不可变值，对它写会改到一个共享的值上，所以这里拒。
+    if (!Array.isArray(w.源) || w.源[数组标] !== true) {
+      rt.fail("HMYR-R0151", "view_set: the window was opened on bytes that cannot be written");
+    }
+    w.源[w.起 + i] = a[2];
+    return a[2];
+  },
   index_get: (rt, args) => {
     const m = args[0];
     if (!(m instanceof Map)) rt.fail("HMYR-R0219", "index_get wants an index, found " + describe(m));

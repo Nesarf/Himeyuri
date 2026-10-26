@@ -456,6 +456,20 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     let 源 = index_get(值们[0], "源")
     return 好(源[index_get(值们[0], "起") + i])
   }
+  if 名 == "view_set" {
+    if len(值们) != 3 { return 坏("view_set 要三个参数") }
+    if index_has(值们[0], "kind") == false { return 坏("HMYR-R0152 view_set: 这不是窗口") }
+    if index_get(值们[0], "kind") != "view" { return 坏("HMYR-R0152 view_set: 这不是窗口") }
+    let 长 = index_get(值们[0], "长")
+    let i = to_int(值们[1])
+    if i < 0 || i >= 长 { return 坏("HMYR-R0152 view_set: " + str(i) + " 在窗口外面（" + str(长) + "）") }
+    let 源 = index_get(值们[0], "源")
+    let 位 = index_get(值们[0], "起") + i
+    // 写进源。源不可写时由 设() 那一层判（R0151）—— 这一层看不见它的判据，
+    // 所以那一侧在这里没有同一句话可给：source-not-writable 在自举层是「设() 报错」。
+    设(源, 位, 值们[2])
+    return 好(值们[2])
+  }
   // 原始字节：嵌入与打包要它。这一层只转发，读不到由下面那一层说。
   if 名 == "read_bytes" {
     let 欠读 = 要效果(环境, "file", "read_bytes")

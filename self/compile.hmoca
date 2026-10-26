@@ -169,6 +169,7 @@ fn 是内置(名: String) -> Bool {
   if 名 == "bytes_view" { return true }
   if 名 == "view_len" { return true }
   if 名 == "view_get" { return true }
+  if 名 == "view_set" { return true }
   if 名 == "bytes_to_text" { return true }
   if 名 == "chdir" { return true }
   if 名 == "console_codepage" { return true }

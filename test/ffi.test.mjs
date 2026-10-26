@@ -139,6 +139,80 @@ console.log("四、C 那台一致");
   }
 }
 
+console.log("五、可写窗口：写进窗口，源也跟着变");
+{
+  // 这一条是「不拷贝」最强的证据。元组不可变，所以在只读窗口上测不到
+  // 「改了源之后窗口看到新值」；可变数组测得到 —— 而它证明窗口与源是同一块内存。
+  const p = 投(行们([
+    "fn main() -> Int effects(process) {",
+    "  let 源 = 数组((10, 11, 12, 13))",
+    "  let 窗 = bytes_view(源, 1, 2)",
+    "  print(\"写前=\" + str(view_get(窗, 0)) + chr(10))",
+    "  view_set(窗, 0, 99)",
+    "  print(\"写后窗=\" + str(view_get(窗, 0)) + chr(10))",
+    "  print(\"写后源=\" + str(源[1]) + chr(10))",
+    "  return 0",
+    "}",
+  ]), "可.hmoca");
+  const 甲 = 跑([p]);
+  const 甲行 = 行(甲.stdout);
+  ok("默认路径：写前是原值", 甲行.includes("写前=11"), JSON.stringify({ status: 甲.status, out: 甲行, err: (甲.stderr || "").slice(0, 140) }));
+  ok("默认路径：写后窗口读到新值", 甲行.includes("写后窗=99"), JSON.stringify(甲行));
+  ok("默认路径：源也变了（不拷贝的证据）", 甲行.includes("写后源=99"), JSON.stringify(甲行));
+
+  const 乙 = 跑(["--compile", p]);
+  const 乙行 = 行(乙.stdout);
+  ok("--compile 同一段", 乙.status === 0 && JSON.stringify(乙行) === JSON.stringify(甲行.slice(0, 乙行.length)),
+    JSON.stringify([乙行, 甲行.slice(0, 乙行.length)]));
+
+  const exe2 = path.join(临, "hmyr-ffi2.exe");
+  const 有gcc = (() => {
+    try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
+  })();
+  if (有gcc) {
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-Wl,--stack,67108864", "-o", exe2,
+      path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
+    if (编.status === 0) {
+      const 码 = path.join(临, "可.hmoks");
+      const 编程序 = spawnSync(process.execPath, [path.join(ROOT, "tools", "emit-code.mjs"), p, 码], { encoding: "utf8" });
+      if (编程序.status === 0) {
+        const 台 = spawnSync(exe2, [码], { encoding: "utf8", timeout: 300000,
+          env: { ...process.env, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000" } });
+        const 台行 = 行(台.stdout);
+        ok("C 那台同一段", 台.status === 0 && JSON.stringify(台行) === JSON.stringify(甲行.slice(0, 台行.length)),
+          JSON.stringify({ status: 台.status, out: 台行 }));
+      }
+    }
+  } else {
+    console.log("  跳过  这台机器上没有 gcc —— 第四台不验");
+  }
+}
+
+console.log("六、不可写的源：元组上写要拒");
+{
+  // 元组是不可变值，对它写会改到一个共享的值上。与 设() 同一套码：R0151。
+  const p = 投(行们([
+    "fn main() -> Int effects(process) {",
+    "  let 源 = (10, 11, 12)",
+    "  let 窗 = bytes_view(源, 0, 2)",
+    "  view_set(窗, 0, 99)",
+    "  print(\"没有拦住\" + chr(10))",
+    "  return 0",
+    "}",
+  ]), "不.hmoca");
+  const 甲 = 跑([p]);
+  const 甲出 = (甲.stdout || "") + (甲.stderr || "");
+  ok("默认路径：元组上写被拒（R0151）", 甲出.includes("HMYR-R0151") && !甲出.includes("没有拦住"),
+    JSON.stringify(甲出.slice(0, 160)));
+  const 乙 = 跑(["--compile", p]);
+  const 乙出 = (乙.stdout || "") + (乙.stderr || "");
+  ok("--compile：同一句", 乙出.includes("HMYR-R0151") && !乙出.includes("没有拦住"),
+    JSON.stringify(乙出.slice(0, 160)));
+
+  // 自举层那一条路对不可写的源没有同一句话可给：它的 设() 报的是底层那句。
+  // 这一条与上面那条类型缺口是同一类，写在这里而不是让它空着。
+}
+
 // 一条判据这里做不到，写出来而不是让它空着：
 // 类型不对（拿数字去建窗口）那一侧，三台不一致 —— 自举层的 len() 对数字先报底层的
 // 「len() wants a string or a tuple」，走不到 R0152。要统一，得给自举层一个

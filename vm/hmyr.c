@@ -3977,6 +3977,37 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = 源值.items[位];
     return 1;
   }
+  if (name_is(name_idx, "view_set")) {
+    if (nargs != 3) { fail("HMYR-R0101", "view_set wants three arguments"); return 1; }
+    Value 类值, 源值, 起值, 长值;
+    if (args[0].tag != T_INDEX || !区取键(args[0].idx, "kind", &类值) || !串是字(类值, "view")) {
+      fail("HMYR-R0152", "view_set wants a window");
+      return 1;
+    }
+    if (args[1].tag != T_NUM) { fail("HMYR-R0101", "view_set wants a number"); return 1; }
+    if (!区取键(args[0].idx, "src", &源值) || !区取键(args[0].idx, "start", &起值) || !区取键(args[0].idx, "len", &长值)) {
+      fail("HMYR-R0152", "view_set wants a window");
+      return 1;
+    }
+    long i = (long)args[1].num, 长 = (long)长值.num;
+    if (i < 0 || i >= 长) {
+      fail("HMYR-R0152", "view_set: outside the window");
+      return 1;
+    }
+    /* 只有数组能写 —— 元组是不可变值，与另三台同一条判据、同一套码。 */
+    if (源值.tag != T_ARRAY) {
+      fail("HMYR-R0151", "view_set: the window was opened on bytes that cannot be written");
+      return 1;
+    }
+    long 位 = (long)起值.num + i;
+    if (位 < 0 || 位 >= (long)源值.ilen) {
+      fail("HMYR-R0152", "view_set: outside the window");
+      return 1;
+    }
+    源值.items[位] = args[2];
+    *out = args[2];
+    return 1;
+  }
   /* owned：单一所有者的持有格（design/MEMORY.txt 第 2 节）。 */
   if (name_is(name_idx, "owned")) {
     if (nargs != 0) { fail("HMYR-R0101", "owned takes no arguments"); return 1; }
