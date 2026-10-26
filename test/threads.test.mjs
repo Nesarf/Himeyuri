@@ -84,6 +84,20 @@ console.log("超时：等不到就报编号，而不是一直挂着");
   fs.rmSync(慢路径, { force: true });
 }
 
+console.log("派生处：没声明 thread 就不许派生");
+{
+  // 效果在并发下只落一层，而今天落的就是这一层（SPEC 2.9 的 [定]）：
+  // thr_spawn 带 thread 效果，所以没声明的函数调它会被 R0201 拒。
+  // 更细的那一层（任务能碰的东西不许超出派生者）今天做不到 —— 任务是一段源码
+  // 字符串，它的 effects 在字符串里，派生时看不见。理由写在 CONCURRENCY.txt 的 2.1.6。
+  const r = 跑('fn main() -> Int {\n  let 手 = thr_spawn("(fn work() -> Int { 1 })", "work")\n  return 0\n}\n');
+  ok("没声明 thread 的派生被拒（R0201）", r.error && r.error.includes("HMYR-R0201"), String(r.error).slice(0, 100));
+
+  // 声明了就过得去 —— 这一句是上一条的对照，少了它判据会往「一律拒」偏。
+  const 好 = 跑('fn main() -> Int effects(thread) {\n  let 手 = thr_spawn("(fn work() -> Int { 1 })", "work")\n  return 0\n}\n');
+  ok("声明了 thread 就不报 R0201", !好.error || !好.error.includes("HMYR-R0201"), String(好.error).slice(0, 100));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
