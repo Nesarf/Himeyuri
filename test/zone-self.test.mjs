@@ -242,6 +242,9 @@ console.log("八、一个真程序：四台机器同一段");
   const 甲行 = 行(甲.stdout);
   ok("默认跑得动", 甲.status === 0, JSON.stringify({ status: 甲.status, err: (甲.stderr || "").slice(0, 120) }));
   ok("读数对（四行、总长十五）", 甲行.includes("行=4 总长=15"), JSON.stringify(甲行));
+  // 这一行是「区里真的放着东西」的证据：每段的长度写进记账块的格子，走完再读出来。
+  // 少了它，示例只是在记账，而记账不需要块有内容。
+  ok("各段长度是从块的格子里读出来的", 甲行.includes("各段=5,3,4,3"), JSON.stringify(甲行));
   ok("交出去的那块活过了区", 甲行.includes("关之后 报告.live=1 zone=managed"), JSON.stringify(甲行));
 
   const 乙 = 跑(["--host-eval", 例]);
