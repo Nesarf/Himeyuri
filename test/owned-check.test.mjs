@@ -590,6 +590,42 @@ console.log("十三、跨包（包名解析 + 同一张表）");
   ok("跨包的干净调用不报",
    净.diagnostics.errors.filter((e) => e.code === "HMYR-E0321").length === 0,
    JSON.stringify(净.diagnostics.errors.map((e) => e.code)));
+
+  // 版本：import "甲包" rev N 与路径形式走同一套检查 —— 因为包名解析成路径之后，
+  // 检查就落在 import 循环里那一段，与路径形式没有分叉。
+  // 上一版的文档说「版本协商只对路径形式生效」，那是错的；这一条判据就是来钉住它的。
+  fs.writeFileSync(path.join(根, "甲包", "index.hmoca"), 行们([
+    "rev 2",
+    "",
+    "fn 甲() -> Int {",
+    "  return 1",
+    "}",
+  ]), "utf8");
+  const 要三 = path.join(根, "要三.hmoca");
+  fs.writeFileSync(要三, 行们([
+    "import \"甲包\" rev 3",
+    "",
+    "fn main() -> Int {",
+    "  return 甲()",
+    "}",
+  ]), "utf8");
+  const 高三 = loadUnit(要三);
+  ok("包名上要的版本高于模块提供的 → E0303",
+   高三.diagnostics.errors.some((e) => e.code === "HMYR-E0303"),
+   JSON.stringify(高三.diagnostics.errors.map((e) => e.code)));
+
+  const 要二 = path.join(根, "要二.hmoca");
+  fs.writeFileSync(要二, 行们([
+    "import \"甲包\" rev 2",
+    "",
+    "fn main() -> Int {",
+    "  return 甲()",
+    "}",
+  ]), "utf8");
+  const 平 = loadUnit(要二);
+  ok("要的版本与提供的一样 → 不报 E0303",
+   平.diagnostics.errors.filter((e) => e.code === "HMYR-E0303").length === 0,
+   JSON.stringify(平.diagnostics.errors.map((e) => e.code)));
 }
 
 fs.rmSync(临, { recursive: true, force: true });
