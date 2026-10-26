@@ -106,6 +106,39 @@ console.log("三、三台一致");
     JSON.stringify([乙行, 基准.slice(0, 乙行.length)]));
 }
 
+console.log("四、C 那台一致");
+{
+  // 这一台要现编：它是唯一不经过 JS 的那条路。编不出来就跳过，并说明跳过了什么。
+  const 有gcc = (() => {
+    try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
+  })();
+  if (!有gcc) {
+    console.log("  跳过  这台机器上没有 gcc —— 第四台不验");
+  } else {
+    const exe = path.join(临, "hmyr-ffi.exe");
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-Wl,--stack,67108864", "-o", exe,
+      path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
+    ok("C 那台编得出来", 编.status === 0, String(编.stderr || "").slice(0, 160));
+    if (编.status === 0) {
+      const 码 = path.join(临, "甲.hmoks");
+      const 源 = path.join(临, "甲.hmoca");
+      const 编程序 = spawnSync(process.execPath, [path.join(ROOT, "tools", "emit-code.mjs"), 源, 码],
+        { encoding: "utf8" });
+      ok("窗口程序编得出来", 编程序.status === 0, String(编程序.stderr || "").slice(0, 160));
+      if (编程序.status === 0) {
+        const 台 = spawnSync(exe, [码], {
+          encoding: "utf8", timeout: 300000,
+          env: { ...process.env, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000" },
+        });
+        const 台行 = 行(台.stdout);
+        const 基准行 = 行(跑([源]).stdout);
+        ok("C 那台同一段", 台.status === 0 && JSON.stringify(台行) === JSON.stringify(基准行.slice(0, 台行.length)),
+          JSON.stringify({ status: 台.status, out: 台行 }));
+      }
+    }
+  }
+}
+
 // 一条判据这里做不到，写出来而不是让它空着：
 // 类型不对（拿数字去建窗口）那一侧，三台不一致 —— 自举层的 len() 对数字先报底层的
 // 「len() wants a string or a tuple」，走不到 R0152。要统一，得给自举层一个

@@ -3912,6 +3912,71 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = 区新建();
     return 1;
   }
+  /* FFI 的最小形状（design/FFI.txt 第四节）：一段不拷贝的窗口。
+   * 用索引表示：kind = view，三个字段 src / start / len —— 与另三台同一套判词，
+   * 内部键照这一台的规矩用 ASCII。 */
+  if (name_is(name_idx, "bytes_view")) {
+    if (nargs != 3) { fail("HMYR-R0101", "bytes_view wants three arguments"); return 1; }
+    Value 源 = args[0];
+    if (源.tag != T_TUPLE && 源.tag != T_ARRAY) {
+      fail("HMYR-R0152", "bytes_view wants bytes (a tuple or an array)");
+      return 1;
+    }
+    if (args[1].tag != T_NUM || args[2].tag != T_NUM) {
+      fail("HMYR-R0101", "bytes_view wants numbers for the start and the length");
+      return 1;
+    }
+    long 总 = (long)源.ilen, 起 = (long)args[1].num, 长 = (long)args[2].num;
+    if (起 < 0 || 长 < 0 || 起 + 长 > 总) {
+      fail("HMYR-R0151", "bytes_view: the range is outside the bytes");
+      return 1;
+    }
+    Value v = v_null();
+    v.tag = T_INDEX;
+    v.idx = 索引造();
+    区放键(v.idx, "kind", ascii_text("view"));
+    区放键(v.idx, "src", 源);
+    区放键(v.idx, "start", v_num((double)起));
+    区放键(v.idx, "len", v_num((double)长));
+    *out = v;
+    return 1;
+  }
+  if (name_is(name_idx, "view_len")) {
+    if (nargs != 1) { fail("HMYR-R0101", "view_len wants one argument"); return 1; }
+    Value 类值, 长值;
+    if (args[0].tag != T_INDEX || !区取键(args[0].idx, "kind", &类值) || !串是字(类值, "view")) {
+      fail("HMYR-R0152", "view_len wants a window");
+      return 1;
+    }
+    if (!区取键(args[0].idx, "len", &长值)) { fail("HMYR-R0152", "view_len wants a window"); return 1; }
+    *out = 长值;
+    return 1;
+  }
+  if (name_is(name_idx, "view_get")) {
+    if (nargs != 2) { fail("HMYR-R0101", "view_get wants two arguments"); return 1; }
+    Value 类值, 源值, 起值, 长值;
+    if (args[0].tag != T_INDEX || !区取键(args[0].idx, "kind", &类值) || !串是字(类值, "view")) {
+      fail("HMYR-R0152", "view_get wants a window");
+      return 1;
+    }
+    if (args[1].tag != T_NUM) { fail("HMYR-R0101", "view_get wants a number"); return 1; }
+    if (!区取键(args[0].idx, "src", &源值) || !区取键(args[0].idx, "start", &起值) || !区取键(args[0].idx, "len", &长值)) {
+      fail("HMYR-R0152", "view_get wants a window");
+      return 1;
+    }
+    long i = (long)args[1].num, 长 = (long)长值.num;
+    if (i < 0 || i >= 长) {
+      fail("HMYR-R0151", "view_get: outside the window");
+      return 1;
+    }
+    long 位 = (long)起值.num + i;
+    if (位 < 0 || 位 >= (long)源值.ilen) {
+      fail("HMYR-R0151", "view_get: outside the window");
+      return 1;
+    }
+    *out = 源值.items[位];
+    return 1;
+  }
   /* owned：单一所有者的持有格（design/MEMORY.txt 第 2 节）。 */
   if (name_is(name_idx, "owned")) {
     if (nargs != 0) { fail("HMYR-R0101", "owned takes no arguments"); return 1; }
