@@ -124,16 +124,30 @@ console.log("六、逃生口存在且有效");
 
 console.log("七、整仓源码零诊断");
 {
-  const 份们 = fs.readdirSync(path.join(ROOT, "self")).filter((x) => x.endsWith(".hmoca")).sort();
-  let 总数 = 0;
+  // 判据说的是「整仓」，所以这里不只 self/。跳过的东西写清楚：点开头的目录、node_modules、
+  // 以及 dist 与 build（那里是产物，不是源码）。
+  const 收 = (根, 出 = [], 深 = 0) => {
+    if (深 > 3) return 出;
+    for (const e of fs.readdirSync(根, { withFileTypes: true })) {
+      if (e.name.startsWith(".") || e.name === "node_modules" || e.name === "dist" || e.name === "build") continue;
+      const p = path.join(根, e.name);
+      if (e.isDirectory()) 收(p, 出, 深 + 1);
+      else if (e.name.endsWith(".hmoca")) 出.push(p);
+    }
+    return 出;
+  };
+  const 份们 = 收(ROOT).sort();
+  let 总数 = 0, 读不动 = 0;
   const 首个 = [];
-  for (const 名 of 份们) {
-    const 源 = fs.readFileSync(path.join(ROOT, "self", 名), "utf8");
-    const 出 = 查(源);
-    if (出.length) 首个.push({ 名, 出: 出.slice(0, 2) });
+  for (const p of 份们) {
+    let 出 = [];
+    try { 出 = 查(fs.readFileSync(p, "utf8")); } catch { 读不动++; continue; }
+    if (出.length) 首个.push({ p: path.relative(ROOT, p), 出: 出.slice(0, 2) });
     总数 += 出.length;
   }
-  ok(份们.length + " 份 self/*.hmoca 零诊断", 总数 === 0, JSON.stringify(首个.slice(0, 2)));
+  ok(份们.length + " 份 .hmoca 零诊断", 总数 === 0, JSON.stringify(首个.slice(0, 3)));
+  // 「读不动」不算误报（子集那一层认的窄），但它也不该被当成「检查过了」。
+  ok("没有一份是读不动而跳过的", 读不动 === 0, String(读不动));
 }
 
 console.log("八、检查器自己不抛");
