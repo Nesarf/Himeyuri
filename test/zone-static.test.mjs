@@ -185,11 +185,14 @@ console.log("九、启动器：默认这条路也拦，而它不挡别人");
   const 丙 = 跑([普]);
   ok("普通程序照跑", (丙.stdout || "").includes("照跑"), JSON.stringify((丙.stdout || "").slice(0, 80)));
 
-  // 缺口二的一个半边：字节码编译器不认方法调用（它只认按名字调用），这本是它的实现限制。
-  // 而那条错原来不带码，于是 --compile 这一路会露出栈 —— 崩了也退出非零，
-  // 所以只看退出码会把「说了一句编号」与「栈」混成同一件事。判据落在有没有栈帧上。
-  const 编 = 跑(["--compile", 投(行们(["fn main() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return 7", "}"]), "主编.hmoca")]);
-  ok("--compile 上给的是编号而不是栈", (编.stderr || "").includes("HMYR-R0110"), JSON.stringify((编.stderr || "").slice(0, 120)));
+  // 缺口二：字节码编译器原来不认方法调用（只认按名字调用），于是 --compile 这一路
+  // 会露出栈。2026-10-27 补上 CALLM 之后它编得过 —— 判据因此从「给一句编号」
+  // 变成「编得过、而且没有栈」。当初那条「给编号」的判据是它还没修时写的，
+  // 留着就成了「修好了反而红」，所以它跟着事实走。
+  // 程序返回 0：--compile 那一面把 main 的返回值当退出码，返回 7 就会得到 status 7 ——
+  // 那是它在跑通，不是它失败。判据要能在「退出码」与「拒绝」之间分清。
+  const 编 = 跑(["--compile", 投(行们(["fn main() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return 0", "}"]), "主编.hmoca")]);
+  ok("--compile 认得方法调用了", 编.status === 0, JSON.stringify({ status: 编.status, err: (编.stderr || "").slice(0, 120) }));
   ok("而且没有栈帧", !/(^|\n)\s+at /.test(编.stderr || ""), JSON.stringify((编.stderr || "").slice(0, 120)));
 }
 

@@ -272,6 +272,17 @@ const 编译函数 = (decl) => {
       case "Field": 表达(n.target); 发("FIELD", n.name); return;
       case "Index": 表达(n.target); 表达(n.index); 发("INDEX"); return;
       case "Call": {
+        // 方法调用（a.alloc(16)）：先把主压栈，再压参数，最后一条 CALLM。
+        // 这是区的入口 —— 到 2026-10-26 为止这一行是「只认按名字调用」，于是
+        // 任何 a.alloc(16) 在 --compile 上都是一句拒绝，区也就只有解释那两条路能跑。
+        // 「只有区有方法」这条判断不写在语法里：它写在 VM 与 C 那台的分派里，
+        // 因为它在两处都一样 —— 而语法不该替语义做决定。
+        if (n.callee.kind === "Field") {
+          表达(n.callee.target);
+          for (const a of n.args) 表达(a);
+          发("CALLM", n.callee.name, n.args.length);
+          return;
+        }
         if (n.callee.kind !== "Ident") throw new 编译错("只认按名字调用：self/ 里没有别的写法");
         for (const a of n.args) 表达(a);
         if (内置名.has(n.callee.name)) 发("CALLB", n.callee.name, n.args.length);

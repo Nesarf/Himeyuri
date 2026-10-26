@@ -162,6 +162,35 @@ console.log("五、两台机器（默认与 --host-eval）跑出同一段");
     JSON.stringify(行(甲.stdout)));
 }
 
+console.log("六、字节码那台也跑得动（--compile），与解释那台逐行相同");
+{
+  // 到 2026-10-26 为止，字节码编译器对 a.alloc(16) 的回答是「只认按名字调用」——
+  // 于是区只有解释那两条路能跑。CALLM 接上之后，这里验的是第三台机器。
+  // 比的是「解释那台的前若干行」：解释面会把 main 的返回值也打出来，而 --compile 面不打，
+  // 那是两条面一直以来的显示差别，不是这一轮的东西。
+  const p = 投(行们([
+    "fn main() -> Int {",
+    "  let a = arena()",
+    "  let b = a.alloc(16)",
+    "  let c = a.alloc(8)",
+    "  print(\"zone=\" + b.zone + \" size=\" + str(b.size) + chr(10))",
+    "  print(\"held=\" + str(a.held()) + chr(10))",
+    "  a.freeze(b)",
+    "  print(\"held=\" + str(a.held()) + chr(10))",
+    "  print(\"c.live=\" + str(c.live) + chr(10))",
+    "  a.close()",
+    "  print(\"b.live=\" + str(b.live) + chr(10))",
+    "  return 0",
+    "}",
+  ]), "辛.hmoca");
+  const 释 = 跑([p]);
+  const 编 = 跑(["--compile", p]);
+  const 释行 = 行(释.stdout), 编行 = 行(编.stdout);
+  ok("--compile 跑得动", 编.status === 0, JSON.stringify({ status: 编.status, err: (编.stderr || "").slice(0, 140) }));
+  ok("而且它打出了同一段", 编行.length > 0 && JSON.stringify(编行) === JSON.stringify(释行.slice(0, 编行.length)),
+    JSON.stringify([编行, 释行.slice(0, 编行.length)]));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

@@ -183,8 +183,10 @@ export const 内置表 = {
     return 数.造(id);
   } },
   thr_count: { 做: (vm) => 数.造(Array.from(线程们.values()).filter((h) => vm.cap.thread.load(h.flag) === 0).length) },
-  // arena：三区模型的桩，字段是函数值；这一份也没有一等函数值。
-  arena: { 做: (vm) => vm.坏("HMYR-R0104", "arena is a stub for the zone model: its fields are functions, and this machine has no first-class functions") },
+  // arena：区在这一台也是真的了（2026-10-27）。交回的是一条索引 —— 与自举层
+  // （self/eval.hmoca）同一个表示，因为 close 要改状态而记录不可变。
+  // 六个方法由 vm.mjs 的 CALLM 分派，分派表在文件末尾的 调区方法。
+  arena: { 做: () => 新区() },
   // 字节元组转文本：按 UTF-8 解码。read_stdin_bytes 交回字节，而请求体是 UTF-8。
   bytes_to_text: { 做: (vm, a) => {
     const 项们 = a[0].items;
@@ -597,3 +599,85 @@ const 述 = (v, 文) => {
   if (数.是数(v)) return 数.成文(v);
   return String(v);
 };
+
+// ---- 区：三区模型在字节码这一台的记账 ----
+//
+// 表示与自举层（self/eval.hmoca）一样：区是一条索引，键是「种 / 关 / 下一个 / 活 / 块N」；
+// 块也是索引，键是「种 / zone / size / live / 号」。为什么用索引而不是记录 ——
+// 记录不可变，而 close 要改状态，那是这件事的全部理由。
+//
+// 这是第三次实现（宿主求值器一份、自举层一份、这里一份）。重复是认下的代价：
+// 三台机器各自要能跑同一段源码，而判据是「三台输出相同」，不是「三台共用一份实现」。
+//
+// 索引用 function 声明而不是 const：arena 那个内置在本文件靠前的位置就要调用 新区，
+// 而 const 不提升、function 提升。
+export function 是区(v) {
+  return !!(v && v.tag === "index" && v.m.get("种") === "区");
+}
+
+export function 新区() {
+  const m = new Map();
+  m.set("种", "区");
+  m.set("关", 0);
+  m.set("下一个", 1);
+  m.set("活", 0);
+  return { tag: "index", m };
+}
+
+// 交回 {值} 或 {码, 错}。码缺省是 R0302 —— 「拿到的不是那个区里活着的块」那一条。
+export function 调区方法(主, 名, 参) {
+  if (!是区(主)) return { 错: "这一版只认区上的方法：" + 名 };
+  const m = 主.m;
+  if (名 === "alloc") {
+    if (参.length !== 1) return { 错: "alloc 要一个参数" };
+    if (m.get("关") !== 0) return { 错: "arena.alloc: that arena is already closed" };
+    const 号 = m.get("下一个");
+    const 块 = new Map();
+    块.set("种", "块");
+    块.set("zone", "arena");
+    块.set("size", 参[0]);
+    块.set("live", 1);
+    块.set("号", 号);
+    m.set("块" + 号, { tag: "index", m: 块 });
+    m.set("下一个", 号 + 1);
+    m.set("活", m.get("活") + 1);
+    return { 值: { tag: "index", m: 块 } };
+  }
+  if (名 === "held") return { 值: m.get("活") };
+  if (名 === "close") {
+    // 交出去的那些归托管，close 不带它们走 —— 那正是 freeze 的全部意义。
+    const 下一个 = m.get("下一个");
+    for (let i = 1; i < 下一个; i++) {
+      const 块 = m.get("块" + i);
+      if (块 && 块.m.get("zone") === "arena") 块.m.set("live", 0);
+    }
+    m.set("关", 1);
+    m.set("活", 0);
+    return { 值: 0 };
+  }
+  if (名 === "freeze") {
+    if (参.length !== 1) return { 错: "freeze 要一个参数" };
+    if (m.get("关") !== 0) return { 错: "arena.freeze: that arena is already closed" };
+    const 块 = 参[0];
+    if (!块 || 块.tag !== "index" || 块.m.get("zone") !== "arena") {
+      return { 错: "arena.freeze was given a block this arena does not own" };
+    }
+    块.m.set("zone", "managed");
+    块.m.set("live", 1);
+    m.set("活", m.get("活") - 1);
+    return { 值: 块 };
+  }
+  if (名 === "adopt") {
+    if (参.length !== 1) return { 错: "adopt 要一个参数" };
+    if (m.get("关") !== 0) return { 错: "arena.adopt: that arena is already closed" };
+    const 块 = 参[0];
+    if (!块 || 块.tag !== "index" || 块.m.get("zone") !== "managed") {
+      return { 码: "HMYR-R0303", 错: "arena.adopt: that block was not handed to the managed zone" };
+    }
+    块.m.set("zone", "arena");
+    块.m.set("live", 1);
+    m.set("活", m.get("活") + 1);
+    return { 值: 块 };
+  }
+  return { 错: "区上没有这个方法：" + 名 };
+}

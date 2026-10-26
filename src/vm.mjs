@@ -13,7 +13,7 @@
 // 而数字的意思在 src/numbers.mjs 里有一处定义：执行器不再自己写裸算术，
 // 也不再自己判断「这是不是数」。字符串的码元操作同理，在 src/text.mjs。
 // 换掉标量那件事要改的就是这两份文件。
-import { 内置表 } from "./vm-builtins.mjs";
+import { 内置表, 调区方法 } from "./vm-builtins.mjs";
 import { 编译模块, 合并程序 } from "./bytecode.mjs";
 import * as 数 from "./numbers.mjs";
 import * as 文 from "./text.mjs";
@@ -227,6 +227,9 @@ export class 虚拟机 {
         case "FIELD": {
           const t = 弹();
           if (!t || t.tag !== "record" || !t.fields.has(指令.a)) {
+            // 区与块是索引，它们的字段也要能读（b.zone / b.size / b.live）。
+            // 记录先问、索引后问：同名时记录赢，与 self/eval 那条同一顺序。
+            if (t && t.tag === "index" && t.m.has(指令.a)) { 压(t.m.get(指令.a)); pc++; break; }
             this.坏("HMYR-R0106", "no field '" + 指令.a + "' on that value");
             return null;
           }
@@ -337,6 +340,21 @@ export class 虚拟机 {
           if (!r.ok) return null;
           压(r.值);
           pc++; break;
+        }
+        case "CALLM": {
+          // 方法调用（a.alloc(16)）：主先压栈，参数按序压，最后这一条。
+          // 分派交给 vm-builtins 的 调区方法 —— 与自举层那边同一套键与同一套判词，
+          // 因为「三台机器同一个答案」靠的是判词相同，不是实现相同。
+          const n = 指令.b;
+          const 参 = [];
+          for (let i = 0; i < n; i++) 参.push(弹());
+          参.reverse();
+          const 主 = 弹();
+          const r = 调区方法(主, 指令.a, 参);
+          if (r.错) { this.坏(r.码 || "HMYR-R0302", r.错); return null; }
+          压(r.值);
+          pc++;
+          break;
         }
         case "RET": return 弹();
         default: this.坏("HMYR-R0110", "cannot execute the opcode " + 指令.op); return null;

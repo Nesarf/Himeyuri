@@ -338,6 +338,16 @@ fn 表达(节点: Int, 状态: Int) {
     return {ok: false, 错: "不认的一元运算：" + 节点.op}
   }
   if 种 == "Call" {
+    // 方法调用（a.alloc(16)）：主先压栈，参数按序压，最后一条 CALLM。
+    // 与 src/bytecode.mjs 那一份发同一条指令 —— 两台编译器要给同一个字节流，
+    // 而这一点由 selfvmcompile 那套盯着。
+    if 节点.callee.kind == "Field" {
+      let 主 = 表达(节点.callee.target, 状态)
+      if 主.ok == false { return 主 }
+      let 方的参 = 编实参(节点.args, 主.状态, 0)
+      if 方的参.ok == false { return 方的参 }
+      return {ok: true, 状态: 发(方的参.状态, {op: "CALLM", a: 节点.callee.name, b: len(节点.args)})}
+    }
     let 参 = 编实参(节点.args, 状态, 0)
     if 参.ok == false { return 参 }
     if 是内置(节点.callee.text) {
