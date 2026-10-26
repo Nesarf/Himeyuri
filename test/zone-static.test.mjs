@@ -175,6 +175,75 @@ console.log("九、启动器：默认这条路也拦，而它不挡别人");
   ok("而且没有栈帧", !/(^|\n)\s+at /.test(编.stderr || ""), JSON.stringify((编.stderr || "").slice(0, 120)));
 }
 
+console.log("十、关掉之后那块不再可用，而借出去要看住");
+{
+  // 4.1 的原例里，close 之后接的是 b.size —— 「读它的字段」与「返回它」一样是碰了死内存，
+  // 而运行期对那一下是不吭声的（块的 size 字段还在）。所以这条只能在装载时看。
+  const 关后用 = 行们([
+    "fn f() -> Int {",
+    "  let a = arena()",
+    "  let b = a.alloc(8)",
+    "  a.close()",
+    "  return b.size",
+    "}",
+  ]);
+  ok("close 之后读字段给 R0301", 查(关后用).some((d) => d.code === "HMYR-R0301" && d.severity === "error"), JSON.stringify(查(关后用)));
+
+  // 交出去之后那块归托管，close 不带走它 —— 那正是 freeze 的意义，所以不该报。
+  const 先交 = 行们([
+    "fn f() -> Int {",
+    "  let a = arena()",
+    "  let b = a.alloc(8)",
+    "  a.freeze(b)",
+    "  a.close()",
+    "  return b.size",
+    "}",
+  ]);
+  ok("交出去之后 close 再用，不报", 查(先交).length === 0, JSON.stringify(查(先交)));
+
+  // close 写在 if 里面时它可能没执行过，所以不算「上面已经关了」。漏报一种，比误报一种好。
+  const 分支里 = 行们([
+    "fn f(c: Int) -> Int {",
+    "  let a = arena()",
+    "  let b = a.alloc(8)",
+    "  if c > 0 {",
+    "    a.close()",
+    "  }",
+    "  return b.size",
+    "}",
+  ]);
+  ok("分支里的 close 不算数", !查(分支里).some((d) => d.code === "HMYR-R0301"), JSON.stringify(查(分支里)));
+
+  // 4.2 的原例要一个模块级的可变变量，而语言里没有那种声明（顶层只有 fn / type / const /
+  // effect / macro）。今天写得出来的近似是「把块交给别的函数」：那个函数的函数体不在这份
+  // 源码里，没人保证它不把块留下。近似是保守的，所以它说警告，不说错误。
+  const 交块 = 行们([
+    "fn keep(x: Int) -> Int {",
+    "  return x",
+    "}",
+    "fn f() -> Int {",
+    "  let a = arena()",
+    "  let b = a.alloc(8)",
+    "  return keep(b)",
+    "}",
+  ]);
+  ok("块交给别的函数给 W0311", 查(交块).some((d) => d.code === "HMYR-W0311" && d.severity === "warning"), JSON.stringify(查(交块)));
+
+  const 传字段 = 行们([
+    "fn keep(x: Int) -> Int {",
+    "  return x",
+    "}",
+    "fn f() -> Int {",
+    "  let a = arena()",
+    "  let b = a.alloc(8)",
+    "  let n = keep(b.size)",
+    "  a.close()",
+    "  return n",
+    "}",
+  ]);
+  ok("传字段不算传块", 查(传字段).length === 0, JSON.stringify(查(传字段)));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
