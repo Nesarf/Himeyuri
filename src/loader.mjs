@@ -16,6 +16,7 @@ import { 切 } from "./subset-lex.mjs";
 import { 子集解 } from "./subset-parse.mjs";
 import { 展开模块 } from "./expand.mjs";
 import { 区检查 } from "./zone-check.mjs";
+import { 实时检查 } from "./realtime-check.mjs";
 
 const short = (file) => file.split(/[\\/]/).pop() || file;
 
@@ -87,6 +88,14 @@ export function loadUnit(entry, options = {}) {
       for (const d of 区检查(ast, { 文件: short(abs) })) {
         if (d.severity === "error") diagnostics.error(d.code, d.message, d.line, d.column);
         else diagnostics.warn(d.code, d.message, d.line, d.column);
+      }
+    }
+
+    // 实时档位那四条（design/MEMORY.txt 第 3 节）。开关与区检查分开：
+    // 一条管「内存跑出区」，一条管「实时回调碰了会等的东西」—— 两件事关掉的理由不同。
+    if (options.realtimeCheck !== false) {
+      for (const d of 实时检查(ast, { 文件: short(abs) })) {
+        diagnostics.error(d.code, d.message, d.line, d.column);
       }
     }
 
