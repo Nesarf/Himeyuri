@@ -33,7 +33,7 @@ console.log("一、六份，默认栈下，名字与顺序都与宿主一致");
   // 数字随规模走，这一条是它自己的注释里写着的。
   // 2026-10-27 之后：body 加了五个（声明扫描认 const/var 的那一串），
   // eval 加了区与持有格的方法分派，run 加了常量的合并与几个小函数。
-  const 期 = { lex: 27, chain: 27, stmt: 10, body: 28, eval: 52, run: 55 };
+  const 期 = { lex: 27, chain: 27, stmt: 10, body: 28, eval: 55, run: 55 };
   for (const 名 of Object.keys(期)) {
     const 路 = path.join(ROOT, "self", 名 + ".hmoca");
     const 甲 = 算名(路);

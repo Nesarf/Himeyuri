@@ -22,6 +22,7 @@ export const 检查码 = "HMYR-E0321";
 
 const 空 = "empty";
 const 满 = "full";
+const 关 = "closed";
 
 const 是方法调用 = (n) =>
   n && n.kind === "Call" && n.callee && n.callee.kind === "Field" &&
@@ -58,12 +59,23 @@ function 处理方法调用(调, 状态, 报) {
   if (!是方法调用(调)) return false;
   const 名 = 调.callee.target.name;
   const 方法 = 调.callee.name;
-  if (!状态.has(名) || (方法 !== "放" && 方法 !== "取")) {
-    // 别的方法（关 等）或来源不明的：之后说不清。
-    if (状态.has(名)) 状态.delete(名);
+  if (!状态.has(名)) return false;
+  if (方法 !== "放" && 方法 !== "取" && 方法 !== "关") {
+    // 别的方法：之后说不清（这一层不认识它们，也不假装认识）。
+    状态.delete(名);
     return false;
   }
   const 现在 = 状态.get(名);
+  // 关了之后不能再放也不能再取 —— 那两条在运行期是 R0305，而这里看得见。
+  if (现在 === 关 && (方法 === "放" || 方法 === "取")) {
+    报("'" + 名 + "' was closed before this point; using it after close is R0305 at run time, and it is knowable now", 调);
+    return true;
+  }
+  if (方法 === "关") {
+    // 重复关是幂等的（运行期也是），所以只记状态，不报。
+    if (现在 !== 关) 状态.set(名, 关);
+    return true;
+  }
   if (方法 === "放") {
     if (现在 === 满) {
       报("'" + 名 + "' already holds a value here; putting a second one is R0305 at run time, and it is knowable now", 调);
@@ -78,6 +90,17 @@ function 处理方法调用(调, 状态, 报) {
     }
   }
   return true;
+}
+
+// 两条路径汇合时，一个变量的状态只在两条都一样的时候才保得住 —— 其余一律说不清。
+// 这一条是数据流分析的全部内容，而它保守的方向仍然是「宁可漏」：
+// 一侧满一侧空就是「可能满可能空」，不判。
+function 合并状态(甲, 乙) {
+  const 出 = new Map();
+  for (const [名, 态] of 甲) {
+    if (乙.get(名) === 态) 出.set(名, 态);
+  }
+  return 出;
 }
 
 // 一个直行序列：按顺序更新状态表，遇到错就报，遇到看不透的东西就降级。
@@ -101,16 +124,31 @@ function 走块(语句们, 状态, 报) {
     const 调 = 句.kind === "ExprStmt" ? 句.expr : (句.kind === "Assign" ? 句.value : null);
     if (处理方法调用(调, 状态, 报)) continue;
 
-    // 分支与循环：体里的一次也不追，但外面那些变量的状态要降级 ——
-    // 「可能没走过」与「可能走了多次」都说不出结论。
-    if (句.kind === "If") {
-      走块(句.then ? (句.then.statements || []) : [], new Map(状态), 报);
-      走块(句.else ? (句.else.statements || []) : [], new Map(状态), 报);
-      for (const 键 of Array.from(状态.keys())) 状态.delete(键);
+    // 分支与循环。两只形状都要认：宿主那一层的 parser 给的是语句（kind 就是 If / While），
+    // 而子集那一层给的是表达式（ExprStmt 的 expr 是 If / While）。
+    // 只认一只的话，另一只上这一节等于没跑 —— 而它会「碰巧」通过，因为走到降级那条路。
+    const 控制 = (句.kind === "If" || 句.kind === "While")
+      ? 句
+      : (调 && (调.kind === "If" || 调.kind === "While") ? 调 : null);
+
+    if (控制 && 控制.kind === "If") {
+      // 两条路径各走一遍（用的是同一份状态的拷贝），再按「都一样才保得住」汇合。
+      // 没有 else 的那一支，另一侧就是原状态 —— 那是「可能没走」的意思。
+      const 甲 = 走块(控制.then ? (控制.then.statements || []) : [], new Map(状态), 报);
+      const 乙 = 控制.otherwise
+        ? 走块(控制.otherwise.statements || [], new Map(状态), 报)
+        : new Map(状态);
+      const 合 = 合并状态(甲, 乙);
+      状态.clear();
+      for (const [键, 态] of 合) 状态.set(键, 态);
       continue;
     }
-    if (句.kind === "While") {
-      for (const 键 of Array.from(状态.keys())) 状态.delete(键);
+    if (控制 && 控制.kind === "While") {
+      // 零次与多次都要算：体走一遍得出「走过之后」，再与「没走」的那份汇合。
+      const 体 = 走块(控制.body ? (控制.body.statements || []) : [], new Map(状态), 报);
+      const 合 = 合并状态(状态, 体);
+      状态.clear();
+      for (const [键, 态] of 合) 状态.set(键, 态);
       continue;
     }
 

@@ -169,6 +169,103 @@ console.log("五、整仓现有 .hmoca 零误报");
   ok("没有一份是读不动而跳过的", 读不动 === 0, String(读不动));
 }
 
+console.log("六、分支合并（数据流那一层）");
+{
+  // 两侧都放进去了，所以汇合之后是「满」—— 再放一次就是 R0305，看得见。
+  const 两侧都放 = 行们([
+    "fn f(n: Int) -> Int {",
+    "  let 格 = owned()",
+    "  if n > 0 {",
+    "    格.放(1)",
+    "  } else {",
+    "    格.放(2)",
+    "  }",
+    "  格.放(3)",
+    "  return 0",
+    "}",
+  ]);
+  ok("if 两侧各放一次之后再放被拒", 有(查(两侧都放), "already holds a value"), JSON.stringify(查(两侧都放)));
+
+  // 一侧放一侧不放：汇合之后是「可能满可能空」，所以不判 —— 这一条与上一条成对，
+  // 少了它，合并就会往「宁可报」偏，而那份检查活不下来。
+  const 一侧放 = 行们([
+    "fn f(n: Int) -> Int {",
+    "  let 格 = owned()",
+    "  if n > 0 {",
+    "    格.放(1)",
+    "  }",
+    "  格.放(3)",
+    "  return 0",
+    "}",
+  ]);
+  ok("一侧放一侧不放：汇合后不报", 查(一侧放).length === 0, JSON.stringify(查(一侧放)));
+
+  // 先装满，再在两侧都取空 —— 汇合之后是「空」，再取一次就是 R0306。
+  const 两侧都取 = 行们([
+    "fn f(n: Int) -> Int {",
+    "  let 格 = owned()",
+    "  格.放(9)",
+    "  if n > 0 {",
+    "    格.取()",
+    "  } else {",
+    "    格.取()",
+    "  }",
+    "  格.取()",
+    "  return 0",
+    "}",
+  ]);
+  ok("两侧都取空之后再取被拒", 有(查(两侧都取), "is empty here"), JSON.stringify(查(两侧都取)));
+
+  // 循环体里放一次：零次或多次都可能，汇合之后说不清，不判。
+  const 循环放 = 行们([
+    "fn f(n: Int) -> Int {",
+    "  let 格 = owned()",
+    "  var i = 0",
+    "  while i < n {",
+    "    格.放(i)",
+    "    i = i + 1",
+    "  }",
+    "  格.放(7)",
+    "  return 0",
+    "}",
+  ]);
+  ok("循环之后不报（零次或多次都可能）", 查(循环放).length === 0, JSON.stringify(查(循环放)));
+}
+
+console.log("七、关闭之后的使用");
+{
+  const 关后放 = 行们([
+    "fn f() -> Int {",
+    "  let 格 = owned()",
+    "  格.关()",
+    "  格.放(1)",
+    "  return 0",
+    "}",
+  ]);
+  ok("关之后放被拒", 有(查(关后放), "was closed before this point"), JSON.stringify(查(关后放)));
+
+  const 关后取 = 行们([
+    "fn f() -> Int {",
+    "  let 格 = owned()",
+    "  格.关()",
+    "  格.取()",
+    "  return 0",
+    "}",
+  ]);
+  ok("关之后取被拒", 有(查(关后取), "was closed before this point"), JSON.stringify(查(关后取)));
+
+  // 重复关是幂等的，运行期不报，这里也不该报。
+  const 重复关 = 行们([
+    "fn f() -> Int {",
+    "  let 格 = owned()",
+    "  格.关()",
+    "  格.关()",
+    "  return 0",
+    "}",
+  ]);
+  ok("重复关不报", 查(重复关).length === 0, JSON.stringify(查(重复关)));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
