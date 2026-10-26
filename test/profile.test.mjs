@@ -172,6 +172,55 @@ console.log("七、JS 侧也真的会起线程（最小求值器）");
   ok("steady 第二个线程撞池", (紧.stderr || "").includes("HMYR-R0223"), JSON.stringify((紧.stdout || "").slice(0, 60)) + JSON.stringify((紧.stderr || "").slice(-120)));
 }
 
+console.log("八、GC 那一项在 C 那台上也按档位");
+{
+  // 在接上之前，steady 预设里那句「GC 开」只是一行字：C 那台只认 HMYR_GC 环境变量，
+  // 而没有任何地方按档位给它传。判据用 GC 自己的日志 —— 阈值压到一兆，
+  // 看到 gc 开始就是开着，而「开」与「关」跑出的是同一段结果：档位换的是资源，不是答案。
+  const exe = path.join(临, "hmyr.exe");
+  if (!fs.existsSync(exe)) {
+    console.log("  跳过  C 那台没编出来 —— GC 那一侧不验");
+  } else {
+    const 源 = [
+      "fn main() -> Int {",
+      '  var s = ""',
+      "  var i = 0",
+      "  while i < 2000 {",
+      '    s = s + "0123456789"',
+      "    i = i + 1",
+      "  }",
+      '  print("len=" + str(len(s)) + chr(10))',
+      "  return 0",
+      "}",
+    ].join("\n") + "\n";
+    for (const 名 of ["g.hmsnp", "g.hmhsr"]) fs.writeFileSync(path.join(临, 名), 源, "utf8");
+
+    // 这一台的进程环境里若留着 HMYR_GC，会把「按档位」验成「按环境变量」——
+    // 那种判据在别人机器上绿、在自己的机器上红。先摘掉，再由每一跑自己给。
+    const 净 = { ...process.env };
+    delete 净.HMYR_GC;
+    delete 净.HMYR_GC_LOG;
+    delete 净.HMYR_GC_BYTES;
+    const 跑G = (名, env) => spawnSync(exe, [path.join(临, 名)], {
+      encoding: "utf8", cwd: 临, timeout: 180000,
+      env: { ...净, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000",
+        HMYR_GC_BYTES: "1000000", HMYR_GC_LOG: "1", ...env },
+    });
+
+    const 稳 = 跑G("g.hmsnp", {});
+    const 弹 = 跑G("g.hmhsr", {});
+    ok("steady 真的回收", (稳.stderr || "").includes("gc: "), JSON.stringify((稳.stderr || "").slice(0, 80)));
+    ok("elastic 不回收", !(弹.stderr || "").includes("gc: "), JSON.stringify((弹.stderr || "").slice(0, 80)));
+    ok("两档跑出同一段结果", (稳.stdout || "") === (弹.stdout || ""), JSON.stringify([稳.stdout, 弹.stdout]));
+
+    // 环境变量仍然优先：它说的是「这一跑我要改」，比文件名离得更近。
+    const 压开 = 跑G("g.hmhsr", { HMYR_GC: "1" });
+    const 压关 = 跑G("g.hmsnp", { HMYR_GC: "0" });
+    ok("HMYR_GC=1 能让 elastic 回收", (压开.stderr || "").includes("gc: "), JSON.stringify((压开.stderr || "").slice(0, 80)));
+    ok("HMYR_GC=0 能让 steady 停手", !(压关.stderr || "").includes("gc: "), JSON.stringify((压关.stderr || "").slice(0, 80)));
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

@@ -4263,6 +4263,14 @@ static int 找种子(char *buf, size_t cap, const char *argv0) {
   return 0;
 }
 
+/* 档位：看名字，不看内容 —— 与 JS 那侧的 tools/file-kind.mjs 同一条规矩。
+ * 只写在这里：步限与回收都问它。两处各写一遍「以尾」的话，改一处就漏一处，
+ * 而那种漏不会当场叫 —— 它只是让某一个名字悄悄回到默认档。 */
+static int 是弹性档(const char *名) {
+  size_t n = 名 ? strlen(名) : 0;
+  return n > 6 && strcmp(名 + n - 6, ".hmhsr") == 0;
+}
+
 /* 步限：默认五百万步。跑解释器替程序执行要几十倍，所以从环境变量放宽 ——
  * 编译那一段则直接按放宽的那个数算，因为「编一份源码」本来就不是小活。 */
 static int 步限从环境(const char *目标) {
@@ -4271,16 +4279,29 @@ static int 步限从环境(const char *目标) {
     long v = atol(sl);
     if (v > 0) return (int)(v > 2000000000L ? 2000000000L : v);
   }
-  /* 档位：看名字，不看内容 —— 与 JS 那侧的 tools/file-kind.mjs 同一条规矩。
-   * 五百万是这一份一直以来的默认，两亿是启动器主路径一直以来的默认，
-   * 所以两档各自落在「已经存在的两个数」上，不是新编出来的。 */
-  if (目标) {
-    size_t n = strlen(目标);
-    if (n > 6 && strcmp(目标 + n - 6, ".hmhsr") == 0) return 200000000;
-    if (n > 6 && strcmp(目标 + n - 6, ".hmsnp") == 0) return 5000000;
-  }
-  return 5000000;
+  /* 两档落在两个已经存在的数上：五百万是这一份一直以来的默认，两亿是启动器
+   * 主路径一直以来的默认。.hmsnp 就是默认那一档，所以这里只判弹性档。 */
+  return 是弹性档(目标) ? 200000000 : 5000000;
 }
+
+/* 回收：默认开，阈值三十二兆。档位给默认值 —— steady 开、elastic 关，与
+ * tools/file-kind.mjs 的档预设同一条规矩（看后缀，不看内容）。
+ * 环境变量优先于档位：它说的是「这一跑我要改」，比文件名离得更近。
+ * 只在桌面编译：裸机上没有 getenv，也没有回收器本身。 */
+#if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+static void 回收从档位(const char *目标) {
+  int 默认 = 是弹性档(目标) ? 0 : 1;
+  { const char *gc = getenv("HMYR_GC"); g_gc开 = gc ? !(gc[0] == 48 && gc[1] == 0) : 默认; }
+  g_gc日志 = getenv("HMYR_GC_LOG") != NULL;
+  {
+    const char *gb = getenv("HMYR_GC_BYTES");
+    if (gb) {
+      long v = atol(gb);
+      if (v > 0) g_gc阈值 = (size_t)v;
+    }
+  }
+}
+#endif
 
 /* 装一份字节码、按命令行给它 argv、跑，交回退出码。
  *
@@ -4648,17 +4669,10 @@ int main(int argc, char **argv) {
    * 为什么改默认：实测同一份自编译，关着峰值 279.3 兆、开着 151.2 兆，
    * 而耗时几乎一样（12.8 秒对 12.6 秒）。原来那句「一次运行很短，GC 是另一件工作」
    * 在峰值上已经站不住 —— 二百五十六兆的界线只剩四十兆余量。
-   * 板子上不编这一块，那几个变量也不在 —— 所以这一段只给桌面。 */
+   * 板子上不编这一块，那几个变量也不在 —— 所以这一段只给桌面。
+   * 档位那一项也在这里给默认：steady 开、elastic 关。 */
 #if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
-  { const char *gc = getenv("HMYR_GC"); g_gc开 = (gc == NULL) || !(gc[0] == 48 && gc[1] == 0); }
-  g_gc日志 = getenv("HMYR_GC_LOG") != NULL;
-  {
-    const char *gb = getenv("HMYR_GC_BYTES");
-    if (gb) {
-      long v = atol(gb);
-      if (v > 0) g_gc阈值 = (size_t)v;
-    }
-  }
+  回收从档位(argc > 1 ? argv[1] : NULL);
 #endif
   {
     /* 上限：给了就照给的，给 0 表示不限。 */
@@ -4684,6 +4698,11 @@ int main(int argc, char **argv) {
     char *入口 = 解容器(旧);
     if (!入口) return 1;
     argv[1] = 入口;
+#if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+    /* 挑出来的是哪个入口，摊开之后才知道 —— 所以档位在这里再定一次。
+     * 一个容器可以同时装 hmsnp 与 hmhsr，而跑的是被挑出来的那一个。 */
+    回收从档位(入口);
+#endif
     if (是源码路径(入口)) {
       int 码 = cli_main(argc, argv);
 #if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
