@@ -97,6 +97,42 @@ console.log("五、C 那台也按档位：同一份内容，两个名字，两�
   }
 }
 
+console.log("六、线程池那一项在 C 那台上真的拦");
+{
+  // steady 的预设里写着「线程池一个」。在接上之前那只是预设里的一个数字，没人读它。
+  // 这一节要看见的是两件事：第二线程起不来，而且它说的是「池满」而不是「这台机器没线程」——
+  // 两者都是 -1，但一个该等、一个该换机器。
+  //
+  // 只在 C 那台上验：JS 侧跑的是最小求值器，它的 thr_spawn 是假的（恒返回 -1），
+  // 所以那一侧连「第一个线程」都起不来，测不出池的深浅。
+  const exe = path.join(临, "hmyr.exe");
+  if (!fs.existsSync(exe)) {
+    console.log("  跳过  C 那台没编出来 —— 线程池那一侧不验");
+  } else {
+    const 行们 = [
+      "fn main() -> Int effects(thread) {",
+      '  let 库 = "fn main() -> Int {" + chr(10) + "  return 0" + chr(10) + "}" + chr(10)',
+      '  let 甲 = thr_spawn(库, "main")',
+      '  print("甲=" + str(甲) + chr(10))',
+      '  let 乙 = thr_spawn(库, "main")',
+      '  print("乙=" + str(乙) + chr(10))',
+      "  return 0",
+      "}",
+    ].join("\n") + "\n";
+    for (const 名 of ["t.hmsnp", "t.hmhsr"]) fs.writeFileSync(path.join(临, 名), 行们, "utf8");
+    const 跑C = (名) => spawnSync(exe, [path.join(临, 名)], {
+      encoding: "utf8", cwd: 临, timeout: 300000,
+      env: { ...process.env, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000" },
+    });
+    const 紧 = 跑C("t.hmsnp");
+    const 宽 = 跑C("t.hmhsr");
+    ok("steady 第一个线程起得来", (紧.stdout || "").includes("甲=1"), JSON.stringify((紧.stdout || "").slice(0, 60)));
+    ok("steady 第二个线程起不来", (紧.stdout || "").includes("乙=-1"), JSON.stringify((紧.stdout || "").slice(0, 60)));
+    ok("而且它说的是「池满」", (紧.stderr || "").includes("HMYR-R0223"), JSON.stringify((紧.stderr || "").slice(-120)));
+    ok("elastic 两个线程都起得来", !(宽.stdout || "").includes("乙=-1") && (宽.stdout || "").includes("甲=1"), JSON.stringify((宽.stdout || "").slice(0, 60)));
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

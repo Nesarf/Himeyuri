@@ -126,6 +126,12 @@ export const 内置表 = {
   // 而两边的失败语义不同（一个抛、一个交回停机记录）。抽出来的共用要同时满足
   // 两种，那层抽象比两份各三十行更难读。
   thr_spawn: { 效果: "thread", 做: (vm, a) => {
+    // 档位里「线程池」那一项在这里落地 —— 在那之前它只是预设里的一个数字，没人读。
+    // 0 表示不设限：普通 .hmoca 的跑法不该因为多了两档而变。
+    const 上限 = vm.cap.thread.上限 || 0;
+    if (上限 > 0 && 线程们.size >= 上限) {
+      return vm.坏("HMYR-R0223", "thread pool is full: " + 线程们.size + " alive, limit " + 上限 + "（steady 那一档只给一个；要更多就用 hmhsr 那一档）");
+    }
     const source = String(vm.成串(a[0]));
     const entry = String(vm.成串(a[1]));
     const id = 下一个线程号++;

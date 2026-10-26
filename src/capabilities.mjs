@@ -34,7 +34,10 @@ const 转义 = (s) => "\u001b[" + s;
 //
 // 为什么不是 postMessage：那个回调也在主线程的事件循环里，而主线程正堵在 Atomics.wait 上。
 // 于是结果经文件送达，共享内存只发「写完了」这一个信号。这一条与 CAPABILITIES.txt 里那段一致。
-const 线程能力 = () => ({
+// 上限由调用方给：这一层不知道谁还活着，那是管线程表的那一层的事（见 vm-builtins.mjs）。
+// 0 表示不设限 —— 普通 .hmoca 的情形，行为与加这一项之前一样。
+const 线程能力 = (上限 = 0) => ({
+  上限,
   // 起不来就交回 null，让调用方决定怎么说话（契约里：交回一个无效句柄，不另设编号）。
   // 而原因要留下来：静默的 null 会让「为什么起不来」变成一件要去猜的事，
   // 今天这一格就是这样多花了时间——Worker 没 import，ReferenceError 被吞成了 null。
@@ -60,7 +63,7 @@ export const 本机能力 = (options = {}) => ({
     "terminal.size", "terminal.escape", "terminal.raw_input", "terminal.read",
     "text.unicode.normalize", "text.unicode.properties", "text.unicode.case", "thread.spawn",
   ],
-  thread: 线程能力(),
+  thread: 线程能力(options.线程上限 || 0),
   file: {
     read: (p) => fs.readFileSync(p),
     exists: (p) => fs.existsSync(p),

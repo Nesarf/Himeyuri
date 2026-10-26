@@ -19,6 +19,7 @@ export const CODES = [
   { code: "HMYR-R0219", stage: "host", checkedBy: "test/index.test.mjs", meaning: "an index operation given something that is not an index: refused rather than guessing" },
   { code: "HMYR-R0221", stage: "host", checkedBy: "test/threads.test.mjs", meaning: "a thread handle that does not exist" },
   { code: "HMYR-R0222", stage: "host", checkedBy: "test/threads.test.mjs", meaning: "a thread that did not finish within the given time" },
+  { code: "HMYR-R0223", stage: "host", checkedBy: "test/profile.test.mjs", meaning: "the thread pool is full: steady gives one slot, elastic gives the compile-time number" },
   { code: "HMYR-R0214", stage: "host", checkedBy: "test/record-new.test.mjs", meaning: "record_new given something that is not a (name, value) tuple, or a name a record cannot hold: records are not hashmaps" },
   { code: "HMYR-R0213", stage: "host", checkedBy: "test/capabilities.test.mjs", meaning: "run_program with an empty program name: refused with a code instead of the host's bare exception" },
   { code: "HMYR-R0211", stage: "host", checkedBy: "test/capabilities.test.mjs", meaning: "a file that cannot be read: the host reason is carried, not swallowed" },
