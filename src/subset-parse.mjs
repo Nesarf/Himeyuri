@@ -451,6 +451,21 @@ export const 子集解 = (tokens, options = {}) => {
       return (items.length === 1 && !尾逗号) ? items[0] : { kind: "Tuple", items, line: t.line, column: t.column };
     }
 
+    // arena() 在词法里是关键字，所以在表达式里它不会被当成一个名字。
+    // 宿主那一份（src/parser.mjs）在这里有一支，而子集这一份一直没有 ——
+    // 于是「三区模型」这条路到今天在主路径上不可达：写一行 arena() 就是语法错。
+    // 形状照宿主那一支，逐字段相同（套件拿两棵树逐节点比）。
+    if (是("keyword") && t.value === "arena") {
+      进();
+      const args = [];
+      if (是标("(")) {
+        进();
+        while (!是标(")") && !是("eof")) { args.push(解析表达式()); if (是标(",")) 进(); else break; }
+        要标(")", "关 arena 的括号");
+      }
+      return { kind: "Call", callee: { kind: "Ident", name: "arena", line: t.line, column: t.column }, args, line: t.line, column: t.column };
+    }
+
     if (t.type === "ident") { 进(); return { kind: "Ident", name: t.value, line: t.line, column: t.column }; }
 
     报("HMYR-E0104", "期望一个表达式，见到 " + 说明(t), t);

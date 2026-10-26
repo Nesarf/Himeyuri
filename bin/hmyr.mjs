@@ -140,6 +140,12 @@ import { 档位, 档预设, 档步限 } from "../tools/file-kind.mjs";
 
 const 参数 = process.argv.slice(1);
 
+// --no-zone-check 是启动器自己的开关，解释器那边不认识它。留着它，自举层会把它
+// 当成一个文件路径去读（症状是「cannot read './--no-zone-check'」）——
+// 所以它在这里就被拿掉，与「谁消费哪个开关」这件事一起留在这一行。
+const 区检查关 = 参数.includes("--no-zone-check");
+if (区检查关) 参数.splice(参数.indexOf("--no-zone-check"), 1);
+
 // 容器：给一个 .hm-ittgn-krgn-m 时直接跑它 —— 解到临时目录，把参数里那个路径换成入口。
 // 判据只看后缀，与 C 那台看 .hmoca 是同一条规矩：不猜文件内容。
 // 入口由 src/ittgn.mjs 挑（先源码后字节码，先 main 后与包同名），这里不重复那一套判断。
@@ -223,6 +229,37 @@ const 步限 = Number(process.env.HMYR_STEPS || 0) || 档步限(目标路);
 // 线程上限也由档位给 —— 能力层不知道谁还活着，它只收下这个数，
 // 而「活着的线程数不能超过它」这一条在 vm-builtins.mjs 的 thr_spawn 里兑现。
 const 能力 = 本机能力({ 线程上限: 档 ? 档预设[档].线程 : 0 });
+
+// 三区模型的编译期那一半（design/MEMORY.txt 第一条硬规则）。
+//
+// 检查放在这里，是因为默认这条路把解析交给了自举层：用户程序由 self/ 里那份装载器读，
+// 而它写在 HMYR 里，调不到宿主的检查器。所以在把命令行交给解释器之前，
+// 宿主先用自己那两层把入口读一遍 —— 只为区检查的报告。
+//
+// 只有区那一条会拦。读不动的（子集那一层认的窄，遇上看不懂的构造会抛）与别的诊断
+// 一律放过去：那些事由解释器那边说，启动器不替它讲，否则「我读不懂」会变成
+// 「你的程序错了」—— 那两句之间的差别，正是这一层最不该抹掉的东西。
+//
+// --no-zone-check 关掉它。开关必须存在：一条误报会把整条路堵死，
+// 而堵死之后人只会去改启动器。
+if (目标路 && !区检查关) {
+  let 检查 = null;
+  try {
+    检查 = loadUnit(path.resolve(目标路), { capabilities: 能力 });
+  } catch {
+    检查 = null;
+  }
+  if (检查) {
+    for (const w of 检查.diagnostics.warnings) {
+      if (w.code === "HMYR-W0310") process.stderr.write(w.code + " " + w.message + "\n");
+    }
+    const 区错 = 检查.diagnostics.errors.filter((e) => e.code === "HMYR-R0301");
+    if (区错.length) {
+      for (const e of 区错) process.stderr.write(e.code + " " + e.message + "\n");
+      process.exit(1);
+    }
+  }
+}
 
 // 这一层跑的是自举解释器（self/ 那六份），不是用户的程序。解释器替程序执行，
 // 必然碰得到全部效果，所以这里关掉内置的效果检查 —— 目标程序的效果由 self/eval.hmyr 查。

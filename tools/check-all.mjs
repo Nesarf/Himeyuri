@@ -113,6 +113,7 @@ const SUITES = [
   ["recordnew", "test/record-new.test.mjs", "SPEC M7 - building a record by name and reading a field by name, so the bootstrap can do both"],
   ["index", "test/index.test.mjs", "design/INDEX.txt - an index is built, filled, read and asked about; keys are arbitrary strings, a repeated set overwrites without moving the key"],
   ["zone", "test/zone.test.mjs", "design/MEMORY.txt - the bookkeeping half of the zone model: a block carries its zone, freeze hands it to the managed zone, adopt takes it back, and a wrong conversion names itself"],
+  ["zonestatic", "test/zone-static.test.mjs", "design/MEMORY.txt - the compile-time half of the zone model: an escape is refused while the module is being loaded, an arena built inside a loop is a warning, and the rest of the repository reads clean"],
   ["surface", "test/surface.test.mjs", "SPEC M7 - several sub surfaces composited onto the main one, the way real windows will be"],
   ["pixel", "test/pixel.test.mjs", "SPEC M7 - a second kind of buffer: pixels, and a real PNG comes out the other end"],
   ["parallel", "test/parallel.test.mjs", "SPEC M7 - real parallelism borrowed from a process that has it, and the judgement still read back in Himeyuri"],

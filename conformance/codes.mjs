@@ -76,7 +76,11 @@ export const CODES = [
   { code: "HMYR-W0302", stage: "link", checkedBy: "test/module.test.mjs", meaning: "two modules declare the same name, and the flat table means the later one wins" },
   // Planned: registered so the identifier is reserved and searchable, exempt from the "every registered
   // code is emitted" check until the zone model of design/MEMORY.txt exists.
-  { code: "HMYR-R0301", stage: "run", planned: true, meaning: "a value escaped the arena it was allocated in" },
+  // The escape code was registered as planned while the zone model had only its bookkeeping half.
+  // The static check (src/zone-check.mjs, run when a module is loaded) now emits it, so it is a real
+  // code and no longer exempt. Its stage is link rather than run: it is found before the program starts.
+  { code: "HMYR-R0301", stage: "link", checkedBy: "test/zone-static.test.mjs", meaning: "a value escaped the arena it was allocated in: the block was never handed over, so returning it would let it outlive the arena" },
+  { code: "HMYR-W0310", stage: "link", checkedBy: "test/zone-static.test.mjs", meaning: "an arena is built inside a loop: every round allocates a new one, so the total grows with the number of rounds" },
   // The two below are reachable today: the zone model has its bookkeeping half, so a wrong
   // conversion is a runtime refusal rather than a paragraph in a design paper.
   { code: "HMYR-R0302", stage: "run", checkedBy: "test/zone.test.mjs", meaning: "a zone conversion was handed something that is not a live block of that arena: the block belongs elsewhere, or its arena is already closed" },

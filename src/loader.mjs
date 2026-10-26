@@ -15,6 +15,7 @@ import { 本机能力 } from "./capabilities.mjs";
 import { 切 } from "./subset-lex.mjs";
 import { 子集解 } from "./subset-parse.mjs";
 import { 展开模块 } from "./expand.mjs";
+import { 区检查 } from "./zone-check.mjs";
 
 const short = (file) => file.split(/[\\/]/).pop() || file;
 
@@ -75,6 +76,19 @@ export function loadUnit(entry, options = {}) {
     loading.add(abs);
     const source = String(cap.file.read(abs));
     const { ast } = reader(source, abs);
+
+    // 三区模型的编译期那一半（design/MEMORY.txt 第一条硬规则）：装载时走一遍树，
+    // 把「逃逸」与「循环里建 arena」说出来。放在这一层是因为这里所有走 loader 的路
+    // 都会经过 —— 主路径、--compile、以及每一套拿源码造工程的验收。
+    //
+    // 逃生口是 options.zoneCheck === false，而不是一条永远不触发的开关：
+    // 一条误报会把整条路堵死，而堵死之后人会去改加载器，不会去改那条判据。
+    if (options.zoneCheck !== false) {
+      for (const d of 区检查(ast, { 文件: short(abs) })) {
+        if (d.severity === "error") diagnostics.error(d.code, d.message, d.line, d.column);
+        else diagnostics.warn(d.code, d.message, d.line, d.column);
+      }
+    }
 
     for (const imp of ast.imports) {
       const target = resolveImport(cap, abs, imp.path);

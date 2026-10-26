@@ -137,6 +137,23 @@ console.log("六、它自己的注释写着现在的账");
   ok("注释写了数出来的声明种类", 文.includes("只有 fn，180 个"), "在");
 }
 
+console.log("七、arena() 两侧同形（它在词法里是关键字，所以两侧各有一支）");
+{
+  // 子集这一支是后补的：在此之前它只有「认得窄而说清」那半边 —— arena 被词法认成关键字，
+  // 却在表达式层无处可去，于是 arena 程序在主路径上是语法错。补的时候照宿主那一支逐字段抄。
+  const 源 = "fn f() -> Int {\n  let a = arena()\n  let b = a.alloc(16)\n  a.close()\n  return 0\n}\n";
+  const 主 = 宿主树(源);
+  let 子 = null, 错 = "";
+  try { 子 = 子集解(切(源)); } catch (e) { 错 = e.message; }
+  ok("子集那一层不再把它当语法错", 子 !== null && 子.diagnostics.items.length === 0,
+    错 || JSON.stringify(子 ? 子.diagnostics.items.map((d) => d.code) : []));
+  const 差 = 子 ? 第一个不同(主, 子.ast) : "子集没有交出树";
+  ok("两棵树相同", 差 === null, 差 || "");
+  // 不带括号也认：宿主那一支允许它，两侧分叉的话，「arena 当对象用」这种写法会在一边成一边败。
+  const 无括 = 子集解(切("fn f() -> Int {\n  let a = arena\n  return 0\n}\n")).ast.decls[0].body.statements[0].value;
+  ok("不带括号也是同一个 Call", 无括.kind === "Call" && 无括.callee.name === "arena" && 无括.args.length === 0, JSON.stringify(无括));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
