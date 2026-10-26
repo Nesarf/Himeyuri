@@ -69,6 +69,20 @@ fn 字节串(字节们, 起: Int, 止: Int) -> String {
   return s
 }
 
+// 切一段字节。为什么不写 slice(字节们, 起, 止)：最小求值器那边的 slice 只认
+// 字符串与码元序列，数组进去会走「转成字符串」那条（"104,101,…"），而 write_bytes
+// 不收字符串。给 slice 加数组那一支试过，cli 整套大面积红 —— 有地方正靠旧行为做事。
+// 所以字节的切法留在这一层，一处，明写着。
+fn 字节段(字节们, 起: Int, 止: Int) {
+  var 出 = ()
+  var i = 起
+  while i < 止 {
+    出 = 出 + (字节们[i],)
+    i = i + 1
+  }
+  return 出
+}
+
 fn 小16(n: Int) {
   return (n % 256, ((n - (n % 256)) / 256) % 256)
 }
@@ -167,7 +181,7 @@ fn 取(包路: String, 名: String, 出: String) -> Int effects(file) {
   while i < len(成员们) {
     let 一 = 成员们[i]
     if 一[0] == 名 {
-      write_bytes(出, (slice(字节们, 一[1], 一[2]),))
+      write_bytes(出, (字节段(字节们, 一[1], 一[2]),))
       print("取了 " + 名 + " → " + 出 + chr(10))
       return 0
     }

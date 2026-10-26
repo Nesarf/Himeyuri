@@ -87,7 +87,10 @@ const 坏路 = 写出("bad.json", 造清单({ 坏: true }));
 const 坏 = 跑(坏路);
 ok("退出码 1", 坏.码 === 1, 坏.码 + " " + 坏.坏);
 ok("点名 design/ARRAY.txt", 坏.出.includes("[不通过] design/ARRAY.txt"), JSON.stringify(坏.出.slice(0, 160)));
-ok("算出的是真哈希", 坏.出.includes("3e01244c07f6d1ec"), JSON.stringify(坏.出.slice(0, 160)));
+    // 不写死一个哈希：这份文档改一个字它就变，而那条判据要验的是「verify 算出来的
+    // 是真的那一个」，不是「它等于某个常数」—— design/ARRAY.txt 改名那一轮改过内容，
+    // 于是写死的那一串当场过期。
+    ok("算出的是真哈希", 坏.出.includes(哈("design/ARRAY.txt").slice(0, 16)), JSON.stringify(坏.出.slice(0, 160)));
 ok("带着那一行的原文", 坏.出.includes("0000000000000000") && 坏.出.includes("sha256"), JSON.stringify(坏.出.slice(0, 200)));
 ok("末行是判定", 坏.出.trim().endsWith("不通过"));
 

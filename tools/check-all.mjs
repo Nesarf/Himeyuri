@@ -149,6 +149,8 @@ const SUITES = [
   // 改名第一步的验收：新名与旧名指的是同一件事，两台机器都得认两套拼法。
   // 第二步（批量 git mv）之后这一套仍然该绿 —— 那时它证明的是「旧的接了没」。
   ["names", "test/names.test.mjs", "design/FILETYPE.txt - the rename's first step: .hmyr with .hmoca, .hmyrb with .hmoks, and .hmtn for the seed, all naming the same things on both machines"],
+  // 容器格式的骨架：三条规矩都是格式的一部分，所以各有判据。
+  ["ittgn", "test/ittgn.test.mjs", "design/FILETYPE.txt - the container format's skeleton: bytes go in and come out unchanged, depth is counted per container with a ceiling of twelve, and hmsnp or hmhsr is refused as a member because those two are the container's own logic"],
   ["deflate", "test/deflate.test.mjs", "SPEC M7 - deflate stored blocks written in Himeyuri: round trip, and zlib reads the stream without being told anything"],
   ["tree", "test/tree.test.mjs", "SPEC M7 - the Huffman tree alone: all three code-length tables must sum to a complete Kraft total"],
   ["array", "test/array.test.mjs", "SPEC 2.2 - a mutable array beside the immutable tuple: write, read, out of range, and the tuple it came from stays put"],
