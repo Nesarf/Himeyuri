@@ -81,6 +81,32 @@ console.log("硬规矩：档案不影响求值");
   if (旧 === "") { /* 之前没选过，就保持现在选的 */ } else { call("切换档案", [旧]); }
 }
 
+console.log("数字的写法不进档案（第五条在输出那一头）");
+{
+  // 同一份程序在两个档案下算同一个数，写出来必须一模一样。
+  // 挑 3.5 与 1234567 是因为它们最容易被本地化：小数点与千分位。
+  // 这一条是「档案不影响语义」落到字符串上的形状 —— 也是 SPEC 2.8 里
+  // 「数字格式不进档案」那一条的判据。
+  const src = 'fn main() { print(str(3.5) + "|" + str(1234567) + "\\n") }\n';
+  const 跑一次 = (档案) => {
+    const 旧 = call("当前档案", []);
+    call("切换档案", [档案]);
+    const 求值器 = new Runtime({});
+    let 出 = "";
+    求值器.write = (s) => { 出 += String(s); };
+    const 诊断 = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
+    const { ast } = parse(lex(src, { diagnostics: 诊断 }).tokens, { diagnostics: 诊断 });
+    求值器.run(ast);
+    // 只跑一次：run() 已经跑过 main 了。上一版在这里又手动调了一次，
+    // 于是输出重复了 —— 而两份重复的输出当然也「一样」，那种判据是假通过。
+    if (旧 !== "") call("切换档案", [旧]);
+    return 出;
+  };
+  const 甲 = 跑一次("zh-CN.gbk");
+  const 乙 = 跑一次("en-US.utf8");
+  ok("两个档案下数字写成同一串", 甲 === 乙 && 甲 === "3.5|1234567\n", JSON.stringify([甲, 乙]));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
