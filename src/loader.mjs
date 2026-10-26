@@ -131,17 +131,28 @@ export function loadUnit(entry, options = {}) {
     modules.set(abs, ast);
     order.push(abs);
 
-    // owned 的四层检查（design/MEMORY.txt 第 2 节）。它放在 import 之后，因为
-    // 跨模块的借用分析要读「被调者那一侧」的结果 —— 而那要在被调模块装载完之后才有。
-    // 顺序换了，本模块的错还是一样报；换来的是「跨模块看得见」。
+    // owned 的第一趟：只收集签名与脏，不报。跨模块的借用分析要一张填满的表，
+    // 而「填满」要等所有模块都装载完 —— 所以句子留到第二趟。
     if (options.ownedCheck !== false) {
-      for (const d of 持有格检查(ast, { 文件: short(abs), 外部: 跨模块 })) {
-        diagnostics.error(d.code, d.message, d.line, d.column);
-      }
+      持有格检查(ast, { 文件: short(abs), 外部: 跨模块, 只收集: true });
     }
   }
 
   visit(entry);
+
+  // owned 的第二趟（design/MEMORY.txt 第 2 节）：这时候表已经填满，
+  // 所以「被调者在调用者之后装载」也看得见 —— 那个缺口就是这一趟补上的。
+  // 它必须在 visit(entry) 之后：在那之前 order 还是空的，而空的 order 会让这一趟
+  // 一条都不报，看上去像「检查没生效」。
+  if (options.ownedCheck !== false) {
+    for (const file of order) {
+      const ast = modules.get(file);
+      if (!ast) continue;
+      for (const d of 持有格检查(ast, { 文件: short(file), 外部: 跨模块 })) {
+        diagnostics.error(d.code, d.message, d.line, d.column);
+      }
+    }
+  }
 
   // The flat function table means a shared name is a silent overwrite. Say it out loud instead.
   const declared = new Map();

@@ -492,6 +492,44 @@ console.log("十一、跨模块（按装载顺序累积）");
    JSON.stringify(单净.diagnostics.errors.map((e) => e.code)));
 }
 
+console.log("十二、被调者在调用者之后装载（两趟补齐的那一块）");
+{
+  // 第十一节那种写法里，被调者总是先装载（import 先走），所以单趟就够。
+  // 这一节造的是反过来的顺序：入口先 import 调用者、再 import 被调者 ——
+  // 于是调用者被检查的时候，被调者还没进表。单趟在这里会沉默，两趟不会。
+  const 丙 = 投(行们([
+    "fn 借(borrow 格: Int) -> Int {",
+    "  改(格)",
+    "  return 0",
+    "}",
+  ]), "丙.hmoca");
+
+  const 丁 = 投(行们([
+    "fn 改(格: Int) -> Int {",
+    "  格.放(1)",
+    "  return 0",
+    "}",
+  ]), "丁.hmoca");
+
+  const 戊 = 投(行们([
+    "import \"./丙.hmoca\"",
+    "import \"./丁.hmoca\"",
+    "",
+    "fn main() -> Int {",
+    "  return 0",
+    "}",
+  ]), "戊.hmoca");
+
+  const 单 = loadUnit(戊);
+  ok("被调者后装载也报",
+   单.diagnostics.errors.some((e) => e.code === "HMYR-E0321" && /all the way down|changes it/.test(e.message)),
+   JSON.stringify(单.diagnostics.errors.map((e) => e.code + " " + e.message.slice(0, 70))));
+
+  // 而且报的只有那一处 —— 两趟不该把同一个错报两次。
+  const 那条 = 单.diagnostics.errors.filter((e) => e.code === "HMYR-E0321");
+  ok("同一个错只报一次", 那条.length === 1, String(那条.length));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

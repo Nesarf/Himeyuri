@@ -35,7 +35,11 @@ export function 持有格检查(ast, 选项 = {}) {
   const 出 = [];
   const 文件 = 选项.文件 || "";
   const 前缀 = 文件 ? 文件 + ": " : "";
+  // 只收集：第一趟装载时用。那时跨模块的表还没填完，报了也不算数 ——
+  // 所以这一档只走一遍树把签名与脏交出去，句子一条都不发。
+  const 只收集 = 选项.只收集 === true;
   const 报 = (message, 节点) => {
+    if (只收集) return;
     出.push({
       severity: "error", code: 检查码, message: 前缀 + message,
       line: (节点 && 节点.line) || 0, column: (节点 && 节点.column) || 0,
