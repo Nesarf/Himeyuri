@@ -62,7 +62,11 @@ const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
 // 跑 self/ 那六份真正需要的内置。stage0 模式下只放这几个过去。
 // field_names 不在这一张里：自举层现在还不用它，而这张表的意思是「已经量过的必须项」，
 // 多写一个就把闸门放宽了一格。
-const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "f64_bytes", "is_dir", "is_letter", "is_mark", "len", "nfc", "ord", "pack_value", "print", "print_err", "read_dir", "read_line", "read_lines", "read_text", "record_new", "slice", "str", "to_int", "write_bytes"]);
+//
+// index 那四个是 2026-10-27 量出来的：区的记账要用可变容器，而记录不可变，
+// 所以 self/eval 的区用索引表示（index_new / set / get / has —— 只用得到这四个，
+// index_len 与 index_keys 自举层没有用，所以不进这张表）。
+const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "f64_bytes", "index_get", "index_has", "index_new", "index_set", "is_dir", "is_letter", "is_mark", "len", "nfc", "ord", "pack_value", "print", "print_err", "read_dir", "read_line", "read_lines", "read_text", "record_new", "slice", "str", "to_int", "write_bytes"]);
 
 export class Runtime {
   constructor(options = {}) {

@@ -174,8 +174,12 @@ console.log("九、启动器：默认这条路也拦，而它不挡别人");
   ok("没走到解释器那句「这台机器没有 arena」", !((甲.stdout || "") + (甲.stderr || "")).includes("R0104"),
     JSON.stringify(((甲.stdout || "") + (甲.stderr || "")).slice(0, 100)));
 
+  // 开关的意义是「这一次不检查」，不是「产出某一段输出」。所以判据是「不再被 R0301 拦」，
+  // 而不是某个具体读数 —— 2026-10-27 之前这里等的是解释器那句「这台机器没有 arena」，
+  // 而区在自举层有了之后，那句话不再出现，判断也就不能再押在它身上。
   const 乙 = 跑(["--no-zone-check", 逃]);
-  ok("开关能把它放过去", /R0104/.test((乙.stdout || "") + (乙.stderr || "")), JSON.stringify((乙.stdout || "").slice(0, 80)));
+  ok("开关能把它放过去", 乙.status === 0 && !((乙.stdout || "") + (乙.stderr || "")).includes("R0301"),
+    JSON.stringify({ status: 乙.status, out: ((乙.stdout || "") + (乙.stderr || "")).slice(0, 120) }));
 
   const 普 = 投(行们(["fn main() -> Int {", '  print("照跑" + chr(10))', "  return 0", "}"]), "主普.hmoca");
   const 丙 = 跑([普]);

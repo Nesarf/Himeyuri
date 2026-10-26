@@ -152,7 +152,114 @@ fn 要效果(环境: Int, 效: String, 名: String) -> String {
   return "HMYR-R0201 " + 名 + " 要 " + 效 + " 效果，而调用它的函数没有声明"
 }
 
+// ---- 区：三区模型在自举层的那一半 ----
+//
+// 区与块都用索引表示，因为它们是**要变**的东西：close 之后块就该死了。
+// 记录在这门语言里不可变，装不了这种状态；索引是宿主给的可变容器
+// （index_set 交回同一个索引，见 design/INDEX.txt 与 index 那一组内置）。
+// 索引这一组在七处内置表里本来就齐，所以这一层没有新加任何内置。
+//
+// 一个区：{"种": "区", "关": 0/1, "下一个": 下一块号, "活": 活着的块数, "块1": 块, ...}
+// 一个块：{"种": "块", "zone": "arena"/"managed", "size": 字节数, "live": 0/1, "号": 块号}
+//
+// 「这是不是区或块」用 index_has(x, "种") 判：它对任何值都安全 —— 不是索引就交回 false，
+// 记录也交回 false（记录不是 Map，见 src/eval.mjs 的 index_has）。所以不必另加 is_index。
+//
+// 与宿主那一份（src/eval.mjs 的 arena）的差别只有表示：那边是 JS 对象，这边是索引。
+// 判据是「两台机器的判词一样」，不是「两台机器的内部一样」。
+
+fn 新区() -> Int {
+  let 区 = index_new()
+  index_set(区, "种", "区")
+  index_set(区, "关", 0)
+  index_set(区, "下一个", 1)
+  index_set(区, "活", 0)
+  return 区
+}
+
+fn 分配块(区: Int, 大小: Int) -> Int {
+  if index_get(区, "关") != 0 { return 坏("HMYR-R0302 arena.alloc: that arena is already closed") }
+  let 号 = index_get(区, "下一个")
+  let 块 = index_new()
+  index_set(块, "种", "块")
+  index_set(块, "zone", "arena")
+  index_set(块, "size", 大小)
+  index_set(块, "live", 1)
+  index_set(块, "号", 号)
+  index_set(区, "块" + str(号), 块)
+  index_set(区, "下一个", 号 + 1)
+  index_set(区, "活", index_get(区, "活") + 1)
+  return 好(块)
+}
+
+// 关区：把它名下的块（还没交出去的）一起标记成死的，再记下「关」。
+// 交出去的那些归托管，close 不带它们走 —— 那正是 freeze 的全部意义。
+fn 关区(区: Int) -> Int {
+  let 下一个 = index_get(区, "下一个")
+  var i = 1
+  while i < 下一个 {
+    let 键 = "块" + str(i)
+    if index_has(区, 键) {
+      let 块 = index_get(区, 键)
+      if index_get(块, "zone") == "arena" { index_set(块, "live", 0) }
+    }
+    i = i + 1
+  }
+  index_set(区, "关", 1)
+  index_set(区, "活", 0)
+  return 好(0)
+}
+
+fn 交出去(区: Int, 块: Int) -> Int {
+  if index_get(区, "关") != 0 { return 坏("HMYR-R0302 arena.freeze: that arena is already closed") }
+  if index_get(块, "zone") != "arena" { return 坏("HMYR-R0302 arena.freeze was given a block this arena does not own") }
+  index_set(块, "zone", "managed")
+  index_set(块, "live", 1)
+  index_set(区, "活", index_get(区, "活") - 1)
+  return 好(块)
+}
+
+fn 收回来(区: Int, 块: Int) -> Int {
+  if index_get(区, "关") != 0 { return 坏("HMYR-R0302 arena.adopt: that arena is already closed") }
+  if index_get(块, "zone") != "managed" { return 坏("HMYR-R0303 arena.adopt: that block was not handed to the managed zone") }
+  index_set(块, "zone", "arena")
+  index_set(块, "live", 1)
+  index_set(区, "活", index_get(区, "活") + 1)
+  return 好(块)
+}
+
+// 方法分派。这一版只认区上的方法 —— 别的值当主时给一句说得清的话，不崩：
+// 而它不会崩的理由是 index_has 对不是索引的值交回 false，而不是抛。
+fn 求方法(主: Int, 名: String, 参: Int) -> Int {
+  if index_has(主, "种") == false { return 坏("这一版只认区上的方法：" + 名) }
+  if index_get(主, "种") != "区" { return 坏("这一版只认区上的方法：" + 名) }
+  if 名 == "alloc" {
+    if len(参) != 1 { return 坏("alloc 要一个参数") }
+    return 分配块(主, 参[0])
+  }
+  if 名 == "close" { return 关区(主) }
+  if 名 == "held" { return 好(index_get(主, "活")) }
+  if 名 == "freeze" {
+    if len(参) != 1 { return 坏("freeze 要一个参数") }
+    return 交出去(主, 参[0])
+  }
+  if 名 == "adopt" {
+    if len(参) != 1 { return 坏("adopt 要一个参数") }
+    return 收回来(主, 参[0])
+  }
+  return 坏("区上没有这个方法：" + 名)
+}
+
 fn 求调用(节点: Int, 环境: Int) -> Int {
+  // 方法调用（a.alloc(16)）：区是这一层唯一有方法的对象。
+  // 别的值当主时求方法给的是一句话，不是崩 —— 见那边对 index_has 的说明。
+  if 节点.callee.kind == "Field" {
+    let 主 = 求值(节点.callee.target, 环境)
+    if 主.ok == false { return 主 }
+    let 参 = 求参数(节点.args, 环境)
+    if 参.ok == false { return 参 }
+    return 求方法(主.value, 节点.callee.name, 参.value)
+  }
   if 节点.callee.kind != "Ident" { return 坏("这一版只认按名字调用") }
   let 名 = 节点.callee.text
   let 参 = 求参数(节点.args, 环境)
@@ -220,10 +327,11 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if len(值们) != 1 { return 坏("pack_value 要一个参数") }
     return 好(pack_value(值们[0]))
   }
-  // arena 那一格：C 那台与这里都没有它（三区模型还没实现），所以给一句具体的「没有」，
-  // 而不是让名字掉到「没有这个方法」那一条 —— 后者会让人以为是自己拼错了。
+  // arena 那一格：区在这一层是真的了（2026-10-27），所以这里不再只是「没有」。
+  // 交回的是一条索引；alloc / close / freeze / adopt / held 由求方法分派。
   if 名 == "arena" {
-    return 坏("HMYR-R0104 这台机器没有 arena")
+    if len(值们) != 0 { return 坏("arena 不要参数") }
+    return 好(新区())
   }
   // 原始字节：嵌入与打包要它。这一层只转发，读不到由下面那一层说。
   if 名 == "read_bytes" {
@@ -738,8 +846,12 @@ fn 求值(节点: Int, 环境: Int) -> Int {
     // 先问再取：field_get 取不到会抛（有编号），而这里接不住异常，所以先问 field_has。
     let 标 = 求值(节点.target, 环境)
     if 标.ok == false { return 标 }
-    if field_has(标.value, 节点.name) == false { return 坏("没有这个字段：" + 节点.name) }
-    return 好(field_get(标.value, 节点.name))
+    if field_has(标.value, 节点.name) { return 好(field_get(标.value, 节点.name)) }
+    // 区与块是索引，它们的字段也要能读（b.zone / b.size / b.live）。
+    // index_has 对不是索引的值交回 false 而不是抛，所以这一句对记录与别的值都安全。
+    // 记录先问、索引后问：同名时记录赢，这样「记录」这个意思不被索引借走。
+    if index_has(标.value, 节点.name) { return 好(index_get(标.value, 节点.name)) }
+    return 坏("没有这个字段：" + 节点.name)
   }
   if 种 == "Tuple" { return 求参数(节点.items, 环境) }
   if 种 == "Record" { return 求记录(节点, 环境) }

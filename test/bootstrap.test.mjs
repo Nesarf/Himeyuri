@@ -2,7 +2,7 @@
 //
 // 这一套钉的是数字与边界，不是愿望：
 //   一、Stage 0 现在是三份：loader 与子集那两层（宿主那两层不在里面）
-//   二、它读进来自举那一层：六份、一百二十三条声明
+//   二、它读进来自举那一层：六份、一百八十六条声明
 //   三、它不包含求值——求值在 self/ 里
 //
 // 账分过两次：
@@ -48,16 +48,16 @@ console.log("一、Stage 0 是五份：loader、子集那两层、诊断，与�
   ok("宿主那份留着一条开关（--host-eval）", 启动器.includes("--host-eval"));
 }
 
-console.log("二、它读进来自举那一层：六份，一百二十三条声明");
+console.log("二、它读进来自举那一层：六份，一百八十六条声明");
 {
   const u = loadUnit(path.join(ROOT, "self/run.hmoca"));
   ok("loadUnit 读得动", u.ok, JSON.stringify(u.diagnostics.errors.map((e) => e.code)));
   ok("带进六份文件", u.modules.size === 6, String(u.modules.size));
   let 声明 = 0;
   for (const m of u.modules.values()) 声明 += m.decls.length;
-  // 声明数随自举层的规模走。151 是加载器那一串搬进来之前的数；今天它是 180，
-  // 涨的那些是 加载走、造模块、造整棵、类型解析器、模块版本 一串。
-  ok("一百八十条声明", 声明 === 180, String(声明));
+  // 声明数随自举层的规模走。151 是加载器那一串搬进来之前的数；180 是加上模块版本那一串；
+  // 今天它是 186 —— 涨的六个是区的记账（新区 / 分配块 / 关区 / 交出去 / 收回来 / 求方法）。
+  ok("一百八十六条声明", 声明 === 186, String(声明));
 }
 
 console.log("三、求值不在 Stage 0 里（两份账都不在）");
