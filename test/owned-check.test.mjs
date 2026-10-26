@@ -530,6 +530,68 @@ console.log("十二、被调者在调用者之后装载（两趟补齐的那一�
   ok("同一个错只报一次", 那条.length === 1, String(那条.length));
 }
 
+console.log("十三、跨包（包名解析 + 同一张表）");
+{
+  // 包名的规则只有一句：包根下面的一个目录，入口是那个目录里的 index.hmoca。
+  // 包根认 hmyr.hmkit —— 套件清单本来就叫那个名字，所以「这里是一个包」这件事
+  // 已经有记号了，只是以前没人拿它当地界。
+  const 根 = path.join(临, "pkg");
+  fs.mkdirSync(path.join(根, "甲包"), { recursive: true });
+  fs.mkdirSync(path.join(根, "乙包"), { recursive: true });
+  fs.writeFileSync(path.join(根, "hmyr.hmkit"), "[]", "utf8");
+  fs.writeFileSync(path.join(根, "甲包", "index.hmoca"), 行们([
+    "import \"乙包\"",
+    "",
+    "fn 借(borrow 格: Int) -> Int {",
+    "  脏(格)",
+    "  return 0",
+    "}",
+  ]), "utf8");
+  fs.writeFileSync(path.join(根, "乙包", "index.hmoca"), 行们([
+    "fn 脏(格: Int) -> Int {",
+    "  格.放(1)",
+    "  return 0",
+    "}",
+  ]), "utf8");
+  const 入口 = path.join(根, "main.hmoca");
+  fs.writeFileSync(入口, 行们([
+    "import \"甲包\"",
+    "",
+    "fn main() -> Int {",
+    "  let 格 = owned()",
+    "  借(格)",
+    "  return 0",
+    "}",
+  ]), "utf8");
+
+  const 单 = loadUnit(入口);
+  ok("包名解析到了实际文件（不报缺文件）",
+   !单.diagnostics.errors.some((e) => e.code === "HMYR-E0302"),
+   JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
+  ok("跨包的转移被看见",
+   单.diagnostics.errors.some((e) => e.code === "HMYR-E0321" && /changes it|all the way down/.test(e.message)),
+   JSON.stringify(单.diagnostics.errors.map((e) => e.code + " " + e.message.slice(0, 70))));
+
+  // 干净的那一对：同样跨包，但乙包的函数什么都不动 —— 不该报。
+  fs.writeFileSync(path.join(根, "乙包", "index.hmoca"), 行们([
+    "fn 看(格: Int) -> Int {",
+    "  return 0",
+    "}",
+  ]), "utf8");
+  fs.writeFileSync(path.join(根, "甲包", "index.hmoca"), 行们([
+    "import \"乙包\"",
+    "",
+    "fn 借(borrow 格: Int) -> Int {",
+    "  看(格)",
+    "  return 0",
+    "}",
+  ]), "utf8");
+  const 净 = loadUnit(入口);
+  ok("跨包的干净调用不报",
+   净.diagnostics.errors.filter((e) => e.code === "HMYR-E0321").length === 0,
+   JSON.stringify(净.diagnostics.errors.map((e) => e.code)));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

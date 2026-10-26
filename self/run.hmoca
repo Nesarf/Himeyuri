@@ -600,8 +600,42 @@ fn 目录部分(路: String) -> String {
   return slice(路, 0, i)
 }
 
+// 绝对路径：以 / 开头，或者第二个字符是盘符冒号。它不该再拼一次目录。
+fn 是绝对(相对: String) -> Bool {
+  if len(相对) >= 1 && slice(相对, 0, 1) == "/" { return true }
+  if len(相对) >= 2 && slice(相对, 1, 2) == ":" { return true }
+  return false
+}
+
+// 一条 import 说明是不是「路径」：./ ../ 开头的、绝对路径。其余（形如一个名字）是包名。
+// 与宿主 loader 的判据同一条。
+fn 是路径(相对: String) -> Bool {
+  if len(相对) >= 2 && slice(相对, 0, 2) == "./" { return true }
+  if len(相对) >= 3 && slice(相对, 0, 3) == "../" { return true }
+  if 是绝对(相对) { return true }
+  return false
+}
+
+// 从某个目录往上找「包根」：第一个含 hmyr.hmkit 的目录。
+// 找不到就交回出发的那个目录 —— 与宿主那一侧的兜底一致（那里回仓库根）。
+fn 找包根从(目录: String, 次: Int) -> String effects(file) {
+  if 次 > 64 { return 目录 }
+  if file_exists(目录 + "/hmyr.hmkit") { return 目录 }
+  let 上 = 目录部分(目录)
+  if 上 == 目录 { return 目录 }
+  return 找包根从(上, 次 + 1)
+}
+
+// 一个 import 说明 → 一个路径。
+// 包名的规则只有一句：包根下面的一个目录，入口是那个目录里的 index.hmoca。
+fn 解析路(目录: String, 相对: String) -> String effects(file) {
+  if 是绝对(相对) { return 相对 }
+  if 是路径(相对) { return 拼路径(目录, 相对) }
+  return 找包根从(目录, 0) + "/" + 相对 + "/index.hmoca"
+}
+
 fn 读一棵(目录: String, 相对: String, 已读: Int, 源码们: Int) effects(file) {
-  let 路 = 拼路径(目录, 相对)
+  let 路 = 解析路(目录, 相对)
   if 含路(已读, 路, 0) { return {已读: 已读, 源码们: 源码们} }
   // 不在就跳过：引一个可选文件不该让整个程序死。那与以前启动器的行为一致——
   // 而那件事以前靠宿主那边的 existsSync 做着。
@@ -638,7 +672,10 @@ fn 跑文件入口(目录: String, 目标: String, 参们: Int) effects(file) {
   if file_exists(路) == false {
     return {ok: false, 文字: "HMYR-R0211 cannot read '" + 路 + "': no such file"}
   }
-  let 读 = 读一棵(目录, 目标, (), ())
+  // 这里传 路（已经拼好的绝对路径），不是 目标。
+  // 理由：解析路 会把「不像路径的名字」当包名，而入口文件的名字常常正是那样
+  // （main.hmoca）。传绝对路径就绕过了那一条判断。
+  let 读 = 读一棵(目录, 路, (), ())
   if len(读.源码们) == 0 {
     return {ok: false, 文字: "HMYR-R0211 nothing read from '" + 路 + "'"}
   }

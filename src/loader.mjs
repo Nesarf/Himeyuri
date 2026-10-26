@@ -21,12 +21,40 @@ import { 持有格检查 } from "./owned-check.mjs";
 
 const short = (file) => file.split(/[\\/]/).pop() || file;
 
-/** 只处理路径形式的 import；包名留给包管理器。 */
+/**
+ * 从某个文件往上找「包根」：第一个含 hmyr.hmkit 的目录；找不到就用仓库根。
+ *
+ * 包根这个概念是给包名解析用的，而它不需要一份新格式 —— 套件清单本来就叫那个名字，
+ * 所以「这里是一个包」这件事已经有记号了，只是以前没人拿它当地界。
+ */
+function 找包根(cap, fromFile) {
+  let 目录 = cap.path.dirname(fromFile);
+  for (let i = 0; i < 64; i++) {
+    if (cap.file.exists(cap.path.join(目录, "hmyr.hmkit"))) return 目录;
+    const 上 = cap.path.dirname(目录);
+    if (上 === 目录) break;
+    目录 = 上;
+  }
+  return cap.path.root();
+}
+
+/**
+ * 把一个 import 说明解析成一个绝对路径。
+ *
+ * 两种形式：路径（相对、绝对、带盘符），与包名。
+ * 包名的规则只有一句：是包根下面的一个目录，入口是那个目录里的 index.hmoca。
+ * 一条规则、一个约定文件名 —— 因为它要在四台机器上给出同一个答案，
+ * 而任何「按清单字段去猜」的写法都会把答案藏进解析顺序里。
+ */
 function resolveImport(cap, fromFile, spec) {
   if (spec.startsWith("./") || spec.startsWith("../") || /^[A-Za-z]:[\\/]/.test(spec) || cap.path.isAbsolute(spec)) {
     return cap.path.resolve(cap.path.dirname(fromFile), spec);
   }
-  return null;
+  // 包名：只认「像名字」的形状，其余仍然交给包管理器（与以前一样）。
+  // 允许非 ASCII —— 这门语言的标识符本来就能写中文，包名没有理由更窄。
+  const 名 = spec.replace(/\/+$/, "");
+  if (!/^[\p{L}_][\p{L}\p{N}_-]*$/u.test(名)) return null;
+  return cap.path.join(找包根(cap, fromFile), 名, "index.hmoca");
 }
 
 /**
