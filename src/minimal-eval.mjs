@@ -670,6 +670,8 @@ export class 最小运行时 {
   调用函数内(decl, args, fromEffects) {
     if (fromEffects) {
       for (const effect of decl.effects || []) {
+        // 与宿主求值器同一条：realtime 是档位，不沿调用链传。
+        if (effect === "realtime") continue;
         if (!fromEffects.has(effect)) {
           this.坏("HMYR-R0201", "function '" + decl.name + "' uses effect '" + effect + "', which the caller did not declare");
         }

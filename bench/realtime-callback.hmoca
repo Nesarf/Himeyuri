@@ -1,0 +1,33 @@
+// 一个实时回调：只做算术与区里**已经分好**的块，不碰世界。
+//
+// 这是 design/MEMORY.txt 第 3 节想要的那种形状 —— 区在回调开始之前建好，
+// 回调里一个 arena() 都不调（静态检查会拦），块按下标写与读。
+//
+// 它不证明「零停顿」。它给那条承诺一支标尺：bench/realtime.mjs 量它的最坏耗时
+// 与分配量，而那两个数字才是「离零停顿还有多远」的证据。
+
+fn 回调(块: Int, n: Int) -> Int effects(realtime) {
+  var s = 0
+  var i = 0
+  while i < n {
+    let 位 = i % 块.size
+    块.存(位, i)
+    s = s + 块.取(位)
+    i = i + 1
+  }
+  return s
+}
+
+fn main() -> Int effects(process) {
+  let 区 = arena()
+  let 块 = 区.alloc(64)
+  var k = 0
+  var 总 = 0
+  while k < 2000 {
+    总 = 总 + 回调(块, 200)
+    k = k + 1
+  }
+  print(str(总) + chr(10))
+  区.close()
+  return 0
+}

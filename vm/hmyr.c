@@ -4211,6 +4211,18 @@ static Value run_func(Func *f, Value *args, int nargs) {
          * 这一条在语言规范里，而这里以前不查 —— 数据本来就在函数表里。 */
         if (g_effects_on) {
           for (uint32_t e = 0; e < callee->neffects; e++) {
+            /* realtime 是档位，不是权限 —— 它不沿调用链传（design/MEMORY.txt 第 3 节）。 */
+            {
+              const char *字 = "realtime";
+              uint32_t 字长 = 8;
+              if (callee->effect_lens[e] == 字长) {
+                uint32_t 同 = 1;
+                for (uint32_t k = 0; k < 字长; k++) {
+                  if (callee->effects[e][k] != (uint16_t)(unsigned char)字[k]) { 同 = 0; break; }
+                }
+                if (同) continue;
+              }
+            }
             if (has_effect(f, callee->effects[e], callee->effect_lens[e])) continue;
             char 效[32];
             uint32_t el = callee->effect_lens[e] < 31 ? callee->effect_lens[e] : 31;

@@ -130,6 +130,9 @@ fn 效在(效们: Int, 名: String, i: Int) -> Bool {
 // 交回第一个缺的效果名；一个也不缺就交回空串。
 fn 缺效果从(要的: Int, 有的: Int, i: Int) -> String {
   if i >= len(要的) { return "" }
+  // realtime 是档位，不是权限 —— 它不沿调用链传（design/MEMORY.txt 第 3 节那处将就）。
+  // 传下去的话，每个调用实时函数的人都要声明自己也在实时档位上，而那不是真的。
+  if 要的[i] == "realtime" { return 缺效果从(要的, 有的, i + 1) }
   if 效在(有的, 要的[i], 0) == false { return 要的[i] }
   return 缺效果从(要的, 有的, i + 1)
 }

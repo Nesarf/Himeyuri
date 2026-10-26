@@ -139,6 +139,8 @@ export class 虚拟机 {
       // 效果：被调者声明的不能比调用者声明的多。
       if (调用者效果) {
         for (const 效 of 函.效果) {
+          // realtime 是档位，不是权限 —— 它不沿调用链传（见 design/MEMORY.txt 第 3 节）。
+          if (效 === "realtime") continue;
           if (!调用者效果.has(效)) {
             this.坏("HMYR-R0201", "function '" + 名 + "' uses effect '" + 效 + "', which the caller did not declare");
             return { ok: false, ...this.停机 };
@@ -329,6 +331,7 @@ export class 虚拟机 {
             const 函 = this.程序.函数们.get(指令.a);
             if (!函) { this.坏("HMYR-R0104", "there is no name '" + 指令.a + "' in scope"); return null; }
             for (const 效 of 函.效果) {
+              if (效 === "realtime") continue;
               if (!帧.效果.has(效)) {
                 this.坏("HMYR-R0201", "function '" + 指令.a + "' uses effect '" + 效 + "', which the caller did not declare");
                 return null;

@@ -158,6 +158,10 @@ export class Runtime {
   callFunctionInner(decl, args, fromEffects) {
     if (fromEffects) {
       for (const effect of decl.effects || []) {
+        // realtime 是档位，不是权限（design/MEMORY.txt 第 3 节那处将就）。
+        // 它写在效果位上，而它说的是「这个函数怎么跑」，所以不沿调用链传 ——
+        // 传下去的话，每个调用它的函数都得声明自己也在实时档位上，而那不是真的。
+        if (effect === "realtime") continue;
         if (!fromEffects.has(effect)) {
           this.fail("HMYR-R0201", "function '" + decl.name + "' uses effect '" + effect + "', which the caller did not declare");
         }
