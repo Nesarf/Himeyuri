@@ -57,6 +57,15 @@ export function 持有格检查(ast, 选项 = {}) {
     if (decl.kind !== "Fn" || !decl.body) continue;
     走块(decl.body.statements || [], new Map(), 报, 签名表);
   }
+
+  // 第四层：借用的承诺要在被调者那一侧兑现。
+  // 上面几层都在调用者那一侧看 ——「borrow 之后我还能继续用」，那是信任。
+  // 这一层走到被调函数体里，看它有没有真的不动那个参数，于是信任变成证明的一半：
+  // 承诺写在自己身上，就由自己这一侧来验。
+  for (const decl of ast.decls) {
+    if (decl.kind !== "Fn" || !decl.body) continue;
+    查借用承诺(decl, 签名表, 报);
+  }
   return 出;
 }
 
@@ -205,4 +214,52 @@ function 句子里提到的名字(n, 出 = new Set()) {
     句子里提到的名字(v, 出);
   }
   return 出;
+}
+
+// 借用的承诺，在被调者这一侧验。
+//
+// 前三层都在调用者那一侧：borrow 之后源这边的状态保持不变 —— 那是「信任」。
+// 这一层走进函数体，看它有没有真的不动那个参数，于是信任有了证明的一半。
+// 另一半（跨两层以上的传递）仍然不做，与 §7 那条「不做完整证明」同一处。
+function 查借用承诺(decl, 签名表, 报) {
+  const 借来的 = new Set(
+    (decl.params || []).filter((p) => p && p.passing === "borrow").map((p) => p.name),
+  );
+  if (借来的.size === 0) return;
+
+  const 走 = (n) => {
+    if (!n || typeof n !== "object") return;
+    if (Array.isArray(n)) { for (const x of n) 走(x); return; }
+
+    if (n.kind === "Call" && n.callee) {
+      // 借来的名字被当成方法的主：X.放 / X.取 / X.关。
+      const 主 = n.callee.kind === "Field" ? n.callee.target : null;
+      if (主 && 主.kind === "Ident" && 借来的.has(主.name)) {
+        const 方法 = n.callee.name;
+        if (方法 === "放" || 方法 === "取" || 方法 === "关") {
+          报("'" + 主.name + "' is borrowed here, and this function calls " + 方法 + " on it: a borrow promises to leave what it borrows alone", n);
+        }
+      }
+      // 借来的名字被交给一个 own 参数：那等于把它交出去。
+      if (n.callee.kind === "Ident" && 签名表.has(n.callee.name)) {
+        const 形们 = 签名表.get(n.callee.name) || [];
+        const 实们 = n.args || [];
+        for (let i = 0; i < 实们.length; i++) {
+          const 形 = 形们[i];
+          const 实 = 实们[i];
+          if (!形 || 形.passing !== "own") continue;
+          if (实 && 实.kind === "Ident" && 借来的.has(实.name)) {
+            报("'" + 实.name + "' is borrowed here, and it is handed to an own parameter: that moves what this function only borrowed", n);
+          }
+        }
+      }
+    }
+
+    for (const [k, v] of Object.entries(n)) {
+      if (k === "line" || k === "column" || k === "kind") continue;
+      走(v);
+    }
+  };
+
+  走(decl.body);
 }

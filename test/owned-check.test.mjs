@@ -317,6 +317,65 @@ console.log("八、跨函数的转移（只看签名上那个 own）");
   ok("没写 own 的参数不算转移", 查(普通参).length === 0, JSON.stringify(查(普通参)));
 }
 
+console.log("九、借用的承诺在被调者那一侧兑现");
+{
+  // 前三层都在调用者那边看：borrow 之后我还能继续用 —— 那是信任。
+  // 这一层走进函数体，看它有没有真的不动那个参数。
+  const 借了又放 = 行们([
+    "fn 看(borrow 格: Int) -> Int {",
+    "  格.放(1)",
+    "  return 0",
+    "}",
+  ]);
+  ok("borrow 参数上放被拒", 有(查(借了又放), "is borrowed here"), JSON.stringify(查(借了又放)));
+
+  const 借了又取 = 行们([
+    "fn 看(borrow 格: Int) -> Int {",
+    "  格.取()",
+    "  return 0",
+    "}",
+  ]);
+  ok("borrow 参数上取被拒", 有(查(借了又取), "is borrowed here"), JSON.stringify(查(借了又取)));
+
+  const 借了又关 = 行们([
+    "fn 看(borrow 格: Int) -> Int {",
+    "  格.关()",
+    "  return 0",
+    "}",
+  ]);
+  ok("borrow 参数上关被拒", 有(查(借了又关), "is borrowed here"), JSON.stringify(查(借了又关)));
+
+  // 借来的东西再交给一个 own 参数，等于把它交出去了 —— 那也是动了它。
+  const 借出再转移 = 行们([
+    "fn 收下(own 格: Int) -> Int {",
+    "  return 0",
+    "}",
+    "",
+    "fn 看(borrow 格: Int) -> Int {",
+    "  收下(格)",
+    "  return 0",
+    "}",
+  ]);
+  ok("borrow 传进 own 参数被拒", 有(查(借出再转移), "that moves what this function only borrowed"), JSON.stringify(查(借出再转移)));
+
+  // 正例：借了不动。
+  const 只看 = 行们([
+    "fn 看(borrow 格: Int) -> Int {",
+    "  return 0",
+    "}",
+  ]);
+  ok("借了不用不报", 查(只看).length === 0, JSON.stringify(查(只看)));
+
+  // 没写 borrow 的参数不受这一条约束 —— 门只对写了那个词的开。
+  const 普通参数动 = 行们([
+    "fn 改(格: Int) -> Int {",
+    "  格.放(1)",
+    "  return 0",
+    "}",
+  ]);
+  ok("普通参数上放不报", 查(普通参数动).length === 0, JSON.stringify(查(普通参数动)));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
