@@ -17,6 +17,7 @@ import { 子集解 } from "./subset-parse.mjs";
 import { 展开模块 } from "./expand.mjs";
 import { 区检查 } from "./zone-check.mjs";
 import { 实时检查 } from "./realtime-check.mjs";
+import { 持有格检查 } from "./owned-check.mjs";
 
 const short = (file) => file.split(/[\\/]/).pop() || file;
 
@@ -95,6 +96,14 @@ export function loadUnit(entry, options = {}) {
     // 一条管「内存跑出区」，一条管「实时回调碰了会等的东西」—— 两件事关掉的理由不同。
     if (options.realtimeCheck !== false) {
       for (const d of 实时检查(ast, { 文件: short(abs) })) {
+        diagnostics.error(d.code, d.message, d.line, d.column);
+      }
+    }
+
+    // owned 的单次使用（design/MEMORY.txt 第 2 节）：放两次、取两次这一类能静态看的错，
+    // 在装载时拦。三个开关各管一件事，理由与区那一条同：会误报的检查会被关掉。
+    if (options.ownedCheck !== false) {
+      for (const d of 持有格检查(ast, { 文件: short(abs) })) {
         diagnostics.error(d.code, d.message, d.line, d.column);
       }
     }

@@ -118,6 +118,7 @@ const SUITES = [
   ["globalvar", "test/global-var.test.mjs", "design/GLOBALS.txt - a module-level var reads and writes on all four machines, a const refuses to be rebound, and the two machines that compile agree on the answer"],
   ["realtime", "test/realtime.test.mjs", "design/MEMORY.txt section 3 - the realtime profile's static half: allocating, blocking, an endless loop and an unclosed call chain are all refused while the module is being loaded"],
   ["owned", "test/owned.test.mjs", "design/MEMORY.txt section 2 - the third zone: a holder owns one value at a time, taking is the transfer, and a second put or an empty take names itself"],
+  ["ownedcheck", "test/owned-check.test.mjs", "design/MEMORY.txt section 2 - the load-time half of the owned zone: a second put or a second take in a straight line is refused while the module loads, and anything the checker cannot see is left alone"],
   ["surface", "test/surface.test.mjs", "SPEC M7 - several sub surfaces composited onto the main one, the way real windows will be"],
   ["pixel", "test/pixel.test.mjs", "SPEC M7 - a second kind of buffer: pixels, and a real PNG comes out the other end"],
   ["parallel", "test/parallel.test.mjs", "SPEC M7 - real parallelism borrowed from a process that has it, and the judgement still read back in Himeyuri"],
