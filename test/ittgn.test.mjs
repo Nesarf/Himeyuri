@@ -221,6 +221,40 @@ console.log("九、往返：容器 → zip → 容器，字节相同");
   ok("往返之后逐字节相同", Buffer.compare(甲, 乙) === 0, 甲.length + " 对 " + 乙.length);
 }
 
+console.log("十、C 那台也认容器");
+{
+  // 两份读容器的实现（src/ittgn.mjs 与 vm/hmyr.c），判据是它们挑出同一个入口、
+  // 跑出同一段标准输出。比「两边都能读」硬 —— 挑入口那套规则（先源码后字节码、
+  // 先 main 后与包同名）只要一处分叉，这条就红。
+  const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
+  if (!有gcc) {
+    console.log("  跳过  这台机器上没有 gcc —— C 那台那一侧不验");
+  } else {
+    const exe = path.join(临, "hmyr.exe");
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe,
+      path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
+    ok("C 那台编得出来", 编.status === 0, String(编.stderr).slice(0, 160));
+
+    造("c/main.hmoca", [...Buffer.from("fn main() -> Int {\n  print(\"两台都认容器\" + chr(10))\n  return 0\n}\n", "utf8")]);
+    const 包 = "两台.hm-ittgn-krgn-m";
+    const 装 = 跑(["--装", 包, "c/main.hmoca"]);
+    ok("装成容器", (装.stdout || "").includes("装了"), (装.stdout || "").slice(0, 100));
+
+    const js = 跑文件([包]);
+    const c = spawnSync(exe, [path.join(临, 包)], {
+      encoding: "utf8", cwd: 临, timeout: 300000,
+      env: { ...process.env, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000" },
+    });
+    ok("JS 那台跑出了那句话", (js.stdout || "").includes("两台都认容器"), JSON.stringify((js.stdout || "").slice(0, 80)));
+    // 比之前先去掉两类差：一类是 C 那台写进 stderr 的内部日志（「编了几个块」），
+    // 那不叫程序说了什么；另一类是 JS 启动器替程序打出的返回值（单独一行的纯数字），
+    // 那是它的显示选择，C 那台不做这件事。去掉之后剩下的，才是「程序说了什么」。
+    const 行们 = (s) => String(s || "").split("\n").filter((x) => x.length > 0 && !/^-?\d+$/.test(x));
+    ok("C 那台跑出同一段标准输出", JSON.stringify(行们(c.stdout)) === JSON.stringify(行们(js.stdout)),
+      JSON.stringify([js.stdout, c.stdout]));
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

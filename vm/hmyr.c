@@ -3997,6 +3997,205 @@ static void 临时路径(char *buf, size_t cap) {
 #endif
 }
 
+/* ---------- 容器：.hm-ittgn-krgn-m ----------
+ *
+ * 与 src/ittgn.mjs 是同一条规矩的两份实现：那一份读容器，这一份也读。
+ * 验收是「同一份容器，两台跑出同一段输出」—— 比「两边都能读」硬得多。
+ *
+ * 摊开用临时目录：容器就地跑不起来，因为它的成员在文件里、不在文件系统上。
+ * 摊开之后交给既有的两条路（源码走 cli_main，字节码走 run_bytecode），
+ * 那一层不必知道「容器」这回事。 */
+
+static void 临时目录路径(char *buf, size_t cap) {
+#ifdef _WIN32
+  const char *dir = getenv("TEMP");
+  if (!dir || !*dir) dir = getenv("TMP");
+  if (!dir || !*dir) dir = ".";
+  /* 带线程号的理由与 临时路径 那一条相同：两个线程同时摊开一个容器会撞成同一个目录。 */
+  snprintf(buf, cap, "%s\\hmyr-ittgn-%ld-%lu", dir, (long)_getpid(), (unsigned long)GetCurrentThreadId());
+#elif defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+  const char *dir = getenv("TMPDIR");
+  if (!dir || !*dir) dir = "/tmp";
+  snprintf(buf, cap, "%s/hmyr-ittgn", dir);
+#else
+  const char *dir = getenv("TMPDIR");
+  if (!dir || !*dir) dir = "/tmp";
+  snprintf(buf, cap, "%s/hmyr-ittgn-%ld", dir, (long)getpid());
+#endif
+}
+
+static void 试建目录(const char *路) {
+#ifdef _WIN32
+  _mkdir(路);
+#else
+  mkdir(路, 0777);
+#endif
+}
+
+/* 建到「最后一段的前面」：路是文件路径，所以末段不能建。
+ * 成员的路径里可以带子目录，所以要从头一级一级来。 */
+static void 建父目录(const char *路) {
+  char 暂[2048];
+  snprintf(暂, sizeof 暂, "%s", 路);
+  for (char *p = 暂 + 1; *p; p++) {
+    if (*p == '/' || *p == '\\') {
+      char 旧 = *p;
+      *p = 0;
+      试建目录(暂);
+      *p = 旧;
+    }
+  }
+}
+
+static int 写整文件(const char *路, const uint8_t *数据, size_t 长) {
+  FILE *f = 开文件(路, "wb");
+  if (!f) return 0;
+  size_t 写 = fwrite(数据, 1, 长, f);
+  fclose(f);
+  return 写 == 长;
+}
+
+static int 以尾2(const char *s, const char *尾) {
+  size_t n = strlen(s), m = strlen(尾);
+  return n >= m && strcmp(s + n - m, 尾) == 0;
+}
+
+static int 是容器路径(const char *p) { return p && 以尾2(p, ".hm-ittgn-krgn-m"); }
+
+static unsigned 容器读16(const uint8_t *b, size_t 位) {
+  return (unsigned)b[位] | ((unsigned)b[位 + 1] << 8);
+}
+
+static unsigned 容器读32(const uint8_t *b, size_t 位) {
+  return (unsigned)b[位] | ((unsigned)b[位 + 1] << 8) | ((unsigned)b[位 + 2] << 16) | ((unsigned)b[位 + 3] << 24);
+}
+
+typedef struct {
+  char 名[1024];
+  const uint8_t *数据;
+  size_t 长;
+  int 阶;   /* 0 = 源码，1 = 字节码，-1 = 两者都不是 */
+} 容器成员;
+
+/* 去掉目录与扩展名，留下基名。挑入口时要拿它比 main 与包名。 */
+static void 取基名(const char *名, char *出, size_t cap) {
+  const char *末段 = 名;
+  for (const char *p = 名; *p; p++) if (*p == '/' || *p == '\\') 末段 = p + 1;
+  snprintf(出, cap, "%s", 末段);
+  char *点 = strrchr(出, '.');
+  if (点) *点 = 0;
+}
+
+/* 把容器摊到临时目录，交回入口的路径（malloc 的 UTF-8）。挑不出来返回 NULL。
+ *
+ * 挑法与 src/ittgn.mjs 的 找入口 逐条对齐：先源码后字节码；同一阶里先 main、
+ * 后与包同名、再取第一个。两处对同一份容器挑出不同成员的话，那一条验收会当场红。 */
+static char *解容器(const char *包路) {
+  size_t 长 = 0;
+  uint8_t *字节 = read_file(包路, &长);
+  if (!字节) { fprintf(stderr, "HMYR-E0413 cannot read that container: %s\n", 包路); return NULL; }
+  if (长 < 12 || memcmp(字节, "HMYRITTGN", 9) != 0) {
+    fprintf(stderr, "HMYR-E0413 not a container: %s\n", 包路);
+    free(字节);
+    return NULL;
+  }
+  if (字节[9] != 1) {
+    fprintf(stderr, "HMYR-E0415 container version %u is not known\n", (unsigned)字节[9]);
+    free(字节);
+    return NULL;
+  }
+  unsigned 数 = 容器读16(字节, 10);
+  容器成员 *们 = (容器成员 *)calloc(数 ? 数 : 1, sizeof(容器成员));
+  if (!们) { free(字节); return NULL; }
+  size_t 位 = 12;
+  for (unsigned i = 0; i < 数; i++) {
+    if (位 + 2 > 长) goto 截断;
+    unsigned 名长 = 容器读16(字节, 位);
+    if (位 + 2 + 名长 + 4 > 长) goto 截断;
+    if (名长 >= sizeof 们[i].名) {
+      fprintf(stderr, "HMYR-E0417 member name is too long: %u bytes\n", 名长);
+      free(们);
+      free(字节);
+      return NULL;
+    }
+    memcpy(们[i].名, 字节 + 位 + 2, 名长);
+    们[i].名[名长] = 0;
+    size_t 长位 = 位 + 2 + 名长;
+    unsigned 数据长 = 容器读32(字节, 长位);
+    size_t 起 = 长位 + 4;
+    if (起 + 数据长 > 长) goto 截断;
+    们[i].数据 = 字节 + 起;
+    们[i].长 = 数据长;
+    if (以尾2(们[i].名, ".hmoca")) 们[i].阶 = 0;
+    else if (以尾2(们[i].名, ".hmoks")) 们[i].阶 = 1;
+    else 们[i].阶 = -1;
+    位 = 起 + 数据长;
+  }
+
+  {
+    char 目录[1024];
+    临时目录路径(目录, sizeof 目录);
+    试建目录(目录);
+    for (unsigned i = 0; i < 数; i++) {
+      char 全[2048];
+      snprintf(全, sizeof 全, "%s/%s", 目录, 们[i].名);
+      建父目录(全);
+      if (!写整文件(全, 们[i].数据, 们[i].长)) {
+        fprintf(stderr, "HMYR-E0417 cannot write a member: %s\n", 们[i].名);
+        free(们);
+        free(字节);
+        return NULL;
+      }
+    }
+
+    /* 包名：容器文件名去掉后缀。用「与包同名」挑入口时要用它。 */
+    char 包名[512];
+    {
+      const char *末段 = 包路;
+      for (const char *p = 包路; *p; p++) if (*p == '/' || *p == '\\') 末段 = p + 1;
+      snprintf(包名, sizeof 包名, "%s", 末段);
+      size_t m = strlen(".hm-ittgn-krgn-m");
+      size_t n = strlen(包名);
+      if (n > m) 包名[n - m] = 0;
+    }
+
+    int 选 = -1;
+    for (int 阶 = 0; 阶 < 2 && 选 < 0; 阶++) {
+      int 第一个 = -1, 同名 = -1, 主 = -1;
+      for (unsigned i = 0; i < 数; i++) {
+        if (们[i].阶 != 阶) continue;
+        if (第一个 < 0) 第一个 = (int)i;
+        char 基[512];
+        取基名(们[i].名, 基, sizeof 基);
+        if (同名 < 0 && strcmp(基, 包名) == 0) 同名 = (int)i;
+        if (主 < 0 && strcmp(基, "main") == 0) 主 = (int)i;
+      }
+      选 = 主 >= 0 ? 主 : 同名 >= 0 ? 同名 : 第一个;
+    }
+    if (选 < 0) {
+      fprintf(stderr, "HMYR-E0418 the container has no runnable entry (needs a .hmoca or .hmoks member)\n");
+      free(们);
+      free(字节);
+      return NULL;
+    }
+    {
+      char 全[2048];
+      snprintf(全, sizeof 全, "%s/%s", 目录, 们[选].名);
+      char *出 = (char *)malloc(strlen(全) + 1);
+      if (出) memcpy(出, 全, strlen(全) + 1);
+      free(们);
+      free(字节);
+      return 出;
+    }
+  }
+
+截断:
+  fprintf(stderr, "HMYR-E0416 the container member table is truncated\n");
+  free(们);
+  free(字节);
+  return NULL;
+}
+
 /* 种子在哪。三种找法，按「离用户近」排：环境变量、可执行文件旁边、
  * 当前目录。找不到就明说，别让人等一个「没有这个文件」的通用消息。 */
 /* 内置种子写到哪儿：与编译产物分开一个名字，免得 cli_main 的清理删错文件。 */
@@ -4441,6 +4640,24 @@ int main(int argc, char **argv) {
       long v = atol(ml);
       g_mem_limit = v > 0 ? (size_t)v * 1024 * 1024 : 0;
     }
+  }
+
+  /* 容器：先摊开，再把 argv[1] 换成解出来的入口 —— 后面两条路都不必知道容器这回事。
+   * 程序看到的第一个参数仍是用户敲的那个容器名（argv0 传旧的那一个），
+   * 所以里面的程序读 argv() 时看见的是「我被哪个容器叫起来的」，不是一个临时路径。 */
+  if (是容器路径(argv[1])) {
+    char *旧 = argv[1];
+    char *入口 = 解容器(旧);
+    if (!入口) return 1;
+    argv[1] = 入口;
+    if (是源码路径(入口)) {
+      int 码 = cli_main(argc, argv);
+#if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+      if (g_种子临时[0]) remove(g_种子临时);
+#endif
+      return 码;
+    }
+    return run_bytecode(入口, 旧, argc - 2, argv + 2, 步限从环境(旧));
   }
 
   /* 两个入口：给一份源码时先编再跑（启动器那一面），给一份字节码时直接跑。
