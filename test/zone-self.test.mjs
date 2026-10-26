@@ -267,6 +267,55 @@ console.log("八、一个真程序：四台机器同一段");
   }
 }
 
+console.log("九、模块级 const 持有索引：四台同一段（§4.2 的原例有了写法）");
+{
+  // design/MEMORY.txt §4.2 的原例是「把块存到一个模块级变量里」。这一门语言没有顶层 var，
+  // 但它有 const 持有索引 —— 索引可变，而 const 只约束名字不重新绑定。于是那个容器有了，
+  // 而 R0304 已经会管「块被存进索引」这一种写法（见 zone-static）。
+  //
+  // 这一节验的是「写法在四台上都成立」：默认、--host-eval、--compile、C 那台。
+  const 源 = [
+    "const 表 = index_new()",
+    "",
+    "fn store(v: Int) -> Int {",
+    "  return index_set(表, \"kept\", v)",
+    "}",
+    "",
+    "fn main() -> Int effects(process) {",
+    "  let r = store(7)",
+    "  print(\"存之前=\" + str(index_get(表, \"kept\")) + chr(10))",
+    "  return 0",
+    "}",
+  ].join("\n") + "\n";
+  const p = 投(源, "癸.hmoca");
+
+  const 甲 = 跑([p]);
+  const 甲行 = 行(甲.stdout);
+  ok("默认跑得动，读数是 7", 甲.status === 0 && 甲行.includes("存之前=7"),
+    JSON.stringify({ status: 甲.status, out: 甲行, err: (甲.stderr || "").slice(0, 120) }));
+
+  const 乙 = 跑(["--host-eval", p]);
+  ok("--host-eval 同一段", (乙.stdout || "") === (甲.stdout || ""), JSON.stringify([(乙.stdout || "").slice(0, 80), (甲.stdout || "").slice(0, 80)]));
+
+  const 丙 = 跑(["--compile", p]);
+  const 丙行 = 行(丙.stdout);
+  ok("--compile 同一段", 丙.status === 0 && JSON.stringify(丙行) === JSON.stringify(甲行.slice(0, 丙行.length)),
+    JSON.stringify([丙行, 甲行.slice(0, 丙行.length)]));
+
+  const exe = path.join(临, "hmyr-c.exe");
+  if (!fs.existsSync(exe)) {
+    console.log("  跳过  C 那台没编出来 —— 第四台不验");
+  } else {
+    const 丁 = spawnSync(exe, [p], {
+      encoding: "utf8", cwd: 临, timeout: 300000,
+      env: { ...process.env, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000" },
+    });
+    const 丁行 = 行(丁.stdout);
+    ok("C 那台同一段", 丁.status === 0 && JSON.stringify(丁行) === JSON.stringify(甲行.slice(0, 丁行.length)),
+      JSON.stringify({ status: 丁.status, out: 丁行, err: (丁.stderr || "").slice(0, 160) }));
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
