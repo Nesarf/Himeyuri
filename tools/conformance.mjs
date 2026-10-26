@@ -101,6 +101,8 @@ const PROSE = new Map([
   // 2.8 与 2.9 同理：一个要四套语言档案，一个要真的起线程，这一份 runner 两样都没有。
   ["2.8", "the locale profiles: exercised by test/locale, i18n and corpus, which switch profiles and run whole-table corpora rather than going through this runner"],
   ["2.9", "concurrency: exercised by test/threads-cvm and the thr suites, which need real threads; this runner is synchronous and has none"],
+  ["2.10", "the outside world: three facts about strings and buffers, verified by test/c-vm and test/f64; the three open questions have no answers yet, so there is nothing to run"],
+  ["2.11", "file types: nine extensions and three directory names, exercised by test/package and test/distro, which build and unpack real packages rather than going through this runner"],
   ["4", "the chapter heading itself"],
   ["4.1", "the not-doing list: prohibitions on syntax, most of which the grammar already makes impossible"],
   ["4.2", "conformance itself: this suite is the evidence"],
