@@ -135,6 +135,9 @@ export function parse(tokens, options = {}) {
     if (at("ident", "macro")) return parseMacro();
     if (at("keyword", "type")) return parseTypeAlias();
     if (at("keyword", "const")) return parseConst();
+    // 顶层 var：模块级、可写的名字。形状与 const 相同，只是 kind 不同 ——
+    // 下游要能分清「这个名字能不能重绑」（见 design/GLOBALS.txt）。
+    if (at("keyword", "var")) return parseTopVar();
     if (at("keyword", "effect")) return parseEffectDecl();
     return null;
   }
@@ -268,6 +271,18 @@ export function parse(tokens, options = {}) {
     const value = parseExpr();
     endStatement();
     return { kind: "Const", name: name ? name.value : "<error>", value, line: kw.line, column: kw.column };
+  }
+
+  // 顶层 var 与 parseConst 只差一个 kind。为什么分成两个 kind 而不是加一个可写标记：
+  // 「能不能重绑」是这一层最要紧的一件事，而一个自己的 kind 让它一眼可查 ——
+  // 读树的人不必先去看某个布尔字段是不是缺了。设计稿在 design/GLOBALS.txt。
+  function parseTopVar() {
+    const kw = advance();
+    const name = expect("ident", "a variable name");
+    expectPunct("=", "before the value");
+    const value = parseExpr();
+    endStatement();
+    return { kind: "VarTop", name: name ? name.value : "<error>", value, line: kw.line, column: kw.column };
   }
 
   // 宏：macro 名(参数们) = 表达式

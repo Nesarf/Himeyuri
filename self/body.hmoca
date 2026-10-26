@@ -145,7 +145,7 @@ fn next_fn(tokens: Int, i: Int) -> Int {
 fn next_decl(tokens: Int, i: Int) -> Int {
   if i >= len(tokens) { return -1 }
   let t = tokens[i]
-  if t.kind == "ident" && (t.text == "fn" || t.text == "const") { return i }
+  if t.kind == "ident" && (t.text == "fn" || t.text == "const" || t.text == "var") { return i }
   return next_decl(tokens, i + 1)
 }
 
@@ -177,16 +177,16 @@ fn 切段(tokens: Int, 起: Int, 止: Int, acc: Int) -> Int {
 //
 // 它只认「const 名 = 表达式」这一种写法 —— 与宿主那一份 parseConst 同一个形状。
 // 认不出来的部分（没有等号、表达式搭不起来）交回 -1，让上层跳过而不是猜。
-fn 常量在(tokens: Int, at: Int) {
+fn 常量在(tokens: Int, at: Int, 可写: Int) {
   let 末 = 行尾位(tokens, at + 1)
   let 等 = 等号位(tokens, at + 2, 末)
-  if 等 < 0 { return {name: "", value: -1, next: 末 + 1} }
+  if 等 < 0 { return {name: "", value: -1, writable: 可写, next: 末 + 1} }
   // 名字在(tokens, i) 看的是 tokens[i+1] —— 它是为「从 fn 的位置取名」写的。
-  // 所以这里传 at（const 自己的位置），不能再 +1：那会让它去看等号，名字永远是空。
+  // 所以这里传 at（声明自己的位置），不能再 +1：那会让它去看等号，名字永远是空。
   let 名 = 名字在(tokens, at)
   let 子 = 切段(tokens, 等 + 1, 末, ())
   let 值 = chain(子)
-  return {name: 名, value: 值.node, next: 末 + 1}
+  return {name: 名, value: 值.node, writable: 可写, next: 末 + 1}
 }
 
 fn 名字在(tokens: Int, i: Int) -> String {
@@ -318,12 +318,14 @@ fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
   let at = next_decl(tokens, i)
   if at < 0 { return {fns: acc, consts: 常量们, next: len(tokens)} }
   let 位 = tokens[at]
-  // const 走另一条路：它没有函数体，值到行尾为止，而名字与值一起收进常量表。
-  // 这张表是「模块级 const 持有索引」那一件事的通道 —— 也就是三区模型 §4.2 要的容器。
-  if 位.text == "const" {
-    let 常 = 常量在(tokens, at)
+  // const 与 var 走另一条路：它们没有函数体，值到行尾为止，而名字、值与「可写吗」
+  // 一起收进常量表。这张表是「模块级名字」的通道 —— 三区模型 §4.2 要的容器也在其中。
+  if 位.text == "const" || 位.text == "var" {
+    var 是var = 0
+    if 位.text == "var" { 是var = 1 }
+    let 常 = 常量在(tokens, at, 是var)
     if 常.name == "" { return decls_from(tokens, 常.next, acc, 常量们) }
-    return decls_from(tokens, 常.next, acc, 常量们 + ((常.name, 常.value),))
+    return decls_from(tokens, 常.next, acc, 常量们 + ((常.name, 常.value, 常.writable),))
   }
   let 名 = 名字在(tokens, at)
   let open = find_body(tokens, at + 1)

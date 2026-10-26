@@ -339,8 +339,10 @@ const 编译函数 = (decl) => {
       }
       case "Assign": {
         const 有 = 查(s.name);
-        if (!有) throw new 编译错("赋给一个不在作用域里的名字：" + s.name);
+        // 槽里没有就是模块级的名字：写它要 SETGLOBAL，与读它走 GLOBAL 是对称的。
+        // 顶层的 var 才落在这一条上；函数里的 var 在槽里，走 ASSIGN（那条会验「可写」）。
         表达(s.value);
+        if (!有) { 发("SETGLOBAL", s.name); return; }
         发("ASSIGN", 有.槽);
         return;
       }
@@ -396,7 +398,10 @@ export const 编译模块 = (ast) => {
   const 全局们 = [];          // 常量声明（Const）
   for (const decl of ast.decls) {
     if (decl.kind === "Fn") 函数们.set(decl.name, 编译函数(decl));
-    else if (decl.kind === "Const") 全局们.push(decl);
+    // Const 与 VarTop 都进上一级那张表：它们的初值都在顶层段里算。
+    // 两者的差别只在「函数里能不能写它」—— 而那一半由 Ident / Assign 两支决定，
+    // 不由这里决定。
+    else if (decl.kind === "Const" || decl.kind === "VarTop") 全局们.push(decl);
     else throw new 编译错("这一份只认 fn 与 const 声明：" + decl.kind);
   }
   // 有常量就有一段初始化。它走的是普通函数那条路（编译、装栈、RET 交回 nil），

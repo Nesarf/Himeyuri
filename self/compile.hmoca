@@ -447,7 +447,13 @@ fn 语句(节点: Int, 状态: Int) {
   }
   if 种 == "Assign" {
     let 号 = 找槽(状态.名表, 节点.name)
-    if 号 < 0 { return {ok: false, 错: "赋给一个不在作用域里的名字：" + 节点.name} }
+    // 槽里没有就是模块级的名字：写它走 SETGLOBAL，与读它走 GLOBAL 对称。
+    // 宿主那一份（src/bytecode.mjs）也是这么做的 —— 两台编译器给同一份字节流。
+    if 号 < 0 {
+      let v = 表达(节点.value, 状态)
+      if v.ok == false { return v }
+      return {ok: true, 状态: 发(v.状态, {op: "SETGLOBAL", a: 节点.name}), 结束: false}
+    }
     let v = 表达(节点.value, 状态)
     if v.ok == false { return v }
     return {ok: true, 状态: 发(v.状态, {op: "ASSIGN", a: 号}), 结束: false}

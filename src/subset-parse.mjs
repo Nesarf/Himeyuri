@@ -1,13 +1,13 @@
 // 子集 parser：Stage 0 的第二层。token 进，树出。
 //
-// 现状：两件事都对上了（2026-10-20）——树，六份共 14103 个节点，逐个相同（形状与位置）；
+// 现状：两件事都对上了（2026-10-20）——树，六份共 14445 个节点，逐个相同（形状与位置）；
 // 以及错误路径上的话（与宿主同一批码、同一个位置）。
 //
 // 它的立场是认得窄而说清：遇到不认的构造就报出来，而不是猜一个树。
 // 一个猜出来的树会在后面某一层变成算错的数，而那时已经看不出源头。
 //
 // 它认的是 self/ 那六份源码用到的构造，别的都报错。那份普查是数出来的，不是照语法书抄的：
-//   声明   只有 fn，195 个；没有 type / const / effect / pub，没有类型参数，没有 requires/ensures
+//   声明   只有 fn，198 个；没有 type / const / effect / pub，没有类型参数，没有 requires/ensures
 //   参数   321 个，全部带类型，没有默认值，没有 own/borrow
 //   类型   只有三种：Int 238、String 79、Bool 4，全是单名
 //   语句   六种：let / var / assign / return / ExprStmt / Block
@@ -165,7 +165,8 @@ export const 子集解 = (tokens, options = {}) => {
   function 解析声明() {
     if (是("keyword", "fn")) return 解析函数();
     if (是("ident", "macro")) return 解析宏();
-    if (是("keyword", "const")) return 解析常量();
+    if (是("keyword", "const")) return 解析常量("Const");
+    if (是("keyword", "var")) return 解析常量("VarTop");
     // 这几样宿主读得动，而这一份还不认——边界，抛。
     if (是("keyword", "type") || 是("keyword", "effect") || 是("keyword", "pub")) {
       不认("子集不认这个声明，见到 " + 说明(看()));
@@ -176,19 +177,19 @@ export const 子集解 = (tokens, options = {}) => {
     return null;
   }
 
-  // 顶层 const：宿主那一支在 src/parser.mjs 的 parseConst，这一份照它。
+  // 顶层 const 与顶层 var：只差一个 kind。写成一个函数带参数，是因为语法完全一样
+  // （名 = 表达式），而「能不能重绑」这件事由 kind 说，不由形状说。见 design/GLOBALS.txt。
   //
-  // 它原来是「认得窄」清单上的一条，而它正是「模块级 const 持有索引」的入口 ——
-  // 索引可变，const 只约束名字不重新绑定，于是「一个活得比函数久的容器」有了，
-  // design/MEMORY.txt 的 §4.2 也就不必等一种新语法。
-  // 认 const 不等于认 type / effect / pub：那三样仍然抛，边界还在原处。
-  function 解析常量() {
+  // const 那一支原来是「认得窄」清单上的一条，而它正是「模块级 const 持有索引」的入口 ——
+  // 索引可变，const 只约束名字不重新绑定，于是「一个活得比函数久的容器」有了。
+  // 认这两个不等于认 type / effect / pub：那三样仍然抛，边界还在原处。
+  function 解析常量(种) {
     const kw = 进();
-    const 名 = 要("ident", "常量名");
-    要标("=", "常量名之后");
+    const 名 = 要("ident", "名字");
+    要标("=", "名字之后");
     const value = 解析表达式();
     收句();
-    return { kind: "Const", name: 名 ? 名.value : "<error>", value, line: kw.line, column: kw.column };
+    return { kind: 种, name: 名 ? 名.value : "<error>", value, line: kw.line, column: kw.column };
   }
 
   // 宏：macro 名(参数们) = 表达式 —— 与宿主那份同一个形状，展开也共用 src/expand.mjs。

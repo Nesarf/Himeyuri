@@ -828,8 +828,15 @@ fn 求值(节点: Int, 环境: Int) -> Int {
     // nil 同理：宿主把那两个字当关键字，自举这一层得自己认回来。
     if 节点.text == "nil" { return 好(()) }
     let r = 查找(环境, 节点.text)
-    if r.found == false { return 坏("没有这个名字：" + 节点.text) }
-    return 好(r.value)
+    if r.found { return 好(r.value) }
+    // 模块级 var 住在环境之外的一张小表里（见 装常量从 与 Assign）。
+    // 为什么不能也放环境里：环境是纯传递的 —— 函数体里改的那一层，函数一返回就没了。
+    // 可写的名字需要一块共享的地方，而索引就是这门语言里那块地方。
+    let 全 = 查找(环境, "全局")
+    if 全.found {
+      if index_has(全.value, 节点.text) { return 好(index_get(全.value, 节点.text)) }
+    }
+    return 坏("没有这个名字：" + 节点.text)
   }
   if 种 == "Binary" { return 求二元(节点.op, 求值(节点.left, 环境), 求值(节点.right, 环境)) }
   if 种 == "Unary" { return 求一元(节点.op, 求值(节点.operand, 环境)) }
@@ -893,6 +900,30 @@ fn 更新(环境: Int, 名: String, 值: Int) -> Int {
   return 环境 + ((名, 值),)
 }
 
+// 环境里那个名字最后一次出现在第几项。-1 表示没有。
+// 「最后一次」与 查找 从后往前是同一条规矩：近的定义盖住远的。
+fn 末位(环境: Int, 名: String, i: Int, 局: Int) {
+  if i >= len(环境) { return 局 }
+  var 新局 = 局
+  if 环境[i][0] == 名 { 新局 = i }
+  return 末位(环境, 名, i + 1, 新局)
+}
+
+// 把第 到 项换成新值，其余原样 —— 交回一张新表。
+//
+// 为什么不能「追加一条」了事：函数体里的环境是「模块级 + 参数 + 局部」，
+// 追加只会落在最内层，函数一返回，模块级那个名字还是旧值。
+// 症状是「写了一个模块级 var，读出来永远是初值」—— 而它看起来像赋值没生效。
+fn 改在从(环境: Int, 到: Int, 值: Int, i: Int, 出: Int) {
+  if i >= len(环境) { return 出 }
+  if i == 到 { return 改在从(环境, 到, 值, i + 1, 出 + ((环境[i][0], 值),)) }
+  return 改在从(环境, 到, 值, i + 1, 出 + (环境[i],))
+}
+
+fn 改在(环境: Int, 到: Int, 值: Int) {
+  return 改在从(环境, 到, 值, 0, ())
+}
+
 fn 好执行(环境: Int, 完成: Bool, 值: Int) {
   return {ok: true, env: 环境, done: 完成, value: 值}
 }
@@ -909,11 +940,25 @@ fn 执行(节点: Int, 环境: Int) -> Int {
     return 好执行(更新(环境, 节点.name, v.value), false, ())
   }
   if 种 == "Assign" {
-    let 现有 = 查找(环境, 节点.name)
-    if 现有.found == false { return 坏执行("不能给没声明过的名字赋值：" + 节点.name) }
+    // 模块级 const 在装进环境时留了一条只读标记（见 装常量从）。
+    let 只读 = 查找(环境, "只读:" + 节点.name)
+    if 只读.found { return 坏执行("不能给 const 重新绑定：" + 节点.name) }
+    // 可写的模块级名字在那张小表里：写它，环境不动。
+    let 全 = 查找(环境, "全局")
+    if 全.found {
+      if index_has(全.value, 节点.name) {
+        let v0 = 求值(节点.value, 环境)
+        if v0.ok == false { return 坏执行(v0.text) }
+        index_set(全.value, 节点.name, v0.value)
+        return 好执行(环境, false, ())
+      }
+    }
+    let 位 = 末位(环境, 节点.name, 0, -1)
+    if 位 < 0 { return 坏执行("不能给没声明过的名字赋值：" + 节点.name) }
     let v = 求值(节点.value, 环境)
     if v.ok == false { return 坏执行(v.text) }
-    return 好执行(更新(环境, 节点.name, v.value), false, ())
+    // 改那一条，而不是追加一条 —— 见 改在 的注释。
+    return 好执行(改在(环境, 位, v.value), false, ())
   }
   if 种 == "ExprStmt" {
     let v = 求值(节点.value, 环境)
@@ -1014,12 +1059,29 @@ fn 装常量从(环境: Int, 常量们: Int, i: Int) -> Int {
   if len(项) < 2 { return 装常量从(环境, 常量们, i + 1) }
   let 值 = 求值(项[1], 环境)
   if 值.ok == false { return 装常量从(环境, 常量们, i + 1) }
-  return 装常量从(更新(环境, 项[0], 值.value), 常量们, i + 1)
+  // 第三项是「可写吗」：没有这一项、或它是 0，就是 const。
+  //
+  // 可写的（var）进那张共享的小表；不可写的留在环境里，并留一条只读标记。
+  // 分开的理由只有一个：环境是纯传递的，写不回去；而索引写得回去。
+  var 可写 = 0
+  if len(项) > 2 { 可写 = 项[2] }
+  if 可写 == 1 {
+    let 全 = 查找(环境, "全局")
+    if 全.found {
+      index_set(全.value, 项[0], 值.value)
+      return 装常量从(环境, 常量们, i + 1)
+    }
+  }
+  var 新 = 更新(环境, 项[0], 值.value)
+  if 可写 == 0 { 新 = 更新(新, "只读:" + 项[0], 1) }
+  return 装常量从(新, 常量们, i + 1)
 }
 
 fn 跑程序带常量与参(语句们: Int, 函数们: Int, 常量们: Int, 参们: Int, 效们: Int) -> Int {
   let 有函数 = 装函数从((), 函数们, 0)
-  let 有常量 = 装常量从(有函数, 常量们, 0)
+  // 那张共享的小表先放进去：装常量时（以及运行时赋值）都靠它。
+  let 有表 = 更新(有函数, "全局", index_new())
+  let 有常量 = 装常量从(有表, 常量们, 0)
   return 执行块(语句们, 更新(更新(有常量, "argv", 参们), "效果", 效们))
 }
 
