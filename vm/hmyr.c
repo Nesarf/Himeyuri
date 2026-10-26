@@ -3997,6 +3997,11 @@ static void 临时路径(char *buf, size_t cap) {
 #endif
 }
 
+/* 容器这一整块只给桌面：它要临时目录、要建目录、要 getenv —— 裸机上一样都没有，
+ * 而板子上摊开一个容器本来也没有地方摊。所以裸机上给两个 stub：
+ * 「不认这个后缀」与「解不出来」，main 里那个分支于是永远不进去。 */
+#if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+
 /* ---------- 容器：.hm-ittgn-krgn-m ----------
  *
  * 与 src/ittgn.mjs 是同一条规矩的两份实现：那一份读容器，这一份也读。
@@ -4195,6 +4200,13 @@ static char *解容器(const char *包路) {
   free(字节);
   return NULL;
 }
+
+#else  /* 裸机：没有文件系统，摊不开容器 */
+
+static int 是容器路径(const char *p) { (void)p; return 0; }
+static char *解容器(const char *包路) { (void)包路; return NULL; }
+
+#endif
 
 /* 种子在哪。三种找法，按「离用户近」排：环境变量、可执行文件旁边、
  * 当前目录。找不到就明说，别让人等一个「没有这个文件」的通用消息。 */
