@@ -1990,9 +1990,13 @@ static Value value_to_text(Value v, Value *out) {
     return *out;
   }
   if (v.tag == T_NULL) {
-    uint16_t *p = 串存(3);
-    p[0] = 'n'; p[1] = 'i'; p[2] = 'l';
-    *out = v_str(p, 3);
+    /* nil 与空元组在这门语言里是同一个东西（design/MEMORY.txt 第 2 节），
+     * 所以它写成 [] —— 与自举层那一台一致，也与这一台对空元组的写法一致。
+     * 早先这里写 "nil"，于是同一个值在四台上写法不同，而那种差异只会在
+     * 拼字符串的时候冒出来。 */
+    uint16_t *p = 串存(2);
+    p[0] = '['; p[1] = ']';
+    *out = v_str(p, 2);
     return *out;
   }
   if (v.tag == T_TUPLE || v.tag == T_ARRAY) {

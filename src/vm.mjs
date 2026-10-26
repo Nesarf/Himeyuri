@@ -94,7 +94,8 @@ export class 虚拟机 {
   成串(v) {
     // 「一个值怎么写成一个字符串」：走到这一层就要落回宿主串，因为它是输出那一头。
     if (this.文.是串(v)) return this.文.成宿主(v);
-    if (v === null) return "nil";
+    // nil 与空元组在这门语言里是同一个东西，所以它写成 []，与自举层那台一致。
+    if (v === null) return "[]";
     if (v && (v.tag === "tuple" || v.tag === "array")) return "[" + v.items.map((x) => this.成串(x)).join(", ") + "]";
     if (数.是数(v)) return 数.成文(v);
     return String(v);               // 记录走这一步，与宿主那边 String(obj) 相同

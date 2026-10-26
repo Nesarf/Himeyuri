@@ -378,6 +378,48 @@ console.log("十、块能存内容（区不只会记账）");
   ok("越界给 R0151", 全出.includes("R0151") && !全出.includes("没有拦住"), JSON.stringify(全出.slice(0, 160)));
 }
 
+console.log("十一、nil 在四台是同一个说法");
+{
+  // nil 与空元组在这门语言里是同一个东西（design/MEMORY.txt 第 2 节）。
+  // 早先三台把它写成 "nil"、自举层写成 "[]" —— 同一个值四种写法，而那种差异
+  // 只会在拼字符串的时候冒出来，所以它一直被下面那条注释躲着。
+  //
+  // 现在四台都写 "[]"。取 nil 的办法就是那个字面量本身：在这门语言里 nil 与空元组
+  // 是同一个东西，所以 `()` 既是空元组也是 nil。早先这一条判不了，正是因为它没有
+  // 一个独立的写法可抓；现在「同一个说法」让这一条变成了「两边写出来一样」。
+  const 源 = 行们([
+    "fn main() -> Int effects(process) {",
+    "  print(\"nil=\" + str(()) + chr(10))",
+    "  print(\"长度=\" + str(len(())) + chr(10))",
+    "  return 0",
+    "}",
+  ]);
+  const p = 投(源, "nil.hmoca");
+
+  const 甲 = 跑([p]);
+  const 甲行 = 行(甲.stdout);
+  ok("默认路径：nil 写成 []", 甲行.includes("nil=[]"), JSON.stringify({ status: 甲.status, out: 甲行 }));
+  ok("而且长度是零", 甲行.includes("长度=0"), JSON.stringify(甲行));
+
+  const 乙 = 跑(["--compile", p]);
+  const 乙行 = 行(乙.stdout);
+  ok("--compile 同一段", 乙.status === 0 && JSON.stringify(乙行) === JSON.stringify(甲行.slice(0, 乙行.length)),
+    JSON.stringify([乙行, 甲行.slice(0, 乙行.length)]));
+
+  const exe2 = path.join(临, "hmyr-c.exe");
+  if (fs.existsSync(exe2)) {
+    const 丁 = spawnSync(exe2, [p], {
+      encoding: "utf8", cwd: 临, timeout: 300000,
+      env: { ...process.env, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000" },
+    });
+    const 丁行 = 行(丁.stdout);
+    ok("C 那台同一段", 丁.status === 0 && JSON.stringify(丁行) === JSON.stringify(甲行.slice(0, 丁行.length)),
+      JSON.stringify({ status: 丁.status, out: 丁行 }));
+  } else {
+    console.log("  跳过  C 那台没编出来 —— 第四台不验");
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

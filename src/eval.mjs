@@ -416,7 +416,9 @@ export class Runtime {
   }
   asString(v) {
     if (typeof v === "string") return v;
-    if (v === null) return "nil";
+    // nil 与空元组在这门语言里是同一个东西，所以它写成 []，与自举层那一台一致。
+    // describe 那边仍然说 "nil" —— 那是诊断文本，不是程序看到的字符串化。
+    if (v === null) return "[]";
     if (Array.isArray(v)) return "[" + v.map((x) => this.asString(x)).join(", ") + "]";
     return String(v);
   }

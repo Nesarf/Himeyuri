@@ -879,7 +879,8 @@ export class 最小运行时 {
     // 交回来的仍是宿主串 —— 它是写出去的那一头，也就是借世界的那一处。
     if (码元.是码元序列(v)) return 码元.成宿主(v);
     if (typeof v === "string") return v;
-    if (v === null) return "nil";
+    // nil 与空元组在这门语言里是同一个东西，所以它写成 []（与自举层、另三台一致）。
+    if (v === null) return "[]";
     if (Array.isArray(v)) return "[" + v.map((x) => this.成串(x)).join(", ") + "]";
     return String(v);
   }
