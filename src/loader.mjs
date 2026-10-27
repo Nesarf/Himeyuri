@@ -77,6 +77,61 @@ function 读包清单(cap, 包根, 名, diagnostics) {
   if (typeof 清单.哈希 !== "string" || !/^sha256:[0-9a-f]{64}$/.test(清单.哈希)) {
     diagnostics.error("HMYR-E0304", "package '" + 名 + "' has no sha256:<64 lowercase hex> 哈希 in its manifest", 0, 0);
   }
+  // 依赖（design/PKGMAN.txt 第二、三节）：名字 → 最低版本。
+  //
+  // 只写最低版本，不写区间 —— 因为 rev 的语义是「向下兼容」：模块提供到第 N 版
+  // 就意味着它提供第 M 版（M 小于等于 N），于是「我要至少 M」正好可判，
+  // 而一个区间要第二套版本语言。理由写在设计稿的第三节。
+  if (清单.依赖 !== undefined) {
+    if (typeof 清单.依赖 !== "object" || 清单.依赖 === null || Array.isArray(清单.依赖)) {
+      diagnostics.error("HMYR-E0304", "package '" + 名 + "' has a 依赖 that is not an object of name->minimum version", 0, 0);
+    } else {
+      for (const [依赖名, 最低] of Object.entries(清单.依赖)) {
+        if (!Number.isInteger(最低)) {
+          diagnostics.error("HMYR-E0304", "package '" + 名 + "' asks for '" + 依赖名 + "' at a version that is not an integer", 0, 0);
+          continue;
+        }
+        const 依赖清单路 = cap.path.join(包根, 依赖名, "hmyr.hmkit");
+        if (!cap.file.exists(依赖清单路)) {
+          diagnostics.error("HMYR-E0305",
+            "package '" + 名 + "' depends on '" + 依赖名 + "', which is not in " + 包根 +
+            "; a dependency is a package beside this one, and a missing one is not a warning", 0, 0);
+          continue;
+        }
+        let 依赖清单 = null;
+        try { 依赖清单 = JSON.parse(String(cap.file.read(依赖清单路))); } catch { 依赖清单 = null; }
+        if (!依赖清单 || !Number.isInteger(依赖清单.版本)) continue;   // 它自己的形状由它自己的装载去报
+        if (依赖清单.版本 < 最低) {
+          diagnostics.error("HMYR-E0306",
+            "package '" + 名 + "' needs '" + 依赖名 + "' at version at least " + 最低 + ", but it offers " +
+            依赖清单.版本 + "; revisions only move forward, so a lower one cannot satisfy a higher request", 0, 0);
+        }
+      }
+    }
+  }
+  if (清单.依赖哈希 !== undefined) {
+    if (typeof 清单.依赖哈希 !== "object" || 清单.依赖哈希 === null || Array.isArray(清单.依赖哈希)) {
+      diagnostics.error("HMYR-E0304", "package '" + 名 + "' has a 依赖哈希 that is not an object of name->hash", 0, 0);
+    } else {
+      for (const [依赖名, 哈希] of Object.entries(清单.依赖哈希)) {
+        if (typeof 哈希 !== "string" || !/^sha256:[0-9a-f]{64}$/.test(哈希)) {
+          diagnostics.error("HMYR-E0304", "package '" + 名 + "' records a 依赖哈希 for '" + 依赖名 + "' that is not sha256:<64 lowercase hex>", 0, 0);
+        }
+      }
+    }
+  }
+  // 依赖与依赖哈希同进同退：只写一边，那一边什么也证明不了。
+  // 这一条要在「依赖」那边查，而不是在「依赖哈希」那边 —— 只写依赖不写哈希的包
+  // 根本走不到后一个分支，于是那句提示永远不会出现（第一版就是这样）。
+  if (清单.依赖 && typeof 清单.依赖 === "object" && !Array.isArray(清单.依赖)) {
+    const 哈希表 = 清单.依赖哈希 && typeof 清单.依赖哈希 === "object" && !Array.isArray(清单.依赖哈希) ? 清单.依赖哈希 : {};
+    for (const 依赖名 of Object.keys(清单.依赖)) {
+      if (!(依赖名 in 哈希表)) {
+        diagnostics.warn("HMYR-W0305",
+          "package '" + 名 + "' depends on '" + 依赖名 + "' without recording its hash; the hash is what tells you the package you use has not been swapped", 0, 0);
+      }
+    }
+  }
   return 清单;
 }
 

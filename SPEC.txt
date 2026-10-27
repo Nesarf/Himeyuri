@@ -397,11 +397,14 @@ design/FILETYPE.txt 第三节。
     test/namespace.test.mjs 第六、七节。
     它中途当过一阵 W0304（只记不拒），而那一段也值得留在记忆里：把既有代码全打红
     的规则不是规则，是一次没做的迁移 —— 先标名字，再开拒绝，顺序不能换。
-  ・第三步 包与依赖：[成了一半] 包名能解析到实际文件（包根 + index.hmoca），版本用 rev 检查，
-    判据在 test/owned-check.test.mjs 第十三节。包清单也进来了：每个包一份 hmyr.hmkit，
-    四项（名字 / 版本 / 许可 / 哈希），装载器验形状（E0304），tools/hmkit-check.mjs 算哈希。
-    见 design/PKGMAN.txt，判据在 test/pkg-manifest.test.mjs。
-    还缺的是 kagaribi 那一套：依赖列表与版本范围、签名、以及「显式步骤」长什么样。
+  ・第三步 包与依赖：[成] 2026-10-27 收口。五件东西：
+    包名能解析到实际文件（包根 + index.hmoca），版本用 rev 检查；
+    包清单（hmyr.hmkit）四项：名字 / 版本 / 许可 / 哈希，装载器验形状（E0304）；
+    依赖与依赖哈希：依赖只写最低版本（区间不做，理由见 design/PKGMAN.txt 第三节），
+    缺包是 E0305、版本不够是 E0306、写了依赖没记哈希是 W0305；
+    哈希链由 tools/hmkit-check.mjs 比 —— 它挡「换了一个包」，挡不住「换的人同时
+    改了清单」，后者要签名，写在设计稿第五节的边界里。
+    判据在 test/pkg-manifest.test.mjs 第七、八节，以及 test/owned-check.test.mjs 第十三节。
 
 顺序的理由没变：第三步的后半（包管理）必须有模块系统当前提；而第二步要动求值器，
 那是这个仓库里最贵的一次改动。

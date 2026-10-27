@@ -41,6 +41,25 @@ async function 主() {
       console.log("  不通过  " + 名 + "：清单独说 " + String(清单.哈希).slice(0, 20) + "…，文件是 " + 真.slice(0, 20) + "…");
       坏++;
     }
+
+    // 哈希链（design/PKGMAN.txt 第二节）：依赖哈希记的是「那个包入口文件的 sha256」。
+    // 它挡的是「换了一个包」；挡不住「换的人同时改了清单」—— 那要签名，另一页的事。
+    const 依赖哈希 = 清单.依赖哈希 && typeof 清单.依赖哈希 === "object" && !Array.isArray(清单.依赖哈希) ? 清单.依赖哈希 : {};
+    for (const [依赖名, 记的] of Object.entries(依赖哈希)) {
+      const 依赖入口 = path.join(根, 依赖名, "index.hmoca");
+      if (!fs.existsSync(依赖入口)) {
+        console.log("  不通过  " + 名 + "：依赖 " + 依赖名 + " 不在这个包根下");
+        坏++;
+        continue;
+      }
+      const 它 = "sha256:" + createHash("sha256").update(fs.readFileSync(依赖入口)).digest("hex");
+      if (它 === 记的) {
+        console.log("  通过  " + 名 + " → " + 依赖名 + "：" + 它.slice(0, 20) + "…");
+      } else {
+        console.log("  不通过  " + 名 + " → " + 依赖名 + "：清单记的是 " + String(记的).slice(0, 20) + "…，那个包现在是 " + 它.slice(0, 20) + "…（它被换过）");
+        坏++;
+      }
+    }
   }
   process.exit(坏 === 0 ? 0 : 1);
 }

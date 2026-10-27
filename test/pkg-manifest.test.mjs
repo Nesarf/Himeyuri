@@ -121,6 +121,85 @@ console.log("六、哈希那一半由工具算");
     JSON.stringify({ status: 错.status, out: String(错.stdout || "").slice(0, 120) }));
 }
 
+console.log("七、依赖：缺包与版本不够各有一个编号");
+{
+  // 依赖只写「最低版本」（design/PKGMAN.txt 第三节）：rev 的语义是向下兼容，
+  // 所以「我要至少 M」可判，而一个区间要第二套版本语言。
+  const 根 = path.join(临, "依赖根");
+  const 造包 = (名, 版本, 依赖) => {
+    const 目录 = path.join(根, 名);
+    fs.mkdirSync(目录, { recursive: true });
+    fs.writeFileSync(path.join(根, "hmyr.hmkit"), "[]", "utf8");
+    fs.writeFileSync(path.join(目录, "index.hmoca"), "pub fn " + 名 + "() -> Int {\n  return " + 版本 + "\n}\n", "utf8");
+    const 清单 = { 名字: 名, 版本, 许可: "CZGD-PL-1.1", 哈希: 好哈希 };
+    if (依赖) 清单.依赖 = 依赖;
+    fs.writeFileSync(path.join(目录, "hmyr.hmkit"), JSON.stringify(清单), "utf8");
+  };
+  const 入口 = (名) => {
+    const p = path.join(根, "用" + 名 + ".hmoca");
+    fs.writeFileSync(p, 行们(["import \"" + 名 + "\"", "", "fn main() -> Int {", "  return 0", "}"]), "utf8");
+    return p;
+  };
+
+  // 一、依赖满足：不报。
+  造包("小库", 2, null);
+  造包("用家", 1, { 小库: 2 });
+  ok("依赖满足就不报", !loadUnit(入口("用家")).diagnostics.errors.some((e) => e.code === "HMYR-E0305" || e.code === "HMYR-E0306"),
+    JSON.stringify(loadUnit(入口("用家")).diagnostics.errors.map((e) => e.code)));
+
+  // 二、缺包：E0305。
+  造包("缺家", 1, { 不存在的包: 1 });
+  const 缺 = loadUnit(入口("缺家"));
+  ok("缺包给 E0305", 缺.diagnostics.errors.some((e) => e.code === "HMYR-E0305"),
+    JSON.stringify(缺.diagnostics.errors.map((e) => e.code)));
+
+  // 三、版本不够：E0306。
+  造包("高家", 1, { 小库: 9 });
+  const 高 = loadUnit(入口("高家"));
+  ok("版本不够给 E0306", 高.diagnostics.errors.some((e) => e.code === "HMYR-E0306"),
+    JSON.stringify(高.diagnostics.errors.map((e) => e.code)));
+
+  // 四、只写依赖不写依赖哈希：一声提示，不是错（哈希链那一半归工具）。
+  const 只依 = { 名字: "裸家", 版本: 1, 许可: "CZGD-PL-1.1", 哈希: 好哈希, 依赖: { 小库: 1 } };
+  fs.mkdirSync(path.join(根, "裸家"), { recursive: true });
+  fs.writeFileSync(path.join(根, "裸家", "index.hmoca"), "pub fn 裸家() -> Int {\n  return 1\n}\n", "utf8");
+  fs.writeFileSync(path.join(根, "裸家", "hmyr.hmkit"), JSON.stringify(只依), "utf8");
+  const 裸 = loadUnit(入口("裸家"));
+  ok("写了依赖没写依赖哈希：提示 W0305", 裸.diagnostics.warnings.some((w) => w.code === "HMYR-W0305"),
+    JSON.stringify(裸.diagnostics.warnings.map((w) => w.code)));
+}
+
+console.log("八、哈希链：被依赖的包有没有被换过");
+{
+  // 本包清单里记下被依赖包入口的 sha256（design/PKGMAN.txt 第二节）。
+  // 它挡的是「换了一个包」，挡不住「换的人同时改了清单」—— 那要签名。
+  const 根 = path.join(临, "链根");
+  fs.mkdirSync(path.join(根, "小库"), { recursive: true });
+  fs.writeFileSync(path.join(根, "hmyr.hmkit"), "[]", "utf8");
+  const 小库入口 = path.join(根, "小库", "index.hmoca");
+  fs.writeFileSync(小库入口, "pub fn 小库() -> Int {\n  return 2\n}\n", "utf8");
+  const 算 = (路) => "sha256:" + createHash("sha256").update(fs.readFileSync(路)).digest("hex");
+  fs.writeFileSync(path.join(根, "小库", "hmyr.hmkit"),
+    JSON.stringify({ 名字: "小库", 版本: 1, 许可: "CZGD-PL-1.1", 哈希: 算(小库入口) }), "utf8");
+
+  const 小库哈希 = () => 算(小库入口);
+  fs.mkdirSync(path.join(根, "用家"), { recursive: true });
+  const 用家入口 = path.join(根, "用家", "index.hmoca");
+  fs.writeFileSync(用家入口, "pub fn 用家() -> Int {\n  return 1\n}\n", "utf8");
+  const 用家清单 = (哈希) => ({ 名字: "用家", 版本: 1, 许可: "CZGD-PL-1.1", 哈希: 算(用家入口), 依赖: { 小库: 1 }, 依赖哈希: { 小库: 哈希 } });
+  fs.writeFileSync(path.join(根, "用家", "hmyr.hmkit"), JSON.stringify(用家清单(小库哈希())), "utf8");
+
+  const 工具 = path.join(ROOT, "tools", "hmkit-check.mjs");
+  const 对 = spawnSync(process.execPath, [工具, "--all", 根], { encoding: "utf8" });
+  ok("链对得上：工具通过", 对.status === 0, String(对.stdout || "").slice(0, 160));
+
+  // 换掉被依赖的那个包 —— 而用家的清单还记着旧的哈希。
+  fs.writeFileSync(小库入口, "pub fn 小库() -> Int {\n  return 999\n}\n", "utf8");
+  const 换 = spawnSync(process.execPath, [工具, "--all", 根], { encoding: "utf8" });
+  ok("被依赖的包被换过：工具报错", 换.status !== 0 && String(换.stdout || "").includes("它被换过"),
+    JSON.stringify({ status: 换.status, out: String(换.stdout || "").slice(0, 200) }));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
