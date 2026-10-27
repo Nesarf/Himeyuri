@@ -102,7 +102,7 @@ fn 含(t: (Int,), x: Int) -> Bool {
 }
 
 // 子段：起止都在下标位置上，越界的部分自然被跳过。
-fn 子段(t: (Int,), 起: Int, 止: Int) -> (Int,) {
+pub fn 子段(t: (Int,), 起: Int, 止: Int) -> (Int,) {
   var 出 = ()
   var i = 起
   while i < 止 {

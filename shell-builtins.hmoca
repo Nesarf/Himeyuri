@@ -55,7 +55,7 @@ fn 是内建(名: String) -> Bool {
   return 是内建从(名, 内建清单(), 0)
 }
 
-fn 认命令(行: String) -> Int {
+pub fn 认命令(行: String) -> Int {
   let 词 = 切词(行)
   if len(词) == 0 { return {kind: "empty"} }
   let 名 = 词[0]
@@ -93,7 +93,7 @@ fn 参数(判定: Int) -> String {
 // 动世界的地方带着效果声明（effects(process)），而输出与退出只是交回一个判定——
 // 这一层不自己去 print，也不自己去 exit，因为那两件事由调用方决定。
 
-fn 执行命令(判定: Int) -> Int effects(process) {
+pub fn 执行命令(判定: Int) -> Int effects(process) {
   if 判定.kind == "empty" { return {kind: "nothing"} }
   if 判定.kind == "unknown" { return {kind: "external", name: 判定.name} }
   if 判定.kind == "err" { return {kind: "err", text: 判定.text} }

@@ -114,7 +114,7 @@ fn parse_add(s: String, i: Int) -> Int {
 }
 
 // 宿主入口：解析一个表达式，返回 {node, next}。
-fn parse(text: String) -> Int {
+pub fn parse(text: String) -> Int {
   return parse_add(text, 0)
 }
 

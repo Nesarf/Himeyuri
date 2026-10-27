@@ -7,7 +7,7 @@
 // 用法：hmyr self/sha256.hmyr <文件>       打印 64 位十六进制
 
 // 2 的 n 次幂：十六进制输出要它按 4 位一段往下取。
-fn 倍(n: Int) -> Int {
+pub fn 倍(n: Int) -> Int {
   var v = 1
   var i = 0
   while i < n {
@@ -18,7 +18,7 @@ fn 倍(n: Int) -> Int {
 }
 
 // 折半拼接：把几十块并成一条，复制量是「块数乘对数」而不是平方。
-fn 拼平(块们: Int, 起: Int, 止: Int) {
+pub fn 拼平(块们: Int, 起: Int, 止: Int) {
   if 止 - 起 <= 1 { return 块们[起] }
   var 左 = 起
   var 右 = 止
@@ -171,7 +171,7 @@ fn 十六进制(值: Int) -> String {
   return 出
 }
 
-fn sha256(字节们: Int) -> String {
+pub fn sha256(字节们: Int) -> String {
   let 填 = 填充(字节们)
   var 哈希们 = 初值()
   var 起 = 0

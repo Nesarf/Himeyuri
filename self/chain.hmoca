@@ -16,7 +16,7 @@ import "./lex.hmoca"
 //
 // 边界写在明处：只认 + - * / % 与括号；出错时给出 {kind: "Error"} 而不猜。
 
-fn is_punct(t: Int, ch: String) -> Bool {
+pub fn is_punct(t: Int, ch: String) -> Bool {
   return t.kind == "punct" && t.text == ch
 }
 
@@ -177,7 +177,7 @@ fn and_op(t: Int) -> String {
   return ""
 }
 
-fn logic(tokens: Int, i: Int) -> Int {
+pub fn logic(tokens: Int, i: Int) -> Int {
   let left = and_level(tokens, i)
   return logic_tail(tokens, left.next, left.node)
 }
@@ -252,7 +252,7 @@ fn add(tokens: Int, i: Int) -> Int {
 }
 
 // 宿主入口：吃掉一串 token，回一棵树和停下的位置。
-fn chain(tokens: Int) -> Int {
+pub fn chain(tokens: Int) -> Int {
   return compare(tokens, 0)
 }
 

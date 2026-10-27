@@ -991,7 +991,7 @@ fn 按基读(s: String, 起: Int, 基: Int) -> Int {
   return 出
 }
 
-fn 数字值(s: String) -> Int {
+pub fn 数字值(s: String) -> Int {
   if len(s) >= 2 {
     let 标 = slice(s, 1, 2)
     if 标 == "x" || 标 == "X" { return 按基读(s, 2, 16) }
@@ -1011,7 +1011,7 @@ fn 数到(s: String) -> Int {
 }
 
 // 求一个节点。这是核心：节点种类一分派，其余都交给上面的帮手。
-fn 求值(节点: Int, 环境: Int) -> Int {
+pub fn 求值(节点: Int, 环境: Int) -> Int {
   let 种 = 节点.kind
   if 种 == "int" { return 好(to_int(节点.text)) }
   if 种 == "Literal" && 节点.type == "int" { return 好(数字值(节点.text)) }
@@ -1215,7 +1215,7 @@ fn 执行块(语句们: Int, 环境: Int) -> Int {
 }
 
 // 跑一段语句：从空环境开始。交回 {ok, env, done, value}。
-fn 跑程序(语句们: Int) -> Int {
+pub fn 跑程序(语句们: Int) -> Int {
   return 执行块(语句们, ())
 }
 
@@ -1278,7 +1278,7 @@ fn 装常量从(环境: Int, 常量们: Int, i: Int) -> Int {
   return 装常量从(新, 常量们, i + 1)
 }
 
-fn 跑程序带常量与参(语句们: Int, 函数们: Int, 常量们: Int, 参们: Int, 效们: Int) -> Int {
+pub fn 跑程序带常量与参(语句们: Int, 函数们: Int, 常量们: Int, 参们: Int, 效们: Int) -> Int {
   let 有函数 = 装函数从((), 函数们, 0)
   // 那张共享的小表先放进去：装常量时（以及运行时赋值）都靠它。
   let 全 = index_new()

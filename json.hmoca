@@ -143,7 +143,7 @@ fn 读对象(s: String, i: Int, acc: Int) {
 }
 
 // 入口：读一段 JSON，交回 (值, 结束位置)。值带着 kind，所以调用方不必猜它是什么。
-fn 解析(s: String) {
+pub fn 解析(s: String) {
   return 读值(s, 0)
 }
 
@@ -267,7 +267,7 @@ fn 生成缩进(值: Int, 层: Int) -> String {
   return "null"
 }
 
-fn 生成(值: Int) -> String {
+pub fn 生成(值: Int) -> String {
   return 生成紧凑(值)
 }
 
@@ -284,7 +284,7 @@ fn 生成二(值: Int) -> String {
 // 写法上有一处必须避开：往元组上一个一个追加是平方级（这个仓库里同一句教训已经出现过四次）。
 // 这里每 1024 字节封一块，最后用两半合并折平。
 
-fn 拼平(块们: Int, 起: Int, 止: Int) {
+pub fn 拼平(块们: Int, 起: Int, 止: Int) {
   if 止 - 起 <= 1 { return 块们[起] }
   var 左 = 起
   var 右 = 止
@@ -296,7 +296,7 @@ fn 拼平(块们: Int, 起: Int, 止: Int) {
   return 拼平(块们, 起, 中) + 拼平(块们, 中, 止)
 }
 
-fn 从文本(s: String) {
+pub fn 从文本(s: String) {
   var 块们 = ()
   var 块 = ()
   var i = 0

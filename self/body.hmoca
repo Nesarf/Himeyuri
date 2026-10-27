@@ -8,7 +8,7 @@ import "./stmt.hmoca"
 // 深度先算好：外层「一条语句一层」（层数等于语句数），而收集一条语句时最多占「这一条自己的 token 数」
 // 那么多层。两者相加而不是相乘，所以一段百来行的体不会碰到调用深度上限。
 
-fn is_punct(t: Int, ch: String) -> Bool {
+pub fn is_punct(t: Int, ch: String) -> Bool {
   return t.kind == "punct" && t.text == ch
 }
 
@@ -121,7 +121,7 @@ fn each(tokens: Int, i: Int, acc: Int) {
 }
 
 // 宿主入口：拿整份函数声明的 token 流，读出它的体。
-fn parse_body(tokens: Int) {
+pub fn parse_body(tokens: Int) {
   let at = find_body(tokens, 0)
   if at < 0 { return {list: (), next: len(tokens), found: false} }
   let got = each(tokens, at + 1, ())
@@ -342,7 +342,7 @@ fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
 }
 
 // 交回 {fns: ((名字, 参数名们, 语句们, 效果名们, 行, 列), …), consts: ((名字, 值), …), next}。
-fn parse_decls(tokens: Int) -> Int {
+pub fn parse_decls(tokens: Int) -> Int {
   return decls_from(tokens, 0, (), ())
 }
 

@@ -8,15 +8,15 @@
 // 参考物是 plaaosert 的 credits_public（Frums - Credits EX 的终端动画）：场景栈与按节拍推进
 // 那个思路学自它，而它直接写 stdout，所以它的动画没法被自动验——这一点我们不改。
 
-fn 清屏() -> String {
+pub fn 清屏() -> String {
   return term_clear()
 }
 
-fn 归位() -> String {
+pub fn 归位() -> String {
   return term_escape(1, 1)
 }
 
-fn 定位(行: Int, 列: Int) -> String {
+pub fn 定位(行: Int, 列: Int) -> String {
   return term_escape(行, 列)
 }
 
@@ -54,14 +54,14 @@ fn 空格行(列数: Int) -> String {
   return " " + 空格行(列数 - 1)
 }
 
-fn 空画布(行数: Int, 列数: Int) -> Int {
+pub fn 空画布(行数: Int, 列数: Int) -> Int {
   if 行数 <= 0 { return () }
   return (空格行(列数),) + 空画布(行数 - 1, 列数)
 }
 
 // 一帧 = 清屏 + 归位 + 逐行写出来。行与行之间用换行，而不是用光标逐行定位——
 // 后者在窄终端上会被自动折行打乱，这一点与参考实现的做法一致。
-fn 画行(画布: Int, i: Int) -> String {
+pub fn 画行(画布: Int, i: Int) -> String {
   if i >= len(画布) { return "" }
   return 画布[i] + "\n" + 画行(画布, i + 1)
 }
@@ -114,7 +114,7 @@ fn 换行从(布: Int, 目标: Int, 新行: String, 当前: Int) -> Int {
   return (布[当前],) + 换行从(布, 目标, 新行, 当前 + 1)
 }
 
-fn 换行(布: Int, 行号: Int, 新行: String) -> Int {
+pub fn 换行(布: Int, 行号: Int, 新行: String) -> Int {
   return 换行从(布, 行号, 新行, 0)
 }
 
@@ -280,7 +280,7 @@ fn 贴行从(行: String, 片段: String, 起点: Int, 当前: Int, 片段位: I
   return 片段[片段位] + 贴行从(行, 片段, 起点, 当前 + 1, 片段位 + 1)
 }
 
-fn 贴行(行: String, 片段: String, 起点: Int) -> String {
+pub fn 贴行(行: String, 片段: String, 起点: Int) -> String {
   return 贴行从(行, 片段, 起点, 0, 0)
 }
 
@@ -316,9 +316,9 @@ fn 画大字(布: Int, 行起点: Int, 列起点: Int, 文字: String) -> Int {
 // 而不必真的按键——不可验的输入等于没有测试。接不上真终端时，开始收键() 返回假，不装。
 
 fn 有键() -> Bool { return key_available() }
-fn 取键() -> String { return key_read() }
+pub fn 取键() -> String { return key_read() }
 fn 推键(键: String) -> Int { return key_push(键) }
-fn 开始收键() -> Bool { return key_start() }
+pub fn 开始收键() -> Bool { return key_start() }
 
 // 跑到有键为止（或跑满上限）。返回实际跑了几帧——这就是「按 q 退出」的形状。
 fn 跑到按键从(布: Int, 栈: Int, bpm: Int, 帧号: Int, 最多帧: Int, 每帧毫秒: Int) -> Int effects(process) {

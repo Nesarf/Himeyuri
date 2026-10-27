@@ -277,22 +277,25 @@ export function loadUnit(entry, options = {}) {
       }
     }
     for (const file of order) {
+      const 报引用 = (n) => {
+        const 家 = 非公开.get(n.callee.name);
+        if (家 && 家 !== file) {
+          diagnostics.warn("HMYR-W0303",
+            "'" + n.callee.name + "' is declared in " + short(家) + " without pub, and it is called in " + short(file) +
+            "; the flat table still lets it through, so this is a notice rather than a refusal", n.line || 0, n.column || 0);
+        }
+      };
       const 走 = (n) => {
         if (!n || typeof n !== "object") return;
         if (Array.isArray(n)) { for (const x of n) 走(x); return; }
-        // 声明本身不算「引用」—— 只看用到的位置。
-        if (n.kind === "Fn" || n.kind === "Const" || n.kind === "TypeAlias") {
-          for (const key of ["body", "value", "params"]) if (n[key]) 走(n[key]);
-          return;
-        }
-        if (n.kind === "Ident" && typeof n.name === "string") {
-          const 家 = 非公开.get(n.name);
-          if (家 && 家 !== file) {
-            diagnostics.warn("HMYR-W0303",
-              "'" + n.name + "' is declared in " + short(家) + " without pub, and it is used in " + short(file) +
-              "; the flat table still lets it through, so this is a notice rather than a refusal", n.line || 0, n.column || 0);
-          }
-        }
+        // 只把「调用」算作引用。
+        //
+        // 第一版把所有 Ident 都算，于是局部变量与参数被当成了对同名全局声明的引用
+        // （'行'、'列' 这种名字最容易撞），盘出来一半是误报。可见性这件事问的是
+        // 「这个名字是从哪儿来的」，而局部变量从作用域来 —— 那要作用域分析，
+        // 而调用点的 callee 不需要：`f(...)` 里的 f 只可能是函数。
+        if (n.kind === "Ident") return;
+        if (n.kind === "Call" && n.callee && n.callee.kind === "Ident") 报引用(n);
         for (const [k, v] of Object.entries(n)) {
           if (k === "line" || k === "column" || k === "kind") continue;
           走(v);

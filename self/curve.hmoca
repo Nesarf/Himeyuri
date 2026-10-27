@@ -271,7 +271,7 @@ fn 模L长(字节们: Int) {
 }
 
 // 取一个字节元组的前 n 个。
-fn 前几(字节们: Int, n: Int) {
+pub fn 前几(字节们: Int, n: Int) {
   var 出 = ()
   var i = 0
   while i < n && i < len(字节们) {
@@ -288,7 +288,7 @@ fn 参全局() -> String effects(process) {
 }
 
 // 验签：公钥 32 字节、R 32 字节、S 32 字节、消息字节。
-fn 验签(公钥们: Int, R们: Int, S们: Int, 消息: Int) effects(process) {
+pub fn 验签(公钥们: Int, R们: Int, S们: Int, 消息: Int) effects(process) {
   let A = 解压(公钥们)
   let R点 = 解压(R们)
   let 哈 = sha512字节(前几(R们, 32) + 前几(公钥们, 32) + 消息)
@@ -373,7 +373,7 @@ fn main() -> Int effects(process) {
 }
 
 // 从第 n 个字节开始取到末尾。
-fn 从第(字节们: Int, n: Int) {
+pub fn 从第(字节们: Int, n: Int) {
   var 出 = ()
   var i = n
   while i < len(字节们) {

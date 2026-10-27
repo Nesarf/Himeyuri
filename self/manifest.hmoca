@@ -23,7 +23,7 @@ fn 以头(s: String, 头: String) -> Bool {
   return slice(s, 0, len(头)) == 头
 }
 
-fn 以尾(s: String, 尾: String) -> Bool {
+pub fn 以尾(s: String, 尾: String) -> Bool {
   if len(s) < len(尾) { return false }
   return slice(s, len(s) - len(尾), len(s)) == 尾
 }
@@ -99,7 +99,7 @@ fn 去尾逗号(行: String) -> String {
 // 走一个目录，交回它下面所有文件的相对路径（递归）。
 // 这一层靠 is_dir 分岔 —— read_dir 只给名字，说不了「这是不是一个目录」。
 // 元组相加在这里够用：一层几十项，深度两层。
-fn 走文件(路: String) effects(file) {
+pub fn 走文件(路: String) effects(file) {
   let 名们 = read_dir(路)
   var 文们 = ()
   var 子们 = ()
@@ -333,7 +333,7 @@ fn 造名项(名: String, 路: String) effects(file) {
   )
 }
 
-fn 主(出路: String) effects(file, process) {
+pub fn 主(出路: String) effects(file, process) {
   var 块们 = ()
   var 块 = ""
   var 块行数 = 0

@@ -154,7 +154,7 @@ fn 写串(字节们: Int) {
 }
 
 // 取最后 n 个字节。公钥 blob 与签名 blob 都是「算法名 + 真正的字节」，尾巴才是要的。
-fn 后几(字节们: Int, n: Int) {
+pub fn 后几(字节们: Int, n: Int) {
   var 出 = ()
   var i = len(字节们) - n
   while i < len(字节们) {
@@ -180,12 +180,12 @@ fn 正文(s: String) {
   return 出
 }
 
-fn 造签名数据(名: Int, 保: Int, 哈希算法: Int, 消息哈希: Int) {
+pub fn 造签名数据(名: Int, 保: Int, 哈希算法: Int, 消息哈希: Int) {
   return (83, 83, 72, 83, 73, 71) + 写串(名) + 写串(保) + 写串(哈希算法) + 写串(消息哈希)
 }
 
 // 解一份 .sig 正文，交回结构里的各段。公钥点是公钥 blob 的尾巴 32 字节。
-fn 解签名(文本: String) {
+pub fn 解签名(文本: String) {
   let 字节们 = 解base64(正文(文本))
   let 公 = 读串(字节们, 10)
   let 名 = 读串(字节们, 公.下)

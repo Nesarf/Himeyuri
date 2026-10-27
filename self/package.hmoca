@@ -47,7 +47,7 @@ fn 打包(包路: String, 只收: String, 要压: Bool) effects(file, process) {
 // 「包外的清单」两样东西，而它们可能来自不同的传递路径。收进去之后，解包即得清单，
 // 包内包外是同一批字节（清单不列自己 —— 造它的时候它还不存在）。
 // 顺序仍由调用者保证：清单必须先存在。
-fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String, 附加名: String) effects(file, process) {
+pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String, 附加名: String) effects(file, process) {
   // 要收的目录。默认这一层；给了第三个参数就只收那一个 —— 后者用来验结构。
   //
   // conformance/ 与 runtime/ucd/ 的语料不在表里：单个文件 45 MB 与 31 MB，

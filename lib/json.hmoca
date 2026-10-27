@@ -267,7 +267,7 @@ fn 解析对象(文: String, i: Int, acc: Int) {
 }
 
 // 入口：整份文都要读掉。尾部还剩下东西就是错 —— 那不是 JSON，是一段以 JSON 开头的文字。
-fn 解析(文: String) {
+pub fn 解析(文: String) {
   let i = 跳空(文, 0)
   let r = 解析值(文, i)
   if r.ok == false { return r }
@@ -332,7 +332,7 @@ fn 写元组(项: Int, i: Int, acc: String) -> String {
 
 // 生成：按标记分派。没有标记的值交回空串 —— 那是「调用方给错了」，
 // 而这一层不猜（猜一个形状，就是把一个错误变成一个更像真话的错）。
-fn 生成(v: Int) -> String {
+pub fn 生成(v: Int) -> String {
   if field_has(v, "数") { return str(v.数) }
   if field_has(v, "串") { return 写串(v.串) }
   if field_has(v, "真") { return "true" }

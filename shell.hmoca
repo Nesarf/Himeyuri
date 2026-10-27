@@ -8,14 +8,14 @@ import "./term.hmoca"
 // 状态是一个二元元组：(缓冲, 光标位置)。光标是「插入点」，0 表示在第一个字符之前。
 // 历史是一个二元元组：(条目, 当前索引)，索引 -1 表示「不在历史里」，也就是正在编辑新的一行。
 
-fn 空状态() -> Int {
+pub fn 空状态() -> Int {
   return ("", 0)
 }
 
 
 
 // 在光标处插入一个片段（通常是一个字符），光标右移同宽。
-fn 插入(状态: Int, 片段文字: String) -> Int {
+pub fn 插入(状态: Int, 片段文字: String) -> Int {
   let 缓冲 = 状态[0]
   let 位 = 状态[1]
   return (slice(缓冲, 0, 位) + 片段文字 + slice(缓冲, 位, len(缓冲)), 位 + len(片段文字))
@@ -66,7 +66,7 @@ fn 显示列从(文本: String, i: Int, 位: Int, acc: Int) -> Int {
 }
 
 // 缓冲里第 位 个码位，落在第几列（从零数）。这就是光标该去的地方。
-fn 显示列(文本: String, 位: Int) -> Int {
+pub fn 显示列(文本: String, 位: Int) -> Int {
   return 显示列从(文本, 0, 位, 0)
 }
 
@@ -177,7 +177,7 @@ fn 到尾(状态: Int) -> Int {
   return (状态[0], len(状态[0]))
 }
 
-fn 缓冲(状态: Int) -> String {
+pub fn 缓冲(状态: Int) -> String {
   return 状态[0]
 }
 
@@ -190,18 +190,18 @@ fn 光标(状态: Int) -> Int {
 // 与最近一条相同就不重复记——这是「按了两次回车只留一条」的规矩，
 // 而它写在明处，不是靠调用方自觉。
 
-fn 空历史() -> Int {
+pub fn 空历史() -> Int {
   return ((), -1)
 }
 
-fn 记住(历史: Int, 行: String) -> Int {
+pub fn 记住(历史: Int, 行: String) -> Int {
   let 条目 = 历史[0]
   if 行 == "" { return (条目, -1) }
   if len(条目) > 0 && 条目[len(条目) - 1] == 行 { return (条目, -1) }
   return (条目 + (行,), -1)
 }
 
-fn 上翻(历史: Int) -> Int {
+pub fn 上翻(历史: Int) -> Int {
   let 条目 = 历史[0]
   let 位 = 历史[1]
   if len(条目) == 0 { return 历史 }
@@ -210,7 +210,7 @@ fn 上翻(历史: Int) -> Int {
   return (条目, 位 - 1)
 }
 
-fn 下翻(历史: Int) -> Int {
+pub fn 下翻(历史: Int) -> Int {
   let 条目 = 历史[0]
   let 位 = 历史[1]
   if 位 == -1 { return 历史 }
@@ -226,7 +226,7 @@ fn 历史行(历史: Int) -> String {
   return 条目[位]
 }
 
-fn 历史条数(历史: Int) -> Int {
+pub fn 历史条数(历史: Int) -> Int {
   return len(历史[0])
 }
 
@@ -235,13 +235,13 @@ fn 历史条数(历史: Int) -> Int {
 // 一行提示的渲染：清屏、归位、写提示符与缓冲，然后把光标放到它该在的那一格。
 // 列是「提示符长度 + 缓冲里的光标位置 + 1」，因为光标定位从 1 起算。
 
-fn 渲染提示行(提示符: String, 状态: Int) -> String {
+pub fn 渲染提示行(提示符: String, 状态: Int) -> String {
   return 清屏() + 归位() + 提示符 + 状态[0] + 定位(1, len(提示符) + 状态[1] + 1)
 }
 
 // 把一行读到的按键逐个作用到状态上。返回 (状态, 是否按了回车)。
 // 这只处理「可打印字符与四个编辑键」，其余键交给调用方决定——不认识就不猜。
-fn 喂键(状态: Int, 键: String) -> Int {
+pub fn 喂键(状态: Int, 键: String) -> Int {
   // raw 模式下回车送来的是 \r（十三），退格是 127 或 8，而不是名字。
   // 而这两个字符在 Himeyuri 源码里写不出来（字符串只认 \\ 与 \"），所以用 chr。
   if 键 == "ENTER" || 键 == chr(13) || 键 == chr(10) { return (状态, true) }

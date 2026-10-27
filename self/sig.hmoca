@@ -186,7 +186,7 @@ fn 跳体(tokens: Int, i: Int) -> Int {
 }
 
 // 整份源码里的所有函数声明，按出现顺序。语言服务器的 documentSymbol 用它。
-fn all_signatures(tokens: Int) -> Int {
+pub fn all_signatures(tokens: Int) -> Int {
   var 列 = ()
   var i = 0
   while i < len(tokens) {

@@ -25,7 +25,7 @@ import "./compile.hmoca"
 //
 // 交给 write_bytes 的是「块们的元组」（二维），由世界那一侧一次拍平写出 ——
 // 拍平在那边是一次线性扫描，不在这边一次次复制。
-fn 块长() -> Int {
+pub fn 块长() -> Int {
   return 512
 }
 

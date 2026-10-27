@@ -114,11 +114,11 @@ console.log("四、归属表：名字来自哪个模块");
   ok("没有的名字交回 null", 机.归属者("不存在") === null, String(机.归属者("不存在")));
 }
 
-console.log("五、观察：非 pub 的名字跨模块调用被记下（W0304）");
+console.log("五、真拦：非 pub 的名字跨模块调用被拒（R0250）");
 {
-  // 这一节验的是「看得见」，不是「拦得住」。
-  // 拦住要连带一次 pub 迁移（今天库里一个 pub 都没写），所以它是下一件工作，
-  // 而不是这一轮把仓库打红的理由。判据因此看两件事：记得住，且 pub 的不记。
+  // 这一节验的是「拦得住」。它曾经只是「记一条」（W0304），因为库里一个 pub 都没写，
+  // 一开就把整个仓库打红。2026-10-27 做完 pub 迁移（tools/pub-census.mjs 盘出
+  // 14 + 62 个名字、19 个入口全仓归零），它才升成拒绝。
   投(行们([
     "fn 私房菜() -> Int {",
     "  return 7",
@@ -137,13 +137,11 @@ console.log("五、观察：非 pub 的名字跨模块调用被记下（W0304）
     "}",
   ]), "偷.hmoca");
   const 单偷 = loadUnit(偷);
-  const 机偷 = runUnit(单偷);
-  let 果偷 = null;
-  try { 果偷 = 机偷.run(单偷.modules.get(偷)); } catch (e) { 果偷 = e; }
+  let 错 = null;
+  try { runUnit(单偷).run(单偷.modules.get(偷)); } catch (e) { 错 = e; }
   // 尾调用那条路（return f()）正是最容易漏的一条，所以这个用例刻意用它。
-  ok("非 pub 被记下（W0304）", 机偷.警告们.some((w) => w.code === "HMYR-W0304"),
-    JSON.stringify(机偷.警告们.map((w) => w.code)));
-  ok("而它不拦：程序照跑完", 果偷 === 7, String(果偷 && (果偷.code || 果偷)));
+  ok("非 pub 被拒（R0250）", !!错 && String(错.code) === "HMYR-R0250",
+    String(错 && (错.code + " " + 错.message)).slice(0, 120));
 
   const 正 = 投(行们([
     "import \"./厨.hmoca\"",
@@ -153,14 +151,11 @@ console.log("五、观察：非 pub 的名字跨模块调用被记下（W0304）
     "}",
   ]), "正.hmoca");
   const 单正 = loadUnit(正);
-  const 机正 = runUnit(单正);
   let 果正 = null;
-  try { 果正 = 机正.run(单正.modules.get(正)); } catch (e) { 果正 = e; }
+  try { 果正 = runUnit(单正).run(单正.modules.get(正)); } catch (e) { 果正 = e; }
   ok("pub 的跨模块调用通过", 果正 === 11, String(果正 && (果正.code || 果正)));
-  ok("pub 的不记", 机正.警告们.filter((w) => w.code === "HMYR-W0304").length === 0,
-    JSON.stringify(机正.警告们.map((w) => w.code)));
 
-  // 同模块里用自家的私有函数：最常见的一种写法，不该被记。
+  // 同模块里用自家的私有函数：最常见的一种写法，不该被拦。
   const 自家 = 投(行们([
     "fn 私房菜() -> Int {",
     "  return 7",
@@ -171,12 +166,31 @@ console.log("五、观察：非 pub 的名字跨模块调用被记下（W0304）
     "}",
   ]), "自家.hmoca");
   const 单家 = loadUnit(自家);
-  const 机家 = runUnit(单家);
   let 果家 = null;
-  try { 果家 = 机家.run(单家.modules.get(自家)); } catch (e) { 果家 = e; }
+  try { 果家 = runUnit(单家).run(单家.modules.get(自家)); } catch (e) { 果家 = e; }
   ok("自家的私有函数照用", 果家 === 7, String(果家 && (果家.code || 果家)));
-  ok("自家的不记", 机家.警告们.filter((w) => w.code === "HMYR-W0304").length === 0,
-    JSON.stringify(机家.警告们.map((w) => w.code)));
+}
+
+console.log("六、整仓：没有一个跨模块的私有调用");
+{
+  // 迁移做完了，所以这一条能立起来：仓库里每一个多模块入口，装载完都是零条 W0303。
+  // 少了这一条，下一次「随手把 pub 删掉」不会有人发现。
+  const 入口们 = [
+    "self/run.hmoca", "self/compile.hmoca", "self/fmt.hmoca", "self/lsp.hmoca",
+    "self/manifest.hmoca", "self/pack.hmoca", "self/package.hmoca", "self/release.hmoca",
+    "self/sign.hmoca", "self/verify.hmoca", "self/sig.hmoca", "self/ssh.hmoca",
+    "self/curve.hmoca", "self/sha512.hmoca",
+    "shell.hmoca", "shell-run.hmoca", "surface.hmoca", "ime.hmoca",
+    "lib/protocol.hmoca",
+  ];
+  const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const 脏 = [];
+  for (const 相 of 入口们) {
+    const 单 = loadUnit(path.join(ROOT, 相));
+    const 数 = 单.diagnostics.warnings.filter((w) => w.code === "HMYR-W0303").length;
+    if (数 > 0) 脏.push(相 + " 有 " + 数 + " 条");
+  }
+  ok("十九个入口都是零", 脏.length === 0, 脏.join("；"));
 }
 
 fs.rmSync(临, { recursive: true, force: true });

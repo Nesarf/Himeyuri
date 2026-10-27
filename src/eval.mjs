@@ -108,23 +108,21 @@ export class Runtime {
     throw e;
   }
 
-  // 可见性：跨模块调一个没写 pub 的名字，记一条（SPEC 6.4 第二步的后一半）。
+  // 可见性：跨模块调一个没写 pub 的名字，拒绝（SPEC 6.4 第二步）。
   //
   // 两处调用：普通调用（evalCall）与 return 里的尾调用（Return 分支）。
-  // 后者必须单独调，因为它在造 TailCall 时不经过 evalCall。
+  // 后者必须单独调，因为它在造 TailCall 时不经过 evalCall —— 只堵前一扇门会漏掉
+  // `return f()`，而那是这门语言最常见的写法（第一版就是这样，判据当场发现）。
   //
-  // 记一条而不是拒绝，理由与装载层的 W0303 同一个：今天库里一个 pub 都没写
-  // （pub 以前不被解析），所以这条规则一开就把整个仓库打红 —— 把既有代码全打红
-  // 的规则不是规则，是一次没做的迁移。它要连带「给能导出的一切标上 pub」那一步，
-  // 而这一步还没有开始。所以它现在是警告，判据验它记得住、也说得清。
+  // 这条规则曾经只是「记一条」，因为库里一个 pub 都没写，一开就把整个仓库打红。
+  // 2026-10-27 做完 pub 迁移（tools/pub-census.mjs 盘出 14 + 62 个名字，
+  // 19 个入口全仓归零），它才升成拒绝。
   查可见性(decl) {
     const 被调者 = this.归属.get(decl.name);
     if (被调者 && this.当前模块 && 被调者 !== this.当前模块 && decl.pub !== true) {
-      this.警告们.push({
-        code: "HMYR-W0304",
-        message: "'" + decl.name + "' is declared in " + 被调者 + " without pub, and it is called from " +
-          this.当前模块 + "; a private name is meant to stay inside its own module",
-      });
+      this.fail("HMYR-R0250",
+        "'" + decl.name + "' is declared in " + 被调者 + " without pub, and it is called from " +
+        this.当前模块 + "; a private name stays inside its own module");
     }
   }
 

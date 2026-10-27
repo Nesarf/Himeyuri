@@ -28,7 +28,7 @@ fn 从数(n: Int) {
   return 组
 }
 
-fn 比(a: Int, b: Int) -> Int {
+pub fn 比(a: Int, b: Int) -> Int {
   var i = 15
   while i >= 0 {
     if a[i] > b[i] { return 1 }
@@ -38,7 +38,7 @@ fn 比(a: Int, b: Int) -> Int {
   return 0
 }
 
-fn 加(a: Int, b: Int) {
+pub fn 加(a: Int, b: Int) {
   let 组 = 数组(零())
   var 进 = 0
   var i = 0
@@ -53,7 +53,7 @@ fn 加(a: Int, b: Int) {
 
 // 减：借位用「不够就先加一个字宽」实现。a 小于 b 时结果会绕回来，
 // 那不是错误 —— 模运算里「减出负数」本来就等于「加一个模」。
-fn 减(a: Int, b: Int) {
+pub fn 减(a: Int, b: Int) {
   let 组 = 数组(零())
   var 借 = 0
   var i = 0
@@ -73,7 +73,7 @@ fn 减(a: Int, b: Int) {
 // 乘：16×16 得到 32 个字。每个部分积最大 2 的 32 次方，双精度表示得下且精确；
 // 累加时先加再拆，所以中间值最大约 2 的 32 次方加两个 16 位数，仍在安全范围内。
 // 造一个 n 个零的可变数组。字面量数错一个太容易 —— 这一版就是数成 31 才发现的。
-fn 零组(n: Int) {
+pub fn 零组(n: Int) {
   var 出 = ()
   var i = 0
   while i < n {
@@ -216,7 +216,7 @@ fn 模约简(三十二: Int) {
 // p = 2^255-19，用 16 个字写出来。低字是 65517（即 0xffed，因为 65536-19），
 // 中间十四个字全 65535，第 15 字是 32767。第一版把低字写成了 65535，
 // 于是这个「模数」比真正的 p 大 18 —— 结果就是 p 减自己减不掉，返回它自己。
-fn 模数() {
+pub fn 模数() {
   let 组 = 零组(16)
   设(组, 0, 65517)
   var i = 1
@@ -228,18 +228,18 @@ fn 模数() {
   return 组
 }
 
-fn 模乘(a: Int, b: Int) {
+pub fn 模乘(a: Int, b: Int) {
   return 模约简(乘(a, b))
 }
 
-fn 一() {
+pub fn 一() {
   let 组 = 零组(16)
   设(组, 0, 1)
   return 组
 }
 
 // 取第 n 位（0 是最低位）。n 从 0 数到 254。
-fn 取位(a: Int, n: Int) -> Int {
+pub fn 取位(a: Int, n: Int) -> Int {
   let 字 = (n - n % 16) / 16
   var 倍 = 1
   var i = 0
@@ -254,7 +254,7 @@ fn 取位(a: Int, n: Int) -> Int {
 
 // 模幂：255 位的指数，从最高位往下「平方、必要时再乘」。
 // 这是求逆的全部内容 —— 费马小定理说 a 的 p 减一次方等于一，于是 p 减二次方就是逆。
-fn 模幂(底: Int, 指: Int) {
+pub fn 模幂(底: Int, 指: Int) {
   var 出 = 一()
   var 位 = 254
   while 位 >= 0 {
@@ -267,7 +267,7 @@ fn 模幂(底: Int, 指: Int) {
   return 出
 }
 
-fn 求逆(a: Int) {
+pub fn 求逆(a: Int) {
   return 模幂(a, 减(模数(), 从数(2)))
 }
 
@@ -276,7 +276,7 @@ fn 半字节(n: Int) -> String {
 }
 
 // 十六进制串 → 大整数。只认小写、长度不超过 64（256 位）。
-fn 从十六进制(s: String) {
+pub fn 从十六进制(s: String) {
   let 组 = 数组(零())
   var 位 = 0
   var 倍 = 1
@@ -300,7 +300,7 @@ fn 从十六进制(s: String) {
 }
 
 // 大整数 → 十六进制（小写，固定 64 个字符）。
-fn 成十六进制(a: Int) {
+pub fn 成十六进制(a: Int) {
   var 出 = ""
   var i = 15
   while i >= 0 {

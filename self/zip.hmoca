@@ -137,7 +137,7 @@ fn 拼(段们: Int) {
   return 拼平(段们, 0, len(段们))
 }
 
-fn 拼平(块们: Int, 起: Int, 止: Int) {
+pub fn 拼平(块们: Int, 起: Int, 止: Int) {
   if 止 - 起 <= 1 { return 块们[起] }
   var 左 = 起
   var 右 = 止
@@ -151,7 +151,7 @@ fn 拼平(块们: Int, 起: Int, 止: Int) {
 
 // ---- deflate 的固定 Huffman（与 self/deflate.hmyr 同一份算法） ----
 
-fn 倍(n: Int) -> Int {
+pub fn 倍(n: Int) -> Int {
   var v = 1
   var i = 0
   while i < n {
@@ -311,7 +311,7 @@ fn 一个中心(crc: Int, 压缩: Int, 原始: Int, 名们: Int, 偏移: Int, �
     写短(0, 2), 写短(0, 2), 写短(0, 4), 写短(偏移, 4), 名们))
 }
 
-fn 尾(条数: Int, 目录大小: Int, 目录偏移: Int) {
+pub fn 尾(条数: Int, 目录大小: Int, 目录偏移: Int) {
   return 拼(((80, 75, 5, 6),
     写短(0, 2), 写短(0, 2), 写短(条数, 2), 写短(条数, 2),
     写短(目录大小, 4), 写短(目录偏移, 4), 写短(0, 2)))
@@ -319,7 +319,7 @@ fn 尾(条数: Int, 目录大小: Int, 目录偏移: Int) {
 
 // 成员名一律用正斜杠。Windows 的路径给的是反斜杠，而 ZIP 规范只认正斜杠 ——
 // 带着反斜杠写进去，别的工具按名字找就找不到了。
-fn 正规名(路: String) -> String {
+pub fn 正规名(路: String) -> String {
   var 出 = ""
   var i = 0
   while i < len(路) {
@@ -331,7 +331,7 @@ fn 正规名(路: String) -> String {
 
 // 一个成员：本地头 + 负载，外加它在中央目录里的那一条。
 // 它自己读文件，所以自己声明 file 效果 —— 靠调用者代传是解释器的宽容，字节码那台不认。
-fn 成员(路: String, 名: String, 压: Bool, 偏移: Int) effects(file) {
+pub fn 成员(路: String, 名: String, 压: Bool, 偏移: Int) effects(file) {
   let 数据 = read_bytes(路)
   let 名们 = 写串(名)
   let crc = crc32(数据)

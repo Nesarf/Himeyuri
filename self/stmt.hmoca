@@ -15,7 +15,7 @@ import "./chain.hmoca"
 // 依赖是明写的：表达式那一层在 chain.hmyr 里，加载器会顺着它把 lex.hmyr 也带进来。
 // 关键字在词法里都是 ident（这条边界写在 lex.hmyr 的文件头），所以这里用 text 判断。
 
-fn is_word(t: Int, w: String) -> Bool {
+pub fn is_word(t: Int, w: String) -> Bool {
   return t.kind == "ident" && t.text == w
 }
 
@@ -132,7 +132,7 @@ fn parse_while(tokens: Int, i: Int) {
 }
 
 // 宿主入口：读一条语句。
-fn parse_statement(tokens: Int) -> Int {
+pub fn parse_statement(tokens: Int) -> Int {
   return statement(tokens, 0)
 }
 

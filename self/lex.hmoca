@@ -73,7 +73,7 @@ fn skip_block(s: String, i: Int) -> Int {
   return skip_block(s, i + 1)
 }
 
-fn slice(s: String, from: Int, to: Int) -> String {
+pub fn slice(s: String, from: Int, to: Int) -> String {
   if from >= to { return "" }
   return s[from] + slice(s, from + 1, to)
 }
@@ -242,12 +242,12 @@ fn 补位置(tokens: Int, 源码: String) {
   return 出
 }
 
-fn scan(text: String) {
+pub fn scan(text: String) {
   return 补位置(tokenize(text, 0, (), false), text)
 }
 
 // 保留换行的入口：语句边界由此而来。旧入口保持原样，六处既有对拍不受影响。
-fn scan_lines(text: String) {
+pub fn scan_lines(text: String) {
   return 补位置(tokenize(text, 0, (), true), text)
 }
 
