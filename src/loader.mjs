@@ -308,7 +308,7 @@ export function loadUnit(entry, options = {}) {
 /** Run every loaded module into one evaluator, in dependency order. */
 export function runUnit(unit, options = {}) {
   const runtime = new Runtime(options);
-  for (const file of unit.order) runtime.registerModule(unit.modules.get(file));
+  for (const file of unit.order) runtime.registerModule(unit.modules.get(file), file);
   return runtime;
 }
 

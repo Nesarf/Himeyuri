@@ -14,7 +14,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadUnit } from "../src/loader.mjs";
+import { loadUnit, runUnit } from "../src/loader.mjs";
 
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-ns-"));
 let passed = 0, failed = 0;
@@ -87,6 +87,31 @@ console.log("三、同一个模块里用非 pub：不报");
   const 单 = loadUnit(入口);
   ok("自家用自己的不报", !有警告(单, "HMYR-W0303"),
     JSON.stringify(单.diagnostics.warnings.map((w) => w.code)));
+}
+
+console.log("四、归属表：名字来自哪个模块");
+{
+  // 命名空间第一步的地基：求值器记下每个名字来自哪个文件。
+  // 它只记，不改查找 —— 所以这一节只验「问得出来」，不验「拦得住」（那是下一步，
+  // 而下一步要动求值器，代价写在 SPEC 6.4 里）。
+  投(行们([
+    "pub fn 招牌() -> Int {",
+    "  return 1",
+    "}",
+  ]), "厨.hmoca");
+  const 入口 = 投(行们([
+    "import \"./厨.hmoca\"",
+    "",
+    "fn main() -> Int {",
+    "  return 招牌()",
+    "}",
+  ]), "堂.hmoca");
+
+  const 单 = loadUnit(入口);
+  const 机 = runUnit(单);
+  ok("招牌来自厨.hmoca", String(机.归属者("招牌")).endsWith("厨.hmoca"), String(机.归属者("招牌")));
+  ok("main 来自堂.hmoca", String(机.归属者("main")).endsWith("堂.hmoca"), String(机.归属者("main")));
+  ok("没有的名字交回 null", 机.归属者("不存在") === null, String(机.归属者("不存在")));
 }
 
 fs.rmSync(临, { recursive: true, force: true });

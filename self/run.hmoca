@@ -670,17 +670,25 @@ fn 目标程序参数(参们: Int, 起: Int, 出: Int) -> Int {
   return 目标程序参数从(参们, 起, 出)
 }
 
-fn 跑文件入口(目录: String, 目标: String, 参们: Int) effects(file) {
+fn 跑文件入口(目录: String, 目标: String, 参们: Int) effects(file, process) {
   let 路 = 拼路径(目录, 目标)
-  if file_exists(路) == false {
-    return {ok: false, 文字: "HMYR-R0211 cannot read '" + 路 + "': no such file"}
+  // 先转成绝对路径，再往 读一棵 传。
+  //
+  // 理由是那一边还会跑一次 解析路，而它只对绝对路径原样返回 —— 相对的 ./a/b 会被
+  // 再拼一次目录，变成 ./a/./a/b，读不到，报的是 R0211（看上去像文件不见了）。
+  // 这道转换不是谨慎，是分工：入口这一层负责「从哪一个绝对文件开始」，
+  // 底下那一层只负责「相对它怎么找」。
+  var 全 = 路
+  if 是绝对(路) == false { 全 = 拼路径(cwd(), 路) }
+  if file_exists(全) == false {
+    return {ok: false, 文字: "HMYR-R0211 cannot read '" + 全 + "': no such file"}
   }
-  // 这里传 路（已经拼好的绝对路径），不是 目标。
+  // 这里传 全（拼好的绝对路径），不是 目标。
   // 理由：解析路 会把「不像路径的名字」当包名，而入口文件的名字常常正是那样
   // （main.hmoca）。传绝对路径就绕过了那一条判断。
-  let 读 = 读一棵(目录, 路, (), ())
+  let 读 = 读一棵(目录, 全, (), ())
   if len(读.源码们) == 0 {
-    return {ok: false, 文字: "HMYR-R0211 nothing read from '" + 路 + "'"}
+    return {ok: false, 文字: "HMYR-R0211 nothing read from '" + 全 + "'"}
   }
   return {ok: true, 文字: 跑模块们(读.源码们, 参们)}
 }

@@ -80,6 +80,8 @@ export class Runtime {
     // 帧退出时把这一层里登记的所有 owned 持有格关掉。只到帧级，不到块级 ——
     // 这门语言没有块钩子，而「一次调用一圈」已经是能写进判据的最小形状。
     this.持有格栈 = [];
+    // 归属表：名字来自哪个模块（命名空间的第一步）。只记，不改查找。
+    this.归属 = new Map();
     // stage0：只允许上面那三张表里的东西。它存在的理由是让「需求表」可执行——
     // 一份写着「只需要这些」的文档只能被人读完点头，而一个会拦下来的求值器能证明它。
     this.stage0 = options.stage0 === true;
@@ -103,11 +105,23 @@ export class Runtime {
 
   // Register what a module declares, without demanding an entry point. A library file has no main, and
   // pretending it must have one made the loader fail on its own fixtures.
-  registerModule(ast) {
+  // 归属表：名字来自哪个模块。命名空间的第一步就是这张表 —— 它只记，不改查找。
+  //
+  // 今天 functions / globals 还是扁平的，所以「这个名字来自哪个文件」这个问题的答案
+  // 只影响诊断与将来的可见性检查，不影响能不能调到。记录下来，是因为等命名空间
+  // 真做的时候，这张表就是它的地基；而现在补它不需要动任何行为，也就不需要动
+  // 挂在求值器上的那几套对拍。
+  registerModule(ast, 文件 = null) {
     for (const decl of ast.decls) {
       if (decl.kind === "Fn") this.functions.set(decl.name, decl);
       else if (decl.kind === "Const") this.globals.set(decl.name, this.evalExpr(decl.value, new Scope(null)));
+      if (文件 && (decl.kind === "Fn" || decl.kind === "Const")) this.归属.set(decl.name, 文件);
     }
+  }
+
+  /** 这个名字来自哪个模块；单文件路径（没有来源）交回 null。 */
+  归属者(名) {
+    return this.归属.get(名) || null;
   }
 
   run(ast) {

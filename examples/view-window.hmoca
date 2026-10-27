@@ -1,0 +1,41 @@
+// 一个窗口：把「字节怎么跨过语言边界」写成能跑的样子。
+//
+// design/FFI.txt 的三个问题在这里都有落点：
+//   谁分配     语言分配（read_bytes 交回一个字节元组）
+//   谁释放     语言释放（那个元组就是一个普通值，交给托管区）
+//   怎么过去   bytes_view：一段只读窗口，不复制，长度与取值都走它
+//
+// 窗口的寿命就是那次调用 —— 这不写在注释里靠自觉，而是写在那一段窗口的定义里：
+// 它指向源，而不拥有源。
+//
+// 校验和（CRC32）不在这一份里：它在默认路径那一台（最小求值器）上还没有实现，
+// 写进来会让这个示例中断。缺口记在 design/FFI.txt 的第六节。
+fn main() -> Int effects(file, process) {
+  let 路 = "D:/himeyuri/data/ucd/Blocks.txt"
+  let 字节 = read_bytes(路)
+  print("文件字节数：" + str(len(字节)) + chr(10))
+
+  // 首八字节：一个窗口，不复制那十一 KB。
+  let 头 = bytes_view(字节, 0, 8)
+  print("首八字节：")
+  var i = 0
+  while i < view_len(头) {
+    print(str(view_get(头, i)) + " ")
+    i = i + 1
+  }
+  print(chr(10))
+
+  // 尾巴那一小段：同一个源，另一个窗口。窗口不复制，所以两个可以同时存在。
+  let 尾 = bytes_view(字节, len(字节) - 4, 4)
+  print("末四字节：")
+  var j = 0
+  while j < view_len(尾) {
+    print(str(view_get(尾, j)) + " ")
+    j = j + 1
+  }
+  print(chr(10))
+
+  // 越界会以 HMYR-R0152 停下程序 —— 所以它不写在示例里：示例要能跑完。
+  // 窗口的长度由 view_len 说，别拿源的长度去猜它。
+  return 0
+}
