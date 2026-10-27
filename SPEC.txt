@@ -82,12 +82,12 @@ expr        = literal | ident | call | field | index | record | binary | unary
 record      = "{" [ field { "," field } ] "}" ;
 field       = ident ":" expr ;
 
-stmt        = let | varStmt | assign | return | ifStmt | whileStmt | block | exprStmt ;
-let         = "let" ident [ ":" type ] "=" expr ;
-varStmt     = "var" ident [ ":" type ] [ "=" expr ] ;
+stmt        = "let" ident [ ":" type ] "=" expr
+            | "var" ident [ ":" type ] [ "=" expr ]
+            | assign | return | ifStmt | whileStmt | block | exprStmt ;
 
 [实] 这一份文法比实现宽，而宽出来的地方要说清：
-      module 里的 import 与 decl 在解析后是**同一层**的两个列表（imports 与 decls），
+      module 里的 import 与 decl 在解析后是同一层的两个列表（imports 与 decls），
       而 decl 里的 macro 只有宿主那一层认 —— 子集那一层明说不含 match 与宏。
       所以逐条对照时，认得的窄是设计，不是缺口。
       文法里三处是这一轮补的：import 的 rev、fn 的 realtime、decl 的 var ——
