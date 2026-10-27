@@ -197,6 +197,49 @@ export function loadUnit(entry, options = {}) {
     }
   }
 
+  // 可见性的第一步（SPEC 6.4 第二步）：非 pub 的声明被别的模块用到时，说一声。
+  //
+  // 它是提示，不是拒绝 —— 求值器的函数表还是扁平的，所以那个名字照样能调到。
+  // 说一声的价值在于：等命名空间真的做了，这份清单就是「要改哪些地方」的名单，
+  // 而不是到时候从零去查。
+  //
+  // pub 与 as 今天是同一档：都被记下来、都不影响能不能看见。两者的差别在代价上，
+  // 而那一句写在 SPEC 6.4 里。
+  {
+    const 非公开 = new Map();     // 名字 -> 它所在的文件
+    for (const file of order) {
+      for (const decl of modules.get(file).decls) {
+        if (decl.kind !== "Fn" && decl.kind !== "Const" && decl.kind !== "TypeAlias") continue;
+        if (decl.pub) continue;
+        非公开.set(decl.name, file);
+      }
+    }
+    for (const file of order) {
+      const 走 = (n) => {
+        if (!n || typeof n !== "object") return;
+        if (Array.isArray(n)) { for (const x of n) 走(x); return; }
+        // 声明本身不算「引用」—— 只看用到的位置。
+        if (n.kind === "Fn" || n.kind === "Const" || n.kind === "TypeAlias") {
+          for (const key of ["body", "value", "params"]) if (n[key]) 走(n[key]);
+          return;
+        }
+        if (n.kind === "Ident" && typeof n.name === "string") {
+          const 家 = 非公开.get(n.name);
+          if (家 && 家 !== file) {
+            diagnostics.warn("HMYR-W0303",
+              "'" + n.name + "' is declared in " + short(家) + " without pub, and it is used in " + short(file) +
+              "; the flat table still lets it through, so this is a notice rather than a refusal", n.line || 0, n.column || 0);
+          }
+        }
+        for (const [k, v] of Object.entries(n)) {
+          if (k === "line" || k === "column" || k === "kind") continue;
+          走(v);
+        }
+      };
+      走(modules.get(file));
+    }
+  }
+
   return { ok: diagnostics.errors.length === 0, order, modules, diagnostics };
 }
 

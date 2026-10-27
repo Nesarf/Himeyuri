@@ -163,12 +163,22 @@ export const 子集解 = (tokens, options = {}) => {
   }
 
   function 解析声明() {
+    // pub 是修饰符，不是声明本身：认它、记在下面那个声明上，再往下走。
+    // 2026-10-27 从「不认」改成「认」—— 因为装载层要靠它说一句可见性的话
+    // （HMYR-W0303），而看不见这个词就无从说起。它今天仍然只是被记下来：
+    // 扁平函数表意味着 pub 不影响「能不能看见」，那一半等命名空间。
+    if (是("keyword", "pub")) {
+      进();
+      const 内 = 解析声明();
+      if (内) 内.pub = true;
+      return 内;
+    }
     if (是("keyword", "fn")) return 解析函数();
     if (是("ident", "macro")) return 解析宏();
     if (是("keyword", "const")) return 解析常量("Const");
     if (是("keyword", "var")) return 解析常量("VarTop");
-    // 这几样宿主读得动，而这一份还不认——边界，抛。
-    if (是("keyword", "type") || 是("keyword", "effect") || 是("keyword", "pub")) {
+    // 这两样宿主读得动，而这一份还不认——边界，抛。
+    if (是("keyword", "type") || 是("keyword", "effect")) {
       不认("子集不认这个声明，见到 " + 说明(看()));
     }
     // 而这些宿主也报「不能以它开始一个声明」，于是报同一个码。
