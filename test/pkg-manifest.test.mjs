@@ -200,6 +200,87 @@ console.log("八、哈希链：被依赖的包有没有被换过");
     JSON.stringify({ status: 换.status, out: String(换.stdout || "").slice(0, 200) }));
 }
 
+console.log("九、签名：谁担保它是");
+{
+  // 哈希链挡「换了一个包」，签名挡「换的人同时改了清单」。
+  // 签的是「去掉签名字段之后的规范化字节」—— 那四条规则写在 design/PKGMAN.txt 第五节。
+  const { generateKeyPairSync, sign, createPublicKey, createHash: 算2 } = await import("node:crypto");
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const 公钥hex = Buffer.from(publicKey.export({ format: "jwk" }).x, "base64url").toString("hex");
+
+  const 根 = path.join(临, "签根");
+  fs.mkdirSync(path.join(根, "签包"), { recursive: true });
+  fs.writeFileSync(path.join(根, "hmyr.hmkit"), "[]", "utf8");
+  fs.writeFileSync(path.join(根, "hmyr.hmtrust"), JSON.stringify({ 签包: 公钥hex }), "utf8");
+  const 入口路 = path.join(根, "签包", "index.hmoca");
+  fs.writeFileSync(入口路, "pub fn 签包() -> Int {\n  return 1\n}\n", "utf8");
+  const 入口哈希 = "sha256:" + 算2("sha256").update(fs.readFileSync(入口路)).digest("hex");
+  // 装载层的判据要一个真的入口去 import 那个包 —— 工具那两条不需要它。
+  const 用签 = path.join(根, "用签.hmoca");
+  fs.writeFileSync(用签, 行们(["import \"签包\"", "", "fn main() -> Int {", "  return 0", "}"]), "utf8");
+
+  // 与工具里那条规范化同一套规则（四条：去签名、键排序、无空格、UTF-8）。
+  const 规范化 = (清单) => {
+    const 去 = { ...清单 };
+    delete 去.签名;
+    const 排 = (v) => {
+      if (Array.isArray(v)) return v.map(排);
+      if (v && typeof v === "object") {
+        const 出 = {};
+        for (const k of Object.keys(v).sort()) 出[k] = 排(v[k]);
+        return 出;
+      }
+      return v;
+    };
+    return Buffer.from(JSON.stringify(排(去)), "utf8");
+  };
+  const 造清单 = (改) => {
+    const 清单 = { 名字: "签包", 版本: 1, 许可: "CZGD-PL-1.1", 哈希: 入口哈希 };
+    if (改) 改(清单);
+    return 清单;
+  };
+
+  const 工具 = path.join(ROOT, "tools", "hmkit-check.mjs");
+  const 清单路 = path.join(根, "签包", "hmyr.hmkit");
+
+  // 一、签对了：工具通过。
+  {
+    const 清单 = 造清单();
+    const 值 = sign(null, 规范化(清单), privateKey).toString("hex");
+    清单.签名 = { 包: "签包", 算法: "ed25519", 值 };
+    fs.writeFileSync(清单路, JSON.stringify(清单), "utf8");
+    const 单 = loadUnit(path.join(根, "用签.hmoca"));
+    const 形 = spawnSync(process.execPath, [工具, "--all", 根], { encoding: "utf8" });
+    ok("清单形状过", !单.diagnostics.errors.some((e) => e.code === "HMYR-E0304" || e.code === "HMYR-E0307"),
+      JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
+    ok("签名验过", 形.status === 0, String(形.stdout || "").slice(0, 200));
+  }
+
+  // 二、清单被改过：签名对不上。
+  {
+    const 清单 = 造清单();
+    const 值 = sign(null, 规范化(清单), privateKey).toString("hex");
+    清单.签名 = { 包: "签包", 算法: "ed25519", 值 };
+    清单.许可 = "改过的许可";
+    fs.writeFileSync(清单路, JSON.stringify(清单), "utf8");
+    const 形 = spawnSync(process.execPath, [工具, "--all", 根], { encoding: "utf8" });
+    ok("清单被改过：签名报错", 形.status !== 0 && String(形.stdout || "").includes("签名对不上"),
+      String(形.stdout || "").slice(0, 200));
+  }
+
+  // 三、可信表里没有这个包的公钥：E0307。
+  {
+    fs.writeFileSync(path.join(根, "hmyr.hmtrust"), JSON.stringify({ 别的包: 公钥hex }), "utf8");
+    const 清单 = 造清单();
+    const 值 = sign(null, 规范化(清单), privateKey).toString("hex");
+    清单.签名 = { 包: "签包", 算法: "ed25519", 值 };
+    fs.writeFileSync(清单路, JSON.stringify(清单), "utf8");
+    const 单 = loadUnit(path.join(根, "用签.hmoca"));
+    ok("公钥不在可信表：E0307", 单.diagnostics.errors.some((e) => e.code === "HMYR-E0307"),
+      JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

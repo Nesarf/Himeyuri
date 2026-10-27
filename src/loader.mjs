@@ -132,6 +132,43 @@ function 读包清单(cap, 包根, 名, diagnostics) {
       }
     }
   }
+  // 签名（design/PKGMAN.txt 第五节）：装载器只验形状。
+  //
+  // 真伪由 tools/hmkit-check.mjs 验 —— 那要 node:crypto，而装载器只借文件与路径。
+  // 形状包括：算法名认得、值的形状对、可信表里有这个包的公钥。
+  // 最后那一条在这里查，是因为「信任的锚在被信任的东西之外」这件事，
+  // 装载器是唯一同时看得见包与包根的一层。
+  if (清单.签名 !== undefined) {
+    const 签名 = 清单.签名;
+    if (!签名 || typeof 签名 !== "object" || Array.isArray(签名)) {
+      diagnostics.error("HMYR-E0304", "package '" + 名 + "' has a 签名 that is not an object", 0, 0);
+    } else {
+      if (签名.包 !== 名) {
+        diagnostics.error("HMYR-E0304",
+          "package '" + 名 + "' has a 签名 for '" + String(签名.包) + "'; the package name is signed too, or one signature could be moved onto another manifest", 0, 0);
+      }
+      if (签名.算法 !== "ed25519") {
+        diagnostics.error("HMYR-E0304", "package '" + 名 + "' signs with '" + String(签名.算法) + "', and ed25519 is the only algorithm this layer knows", 0, 0);
+      }
+      if (typeof 签名.值 !== "string" || !/^[0-9a-f]{128}$/.test(签名.值)) {
+        diagnostics.error("HMYR-E0304", "package '" + 名 + "' has a 签名 值 that is not 128 lowercase hex digits", 0, 0);
+      }
+      // 可信表：包根下的 hmyr.hmtrust。它不在包里 —— 不然换包的人顺手换掉锚。
+      const 表路 = cap.path.join(包根, "hmyr.hmtrust");
+      if (!cap.file.exists(表路)) {
+        diagnostics.error("HMYR-E0307",
+          "package '" + 名 + "' is signed, but there is no hmyr.hmtrust beside it; a signature with no table to check it against proves nothing", 0, 0);
+      } else {
+        let 表 = null;
+        try { 表 = JSON.parse(String(cap.file.read(表路))); } catch { 表 = null; }
+        const 钥 = 表 && typeof 表 === "object" && !Array.isArray(表) ? 表[名] : undefined;
+        if (typeof 钥 !== "string" || !/^[0-9a-f]{64}$/.test(钥)) {
+          diagnostics.error("HMYR-E0307",
+            "package '" + 名 + "' is signed, but hmyr.hmtrust has no 64 lowercase hex public key for it", 0, 0);
+        }
+      }
+    }
+  }
   return 清单;
 }
 
