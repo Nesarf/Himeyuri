@@ -82,6 +82,11 @@ export class Runtime {
     this.持有格栈 = [];
     // 归属表：名字来自哪个模块（命名空间的第一步）。只记，不改查找。
     this.归属 = new Map();
+    // 当前执行在哪一个模块里（可见性检查要问的就是这一件事）。
+    this.当前模块 = null;
+    // 可见性的观察记录（HMYR-W0304）。它是一个列表而不是异常：
+    // 这条规则今天要连带一次 pub 迁移才谈得上拒绝，见 查可见性 上的注释。
+    this.警告们 = [];
     // stage0：只允许上面那三张表里的东西。它存在的理由是让「需求表」可执行——
     // 一份写着「只需要这些」的文档只能被人读完点头，而一个会拦下来的求值器能证明它。
     this.stage0 = options.stage0 === true;
@@ -101,6 +106,26 @@ export class Runtime {
     const e = new Error(message);
     e.code = code;
     throw e;
+  }
+
+  // 可见性：跨模块调一个没写 pub 的名字，记一条（SPEC 6.4 第二步的后一半）。
+  //
+  // 两处调用：普通调用（evalCall）与 return 里的尾调用（Return 分支）。
+  // 后者必须单独调，因为它在造 TailCall 时不经过 evalCall。
+  //
+  // 记一条而不是拒绝，理由与装载层的 W0303 同一个：今天库里一个 pub 都没写
+  // （pub 以前不被解析），所以这条规则一开就把整个仓库打红 —— 把既有代码全打红
+  // 的规则不是规则，是一次没做的迁移。它要连带「给能导出的一切标上 pub」那一步，
+  // 而这一步还没有开始。所以它现在是警告，判据验它记得住、也说得清。
+  查可见性(decl) {
+    const 被调者 = this.归属.get(decl.name);
+    if (被调者 && this.当前模块 && 被调者 !== this.当前模块 && decl.pub !== true) {
+      this.警告们.push({
+        code: "HMYR-W0304",
+        message: "'" + decl.name + "' is declared in " + 被调者 + " without pub, and it is called from " +
+          this.当前模块 + "; a private name is meant to stay inside its own module",
+      });
+    }
   }
 
   // Register what a module declares, without demanding an entry point. A library file has no main, and
@@ -156,6 +181,10 @@ export class Runtime {
     try {
       let 当前 = decl, 当前实参 = args, 当前效果 = fromEffects;
       while (true) {
+        // 模块上下文：进入谁的身体就是谁的模块，出来就还给上一层。
+        // 可见性的判断在调用点（evalCall），因为尾调用会把这一层提前还回去。
+        const 旧模块 = this.当前模块;
+        this.当前模块 = this.归属.get(当前.name) || 旧模块;
         try { return this.callFunctionInner(当前, 当前实参, 当前效果); }
         catch (e) {
           if (e instanceof TailCall) {
@@ -169,6 +198,7 @@ export class Runtime {
           }
           throw e;
         }
+        finally { this.当前模块 = 旧模块; }
       }
     } finally { this.depth--; }
   }
@@ -247,8 +277,10 @@ export class Runtime {
         // 而 return 一个内置调用的结果本来也不占栈。
         const v = stmt.value;
         if (v && v.kind === "Call" && v.callee.kind === "Ident" && this.functions.has(v.callee.name)) {
+          const 目标 = this.functions.get(v.callee.name);
+          this.查可见性(目标);
           const 实参 = v.args.map((a) => this.evalExpr(a, scope, effects));
-          throw new TailCall(this.functions.get(v.callee.name), 实参, effects);
+          throw new TailCall(目标, 实参, effects);
         }
         throw new Return(v ? this.evalExpr(v, scope, effects) : null);
       }
@@ -367,7 +399,11 @@ export class Runtime {
     const args = node.args.map((a) => this.evalExpr(a, scope, effects));
     if (node.callee.kind === "Ident") {
       const decl = this.functions.get(node.callee.name);
-      if (decl) return this.callFunction(decl, args, effects);
+      if (decl) {
+        // 可见性：记一条，不拦（见 查可见性 上的注释）。
+        this.查可见性(decl);
+        return this.callFunction(decl, args, effects);
+      }
     }
     // 方法调用：接收者要跟着传下去。少了 apply 这一步，块上的 存/取 就取不到
     // 自己是哪一块 —— 而那是它唯一的上下文。区的方法不需要它（它们是闭包），
