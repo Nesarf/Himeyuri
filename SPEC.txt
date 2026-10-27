@@ -56,36 +56,47 @@ design/PLATFORM.txt 里，每条都挂落点与里程碑。
 [定] 标识符允许 Unicode 字母，但必须归一化到 NFC，且对同形异码（homoglyph）给出警告。
 理由是我们自己吃过教训：文件识别那套「按内容不按名字」「全量 Unicode 但不得有破损」的经验值直接搬过来。
 
-[定] 注释：// 行注释、/// 文档注释、/* ... */ 块注释且允许嵌套。
-后者是明确的取舍——省下「注释掉一段代码却因为里面已有块注释而失败」的经典坑。
+[定] 注释：// 行注释、/// 文档注释、/* ... */ 块注释，而块注释可以嵌套
+（src/lexer.mjs 用深度计数实现，不是「遇到第一个 */ 就停」）。后者是明确的取舍 ——
+省下「注释掉一段代码却因为里面已有块注释而失败」的经典坑。
 
-[议] 语句结束：倾向照 Go 的做法——换行即结束，续行用显式规则（行尾运算符或括号未闭合）。
-理由：自动分号在 Go 是成功案例，而自由分号带来的歧义我们不需要。
+[定] 语句结束：换行即分界。这一条 2026-10-20 从 [议] 升上来，因为实现一直就是这么跑的；
+续行靠显式规则（行尾运算符或括号未闭合），而唯一放宽的位置是 if 与 else 之间（见 2.2）。
 
 — 2.2 文法（骨架 EBNF）
 
 module      = { import } { decl } ;
-import      = "import" path [ "as" ident ] ;
-decl        = fn | type | const | effect ;
+import      = "import" path [ "as" ident ] [ "rev" int ] ;
+decl        = fn | type | const | var | effect | macro ;
 
 fn          = [ "pub" ] "fn" ident [ typeParams ] "(" [ params ] ")" [ "->" type ]
-              [ effects ] [ contracts ] block ;
+              [ effects ] [ "realtime" ] [ contracts ] block ;
 params      = param { "," param } ;
 param       = [ "own" | "borrow" ] ident ":" type [ "=" expr ] ;
 effects     = "effects" "(" [ effect { "," effect } ] ")" ;
 contracts   = { "requires" expr | "ensures" expr } ;
 
 type        = ident [ typeArgs ] [ "?" ] | tuple | fnType ;
-expr        = literal | ident | call | field | index | record | binary | unary | if | match | block | lambda ;
+expr        = literal | ident | call | field | index | record | binary | unary
+            | if | match | block | lambda ;
 record      = "{" [ field { "," field } ] "}" ;
 field       = ident ":" expr ;
-stmt        = "let" ident [ ":" type ] "=" expr
+
+stmt        = let | varStmt | assign | return | ifStmt | whileStmt | block | exprStmt ;
+let         = "let" ident [ ":" type ] "=" expr ;
+varStmt     = "var" ident [ ":" type ] [ "=" expr ] ;
+
+[实] 这一份文法比实现宽，而宽出来的地方要说清：
+      module 里的 import 与 decl 在解析后是**同一层**的两个列表（imports 与 decls），
+      而 decl 里的 macro 只有宿主那一层认 —— 子集那一层明说不含 match 与宏。
+      所以逐条对照时，认得的窄是设计，不是缺口。
+      文法里三处是这一轮补的：import 的 rev、fn 的 realtime、decl 的 var ——
+      它们都实现了，而文法没跟上，那种过期比缺一条更误导。
 
 [实] 换行是语句分界，但「if 块之后」这个位置不是：} else { 与 } 换行 else { 读成同一棵树。
      2026-10-20 放宽。实现在 src/subset-parse.mjs 的 if 那一支：先往前看，隔着若干换行之后
      真是 else 才把那些换行吃掉 —— 无条件跳过空行会吃掉下一句的换行。
      其余场合换行照旧作分界；这条边界是「这里放宽了」，不是「随便换行都行」。
-     原先写的是「else 必须与右花括号同一行」，那条限制是真的，现在撤掉了。
 
 [验] 文法进符合性套件：每个产生式至少一条正例与一条反例。
 
