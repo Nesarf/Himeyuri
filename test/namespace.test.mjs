@@ -193,6 +193,62 @@ console.log("六、整仓：没有一个跨模块的私有调用");
   ok("十九个入口都是零", 脏.length === 0, 脏.join("；"));
 }
 
+console.log("七、as 别名：`名.成员` 真的能用");
+{
+  // 6.4 第二步的最后一步。别名以前只是被记下来，因为「哪个名字属于哪个模块」
+  // 没有地方问 —— 有归属表与按模块分的声明表之后，能问了。
+  //
+  // 别名不是变量：去求 `厨` 的值只会得到「没有这个变量」，所以这条路必须在
+  // 「求 callee」之前判断。判据里那两个用例就是为这一点写的。
+  投(行们([
+    "pub fn 招牌菜() -> Int {",
+    "  return 11",
+    "}",
+    "",
+    "fn 私房菜() -> Int {",
+    "  return 7",
+    "}",
+  ]), "厨.hmoca");
+
+  const 用别名 = 投(行们([
+    "import \"./厨.hmoca\" as 厨",
+    "",
+    "fn main() -> Int {",
+    "  return 厨.招牌菜()",
+    "}",
+  ]), "用别名.hmoca");
+  const 单用 = loadUnit(用别名);
+  let 果用 = null;
+  try { 果用 = runUnit(单用).run(单用.modules.get(用别名)); } catch (e) { 果用 = e; }
+  ok("别名点成员调得动", 果用 === 11, String(果用 && (果用.code || 果用)));
+
+  const 越界 = 投(行们([
+    "import \"./厨.hmoca\" as 厨",
+    "",
+    "fn main() -> Int {",
+    "  return 厨.私房菜()",
+    "}",
+  ]), "越界.hmoca");
+  const 单越 = loadUnit(越界);
+  let 果越 = null;
+  try { 果越 = runUnit(单越).run(单越.modules.get(越界)); } catch (e) { 果越 = e; }
+  ok("别名点私有的也被拒（R0250）", !!果越 && String(果越.code) === "HMYR-R0250",
+    String(果越 && (果越.code || 果越)).slice(0, 100));
+
+  const 没有 = 投(行们([
+    "import \"./厨.hmoca\" as 厨",
+    "",
+    "fn main() -> Int {",
+    "  return 厨.不存在()",
+    "}",
+  ]), "没有.hmoca");
+  const 单没 = loadUnit(没有);
+  let 果没 = null;
+  try { 果没 = runUnit(单没).run(单没.modules.get(没有)); } catch (e) { 果没 = e; }
+  ok("别名点不存在的给 R0106", !!果没 && String(果没.code) === "HMYR-R0106",
+    String(果没 && (果没.code || 果没)).slice(0, 100));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

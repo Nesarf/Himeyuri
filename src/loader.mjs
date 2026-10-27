@@ -114,6 +114,9 @@ export function loadUnit(entry, options = {}) {
   const modules = new Map();     // absolute path -> ast
   const loading = new Set();     // the chain currently being loaded, for cycle detection
   const order = [];
+  // 别名：`import "x" as y` 里的 y 指到哪个文件（SPEC 6.4 第二步的最后一步）。
+  // 它是在解析 import 时顺手记下的 —— 那是唯一一个「说明文字与文件」同时在场的地方。
+  const 别名表 = new Map();
   // 「怎么把一段源码变成一棵树」现在是子集那两层（src/subset-lex.mjs + src/subset-parse.mjs），
   // 于是 Stage 0 这条路上没有宿主的 lexer 与 parser 了。
   //
@@ -185,6 +188,9 @@ export function loadUnit(entry, options = {}) {
         continue;
       }
       visit(target);
+      // 别名：`import "x" as y` 的 y 现在指向一个真实的文件。
+      // 记在这里，因为这是「说明文字」与「解析出来的文件」同时在场的唯一一处。
+      if (imp.alias) 别名表.set(imp.alias, target);
       // 版本协商：调用方要第 M 版，模块提供到第 N 版，M <= N 就成 ——
       // 模块向下兼容，所以「N 能提供 M」这一条是可判的。
       //
@@ -305,13 +311,16 @@ export function loadUnit(entry, options = {}) {
     }
   }
 
-  return { ok: diagnostics.errors.length === 0, order, modules, diagnostics };
+  return { ok: diagnostics.errors.length === 0, order, modules, 别名表, diagnostics };
 }
 
 /** Run every loaded module into one evaluator, in dependency order. */
 export function runUnit(unit, options = {}) {
   const runtime = new Runtime(options);
   for (const file of unit.order) runtime.registerModule(unit.modules.get(file), file);
+  // 别名要在注册之后交过去：它查的是「这个名字来自哪个模块」，
+  // 而那正是注册时填的那张表。
+  for (const [名, 文件] of (unit.别名表 || [])) runtime.登记别名(名, 文件);
   return runtime;
 }
 

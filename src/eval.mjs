@@ -87,6 +87,10 @@ export class Runtime {
     // 可见性的观察记录（HMYR-W0304）。它是一个列表而不是异常：
     // 这条规则今天要连带一次 pub 迁移才谈得上拒绝，见 查可见性 上的注释。
     this.警告们 = [];
+    // 按模块分的声明表：文件 -> (名字 -> 声明)。`别名.名` 要用它查。
+    this.模块声明 = new Map();
+    // 别名：`import "x" as y` 里的 y 指到哪个文件。
+    this.模块别名 = new Map();
     // stage0：只允许上面那三张表里的东西。它存在的理由是让「需求表」可执行——
     // 一份写着「只需要这些」的文档只能被人读完点头，而一个会拦下来的求值器能证明它。
     this.stage0 = options.stage0 === true;
@@ -139,7 +143,43 @@ export class Runtime {
       if (decl.kind === "Fn") this.functions.set(decl.name, decl);
       else if (decl.kind === "Const") this.globals.set(decl.name, this.evalExpr(decl.value, new Scope(null)));
       if (文件 && (decl.kind === "Fn" || decl.kind === "Const")) this.归属.set(decl.name, 文件);
+      if (文件 && (decl.kind === "Fn" || decl.kind === "Const")) {
+        if (!this.模块声明.has(文件)) this.模块声明.set(文件, new Map());
+        this.模块声明.get(文件).set(decl.name, decl);
+      }
     }
+  }
+
+  /** 登记一个别名：`import "x" as y` 里的 y。 */
+  登记别名(名, 文件) {
+    this.模块别名.set(名, 文件);
+  }
+
+  /**
+   * 若 node 是「别名点成员」这种形状，交回那一边的声明；否则交回 null。
+   *
+   * 这是 SPEC 6.4 第二步的最后一步：as 别名以前只是被记下来，因为「哪个名字属于
+   * 哪个模块」这件事没有地方问 —— 现在有归属表与按模块分的声明表，于是能问。
+   *
+   * 注意它先看 a.b 里的 a 是不是别名，而不是先去求 a 的值：
+   * 别名不是变量，它没有值，去求值只会得到一个「没有这个变量」。
+   */
+  模块成员(node) {
+    if (!node || node.kind !== "Field") return null;
+    const 主 = node.target;
+    if (!主 || 主.kind !== "Ident") return null;
+    const 文件 = this.模块别名.get(主.name);
+    if (!文件) return null;
+    const 表 = this.模块声明.get(文件);
+    const decl = 表 ? 表.get(node.name) : undefined;
+    if (!decl) {
+      this.fail("HMYR-R0106", "module '" + 主.name + "' has no '" + node.name + "'");
+    }
+    // 一个私有名字经由别名访问，仍然是跨模块 —— 同一条可见性规则。
+    // 检查放在这里，调用点就不必再查一次：这两处是同一个判断的两种写法，
+    // 而分成两处只会让其中一处先漂。
+    this.查可见性(decl);
+    return decl;
   }
 
   /** 这个名字来自哪个模块；单文件路径（没有来源）交回 null。 */
@@ -394,11 +434,20 @@ export class Runtime {
       const result = BUILTINS[node.callee.name](this, args);
       return result === undefined ? null : result;
     }
+    // 别名点成员：`import "x" as y` 之后写 `y.名`。
+    // 它要在「求 callee 的值」之前判断 —— 别名不是变量，求值只会说没有这个变量。
+    {
+      const 成员 = this.模块成员(node.callee);
+      if (成员) {
+        const 实参 = node.args.map((a) => this.evalExpr(a, scope, effects));
+        return this.callFunction(成员, 实参, effects);
+      }
+    }
     const args = node.args.map((a) => this.evalExpr(a, scope, effects));
     if (node.callee.kind === "Ident") {
       const decl = this.functions.get(node.callee.name);
       if (decl) {
-        // 可见性：记一条，不拦（见 查可见性 上的注释）。
+        // 可见性：跨模块调私有名字是 HMYR-R0250（见 查可见性）。
         this.查可见性(decl);
         return this.callFunction(decl, args, effects);
       }
