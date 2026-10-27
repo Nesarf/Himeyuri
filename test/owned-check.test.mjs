@@ -539,6 +539,11 @@ console.log("十三、跨包（包名解析 + 同一张表）");
   fs.mkdirSync(path.join(根, "甲包"), { recursive: true });
   fs.mkdirSync(path.join(根, "乙包"), { recursive: true });
   fs.writeFileSync(path.join(根, "hmyr.hmkit"), "[]", "utf8");
+  // 每个包自己也有一份清单（design/PKGMAN.txt）：名字与目录一致、版本是整数、
+  // 许可非空、哈希是 sha256 的形状。形状由装载器验，内容由 tools/hmkit-check.mjs 算。
+  const 清单 = (名) => JSON.stringify({ 名字: 名, 版本: 1, 许可: "CZGD-PL-1.1", 哈希: "sha256:" + "0".repeat(64) });
+  fs.writeFileSync(path.join(根, "甲包", "hmyr.hmkit"), 清单("甲包"), "utf8");
+  fs.writeFileSync(path.join(根, "乙包", "hmyr.hmkit"), 清单("乙包"), "utf8");
   fs.writeFileSync(path.join(根, "甲包", "index.hmoca"), 行们([
     "import \"乙包\"",
     "",

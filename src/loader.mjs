@@ -22,20 +22,62 @@ import { 持有格检查 } from "./owned-check.mjs";
 const short = (file) => file.split(/[\\/]/).pop() || file;
 
 /**
- * 从某个文件往上找「包根」：第一个含 hmyr.hmkit 的目录；找不到就用仓库根。
+ * 从某个文件往上找「包根」：最外层的那个含 hmyr.hmkit 的目录；找不到就用仓库根。
  *
- * 包根这个概念是给包名解析用的，而它不需要一份新格式 —— 套件清单本来就叫那个名字，
- * 所以「这里是一个包」这件事已经有记号了，只是以前没人拿它当地界。
+ * 「最外层」这三个字是必要的，不是谨慎：每个包自己在 hmyr.hmkit 里说明身份
+ * （design/PKGMAN.txt），所以「第一个含清单的目录」会是包自己 —— 于是
+ * import "乙包" 会被解析成 甲包/乙包/index.hmoca。往上走到底、取最后遇到的那个，
+ * 才是这个工程的外壳。
  */
 function 找包根(cap, fromFile) {
   let 目录 = cap.path.dirname(fromFile);
+  let 最后 = null;
   for (let i = 0; i < 64; i++) {
-    if (cap.file.exists(cap.path.join(目录, "hmyr.hmkit"))) return 目录;
+    if (cap.file.exists(cap.path.join(目录, "hmyr.hmkit"))) 最后 = 目录;
     const 上 = cap.path.dirname(目录);
     if (上 === 目录) break;
     目录 = 上;
   }
-  return cap.path.root();
+  return 最后 || cap.path.root();
+}
+
+/**
+ * 读一个包的清单，并做「形状」那一半的校验（design/PKGMAN.txt 第三节）。
+ *
+ * 装载器不计算哈希 —— 那要一个密码学库，而它至今只借文件与路径两样能力。
+ * 哈希由 tools/hmkit-check.mjs 算。这里只验：能读、四项齐、名字与目录一致、
+ * 版本是整数、许可非空、哈希的形状对。
+ */
+function 读包清单(cap, 包根, 名, diagnostics) {
+  const 路 = cap.path.join(包根, 名, "hmyr.hmkit");
+  if (!cap.file.exists(路)) {
+    diagnostics.error("HMYR-E0304", "package '" + 名 + "' has no hmyr.hmkit beside its index.hmoca", 0, 0);
+    return null;
+  }
+  let 清单;
+  try { 清单 = JSON.parse(String(cap.file.read(路))); }
+  catch {
+    diagnostics.error("HMYR-E0304", "package '" + 名 + "' has a manifest that is not JSON", 0, 0);
+    return null;
+  }
+  if (!清单 || typeof 清单 !== "object" || Array.isArray(清单)) {
+    diagnostics.error("HMYR-E0304", "package '" + 名 + "' has a manifest that is not an object", 0, 0);
+    return null;
+  }
+  if (清单.名字 !== 名) {
+    diagnostics.error("HMYR-E0304",
+      "package '" + 名 + "' declares its name as '" + String(清单.名字) + "'; the directory and the manifest must agree, or 'which package did I import' becomes a guess", 0, 0);
+  }
+  if (!Number.isInteger(清单.版本)) {
+    diagnostics.error("HMYR-E0304", "package '" + 名 + "' has no integer 版本 in its manifest", 0, 0);
+  }
+  if (typeof 清单.许可 !== "string" || 清单.许可.length === 0) {
+    diagnostics.error("HMYR-E0304", "package '" + 名 + "' has no 许可 in its manifest", 0, 0);
+  }
+  if (typeof 清单.哈希 !== "string" || !/^sha256:[0-9a-f]{64}$/.test(清单.哈希)) {
+    diagnostics.error("HMYR-E0304", "package '" + 名 + "' has no sha256:<64 lowercase hex> 哈希 in its manifest", 0, 0);
+  }
+  return 清单;
 }
 
 /**
@@ -46,7 +88,7 @@ function 找包根(cap, fromFile) {
  * 一条规则、一个约定文件名 —— 因为它要在四台机器上给出同一个答案，
  * 而任何「按清单字段去猜」的写法都会把答案藏进解析顺序里。
  */
-function resolveImport(cap, fromFile, spec) {
+function resolveImport(cap, fromFile, spec, diagnostics) {
   if (spec.startsWith("./") || spec.startsWith("../") || /^[A-Za-z]:[\\/]/.test(spec) || cap.path.isAbsolute(spec)) {
     return cap.path.resolve(cap.path.dirname(fromFile), spec);
   }
@@ -54,7 +96,10 @@ function resolveImport(cap, fromFile, spec) {
   // 允许非 ASCII —— 这门语言的标识符本来就能写中文，包名没有理由更窄。
   const 名 = spec.replace(/\/+$/, "");
   if (!/^[\p{L}_][\p{L}\p{N}_-]*$/u.test(名)) return null;
-  return cap.path.join(找包根(cap, fromFile), 名, "index.hmoca");
+  const 包根 = 找包根(cap, fromFile);
+  // 有诊断出口时顺手把清单读一遍 —— 那件事只有包名这一支需要。
+  if (diagnostics) 读包清单(cap, 包根, 名, diagnostics);
+  return cap.path.join(包根, 名, "index.hmoca");
 }
 
 /**
@@ -134,7 +179,7 @@ export function loadUnit(entry, options = {}) {
     }
 
     for (const imp of ast.imports) {
-      const target = resolveImport(cap, abs, imp.path);
+      const target = resolveImport(cap, abs, imp.path, diagnostics);
       if (!target) {
         diagnostics.warn("HMYR-W0301", "import of '" + imp.path + "' is not a path; the package manager will own that", 0, 0);
         continue;
@@ -158,6 +203,23 @@ export function loadUnit(entry, options = {}) {
     loading.delete(abs);
     modules.set(abs, ast);
     order.push(abs);
+
+    // 清单的版本与入口顶部的 rev 必须一致（design/PKGMAN.txt 第二节）。
+    // 两处写同一件事看着冗余，但它们的读者不同：清单给包管理看，rev 给装载器看。
+    // 让它们必须一致，是唯一能让两边都不说谎的办法。
+    if (short(abs) === "index.hmoca") {
+      const 目录 = cap.path.dirname(abs);
+      const 清单路 = cap.path.join(目录, "hmyr.hmkit");
+      if (cap.file.exists(清单路)) {
+        let 清单 = null;
+        try { 清单 = JSON.parse(String(cap.file.read(清单路))); } catch { 清单 = null; }
+        if (清单 && Number.isInteger(清单.版本) && ast.rev !== null && ast.rev !== undefined && ast.rev !== 清单.版本) {
+          diagnostics.error("HMYR-E0304",
+            "package '" + short(目录) + "' declares 版本 " + 清单.版本 + " but its index.hmoca says rev " + ast.rev +
+            "; the two readers must not disagree", 0, 0);
+        }
+      }
+    }
 
     // owned 的第一趟：只收集签名与脏，不报。跨模块的借用分析要一张填满的表，
     // 而「填满」要等所有模块都装载完 —— 所以句子留到第二趟。

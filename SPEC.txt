@@ -393,8 +393,10 @@ design/FILETYPE.txt 第三节。
     as 别名今天仍然是记录，而它要的东西比 pub 更多：它要「这个名字属于哪个模块」，
     那正是命名空间本身。所以剩下的那一半要动求值器。
   ・第三步 包与依赖：[成了一半] 包名能解析到实际文件（包根 + index.hmoca），版本用 rev 检查，
-    判据在 test/owned-check.test.mjs 第十三节。还缺的是包管理 kagaribi 那一套：
-    清单、许可、哈希、不许运行时下载。
+    判据在 test/owned-check.test.mjs 第十三节。包清单也进来了：每个包一份 hmyr.hmkit，
+    四项（名字 / 版本 / 许可 / 哈希），装载器验形状（E0304），tools/hmkit-check.mjs 算哈希。
+    见 design/PKGMAN.txt，判据在 test/pkg-manifest.test.mjs。
+    还缺的是 kagaribi 那一套：依赖列表与版本范围、签名、以及「显式步骤」长什么样。
 
 顺序的理由没变：第三步的后半（包管理）必须有模块系统当前提；而第二步要动求值器，
 那是这个仓库里最贵的一次改动。

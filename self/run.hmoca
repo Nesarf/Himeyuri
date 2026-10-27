@@ -616,14 +616,17 @@ fn 是路径(相对: String) -> Bool {
   return false
 }
 
-// 从某个目录往上找「包根」：第一个含 hmyr.hmkit 的目录。
-// 找不到就交回出发的那个目录 —— 与宿主那一侧的兜底一致（那里回仓库根）。
-fn 找包根从(目录: String, 次: Int) -> String effects(file) {
-  if 次 > 64 { return 目录 }
-  if file_exists(目录 + "/hmyr.hmkit") { return 目录 }
+// 从某个目录往上找「包根」：最外层的那个含 hmyr.hmkit 的目录。
+// 「最外层」是必要的：每个包自己在 hmyr.hmkit 里说明身份（design/PKGMAN.txt），
+// 所以「第一个含清单的目录」会是包自己 —— 于是 import "乙包" 会被解析成
+// 甲包/乙包/index.hmoca。往上走到底、取最后遇到的那个，才是这个工程的外壳。
+fn 找包根从(目录: String, 最后: String, 次: Int) -> String effects(file) {
+  if 次 > 64 { return 最后 }
+  var 记 = 最后
+  if file_exists(目录 + "/hmyr.hmkit") { 记 = 目录 }
   let 上 = 目录部分(目录)
-  if 上 == 目录 { return 目录 }
-  return 找包根从(上, 次 + 1)
+  if 上 == 目录 { return 记 }
+  return 找包根从(上, 记, 次 + 1)
 }
 
 // 一个 import 说明 → 一个路径。
@@ -631,7 +634,7 @@ fn 找包根从(目录: String, 次: Int) -> String effects(file) {
 fn 解析路(目录: String, 相对: String) -> String effects(file) {
   if 是绝对(相对) { return 相对 }
   if 是路径(相对) { return 拼路径(目录, 相对) }
-  return 找包根从(目录, 0) + "/" + 相对 + "/index.hmoca"
+  return 找包根从(目录, 目录, 0) + "/" + 相对 + "/index.hmoca"
 }
 
 fn 读一棵(目录: String, 相对: String, 已读: Int, 源码们: Int) effects(file) {
