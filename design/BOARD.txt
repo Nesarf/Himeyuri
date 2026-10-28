@@ -1,0 +1,102 @@
+板子这一侧：HMYR 在一个微控制器上跑
+====================================================================
+
+  2026-10-27 起。目标板是 Nucleo-F411RE（STM32F411RE，Cortex-M4F 96 MHz，
+  Flash 512 KB，SRAM 128 KB）。这一页记的是「这条路走到哪儿了」，
+  以及每一步用什么命令复现。
+
+一、现在到哪一步
+--------------------------------------------------------------------
+
+    [成] 工具链进来：MSYS2 的 ucrt64 双栈
+
+         pacman -S mingw-w64-ucrt-x86_64-arm-none-eabi-gcc make
+         → arm-none-eabi-gcc 16.1.0、GNU Make 4.4.1
+
+    [成] 编译：vm/hmyr.c 一行没改就编得过（除了那处 main，见第三节）
+
+         text 161211 · data 8 · bss 3164（-Os，Cortex-M4）
+         → 板子 Flash 512 KB，占三成
+
+    [成] 在模拟器上跑通：QEMU 的 mps2-an385（Cortex-M3）
+
+         examples/zone-ledger.hmoca 的完整输出：
+           行=4 总长=15
+           各段=5,3,4,3
+           关之前 held=5
+           关之后 报告.live=1 zone=managed
+
+         这个示例同时用上 arena、owned、managed 三区 —— 也就是说
+         区模型在真 ARM 上是对的，不只是「打印了个数」。
+
+    [未成] 板子上的串口：port/uart.c 写了 USART2（PA2/PA3，AF7，BRR 0x8B），
+           而它在 QEMU 的 stm32f4 模型上 TXE 不置起，所以没验过。
+           真板子上的第一件事就是验它（见第四节的验法）。
+
+    [未成] 烧写：ST-Link 那一侧还没有接到构建里。
+
+二、两个文件各自管什么
+--------------------------------------------------------------------
+
+    port/startup_cm4_gnu.s    向量表 + Reset_Handler（.data 拷贝、.bss 清零、bl main）
+    port/link.ld              STM32：Flash 0x08000000 / RAM 0x20000000 / 栈顶 0x2001C000
+    port/link-mps2.ld         MPS2：Flash 0x00000000 / RAM 0x20000000 / 栈顶 0x20100000
+    port/arm-port.c           平台口：把「读字节码」与「写出口」换成内存里的两段
+    port/board-main.c         板侧入口：装平台口、跑、把出口交给串口
+    port/uart.c               Nucleo 的 USART2
+    port/uart-mps2.c          MPS2 的 CMSDK UART
+    port/Makefile             四根旋钮：CPU / UART / LDSCRIPT / PROGRAM
+
+  两份串口、两份链接脚本、不是「一份带开关的」：三者都是「换芯片时要改的数」，
+  而一个文件里放两套地址，最容易出的错是改了这边忘了那边。
+
+三、为板子改的那一处
+--------------------------------------------------------------------
+
+    vm/hmyr.c 的 main 现在包在 #ifndef HMYR_BOARD 里。
+
+    一条 #ifndef 就够，因为「这台机器与它跑在哪无关」这件事在 hmyr_运行 以下
+    已经成立 —— 只有「从哪儿拿字节码、往哪儿写出口」是平台的事，而那两件
+    本来就在 port/ 里。
+
+四、怎么复现（三条命令）
+--------------------------------------------------------------------
+
+    在模拟器上跑（Cortex-M3）：
+
+      cd port && make elf PROGRAM=examples/zone-ledger.hmoca \
+        UART=uart-mps2.c LDSCRIPT=link-mps2.ld CPU=cortex-m3
+      qemu-system-arm -M mps2-an385 -kernel build/hmyr-board.elf \
+        -nographic -monitor none -serial stdio
+
+    给板子编（Cortex-M4）：
+
+      cd port && make elf PROGRAM=examples/zone-ledger.hmoca
+
+    诊断用的心跳：编的时候加 -DHMYR_HEARTBEAT，程序会在输出之前先吐一个叹号。
+    它把「没跑起来」与「跑了没话说」分开，而那是最费时间的一步。
+
+五、三个已经踩过的坑
+--------------------------------------------------------------------
+
+    一、main 重复。vm/hmyr.c 有 main，board-main.c 也有 —— 链接器说 multiple
+       definition。见第三节。
+
+    二、objcopy 的符号名由「它看到的路径」决定。传 build/program.hmoks 会得到
+       _binary_build_program_hmoks_start，而 board-main.c 等的是
+       _binary_program_hmoks_start。差一个目录名就链不上，而弱声明的症状是
+       「字节码是空的」—— 看上去像程序自己没跑。
+
+    三、核不同。用 -mcpu=cortex-m4 编给 Cortex-M3 的 MPS2，M4 的 DSP 指令在 M3 上
+       是未定义指令，症状是 lockup（R15 = 0，R14 = 0xfffffff9）。所以 CPU 是一根
+       旋钮，不是一句优化选项。
+
+六、下一步
+--------------------------------------------------------------------
+
+    ・真板子上验串口：烧一个只吐叹号的映像，看 ST-Link 的虚拟串口有没有反应。
+      有反应，就说明 port/uart.c 那三个数（基址、引脚复用、BRR）都填对了。
+    ・把 ST-Link 的烧写接进 Makefile（st-flash 或 openocd，看本机装哪个）。
+    ・然后才是「更大的程序」：现在的三区示例只用了 bss 的一部分，
+      而 bss 48128 字节已经是板子 SRAM 的三分之一 —— 下一次要量的是
+      跑自举层那一格需要多少。

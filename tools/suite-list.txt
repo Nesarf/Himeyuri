@@ -171,3 +171,5 @@ selfassign	test/self-assign.test.mjs
 selfif	test/self-if.test.mjs
 selfcompare	test/self-compare.test.mjs
 selfsig	test/self-sig.test.mjs
+namespace	test/namespace.test.mjs
+pkgmanifest	test/pkg-manifest.test.mjs

@@ -5221,6 +5221,13 @@ int hmyr_运行(const char *路径, int 参数量, char **参数) {
 }
 
 #ifndef HMYR_LIB
+/* 板子上没有「命令行」，也就没有这个 main —— 那一边的入口是 port/board-main.c。
+ *
+ * 一条 #ifndef 就够，而不必把整个文件拆成两份：这台机器与「它跑在哪」无关这件事，
+ * 在 hmyr_运行 以下就已经成立，只有「从哪儿拿字节码、往哪儿写出口」是平台的事，
+ * 而那两件事本来就在 port/ 里。
+ */
+#ifndef HMYR_BOARD
 int main(int argc, char **argv) {
 #ifdef _WIN32
   /* 先换成宽命令行切出来的那一份：main 给的那份已经把中文路径弄坏了。 */
@@ -5316,4 +5323,5 @@ int main(int argc, char **argv) {
   }
   return run_bytecode(argv[1], argv[1], argc - 2, argv + 2, 步限从环境(argv[1]));
 }
+#endif  /* HMYR_BOARD：板子上这一份 main 不存在，入口是 port/board-main.c */
 #endif  /* HMYR_LIB：库那一侧不要 main，要的是 hmyr_运行 */
