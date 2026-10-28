@@ -74,9 +74,14 @@
   design/AUDIT.txt       一次通查与逐条对照的记录
   design/DISTRO.txt      一个发行版该有什么，以及这里到哪儿了
   design/SELFRUN.txt     最终目标与三步路线
+  design/PKGMAN.txt      一个包怎么说明自己：清单、版本、依赖、哈希链、签名
+  design/HMGET.txt       一个包怎么进来、又怎么拿掉：来源、校验、卸载的三条规矩
+  design/BOARD.txt       跑在一块 Cortex-M4 板子上：四层证据与它装得下多少
   conformance/plain.mjs  七十句中文，一句一个编号
 
   而想先看形状而不是文字的时候：
 
     node tools/impact.mjs --map                整张工程地图：谁 import 谁、每个套件加载了什么
     node tools/impact.mjs self/body.hmoca       给一个文件，答「改动会碰到哪些套件」而不必试跑
+    node tools/hmget.mjs --from <来源> --into <包根> <包名>   取一个包（只从文件，不联网）
+    node tools/hmget.mjs --remove --into <包根> --dry-run <包名>  说清会删什么而不动手
