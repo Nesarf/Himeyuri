@@ -210,7 +210,13 @@ const walk = (dir) => {
     else if (entry.name.endsWith(".mjs")) sources.push(full);
   }
 };
+// 扫 src 与 tools：两边都会 emit 编号。
+//
+// 只扫 src 曾经是对的 —— 那时候只有求值器与装载器会报错。现在 tools/hmget.mjs
+// 也报（E0308 / E0309 / E0310：来源里没有这个包、哈希不符、目标已存在），
+// 而一个「登记了却没人 emit」的误报，正是这一条规则该避免的那种噪声。
 walk(path.join(ROOT, "src"));
+walk(path.join(ROOT, "tools"));
 const emitted = new Set();
 for (const file of sources) {
   const text = fs.readFileSync(file, "utf8");
@@ -279,4 +285,15 @@ const PRODUCTION_CASES = new Map([
 const bad = failed || xpassed || unregistered.length || dead.length || duplicated.length || unexplained.length ||
   (globalThis.__unexercised || []).length || (globalThis.__outside || []).length || (globalThis.__odd || []).length ||
   (globalThis.__grammar || 0);
+if (process.env.HMYR_CONFORMANCE_WHY) {
+  // 红的时候要能问「是哪一节」。默认不出声 —— 一份检查器不该在绿灯时也唠叨。
+  console.log("");
+  console.log("why: failed=" + failed + " xpassed=" + xpassed +
+    " unregistered=" + unregistered.length + " dead=" + dead.length +
+    " duplicated=" + duplicated.length + " unexplained=" + unexplained.length +
+    " unexercised=" + (globalThis.__unexercised || []).length +
+    " outside=" + (globalThis.__outside || []).length +
+    " odd=" + (globalThis.__odd || []).length +
+    " grammar=" + (globalThis.__grammar || 0));
+}
 process.exit(bad ? 1 : 0);

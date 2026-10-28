@@ -42,7 +42,7 @@ export const CASES = [
   { id: "C-0028", clause: "2.2", stage: "parse", title: "a missing expression fails", source: "fn f() {\n  let a =\n}\n", expect: { kind: "error", code: "HMYR-E0104" } },
   { id: "C-0029", clause: "2.2", stage: "parse", title: "if / else if / else", source: "fn f() {\n  if a { 1 } else if b { 2 } else { 3 }\n}\n", expect: { kind: "clean" } },
   { id: "C-0030", clause: "2.2", stage: "parse", title: "a match arm without => fails", source: 'fn f() {\n  match x {\n    1 "one"\n  }\n}\n', expect: { kind: "error", code: "HMYR-E0101" } },
-  { id: "C-0031", clause: "2.2", stage: "parse", title: "one syntax error does not cascade", source: 'fn f() {\n  let a = 1 +\n  let b = 2\n  let c = 3\n}\n', expect: { kind: "error", code: "HMYR-E0104" } },
+  { id: "C-0031", clause: "2.2", stage: "parse", title: "one syntax error does not cascade", source: 'fn f() {\n  let a = 1 +\n  let b = 2\n  let c = 3\n}\n', expect: { kind: "error", code: "HMYR-E0104" } },
 
   // ---------- 2.3 types and evaluation ----------
   { id: "C-0040", clause: "2.3", stage: "run", title: "arithmetic follows precedence", source: 'fn main() {\n  print(1 + 2 * 3)\n}\n', expect: { kind: "output", value: ["7"] } },

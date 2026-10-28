@@ -183,14 +183,14 @@ export function loadUnit(entry, options = {}) {
   for (const 键 of order) {
     const 模块 = modules.get(键);
     if (模块.rev === -1) {
-      const 条 = { code: "HMYR-E0100", message: "rev is not followed by a revision number", file: 键 };
+      const 条 = { code: "HMYR-E0101", message: "rev is not followed by a revision number", file: 键 };
       诊断.errors.push(条);
       诊断.items.push(条);
       模块.rev = null;
     }
     for (const imp of Array.from(模块.imports || [])) {
       if (imp && imp.rev === -1) {
-        const 条 = { code: "HMYR-E0100", message: "rev is not followed by a revision number", file: 键 };
+        const 条 = { code: "HMYR-E0101", message: "rev is not followed by a revision number", file: 键 };
         诊断.errors.push(条);
         诊断.items.push(条);
         imp.rev = null;
