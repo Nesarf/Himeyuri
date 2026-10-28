@@ -171,7 +171,10 @@ console.log("  " + (unexplained.length ? unexplained.length + " clause(s) with n
   // What "portable" means here is declared, not assumed: the modules all three runtimes provide
   // (Deno and Bun through node compatibility). readline belongs: reading a line-oriented stdio stream
   // is exactly what an embedded host needs, and all three have it.
-  const PORTABLE = new Set(["fs", "path", "url", "crypto", "os", "zlib", "child_process", "readline", "net"]);
+  // http 也属于这一类：它只是「起一台本机服务器」用的，而三家的 node 兼容层都有它。
+  // 而它出现在哪一个文件里是有讲究的 —— 只在 test/hmget.test.mjs，用来验 http 来源
+  // 仍然不联网；src 与 tools 一侧用的是 fetch（全局的，不需要 import）。
+  const PORTABLE = new Set(["fs", "path", "url", "crypto", "os", "zlib", "child_process", "readline", "net", "http"]);
 
 // 专有模块：不是三个运行时都有，但某一组能力必须靠它。
 // 用了就登记在这里，并且要在 design 里写明为什么——而「登记」不是「视而不见」。
