@@ -412,6 +412,42 @@ static void 堆账报一下(void) {
  * 有了这个接口，板侧可以在程序跑完之后把真数吐出来，而那个数里没有诊断开销。 */
 size_t hmyr_堆峰值(void) { return g_mem_peak; }
 
+/* 装载分步跟踪：开一次，装载的每一步之后把「到这一步为止的堆峰值」报出去。
+ *
+ * 为什么需要它，而不是在桌面上算：同一个改动在两个平台上省下的量差了两个数量级
+ * —— code_at 压成两字节，32 位桌面上省 22802 字节，板子上只省 482。
+ * 那说明两个平台不是卡在同一处，而看代码看不出来。
+ *
+ * 为什么不用环境变量：板子上 getenv 返回 0，那一条开不起来。所以它是一条接口，
+ * 板侧自己决定要不要开（board-main.c 在 HMYR_LOAD_TRACE 编译期开关下开）。 */
+static int g_装载跟踪 = 0;
+
+void hmyr_开装载跟踪(void) { g_装载跟踪 = 1; }
+
+/* 一路送到平台口（板子上是串口），因为板子上 stderr 是空的 —— 与 分配失败
+ * 走同一条路。桌面上的 报错出去 会退回 fprintf(stderr)。 */
+static void 报错出去(const char *话, size_t 长);
+
+static void 报装载步(const char *步) {
+  if (!g_装载跟踪) return;
+  char 话[96];
+  int 位 = 0;
+  const char *头 = "loadstep ";
+  while (*头 && 位 < 20) 话[位++] = *头++;
+  while (*步 && 位 < 40) 话[位++] = *步++;
+  话[位++] = '=';
+  {
+    char 数[24];
+    int 数位 = 0;
+    size_t 值 = g_mem_peak;
+    if (值 == 0) 数[数位++] = '0';
+    while (值 > 0) { 数[数位++] = (char)('0' + (值 % 10)); 值 /= 10; }
+    while (数位 > 0 && 位 < 90) 话[位++] = 数[--数位];
+  }
+  话[位++] = '\n';
+  报错出去(话, (size_t)位);
+}
+
 /* 分配直方图的第 i 档（按 8 字节一档，24 档）。给裸机那一侧读 ——
  * 那边没有 stderr，所以「打出来看」这条路不通，只能让板侧自己把数字取走再吐。
  *
@@ -1531,6 +1567,7 @@ static void load_program(const uint8_t *bytes, size_t len) {
 
   g_机->函数数 = rd_u16(&r);
   g_机->函数们 = (Func *)calloc(g_机->函数数 ? g_机->函数数 : 1, sizeof(Func));
+  报装载步("函数表");
   for (uint32_t i = 0; i < g_机->函数数; i++) {
     Func *f = &g_机->函数们[i];
     f->name = (uint16_t *)rd_str(&r, &f->name_len);
@@ -1556,8 +1593,10 @@ static void load_program(const uint8_t *bytes, size_t len) {
       读一条(&r, NULL);
     }
   }
+  报装载步("函数们");
   uint16_t nglob = rd_u16(&r);
   for (uint16_t i = 0; i < nglob; i++) { uint32_t n; rd_str(&r, &n); }
+  报装载步("全局名");
 
   /* HMYR_POOL=1：把这个名字池按索引打出来。它与 JS 侧按同一顺序模拟出来的
    * 池并排 diff，第一处不同就是文件读取（或池分配）出错的地方。 */

@@ -75,6 +75,12 @@ int main(void) {
 #endif
   板子装上(码起, 长, 板子错);
 
+  /* 装载分步：板子上的瓶颈与桌面不是同一个地方（code_at 压两字节时桌面省 22802、
+   * 板子只省 482），所以每一步都要能从串口读出来。只在 HMYR_LOAD_TRACE 下打开。 */
+#ifdef HMYR_LOAD_TRACE
+  hmyr_开装载跟踪();
+#endif
+
   char 名[] = "program.hmyrb";
   char *参数[1] = { 名 };
   int 退出码 = hmyr_运行(名, 1, 参数);
