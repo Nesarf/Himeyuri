@@ -1364,16 +1364,23 @@ typedef struct Func {
   uint16_t **effects;
   uint32_t *effect_lens;
   uint32_t ncode;
-  /* 指令不预先解成 Ins 数组，只记每条在这份字节码里的偏移。
+  /* 指令不预先解成 Ins 数组，只记每条在这份字节码里的位置。
    *
    * 为什么：装载占整个 footprint 的 96%（32 位桌面上 1075474 字节，其中
    * 执行只占 49430），而 Ins 每条约四十字节、一份五份自举层有一万多条。
-   * 改成「偏移表 + 现场解一条」之后，那四十字节换成四字节。
+   * 改成「偏移表 + 现场解一条」之后，那四十字节换成两字节。
+   *
+   * 为什么是段内偏移而不是绝对偏移：一张一万四千项的表，四字节是 56 KB，
+   * 两字节是 28 KB —— 而板子上 RAM 只有 128 KB，28 KB 不是小数。
+   * 段内偏移能放进两字节，是因为一个函数的指令流在一个文件里不会跨过 64 KB
+   * （最大的那一个约 30 KB，见 design/BOARD.txt 第十二节那次量测）。
+   * 装载时若真的越了线，会在那里停下并说出来 —— 悄悄截断比停下坏得多。
    *
    * 为什么保留指令序号而不是全改成字节偏移：pc 与所有跳转目标都是序号，
    * 而改成字节偏移会动字节码格式 —— 那是另一件事，且它会让两台机器之间
    * 的字节码不再通用。 */
-  uint32_t *code_at;
+  uint32_t code_base;
+  uint16_t *code_at;
 } Func;
 
 /* A name pool: every string a caller might need to compare by name. */
@@ -1535,10 +1542,17 @@ static void load_program(const uint8_t *bytes, size_t len) {
     for (uint16_t e = 0; e < f->neffects; e++) f->effects[e] = (uint16_t *)rd_str(&r, &f->effect_lens[e]);
     f->ncode = rd_u32(&r);
 /* 指令只记偏移，不建 Ins 数组 —— 现场解一条（读一条 的第二参数传 NULL）。
-     * 这一句是「不整份驻留」的全部：把四万字节的偏移表换掉几十万字节的指令数组。 */
-    f->code_at = (uint32_t *)calloc(f->ncode ? f->ncode : 1, sizeof(uint32_t));
+     * 这一句是「不整份驻留」的全部：把两字节的段内偏移换掉几十万字节的指令数组。 */
+    f->code_base = (uint32_t)r.at;
+    f->code_at = (uint16_t *)calloc(f->ncode ? f->ncode : 1, sizeof(uint16_t));
     for (uint32_t c = 0; c < f->ncode; c++) {
-      f->code_at[c] = (uint32_t)r.at;
+      size_t 段内 = r.at - (size_t)f->code_base;
+      if (段内 > 0xFFFFu) {
+        /* 越界要说出来：悄悄截断会让执行跳到错的指令上，而那种错查起来最费时间。 */
+        fprintf(stderr, "hmyr: a function instruction stream exceeds 64 KB\n");
+        exit(2);
+      }
+      f->code_at[c] = (uint16_t)段内;
       读一条(&r, NULL);
     }
   }
@@ -4376,7 +4390,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
      * 解出来的这一份活在栈上，只够这一轮用 —— 而这一轮的其余部分照旧读 *in。 */
     Ins 本条;
     {
-      Reader rr = { g_码起, g_码长, f->code_at[(uint32_t)pc] };
+      Reader rr = { g_码起, g_码长, (size_t)f->code_base + f->code_at[(uint32_t)pc] };
       读一条(&rr, &本条);
     }
     Ins *in = &本条;
