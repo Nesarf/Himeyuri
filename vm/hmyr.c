@@ -266,11 +266,46 @@ static void 记一笔(size_t n) {
   让一让(n);
 }
 
+/* 分配直方图：按大小分桶，看「哪一档分配最多」。
+ *
+ * 为什么要有这一条：同一个程序在 32 位宿主上是 75343 字节的堆峰值，
+ * 而在 Cortex-M4 上是 39322 —— 两个都是 4 字节指针，差的那一半光靠读代码找不到。
+ * 有了直方图，两边的差别会落在一个具体的档上（比如「96 字节那一档多分配了 2 倍」），
+ * 而那种句子是可以去查的。
+ *
+ * 桶按 8 字节对齐分，因为两边都按 8 对齐 —— 对齐不在这一层，而在 memalign/结构布局。
+ * 只在 HMYR_MALLOC_HIST=1 时统计，平常一个字节都不多花。 */
+#define 桶数 24
+static size_t g_桶[桶数];
+static int g_记直方 = 0;
+
+static void 直方记一笔(size_t n) {
+  if (!g_记直方) return;
+  size_t 档 = n / 8;
+  if (档 >= 桶数) 档 = 桶数 - 1;
+  g_桶[档]++;
+}
+
+static void 直方报一下(void) {
+  fprintf(stderr, "hist:");
+  for (int i = 0; i < 桶数; i++) {
+    if (g_桶[i] == 0) continue;
+    fprintf(stderr, " %d:%llu", (int)(i * 8), (unsigned long long)g_桶[i]);
+  }
+  fprintf(stderr, "\n");
+}
+
+static void 直方开(void) {
+  g_记直方 = 1;
+  atexit(直方报一下);
+}
+
 static void *hm_malloc(size_t n) {
   unsigned char *p = (unsigned char *)原malloc(n + sizeof(size_t));
   if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
   *(size_t *)p = n;
   记一笔(n);
+  直方记一笔(n);
   return p + sizeof(size_t);
 }
 
@@ -314,6 +349,16 @@ static void 堆账报一下(void) {
  *
  * 有了这个接口，板侧可以在程序跑完之后把真数吐出来，而那个数里没有诊断开销。 */
 size_t hmyr_堆峰值(void) { return g_mem_peak; }
+
+/* 分配直方图的第 i 档（按 8 字节一档，24 档）。给裸机那一侧读 ——
+ * 那边没有 stderr，所以「打出来看」这条路不通，只能让板侧自己把数字取走再吐。
+ *
+ * 为什么这件事值得一个接口：同一个程序在 32 位宿主上是 75347 字节、
+ * 在 Cortex-M4 上是 39322，两个都是 4 字节指针。差的那一半靠读代码找不到，
+ * 而直方图能把它落在一个具体的档上。 */
+size_t hmyr_分配档(int i) { return (i >= 0 && i < 桶数) ? g_桶[i] : 0; }
+int hmyr_分配档数(void) { return 桶数; }
+void hmyr_开直方(void) { g_记直方 = 1; }
 
 /* HMYR_HEAP_ONLY=1：只报峰值，不开诊断。
  *
@@ -5284,6 +5329,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i < TRACE_N; i++) g_trace[i].op = 255;
   if (getenv("HMYR_MEM")) atexit(堆账报一下);
   else if (getenv("HMYR_HEAP_ONLY")) atexit(堆峰值报一下);
+  if (getenv("HMYR_MALLOC_HIST")) 直方开();
   /* 回收：默认开，HMYR_GC=0 关掉。阈值默认三十二兆（HMYR_GC_BYTES 改）。
    * 为什么改默认：实测同一份自编译，关着峰值 279.3 兆、开着 151.2 兆，
    * 而耗时几乎一样（12.8 秒对 12.6 秒）。原来那句「一次运行很短，GC 是另一件工作」
