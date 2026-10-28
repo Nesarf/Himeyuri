@@ -229,3 +229,12 @@
   会被当成一堆不认识的语句。pack.hmoca 里补了与 self/run.hmoca 同形的 去导入
   （逐行看、只认行首的 import 与词界）—— 这不是语言的新能力，
   而是「读进来的东西要先整理」这一件搬运工的日常。
+
+[改] 2026-10-28：上面第一条「自举 parser 的节点里还没有这个信息」现在是错的 ——
+    而它被 BOOTSTRAP.txt 自己否定了：那一页 114 行写着「六份一致现在含位置，
+    报错也带得上行号与列号了」。两页对同一件事说了相反的话，而以 BOOTSTRAP 为准，
+    因为它说的是 subset-parse.mjs 的现状，那条有套件钉着（test/subset-parse.test.mjs
+    逐节点比形状与位置）。
+
+    所以这一节「还借在 JS 那边的」现在只剩第二条：.hmoks 的落盘（写字节、拼文件头）
+    仍然在 src/code-file.mjs，由 tools/compile-hmyr.mjs 使用。
