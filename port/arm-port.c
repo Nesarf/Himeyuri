@@ -71,5 +71,34 @@ void 板子清出口(void) { g_出口长 = 0; }
 char *getenv(const char *名) { (void)名; return 0; }
 int atexit(void (*函数)(void)) { (void)函数; return 0; }
 void exit(int 码) { (void)码; for (;;) { } }
+
+/* _sbrk：把堆往上推，但**不越过栈**。
+ *
+ * 为什么必须自己写：库里那一个只推指针、不检查，于是「堆用超了」不表现为
+ * 分配失败，而是表现为「悄悄踩进栈」。design/BOARD.txt 第九节记的就是这件事 ——
+ * 桌面上量到 hello 的堆峰值 92 KB，加静态段与栈共 148 KB，超过板子的 128 KB，
+ * 而它在板上居然跑通了。两种解释只能留一个：要么堆没越界，要么越界了没被发现。
+ *
+ * 这一份让第二种解释不再可能：越过界线就返回 -1，于是 malloc 失败，
+ * 而 hmyr.c 那边会把它当成一次分配失败来报。
+ *
+ * 界线从链接脚本拿：end 是 .bss 的末尾，_estack 是栈顶。
+ * 栈那一段要先扣掉 —— 那是 link.ld 给 8 KB，两处不一致时症状是「栈一深就进 HardFault」。 */
+#ifndef HMYR_HEAP_STACK_RESERVE
+#define HMYR_HEAP_STACK_RESERVE (8u * 1024u)
+#endif
+
+extern char end;
+extern char _estack;
+
+void *_sbrk(ptrdiff_t 增) {
+  static char *当前 = 0;
+  if (当前 == 0) 当前 = &end;
+  char *界 = (char *)((uintptr_t)&_estack - HMYR_HEAP_STACK_RESERVE);
+  if (当前 + 增 > 界) return (void *)-1;   /* 不越界；让 malloc 老老实实失败 */
+  char *旧 = 当前;
+  当前 += 增;
+  return (void *)旧;
+}
 #endif
 
