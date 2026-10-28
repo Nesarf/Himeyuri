@@ -293,6 +293,11 @@ static unsigned g_行号[行号桶数];
 static unsigned g_行号次[行号桶数];
 static int g_行号用 = 0;
 
+/* GC 块按种类记数（0 值槽、1 字符串、2 索引项、3 索引）。声明放在这里，
+ * 因为报数的那一段在下面，而它要读这两张表。 */
+static unsigned g_种次[4];
+static size_t g_种字节[4];
+
 static void 直方报一下(void) {
   fprintf(stderr, "hist:");
   for (int i = 0; i < 桶数; i++) {
@@ -304,6 +309,14 @@ static void 直方报一下(void) {
    * 两行都要，因为一个说尺寸、一个说来源，而对不上就说明两边算的不是同一件事。 */
   fprintf(stderr, "lines:");
   for (int i = 0; i < g_行号用; i++) fprintf(stderr, " %u:%llu", g_行号[i], (unsigned long long)g_行号次[i]);
+  fprintf(stderr, "\n");
+  /* GC 块按种类分开：第三个答案，也是最能对上的那个 —— 行号说「哪一行」，
+   * 种类说「哪一类东西」，而「少 22 个块对不上少 51 次」这种矛盾要在这一行里解。 */
+  fprintf(stderr, "kinds:");
+  for (int i = 0; i < 4; i++) {
+    if (g_种次[i] == 0) continue;
+    fprintf(stderr, " %d:%llu/%lluB", i, (unsigned long long)g_种次[i], (unsigned long long)g_种字节[i]);
+  }
   fprintf(stderr, "\n");
 }
 
@@ -399,6 +412,13 @@ void hmyr_开直方(void) { g_记直方 = 1; }
 unsigned hmyr_分配行(int i) { return (i >= 0 && i < g_行号用) ? g_行号[i] : 0; }
 size_t hmyr_分配行次(int i) { return (i >= 0 && i < g_行号用) ? g_行号次[i] : 0; }
 int hmyr_分配行数(void) { return g_行号用; }
+
+/* GC 块按种类分开：0 值槽、1 字符串、2 索引项、3 索引。
+ * 这一组是「谁在要那些块」的第二个答案 —— 第一个是行号，而它只说明「在哪一行」，
+ * 种类说明「哪一类东西」。两者合起来，「板子为什么少分配」才有落点。 */
+size_t hmyr_种次(int i) { return (i >= 0 && i < 4) ? g_种次[i] : 0; }
+size_t hmyr_种字节(int i) { return (i >= 0 && i < 4) ? g_种字节[i] : 0; }
+int hmyr_种数(void) { return 4; }
 
 /* HMYR_HEAP_ONLY=1：只报峰值，不开诊断。
  *
@@ -1934,6 +1954,11 @@ static Gc块 *gc_查(void *p) {
   return NULL;
 }
 
+/* 按种类记数：gc_分配 本来就有种类这个参数（0 值槽、1 字符串、2 索引项、3 索引），
+ * 所以「谁在要那些 24 到 31 字节的块」不需要再编一套编号 —— 现成的分类就够。
+ *
+ * 这一组存在的理由与行号那一组相同：光知道「GC 块少了 22 个」不能解释
+ * 「24 到 31 那一档少了 51 次」，而按种类分开之后，两边的差会落到某一类上。 */
 static void *gc_分配(size_t 字节, int 种类) {
   Gc块 *b = (Gc块 *)hm_malloc(sizeof(Gc块) + 字节);
   void *载荷 = (void *)(b + 1);
@@ -1944,6 +1969,7 @@ static void *gc_分配(size_t 字节, int 种类) {
   g_gc链 = b;
   g_gc字节 += 字节;
   g_gc数++;
+  if (种类 >= 0 && 种类 < 4) { g_种次[种类]++; g_种字节[种类] += 字节; }
   gc_插(载荷, b);
   return 载荷;
 }
