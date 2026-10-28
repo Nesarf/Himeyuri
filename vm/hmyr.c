@@ -364,11 +364,12 @@ static void 分配失败(void);
  * 板子上那两次装载的失败点（53796 与 66936）互不相容，就是因为这个差。
  * 三个数并排，才分得清「请求太大」与「块太碎」。 */
 static 线程局部 size_t g_失败请求 = 0;
+static 线程局部 unsigned g_失败行 = 0;
 static 线程局部 size_t g_块数 = 0;
 
 static void *hm_malloc_at(size_t n, unsigned 行) {
   unsigned char *p = (unsigned char *)原malloc(n + sizeof(size_t));
-  if (!p) { g_失败请求 = n; 分配失败(); }
+  if (!p) { g_失败请求 = n; g_失败行 = 行; 分配失败(); }
   g_块数++;
   *(size_t *)p = n;
   记一笔(n);
@@ -1360,18 +1361,22 @@ static double rd_f64(Reader *r) {
   return d;
 }
 
-/* Strings are read as UTF-16 code units. They are kept in place in the file
- * image (which stays mapped for the whole run), so nothing is copied. */
-static const uint16_t *rd_str(Reader *r, uint32_t *out_len) {
+/* 字符串是「u16 长度 + 若干 UTF-16LE 码元」，而它本来就在文件映像里 ——
+ * 映像整份常驻（板子上在 Flash，可直接寻址），所以这里只交回偏移，一个字节都不复制。
+ *
+ * 为什么 2026-10-30 改成偏移：板子上装五份自举层时，三千次 rd_str 就是三千个块，
+ * 而每块还有四字节的头与分配器的元数据 —— 光那些就四十 KB 上下，比载荷还大。
+ * 名字池按需解码之后，这三千次分配整个不存在。
+ *
+ * 交回的是「码元数据的起点」与码元数；取第 k 个码元用 池码，
+ * 要 uint16_t* 的旧接口用 池取到 解到栈上，而记录字面量那种要长期持有的用 名复制。 */
+static uint32_t rd_str(Reader *r, uint32_t *out_len) {
   uint16_t n = rd_u16(r);
   need(r, (size_t)n * 2);
-  /* The image is byte-aligned; we cannot hand out a uint16_t* safely unless we
-   * copy, so each string gets its own buffer. */
-  uint16_t *buf = (uint16_t *)malloc((size_t)(n ? n : 1) * sizeof(uint16_t));
-  if (!buf) { 分配失败(); }
-  for (uint32_t i = 0; i < n; i++) buf[i] = rd_u16(r);
+  uint32_t off = (uint32_t)r->at;
+  r->at += (size_t)n * 2;
   *out_len = n;
-  return buf;
+  return off;
 }
 
 /* ---- program --------------------------------------------------------- */
@@ -1402,12 +1407,14 @@ typedef struct {
 } Ins;
 
 typedef struct Func {
-  uint16_t *name;
+  /* 名字与效果名都是「字节流里的偏移 + 码元数」，不复制 —— 见 rd_str 那段注释。
+   * 取码元用 名码，要 uint16_t* 的接口用 池取到 解到栈上。 */
+  uint32_t name_off;
   uint32_t name_len;
   uint16_t nargs;
   uint16_t nslots;
   uint16_t neffects;
-  uint16_t **effects;
+  uint32_t *effect_offs;
   uint32_t *effect_lens;
   uint32_t ncode;
   /* 指令不预先解成 Ins 数组，只记每条在这份字节码里的位置。
@@ -1442,19 +1449,57 @@ typedef struct Func {
 /* 一条指令占几项分段表 —— 见 Func 里 seg_at 的注释。 */
 #define 码段宽 64
 
-/* A name pool: every string a caller might need to compare by name. */
-static 线程局部 uint16_t **pool_p;
+/* A name pool: every string a caller might need to compare by name.
+ *
+ * 2026-10-30 起它只记两样东西：这个名字在字节流里的起点，以及它的码元数。
+ * 以前它存的是 uint16_t*，而每一个指针背后都是一次 malloc —— 板子上三千次。
+ * 码元本来就在文件映像里，所以「取第 k 个码元」是一条读两字节的算式，
+ * 而「这不是一次复制」正是这一整刀要的东西。 */
+static 线程局部 uint32_t *pool_off;
 static 线程局部 uint32_t *pool_len;
 static 线程局部 uint32_t pool_n, pool_cap;
 
-static int64_t pool_add(const uint16_t *p, uint32_t len) {
+/* 字节流的起点与长度：名字要从这里读。定义在装载那一段，声明提到这儿。 */
+static const uint8_t *g_码起;
+static size_t g_码长;
+
+/* 偏移 off 处第 k 个码元（UTF-16LE，与 rd_str 读的是同一份字节）。 */
+static uint16_t 名码(uint32_t off, uint32_t k) {
+  size_t 位 = (size_t)off + (size_t)k * 2;
+  return (uint16_t)(g_码起[位] | ((uint16_t)g_码起[位 + 1] << 8));
+}
+
+/* 第 idx 个名字的第 k 个码元。 */
+static uint16_t 池码(uint32_t idx, uint32_t k) { return 名码(pool_off[idx], k); }
+
+/* 把一段名字解到调用方给的缓冲里，交回写进去的码元数。
+ * 名字比缓冲长时截断，而截断不会造成静默的错误相等：长度比较用的是 pool_len，
+ * 两边长度相等才进逐码元比较，所以一个超长名字只可能与另一个同样超长、且前 cap
+ * 个码元相同的名字误配 —— 标识符不会有那么长。 */
+static uint32_t 池取到(uint32_t idx, uint16_t *buf, uint32_t cap) {
+  uint32_t n = pool_len[idx];
+  uint32_t k = n < cap ? n : cap;
+  for (uint32_t i = 0; i < k; i++) buf[i] = 池码(idx, i);
+  return k;
+}
+
+/* 复制一份出来，给「必须长期持有」的地方（记录字面量的字段名）。
+ * 那几处不多，所以这不是主路 —— 主路是 池码 那条不分配的路。 */
+static uint16_t *名复制(uint32_t off, uint32_t len) {
+  uint16_t *buf = (uint16_t *)malloc((size_t)(len ? len : 1) * sizeof(uint16_t));
+  if (!buf) { 分配失败(); }
+  for (uint32_t i = 0; i < len; i++) buf[i] = 名码(off, i);
+  return buf;
+}
+
+static int64_t pool_add(uint32_t off, uint32_t len) {
   if (pool_n == pool_cap) {
     pool_cap = pool_cap ? pool_cap * 2 : 256;
-    pool_p = (uint16_t **)realloc(pool_p, pool_cap * sizeof(uint16_t *));
+    pool_off = (uint32_t *)realloc(pool_off, pool_cap * sizeof(uint32_t));
     pool_len = (uint32_t *)realloc(pool_len, pool_cap * sizeof(uint32_t));
-    if (!pool_p || !pool_len) { 分配失败(); }
+    if (!pool_off || !pool_len) { 分配失败(); }
   }
-  pool_p[pool_n] = (uint16_t *)p;
+  pool_off[pool_n] = off;
   pool_len[pool_n] = len;
   return (int64_t)pool_n++;
 }
@@ -1464,7 +1509,7 @@ static int64_t pool_add(const uint16_t *p, uint32_t len) {
 static int name_is16(int64_t idx, const uint16_t *u, uint32_t n) {
   if (idx < 0 || (uint32_t)idx >= pool_n) return 0;
   if (pool_len[idx] != n) return 0;
-  for (uint32_t i = 0; i < n; i++) if (pool_p[idx][i] != u[i]) return 0;
+  for (uint32_t i = 0; i < n; i++) if (池码((uint32_t)idx, i) != u[i]) return 0;
   return 1;
 }
 
@@ -1472,7 +1517,7 @@ static int name_is(int64_t idx, const char *ascii) {
   if (idx < 0 || (uint32_t)idx >= pool_n) return 0;
   uint32_t n = pool_len[idx];
   if (n != strlen(ascii)) return 0;
-  for (uint32_t i = 0; i < n; i++) if (pool_p[idx][i] != (uint16_t)(unsigned char)ascii[i]) return 0;
+  for (uint32_t i = 0; i < n; i++) if (池码((uint32_t)idx, i) != (uint16_t)(unsigned char)ascii[i]) return 0;
   return 1;
 }
 
@@ -1485,8 +1530,10 @@ static int64_t read_value(Reader *r, Value *out) {
   if (t == 0x01) { *out = v_num(rd_f64(r)); return 0; }
   if (t == 0x02) {
     uint32_t n;
-    const uint16_t *p = rd_str(r, &n);
-    *out = v_str(p, n);
+    uint32_t off = rd_str(r, &n);
+    /* 字符串常量要长期持有（它进 Value，跟着值走），所以这里有一份复制。
+     * 这一条是例外而不是主路 —— 名字池那三千次不走这里。 */
+    *out = v_str(名复制(off, n), n);
     return 0;
   }
   if (t == 0x03) { *out = v_bool(rd_u8(r)); return 0; }
@@ -1508,7 +1555,9 @@ static int64_t read_value(Reader *r, Value *out) {
     uint32_t *lens = (uint32_t *)calloc(n ? n : 1, sizeof(uint32_t));
     for (uint16_t i = 0; i < n; i++) {
       uint32_t len = 0;
-      names[i] = rd_str(r, &len);
+      uint32_t off = rd_str(r, &len);
+      /* 记录字段名要跟着值走（值会被搬来搬去），所以这里复制一份。 */
+      names[i] = 名复制(off, len);
       lens[i] = len;
       read_value(r, &vals[i]);
     }
@@ -1546,7 +1595,7 @@ static void 读一条(Reader *r, Ins *out) {
     case OP_LOAD: case OP_ASSIGN: in->a = rd_u16(r); break;
     case OP_STORE: in->a = rd_u16(r); in->b = rd_u8(r); break;
     case OP_GLOBAL: case OP_FIELD: case OP_SETGLOBAL: {
-      uint32_t n; const uint16_t *p = rd_str(r, &n); in->a = pool_add(p, n); break;
+      uint32_t n; uint32_t off = rd_str(r, &n); in->a = pool_add(off, n); break;
     }
     case OP_JMP: case OP_JMPF: case OP_JMPT: case OP_JMPF_KEEP: case OP_JMPT_KEEP:
       in->a = rd_u32(r); break;
@@ -1555,15 +1604,15 @@ static void 读一条(Reader *r, Ins *out) {
       uint16_t n = rd_u16(r);
       int64_t start = (int64_t)pool_n;
       for (uint16_t k = 0; k < n; k++) {
-        uint32_t len; const uint16_t *p = rd_str(r, &len); pool_add(p, len);
+        uint32_t len; uint32_t off = rd_str(r, &len); pool_add(off, len);
       }
       in->a = start;
       in->b = n;
       break;
     }
     case OP_CALLB: case OP_CALLF: case OP_CALLM: {
-      uint32_t n; const uint16_t *p = rd_str(r, &n);
-      in->a = pool_add(p, n);
+      uint32_t n; uint32_t off = rd_str(r, &n);
+      in->a = pool_add(off, n);
       in->b = rd_u16(r);
       break;
     }
@@ -1571,11 +1620,10 @@ static void 读一条(Reader *r, Ins *out) {
   }
 }
 
-/* 整份字节码的起点与长度。装载不复制它，执行时按 code_at 里的偏移去现场解一条 ——
- * 于是「贴着字节流读」这件事在桌面上是贴着内存里的那一份，在板子上可以贴着 Flash
- * （0x08000000 可直接寻址）。那一份的生命周期与这台机器一样长，所以不必释放。 */
-static const uint8_t *g_码起;
-static size_t g_码长;
+/* 整份字节码的起点与长度（它们的定义在名字池那一段 —— 取名码要从这里读）。
+ * 装载不复制它，执行时按 seg_at 里的偏移去现场解一条 —— 于是「贴着字节流读」
+ * 这件事在桌面上是贴着内存里的那一份，在板子上可以贴着 Flash（0x08000000 可直接寻址）。
+ * 那一份的生命周期与这台机器一样长，所以不必释放。 */
 
 static void load_program(const uint8_t *bytes, size_t len) {
   Reader r = { bytes, len, 0 };
@@ -1593,13 +1641,13 @@ static void load_program(const uint8_t *bytes, size_t len) {
   报装载步("函数表");
   for (uint32_t i = 0; i < g_机->函数数; i++) {
     Func *f = &g_机->函数们[i];
-    f->name = (uint16_t *)rd_str(&r, &f->name_len);
+    f->name_off = rd_str(&r, &f->name_len);
     f->nargs = rd_u16(&r);
     f->nslots = rd_u16(&r);
     f->neffects = rd_u16(&r);
-    f->effects = (uint16_t **)calloc(f->neffects ? f->neffects : 1, sizeof(uint16_t *));
+    f->effect_offs = (uint32_t *)calloc(f->neffects ? f->neffects : 1, sizeof(uint32_t));
     f->effect_lens = (uint32_t *)calloc(f->neffects ? f->neffects : 1, sizeof(uint32_t));
-    for (uint16_t e = 0; e < f->neffects; e++) f->effects[e] = (uint16_t *)rd_str(&r, &f->effect_lens[e]);
+    for (uint16_t e = 0; e < f->neffects; e++) f->effect_offs[e] = rd_str(&r, &f->effect_lens[e]);
     f->ncode = rd_u32(&r);
 /* 指令只记偏移，不建 Ins 数组 —— 现场解一条（读一条 的第二参数传 NULL）。
      * 这一句是「不整份驻留」的全部：把两字节的段内偏移换掉几十万字节的指令数组。 */
@@ -1627,7 +1675,7 @@ static void load_program(const uint8_t *bytes, size_t len) {
   if (getenv("HMYR_POOL")) {
     for (uint32_t i = 0; i < pool_n; i++) {
       fprintf(stderr, "%u ", (unsigned)i);
-      for (uint32_t k = 0; k < pool_len[i] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)pool_p[i][k]);
+      for (uint32_t k = 0; k < pool_len[i] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)池码(i, k));
       fprintf(stderr, "\n");
     }
   }
@@ -1735,7 +1783,12 @@ static void 分配失败(void) {
   }
   位 = 追加数(话, 位, g_块数);
   {
-    const char *尾 = " bytes\n";
+    const char *丁 = " bytes at line ";
+    while (*丁) 话[位++] = *丁++;
+  }
+  位 = 追加数(话, 位, g_失败行);
+  {
+    const char *尾 = "\n";
     while (*尾) 话[位++] = *尾++;
   }
   报错出去(话, (size_t)位);
@@ -1947,9 +2000,21 @@ static void 函数名(Func *f, char *out, size_t cap) {
   size_t n = 0;
   if (f && cap > 1) {
     n = f->name_len < cap - 1 ? f->name_len : cap - 1;
-    for (size_t i = 0; i < n; i++) out[i] = (f->name[i] < 128) ? (char)f->name[i] : '?';
+    for (size_t i = 0; i < n; i++) {
+      uint16_t 码 = 名码(f->name_off, (uint32_t)i);
+      out[i] = (码 < 128) ? (char)码 : '?';
+    }
   }
   if (cap) out[n] = 0;
+}
+
+/* 名字转成 UTF-8，给诊断用（分配一份，调用方 free）。
+ * 走一次栈缓冲：名字现在只是一段偏移，而 utf16_to_utf8 要的是连续码元。 */
+static char *名字成文(Func *f) {
+  uint16_t 缓[128];
+  uint32_t n = f->name_len < 128 ? f->name_len : 128;
+  for (uint32_t k = 0; k < n; k++) 缓[k] = 名码(f->name_off, k);
+  return utf16_to_utf8(缓, n);
 }
 
 static void 记深度(Func *f, Func *父) {
@@ -1960,14 +2025,14 @@ static void 记深度(Func *f, Func *父) {
       char 子名[64], 父名[48];
       函数名(f, 子名, sizeof 子名);
       函数名(父, 父名, sizeof 父名);
-      char *名 = utf16_to_utf8(f->name, f->name_len);
+      char *名 = 名字成文(f);
       fprintf(stderr, "DEPTH %u #%ld %s (from %s) %s\n", (unsigned)g_深度,
               (long)(f - g_机->函数们), 子名, 父名, 名 ? 名 : "?");
       free(名);
     }
   }
   if (g_depth_cap && g_深度 > g_depth_cap) {
-    char *名 = utf16_to_utf8(f->name, f->name_len);
+    char *名 = 名字成文(f);
     fprintf(stderr, "hmyr: calls went %u deep, past the ceiling %u (at %s)\n",
             (unsigned)g_深度, (unsigned)g_depth_cap, 名 ? 名 : "?");
     free(名);
@@ -1977,7 +2042,18 @@ static void 记深度(Func *f, Func *父) {
 
 static void push(Value v) {
   if (g_机->stack_n == g_机->stack_cap) {
+    /* 初始容量看平台：桌面上 256 一次到位，板子上 64。
+     *
+     * 为什么板子要小：Value 是五十六字节，256 个就是 14336 字节 —— 而板子在
+     * 装完五份自举层之后只剩八 KB 上下。第一次 push 就要那一块，于是装载明明
+     * 成功了，程序却在第一条指令处停下（2026-10-30 的读数：want 14336）。
+     * 64 个是 3584 字节，够跑起来；真需要更深时下面的翻倍照旧，而那一步在
+     * 板子上会短暂要「新旧两份」，所以起点小一些反而更容易过。 */
+#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+    g_机->stack_cap = g_机->stack_cap ? g_机->stack_cap * 2 : 64;
+#else
     g_机->stack_cap = g_机->stack_cap ? g_机->stack_cap * 2 : 256;
+#endif
     g_机->stack = (Value *)realloc(g_机->stack, g_机->stack_cap * sizeof(Value));
     if (!g_机->stack) { 分配失败(); }
   }
@@ -2458,7 +2534,7 @@ static int64_t find_func_index(int64_t name_idx) {
     if (g_机->函数们[i].name_len != pool_len[name_idx]) continue;
     uint32_t same = 1;
     for (uint32_t k = 0; k < g_机->函数们[i].name_len; k++) {
-      if (g_机->函数们[i].name[k] != pool_p[name_idx][k]) { same = 0; break; }
+      if (名码(g_机->函数们[i].name_off, k) != 池码((uint32_t)name_idx, k)) { same = 0; break; }
     }
     if (same) return (int64_t)i;
   }
@@ -2517,11 +2593,13 @@ static int pack_value(Value v, uint8_t **段, size_t *长, size_t *容) {
   return 0;
 }
 
-static int has_effect(Func *f, const uint16_t *名, uint32_t 长) {
+/* 一个函数声明过某个效果没有。效果名按 UTF-16 码元比 ——
+ * 参数现在是「字节流里的偏移」，与 Func.effect_offs 装的是同一种东西。 */
+static int has_effect(Func *f, uint32_t 名off, uint32_t 长) {
   for (uint32_t i = 0; i < f->neffects; i++) {
     if (f->effect_lens[i] != 长) continue;
     uint32_t same = 1;
-    for (uint32_t k = 0; k < 长; k++) if (f->effects[i][k] != 名[k]) { same = 0; break; }
+    for (uint32_t k = 0; k < 长; k++) if (名码(f->effect_offs[i], k) != 名码(名off, k)) { same = 0; break; }
     if (same) return 1;
   }
   return 0;
@@ -4417,7 +4495,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     uint32_t n = pool_len[name_idx];
     if (n > 200) n = 200;
     for (uint32_t i = 0; i < n; i++) {
-      uint16_t ch = pool_p[name_idx][i];
+      uint16_t ch = 池码((uint32_t)name_idx, i);
       msg[i] = (ch < 128) ? (char)ch : '?';
     }
     msg[n] = 0;
@@ -4541,7 +4619,9 @@ static Value run_func(Func *f, Value *args, int nargs) {
       case OP_POP: pop(); pc++; break;
       case OP_GLOBAL: {
         Value 值;
-        if (!全局取(pool_p[in->a], pool_len[in->a], &值)) {
+        uint16_t 名缓[256];
+        uint32_t 名长 = 池取到((uint32_t)in->a, 名缓, 256);
+        if (!全局取(名缓, 名长, &值)) {
           fail("HMYR-R0104", "there is no such global name in scope");
           FRAME_RET(v_null());
         }
@@ -4550,7 +4630,9 @@ static Value run_func(Func *f, Value *args, int nargs) {
       /* 顶层常量的登记：值在栈顶，名字是立即数。只有顶层段发这一条。 */
       case OP_SETGLOBAL: {
         Value 值 = pop();
-        全局放(pool_p[in->a], pool_len[in->a], 值);
+        uint16_t 名缓[256];
+        uint32_t 名长 = 池取到((uint32_t)in->a, 名缓, 256);
+        全局放(名缓, 名长, 值);
         pc++; break;
       }
       case OP_BOOL: { Value v = pop(); push(v_bool(truthy(v))); pc++; break; }
@@ -4641,7 +4723,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         const uint16_t **names = (const uint16_t **)calloc(n ? n : 1, sizeof(uint16_t *));
         for (uint32_t i = 0; i < n; i++) {
           lens[i] = pool_len[in->a + i];
-          names[i] = pool_p[in->a + i];
+          names[i] = 名复制(pool_off[in->a + i], pool_len[in->a + i]);
         }
         for (uint32_t i = 0; i < n; i++) v.rec.vals[i] = g_机->stack[g_机->stack_n - n + i];
         g_机->stack_n -= n;
@@ -4654,7 +4736,9 @@ static Value run_func(Func *f, Value *args, int nargs) {
         /* 区与块是索引，它们的字段也要能读（b.zone / b.size / b.live）。
          * 记录先问、索引后问：同名时记录赢，与另外两台同一顺序。 */
         if (t.tag == T_INDEX && t.idx) {
-          int 处 = 索引找(t.idx, pool_p[in->a], pool_len[in->a]);
+          uint16_t 名缓[256];
+          uint32_t 名长 = 池取到((uint32_t)in->a, 名缓, 256);
+          int 处 = 索引找(t.idx, 名缓, 名长);
           if (处 >= 0) { push(t.idx->项[处].值); pc++; break; }
         }
         if (t.tag != T_RECORD) {
@@ -4662,12 +4746,12 @@ static Value run_func(Func *f, Value *args, int nargs) {
            * 只说了一半，而查的时候要的是另一半。 */
           char 名[64];
           uint32_t nl = pool_len[in->a] < 63 ? pool_len[in->a] : 63;
-          for (uint32_t k = 0; k < nl; k++) 名[k] = (pool_p[in->a][k] < 128) ? (char)pool_p[in->a][k] : '?';
+          for (uint32_t k = 0; k < nl; k++) { uint16_t 码 = 池码((uint32_t)in->a, k); 名[k] = (码 < 128) ? (char)码 : '?'; }
           名[nl] = 0;
           char m[220];
           char 函名[48];
           uint32_t fl3 = (g_机->当前函数 && g_机->当前函数->name_len < 47) ? g_机->当前函数->name_len : 0;
-          for (uint32_t k = 0; k < fl3; k++) 函名[k] = (g_机->当前函数->name[k] < 128) ? (char)g_机->当前函数->name[k] : '?';
+          for (uint32_t k = 0; k < fl3; k++) { uint16_t 码 = 名码(g_机->当前函数->name_off, k); 函名[k] = (码 < 128) ? (char)码 : '?'; }
           函名[fl3] = 0;
           snprintf(m, sizeof m, "field '%s' read off a value that is not a record (tag=%d, %s pc=%u)",
                    名, (int)t.tag, 函名, (unsigned)pc);
@@ -4681,7 +4765,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
           if (t.rec.name_lens[i] != pool_len[in->a]) continue;
           uint32_t same = 1;
           for (uint32_t k = 0; k < t.rec.name_lens[i]; k++) {
-            if (t.rec.names[i][k] != pool_p[in->a][k]) { same = 0; break; }
+            if (t.rec.names[i][k] != 池码((uint32_t)in->a, k)) { same = 0; break; }
           }
           if (same) { push(t.rec.vals[i]); found = 1; 位 = (int)i; break; }
         }
@@ -4691,7 +4775,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         if (g_fields_on) {
           fprintf(stderr, "EV %ld ", g_ev++);
           fprintf(stderr, "FIELD pc=%u n=%u i=%d name=", (unsigned)pc, (unsigned)t.rec.n, 位);
-          for (uint32_t k = 0; k < pool_len[in->a] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)pool_p[in->a][k]);
+          for (uint32_t k = 0; k < pool_len[in->a] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)池码((uint32_t)in->a, k));
           if (位 >= 0) {
             Value v = t.rec.vals[位];
             if (v.tag == T_BOOL) fprintf(stderr, " val=bool:%d", v.boolean ? 1 : 0);
@@ -4727,7 +4811,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         if (g_calls_on && g_calls_n < 200000) {
           char bn[64];
           uint32_t bl = pool_len[in->a] < 63 ? pool_len[in->a] : 63;
-          for (uint32_t k = 0; k < bl; k++) bn[k] = (pool_p[in->a][k] < 128) ? (char)pool_p[in->a][k] : '?';
+          for (uint32_t k = 0; k < bl; k++) { uint16_t 码 = 池码((uint32_t)in->a, k); bn[k] = (码 < 128) ? (char)码 : '?'; }
           bn[bl] = 0;
           fprintf(stderr, "EV %ld CALLB %s n=%u\n", g_ev++, bn, (unsigned)n);
           g_calls_n++;
@@ -4762,7 +4846,9 @@ static Value run_func(Func *f, Value *args, int nargs) {
           for (uint32_t i = 0; i < n; i++) args[i] = g_机->stack[g_机->stack_n - n + i];
           g_机->stack_n -= (n + 1);
           Value out = v_null();
-          调区方法(主, pool_p[in->a], pool_len[in->a], args, (int)n, &out);
+          uint16_t 名缓[256];
+          uint32_t 名长 = 池取到((uint32_t)in->a, 名缓, 256);
+          调区方法(主, 名缓, 名长, args, (int)n, &out);
           free(args);
           if (g_failed) FRAME_RET(v_null());
           push(out); pc++; break;
@@ -4779,7 +4865,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
             fprintf(stderr, "ARGS79 base=%u stackn=%u n=%u tags=", (unsigned)base, (unsigned)g_机->stack_n, (unsigned)in->b);
             for (uint32_t i = 0; i < (uint32_t)in->b; i++) fprintf(stderr, " %d", (int)g_机->stack[g_机->stack_n - (uint32_t)in->b + i].tag);
             fprintf(stderr, " lastfield=");
-            if (g_last_field >= 0) { for (uint32_t k = 0; k < pool_len[g_last_field] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)pool_p[g_last_field][k]); }
+            if (g_last_field >= 0) { for (uint32_t k = 0; k < pool_len[g_last_field] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)池码((uint32_t)g_last_field, k)); }
             fprintf(stderr, "\n");
           }
           /* 栈深要减掉本帧基线：C 这边所有帧共用一条栈，而 JS 那边每帧一条。
@@ -4802,19 +4888,19 @@ static Value run_func(Func *f, Value *args, int nargs) {
               if (callee->effect_lens[e] == 字长) {
                 uint32_t 同 = 1;
                 for (uint32_t k = 0; k < 字长; k++) {
-                  if (callee->effects[e][k] != (uint16_t)(unsigned char)字[k]) { 同 = 0; break; }
+                  if (名码(callee->effect_offs[e], k) != (uint16_t)(unsigned char)字[k]) { 同 = 0; break; }
                 }
                 if (同) continue;
               }
             }
-            if (has_effect(f, callee->effects[e], callee->effect_lens[e])) continue;
+            if (has_effect(f, callee->effect_offs[e], callee->effect_lens[e])) continue;
             char 效[32];
             uint32_t el = callee->effect_lens[e] < 31 ? callee->effect_lens[e] : 31;
-            for (uint32_t k = 0; k < el; k++) 效[k] = (callee->effects[e][k] < 128) ? (char)callee->effects[e][k] : '?';
+            for (uint32_t k = 0; k < el; k++) { uint16_t 码 = 名码(callee->effect_offs[e], k); 效[k] = (码 < 128) ? (char)码 : '?'; }
             效[el] = 0;
             char 名[64];
             uint32_t fl2 = callee->name_len < 63 ? callee->name_len : 63;
-            for (uint32_t k = 0; k < fl2; k++) 名[k] = (callee->name[k] < 128) ? (char)callee->name[k] : '?';
+            for (uint32_t k = 0; k < fl2; k++) { uint16_t 码 = 名码(callee->name_off, k); 名[k] = (码 < 128) ? (char)码 : '?'; }
             名[fl2] = 0;
             char m[200];
             snprintf(m, sizeof m, "%s uses effect '%s', which the caller did not declare", 名, 效);
@@ -4825,7 +4911,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         if (g_机->stack_n < base || g_机->stack_n - base < n) {
           char fname[64];
           uint32_t fl = callee->name_len < 63 ? callee->name_len : 63;
-          for (uint32_t k = 0; k < fl; k++) fname[k] = (callee->name[k] < 128) ? (char)callee->name[k] : '?';
+          for (uint32_t k = 0; k < fl; k++) { uint16_t 码 = 名码(callee->name_off, k); fname[k] = (码 < 128) ? (char)码 : '?'; }
           fname[fl] = 0;
           char m[260];
           snprintf(m, sizeof m, "calling %s (#%lld) wants %u argument(s), the frame has %u (pc=%u)",
@@ -4901,7 +4987,7 @@ static uint8_t *read_file(const char *path, size_t *out_len) {
 static void unload_program(void) {
   g_机->函数们 = NULL;
   g_机->函数数 = 0;
-  pool_p = NULL;
+  pool_off = NULL;
   pool_len = NULL;
   pool_n = 0;
   pool_cap = 0;
@@ -5303,10 +5389,10 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
     const uint16_t cli_name[] = { 0x547D, 0x4EE4, 0x884C, 0x5165, 0x53E3 };
     for (uint32_t i = 0; i < g_机->函数数; i++) {
       Func *f = &g_机->函数们[i];
-      if (f->name_len == 4 && f->name[0] == 'm' && f->name[1] == 'a' && f->name[2] == 'i' && f->name[3] == 'n') entry = f;
+      if (f->name_len == 4 && 名码(f->name_off, 0) == 'm' && 名码(f->name_off, 1) == 'a' && 名码(f->name_off, 2) == 'i' && 名码(f->name_off, 3) == 'n') entry = f;
       if (f->name_len == 5) {
         uint32_t same = 1;
-        for (uint32_t k = 0; k < 5; k++) if (f->name[k] != cli_name[k]) { same = 0; break; }
+        for (uint32_t k = 0; k < 5; k++) if (名码(f->name_off, k) != cli_name[k]) { same = 0; break; }
         if (same) cli = f;
       }
     }
@@ -5326,7 +5412,7 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
       if (f->name_len != 字长) continue;
       uint32_t 同 = 1;
       for (uint32_t k = 0; k < 字长; k++) {
-        if (f->name[k] != (uint16_t)(unsigned char)字[k]) { 同 = 0; break; }
+        if (名码(f->name_off, k) != (uint16_t)(unsigned char)字[k]) { 同 = 0; break; }
       }
       if (同) { top = f; break; }
     }
@@ -5393,7 +5479,7 @@ static DWORD WINAPI 线程体(LPVOID 参) {
           Func *f = &g_机->函数们[i];
           uint32_t same = 1;
           if (f->name_len != 长16) continue;
-          for (uint32_t k = 0; k < 长16; k++) if (f->name[k] != u[k]) { same = 0; break; }
+          for (uint32_t k = 0; k < 长16; k++) if (名码(f->name_off, k) != u[k]) { same = 0; break; }
           if (same) { 入口 = f; break; }
         }
       }

@@ -76,7 +76,7 @@
   design/SELFRUN.txt     最终目标与三步路线
   design/PKGMAN.txt      一个包怎么说明自己：清单、版本、依赖、哈希链、签名
   design/HMGET.txt       一个包怎么进来、又怎么拿掉：来源、校验、卸载的三条规矩
-  design/BOARD.txt       跑在一块 Cortex-M4 板子上：四层证据与它装得下多少
+  design/BOARD.txt       跑在一块 Cortex-M4 板子上：四层证据、边界表，以及五份自举层跑起来那一节
   conformance/plain.mjs  七十句中文，一句一个编号
 
   而想先看形状而不是文字的时候：
