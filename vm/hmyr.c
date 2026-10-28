@@ -385,16 +385,23 @@ static void *hm_calloc_at(size_t a, size_t b, unsigned 行) {
   return p;
 }
 
-/* 两个宏把行号钉在每个调用点上。名字与原来的函数一样，所以下面的代码一行都不用改。 */
+/* 三个宏把行号钉在每个调用点上。名字与原来的函数一样，所以下面的代码一行都不用改。 */
 #define hm_malloc(n)      hm_malloc_at((n), __LINE__)
 #define hm_calloc(a, b)   hm_calloc_at((a), (b), __LINE__)
+#define hm_realloc(p, n)  hm_realloc_at((p), (n), __LINE__)
 
-static void *hm_realloc(void *q, size_t n) {
-  if (!q) return hm_malloc(n);
+/* realloc 失败时也记下要量与行号。
+ *
+ * 为什么补这一条（2026-10-30）：板子上 50 块那一档报的是
+ * 「want 0 live 81768 peak 81800 bytes at line 0」—— 零与零说明失败落在这个函数的
+ * 原地扩容分支上，而那里以前既不记要量也不记行号。读者看到 want 0 只会以为
+ * 「堆满了」，看不出「这一次它想扩到多大」。 */
+static void *hm_realloc_at(void *q, size_t n, unsigned 行) {
+  if (!q) return hm_malloc_at(n, 行);
   unsigned char *真 = (unsigned char *)q - sizeof(size_t);
   size_t 旧 = *(size_t *)真;
   真 = (unsigned char *)原realloc(真, n + sizeof(size_t));
-  if (!真) { 分配失败(); }
+  if (!真) { g_失败请求 = n; g_失败行 = 行; 分配失败(); }
   *(size_t *)真 = n;
   g_mem_live -= 旧;
   记一笔(n);
@@ -508,7 +515,7 @@ static void 堆峰值报一下(void) {
 
 #define malloc(n) hm_malloc(n)
 #define calloc(a, b) hm_calloc(a, b)
-#define realloc(p, n) hm_realloc(p, n)
+#define realloc(p, n) hm_realloc_at((p), (n), __LINE__)
 #define free(p) hm_free(p)
 
 static int in_ranges(const uint32_t *r, size_t count, uint32_t cp) {
