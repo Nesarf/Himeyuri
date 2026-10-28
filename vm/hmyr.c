@@ -297,6 +297,9 @@ static int g_行号用 = 0;
  * 因为报数的那一段在下面，而它要读这两张表。 */
 static unsigned g_种次[4];
 static size_t g_种字节[4];
+/* 再按档分开：种类 × 大小。这一张表是为「95 个字符串块到底落进哪一档」准备的 ——
+ * 只有种类与只有档位都对不上时，交叉一下就能看出是「没分配」还是「落错了档」。 */
+static unsigned g_种档[4][24];
 
 static void 直方报一下(void) {
   fprintf(stderr, "hist:");
@@ -318,6 +321,16 @@ static void 直方报一下(void) {
     fprintf(stderr, " %d:%llu/%lluB", i, (unsigned long long)g_种次[i], (unsigned long long)g_种字节[i]);
   }
   fprintf(stderr, "\n");
+  /* 种类 × 档：最后一层证据。它一次回答「95 个字符串块到底落进哪一档」——
+   * 而只有这一层能把「种类的数」与「档位的数」对上。 */
+  for (int i = 0; i < 4; i++) {
+    int 有 = 0;
+    for (int j = 0; j < 24; j++) if (g_种档[i][j]) 有 = 1;
+    if (!有) continue;
+    fprintf(stderr, "kindband %d:", i);
+    for (int j = 0; j < 24; j++) if (g_种档[i][j]) fprintf(stderr, " %d:%u", j * 8, g_种档[i][j]);
+    fprintf(stderr, "\n");
+  }
 }
 
 static void 直方开(void) {
@@ -419,6 +432,13 @@ int hmyr_分配行数(void) { return g_行号用; }
 size_t hmyr_种次(int i) { return (i >= 0 && i < 4) ? g_种次[i] : 0; }
 size_t hmyr_种字节(int i) { return (i >= 0 && i < 4) ? g_种字节[i] : 0; }
 int hmyr_种数(void) { return 4; }
+
+/* 种类 × 档：种类 i 有多少块落在第 j 档（每档 8 字节）。
+ * 这一张表是最后那一层证据 —— 它一次回答「95 个字符串块到底落进哪一档」。 */
+size_t hmyr_种档次(int 种, int 档) {
+  if (种 < 0 || 种 >= 4 || 档 < 0 || 档 >= 24) return 0;
+  return g_种档[种][档];
+}
 
 /* HMYR_HEAP_ONLY=1：只报峰值，不开诊断。
  *
@@ -1969,7 +1989,18 @@ static void *gc_分配(size_t 字节, int 种类) {
   g_gc链 = b;
   g_gc字节 += 字节;
   g_gc数++;
-  if (种类 >= 0 && 种类 < 4) { g_种次[种类]++; g_种字节[种类] += 字节; }
+  if (种类 >= 0 && 种类 < 4) {
+    g_种次[种类]++;
+    g_种字节[种类] += 字节;
+    /* 这一块的总大小是头加载荷 —— 与 hm_malloc 那一次拿到的 n 完全一样。
+     * 记的是那个和，因为档是按它们分的。 */
+    {
+      size_t 总 = sizeof(Gc块) + 字节;
+      size_t 档2 = 总 / 8;
+      if (档2 >= 24) 档2 = 23;
+      if (g_记直方) g_种档[种类][档2]++;
+    }
+  }
   gc_插(载荷, b);
   return 载荷;
 }

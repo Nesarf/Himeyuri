@@ -59,4 +59,15 @@ unsigned hmyr_分配行(int i);
 size_t hmyr_分配行次(int i);
 int hmyr_分配行数(void);
 
+/* GC 块按种类分开：0 值槽、1 字符串、2 索引项、3 索引。hmyr_种次 是「这一类要了几块」，
+ * hmyr_种字节 是「一共多少字节」，而 hmyr_种档次(种, 档) 是「这一类有多少块落在哪个尺寸档」
+ * （每档 8 字节，24 档）。
+ *
+ * 第三个数是最后一层证据：只有它能把「种类的数」与「档位的数」对上 ——
+ * 「95 个字符串块，而 24 到 31 那一档只有 3 个」这种矛盾，正是在这里解的。 */
+size_t hmyr_种次(int i);
+size_t hmyr_种字节(int i);
+int hmyr_种数(void);
+size_t hmyr_种档次(int 种, int 档);
+
 #endif
