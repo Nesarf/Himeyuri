@@ -305,6 +305,27 @@ static void 堆账报一下(void) {
           (unsigned long long)g_mem_live, (unsigned long long)g_mem_peak);
 }
 
+/* 堆峰值，给「跑在别处」的那一侧读（板子上没有 stderr，所以打印这条路不通）。
+ *
+ * 为什么这个数值得一个正式接口：g_mem_peak 一直是**无条件**记录的
+ * （每次分配后都更新），而 HMYR_MEM 只控制打印。也就是说这个数在任何一台机器上
+ * 都已经有了，只是裸机上没有地方念出来 —— 于是 design/BOARD.txt 第九节那张表
+ * 只能拿 HMYR_MEM 的输出当依据，而那个输出带着诊断自己的分配。
+ *
+ * 有了这个接口，板侧可以在程序跑完之后把真数吐出来，而那个数里没有诊断开销。 */
+size_t hmyr_堆峰值(void) { return g_mem_peak; }
+
+/* HMYR_HEAP_ONLY=1：只报峰值，不开诊断。
+ *
+ * 它与 HMYR_MEM 的差别只有一处，而那一处正是要量准的东西：诊断（记录每次分配）
+ * 自己要占堆，而这里只读那个一直在记的数。板子上读到的 zone-ledger 是 39322 字节，
+ * 而同一个程序在 HMYR_MEM 下报 131745 —— 差 3.3 倍，那一截就是诊断自己。
+ *
+ * 格式刻意简单（一行 heap=<十进制>），因为读它的是工具，不是人。 */
+static void 堆峰值报一下(void) {
+  fprintf(stderr, "heap=%llu\n", (unsigned long long)g_mem_peak);
+}
+
 #define malloc(n) hm_malloc(n)
 #define calloc(a, b) hm_calloc(a, b)
 #define realloc(p, n) hm_realloc(p, n)
@@ -5262,6 +5283,7 @@ int main(int argc, char **argv) {
   }
   for (int i = 0; i < TRACE_N; i++) g_trace[i].op = 255;
   if (getenv("HMYR_MEM")) atexit(堆账报一下);
+  else if (getenv("HMYR_HEAP_ONLY")) atexit(堆峰值报一下);
   /* 回收：默认开，HMYR_GC=0 关掉。阈值默认三十二兆（HMYR_GC_BYTES 改）。
    * 为什么改默认：实测同一份自编译，关着峰值 279.3 兆、开着 151.2 兆，
    * 而耗时几乎一样（12.8 秒对 12.6 秒）。原来那句「一次运行很短，GC 是另一件工作」

@@ -29,4 +29,13 @@ void hmyr_装平台(const Hmyr平台 *p);
  * 桌面上那个读拿它去 fopen。交回退出码。 */
 int hmyr_运行(const char *路径, int 参数量, char **参数);
 
+/* 这次运行的堆峰值（字节）。
+ *
+ * 这个数一直是记录的，与 HMYR_MEM 无关 —— 那个环境变量只决定要不要在退出时
+ * 打到 stderr。裸机上没有 stderr，所以要么有这条接口，要么那个数就没人看得见。
+ *
+ * 为什么它比 HMYR_MEM 的输出可信：诊断自己也在堆上分配。板子上 getenv 返回 0，
+ * 诊断开不起来，于是这里读到的数就是程序自己的峰值。 */
+size_t hmyr_堆峰值(void);
+
 #endif
