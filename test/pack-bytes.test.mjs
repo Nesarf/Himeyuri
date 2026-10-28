@@ -26,12 +26,22 @@ const ok = (名, 条件, 细) => {
 
 const 跑 = (参) => spawnSync(process.execPath, 参, { cwd: 根, encoding: "utf8", timeout: 600000 });
 
-// 两边各写一份，交回 [pack 的字节, code-file 的字节]（失败时那一侧是 null）。
+// 两边各写一份，交回 [code-file 落盘的字节, pack 落盘的字节]（失败时那一侧是 null）。
+//
+// 关键在「同一个编译器、两个打包者」：左边 tools/compile-hmyr.mjs --code-file，
+// 右边 tools/compile-hmyr.mjs。两边喂进去的是同一份函数表（self/compile.hmoca
+// 交出来的那一个），只有落盘那一步不同。于是这一条问的是一件很窄的事：
+// **同一个函数表，两个打包者交出的字节一样吗。**
+//
+// 为什么不能比「两位编译者」：self/compile.hmoca 是子集，它编出的函数表本来就比
+// src/bytecode.mjs 的少（arena-on-board 差十六个字节、带全局的差二十二个）。
+// 两个编译器之间的判据是「跑出同一个答案」，那是 self-bridge 与 launcher 的事。
+// 混起来问会让这一整套变成一条永远红着的判据，而永远红的判据等于没有。
 const 两边写 = (源, 名) => {
   const js  = path.join(临, 名 + "-codefile.hmoks");
   const pk  = path.join(临, 名 + "-pack.hmoks");
-  const r1 = 跑(["tools/compile-hmyr.mjs", 源, js]);
-  const r2 = 跑(["bin/hmyr.mjs", "--compile", "self/pack.hmoca", pk, 源]);
+  const r1 = 跑(["tools/compile-hmyr.mjs", 源, js, "--code-file"]);
+  const r2 = 跑(["tools/compile-hmyr.mjs", 源, pk]);
   return {
     js: fs.existsSync(js) ? fs.readFileSync(js) : null,
     pk: fs.existsSync(pk) ? fs.readFileSync(pk) : null,
