@@ -439,22 +439,26 @@ void hmyr_开装载跟踪(void) { g_装载跟踪 = 1; }
  * 走同一条路。桌面上的 报错出去 会退回 fprintf(stderr)。 */
 static void 报错出去(const char *话, size_t 长);
 
+/* 把 size_t 写成十进制追加到缓冲里（板子上没有 snprintf，而这一行只有数字）。 */
+static int 追加数(char *话, int 位, size_t 值);
+
 static void 报装载步(const char *步) {
   if (!g_装载跟踪) return;
-  char 话[96];
+  char 话[128];
   int 位 = 0;
   const char *头 = "loadstep ";
   while (*头 && 位 < 20) 话[位++] = *头++;
   while (*步 && 位 < 40) 话[位++] = *步++;
   话[位++] = '=';
+  /* 峰值与块数并排：峰值只说「请求了多少」，块数说「切成了几块」——
+   * 而板子上真正先耗尽的常常是后者（见 分配失败 那段注释）。
+   * 一行两个数，装载的每一步都能读出「还差多少」是差在字节还是差在块。 */
+  位 = 追加数(话, 位, g_mem_peak);
   {
-    char 数[24];
-    int 数位 = 0;
-    size_t 值 = g_mem_peak;
-    if (值 == 0) 数[数位++] = '0';
-    while (值 > 0) { 数[数位++] = (char)('0' + (值 % 10)); 值 /= 10; }
-    while (数位 > 0 && 位 < 90) 话[位++] = 数[--数位];
+    const char *中 = " blocks ";
+    while (*中 && 位 < 100) 话[位++] = *中++;
   }
+  位 = 追加数(话, 位, g_块数);
   话[位++] = '\n';
   报错出去(话, (size_t)位);
 }
@@ -1524,21 +1528,32 @@ static int name_is(int64_t idx, const char *ascii) {
 
 static int64_t read_value(Reader *r, Value *out);
 
+/* 解一个值。out 为 NULL 时只把字节流扫过去，一个值都不构造 —— 装载那一步
+ * 就是这样扫指令的（见 读一条 的注释）。
+ *
+ * 为什么这一条值得单独说（2026-10-30）：以前 out 为 NULL 时照样构造，
+ * 于是一条 CONST 里的字符串常量会复制一份、然后丢掉 —— 五份自举层里有八百个，
+ * 而它们全都算进装载的块数。装载期块数从 1248 降到四百多，靠的就是这一条：
+ * 「扫过」与「造出来」是两件事，而装载只要前者。 */
 static int64_t read_value(Reader *r, Value *out) {
   uint8_t t = rd_u8(r);
-  if (t == 0x00) { *out = v_null(); return 0; }
-  if (t == 0x01) { *out = v_num(rd_f64(r)); return 0; }
+  if (t == 0x00) { if (out) *out = v_null(); return 0; }
+  if (t == 0x01) { double d = rd_f64(r); if (out) *out = v_num(d); return 0; }
   if (t == 0x02) {
     uint32_t n;
     uint32_t off = rd_str(r, &n);
     /* 字符串常量要长期持有（它进 Value，跟着值走），所以这里有一份复制。
-     * 这一条是例外而不是主路 —— 名字池那三千次不走这里。 */
-    *out = v_str(名复制(off, n), n);
+     * 而 out 为 NULL 的那条路上它一份都不该有。 */
+    if (out) *out = v_str(名复制(off, n), n);
     return 0;
   }
-  if (t == 0x03) { *out = v_bool(rd_u8(r)); return 0; }
+  if (t == 0x03) { uint8_t b = rd_u8(r); if (out) *out = v_bool(b); return 0; }
   if (t == 0x04) {
     uint16_t n = rd_u16(r);
+    if (!out) {
+      for (uint16_t i = 0; i < n; i++) read_value(r, NULL);
+      return 0;
+    }
     Value *items = alloc_values(n);
     for (uint16_t i = 0; i < n; i++) read_value(r, &items[i]);
     Value v = v_null();
@@ -1550,6 +1565,10 @@ static int64_t read_value(Reader *r, Value *out) {
   }
   if (t == 0x05) {
     uint16_t n = rd_u16(r);
+    if (!out) {
+      for (uint16_t i = 0; i < n; i++) { uint32_t len = 0; rd_str(r, &len); read_value(r, NULL); }
+      return 0;
+    }
     Value *vals = alloc_values(n);
     const uint16_t **names = (const uint16_t **)calloc(n ? n : 1, sizeof(uint16_t *));
     uint32_t *lens = (uint32_t *)calloc(n ? n : 1, sizeof(uint32_t));
@@ -1591,7 +1610,9 @@ static void 读一条(Reader *r, Ins *out) {
   in->b = 0;
   in->val = v_null();
   switch (in->op) {
-    case OP_CONST: read_value(r, &in->val); break;
+    /* out 为 NULL 时连值都不构造：装载扫一遍只需要知道它有多长。
+     * 这一句与 read_value 里那条「out 为 NULL 就不造」是一对。 */
+    case OP_CONST: read_value(r, out ? &in->val : NULL); break;
     case OP_LOAD: case OP_ASSIGN: in->a = rd_u16(r); break;
     case OP_STORE: in->a = rd_u16(r); in->b = rd_u8(r); break;
     case OP_GLOBAL: case OP_FIELD: case OP_SETGLOBAL: {
