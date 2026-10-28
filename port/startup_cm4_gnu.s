@@ -20,8 +20,9 @@
 __Vectors:
     .word _estack
     .word Reset_Handler
-    .space 4 * 14           /* 其余异常：先留空，用到哪一个再补 */
-    .word 0
+    .word 0                 /* 2: NMI */
+    .word HardFault_Handler /* 3: HardFault —— 2026-10-30 补上，理由见下面的处理函数 */
+    .space 4 * 12           /* 4..15：其余异常先留空，用到哪一个再补 */
     .size __Vectors, . - __Vectors
 
     .text
@@ -50,3 +51,19 @@ Reset_Handler:
 5:  b 5b                      /* main 返回就停在这里 —— 裸机上没有「退出去」这回事 */
 
     .ltorg                    /* ldr =符号 的字面量池落在这里，不落在代码中间 */
+
+/* 硬错误：让它在串口上说一句话，然后停住。
+ *
+ * 为什么要有这一条（2026-10-30）：六份自举层在板子上装载成功、执行时栈溢出
+ * （调试器读到 pc 0x00000000、msp 0x1ffff828 —— MSP 落在 RAM 下面），而串口
+ * 一个字节都没有。沉默与「程序根本没跑」长得一模一样，而这两种情形要查的地方
+ * 差得很远。一句话把它分成两种。
+ *
+ * 进来的时候栈可能已经不可信，所以这里不返回、也不再调别的东西：
+ * 写一行，然后停在这个循环里（写串口那层只碰寄存器）。 */
+    .thumb_func
+    .global HardFault_Handler
+    .type HardFault_Handler, %function
+HardFault_Handler:
+    bl hmyr_hard_fault
+6:  b 6b

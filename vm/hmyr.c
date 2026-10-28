@@ -449,6 +449,18 @@ static void 报错出去(const char *话, size_t 长);
 /* 把 size_t 写成十进制追加到缓冲里（板子上没有 snprintf，而这一行只有数字）。 */
 static int 追加数(char *话, int 位, size_t 值);
 
+/* 执行期的一行诊断走平台口。
+ *
+ * 为什么补这一条（2026-10-30）：六份自举层在板子上装载成功、执行却一个字节都没有 ——
+ * 因为执行期的失败信息走 fprintf(stderr)，而板子上 stderr 是空的。
+ * 装载期的失败早就走平台口（分配失败），执行期这一条是漏的。
+ * 桌面上的行为不变：报错出去 没有平台口时退回 fprintf(stderr)。 */
+static void 报一行(const char *话) {
+  size_t n = strlen(话);
+  报错出去(话, n);
+  报错出去("\n", 1);
+}
+
 static void 报装载步(const char *步) {
   if (!g_装载跟踪) return;
   char 话[128];
@@ -5446,14 +5458,14 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
     }
     if (top) {
       (void)run_func(top, NULL, 0);
-      if (g_failed) { fprintf(stderr, "%s\n", g_fail_msg); return 1; }
+      if (g_failed) { 报一行(g_fail_msg); return 1; }
     }
   }
 
   Value r = run_func(entry, NULL, 0);
   if (g_trace_on) trace_dump();
   if (g_failed) {
-    fprintf(stderr, "%s\n", g_fail_msg);
+    报一行(g_fail_msg);
     return 1;
   }
   /* 返回值就是退出码，不是输出。自举层自己会打印它那份验收的编号，

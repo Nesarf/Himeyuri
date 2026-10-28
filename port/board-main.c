@@ -54,6 +54,20 @@ __attribute__((weak)) void 板子吐字节(uint8_t 字节) {
 
 size_t 板子吐过(void) { return g_吐过; }
 
+/* 硬错误处理：说一句，然后停住。由 port/startup_cm4_gnu.s 的向量表指过来。
+ *
+ * 为什么要有它（2026-10-30）：六份自举层在板子上装载成功、执行时栈溢出 ——
+ * 调试器读到 pc 0x00000000、msp 0x1ffff828（MSP 落在 RAM 下面），
+ * 而串口上什么也没有，与「程序根本没跑」一模一样。那句话把两种情形分开。
+ *
+ * 只写一行就停在原地：进来时栈可能已经不可信，而这一层不再依赖栈上的任何东西。
+ * 名字用 ASCII，因为汇编那边要引用它。 */
+void hmyr_hard_fault(void) {
+  const char *话 = "hmyr: hard fault (stack past its reserve, or a bad access)\n";
+  for (const char *p = 话; *p; p++) 板子吐字节((uint8_t)*p);
+  for (;;) { }
+}
+
 int main(void) {
   const uint8_t *码起 = _binary_program_hmoks_start;
   size_t 长 = 0;
