@@ -42,10 +42,10 @@ static void 板子写(const uint8_t *p, size_t n) {
 }
 
 /* 板子的入口调用它：装平台、给出字节码。之后就可以调 hmyr 那边的主流程。 */
-void 板子装上(const uint8_t *字节码, size_t 长) {
+void 板子装上(const uint8_t *字节码, size_t 长, void (*报错)(const char *, size_t)) {
   g_程序 = 字节码;
   g_程序长 = 长;
-  Hmyr平台 口 = { 板子读, 板子写 };
+  Hmyr平台 口 = { 板子读, 板子写, 报错 };
   hmyr_装平台(&口);
 }
 

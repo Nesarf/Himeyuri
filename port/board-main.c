@@ -27,13 +27,16 @@
 #include "../vm/hmyr-port.h"
 
 /* 这两组由 port/arm-port.c 给出（板子与桌面共用同一份实现）。 */
-void 板子装上(const uint8_t *字节码, size_t 长);
+void 板子装上(const uint8_t *字节码, size_t 长, void (*报错)(const char *, size_t));
 size_t 板子出口长(void);
 const uint8_t *板子出口(void);
 
 /* 打进来的字节码。弱声明，理由见文件头第一条。 */
 extern const uint8_t _binary_program_hmoks_start[] __attribute__((weak));
 extern const uint8_t _binary_program_hmoks_end[] __attribute__((weak));
+
+/* 要命的事说出去（定义在文件末尾，与 main 分开放，因为它是平台口那一侧的活）。 */
+static void 板子错(const char *p, size_t n);
 
 /* 往串口发一个字节。板子上由 port/uart.c 给强定义把它顶掉；
  * 这一份是「还没接线」时的退路：字节被丢掉，但记着丢了多少，
@@ -70,7 +73,7 @@ int main(void) {
 #ifndef HMYR_HEARTBEAT
   hmyr_开直方();     /* 只有在不是心跳那一版时才统计 —— 心跳版要的是「最小可跑」 */
 #endif
-  板子装上(码起, 长);
+  板子装上(码起, 长, 板子错);
 
   char 名[] = "program.hmyrb";
   char *参数[1] = { 名 };
@@ -251,4 +254,16 @@ int main(void) {
   }
 
   return 退出码;
+}
+
+/* 要命的事说出去：把这句话逐字节交给串口。
+ *
+ * 它是 hmyr-port.h 里那个 错误 回调的板侧实现。没有它的时候，
+ * 分配失败只走 fprintf(stderr)，而板子上 stderr 是空的 —— 于是「装不下」
+ * 的表现是串口一片空白，与「程序根本没跑」一模一样（design/BOARD.txt 第十一节）。
+ *
+ * 注意它不调用 板子吐字节 之外的东西：那一层只管「一个字节发出去」，
+ * 缓冲与刷新在 arm-port.c 与 uart.c 那一侧。 */
+static void 板子错(const char *p, size_t n) {
+  for (size_t i = 0; i < n; i++) 板子吐字节((uint8_t)p[i]);
 }

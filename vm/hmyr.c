@@ -353,9 +353,13 @@ static void 行号记一笔(unsigned 行) {
   if (g_行号用 < 行号桶数) { g_行号[g_行号用] = 行; g_行号次[g_行号用] = 1; g_行号用++; }
 }
 
+/* 分配失败要说出去（定义在下面，与平台口那一段放在一起）。
+ * 声明在这里，因为失败点在十几个地方，而它们大多在平台口之前。 */
+static void 分配失败(void);
+
 static void *hm_malloc_at(size_t n, unsigned 行) {
   unsigned char *p = (unsigned char *)原malloc(n + sizeof(size_t));
-  if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  if (!p) { 分配失败(); }
   *(size_t *)p = n;
   记一笔(n);
   直方记一笔(n);
@@ -379,7 +383,7 @@ static void *hm_realloc(void *q, size_t n) {
   unsigned char *真 = (unsigned char *)q - sizeof(size_t);
   size_t 旧 = *(size_t *)真;
   真 = (unsigned char *)原realloc(真, n + sizeof(size_t));
-  if (!真) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  if (!真) { 分配失败(); }
   *(size_t *)真 = n;
   g_mem_live -= 旧;
   记一笔(n);
@@ -587,7 +591,7 @@ static void cp_push(CpBuf *b, uint32_t cp) {
   if (b->n == b->cap) {
     b->cap = b->cap ? b->cap * 2 : 64;
     b->p = (uint32_t *)realloc(b->p, b->cap * sizeof(uint32_t));
-    if (!b->p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    if (!b->p) { 分配失败(); }
   }
   b->p[b->n++] = cp;
 }
@@ -839,7 +843,7 @@ static uint16_t *串存(size_t 码元数) {
   if (g_gc开) return gc_串分配(码元数);
   {
     uint16_t *p = (uint16_t *)malloc((码元数 ? 码元数 : 1) * sizeof(uint16_t));
-    if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    if (!p) { 分配失败(); }
     return p;
   }
 }
@@ -918,7 +922,7 @@ static uint16_t *utf8_to_utf16(const char *s, size_t len, uint32_t *out_len);
 static char *拼接(const char *a, const char *b) {
   size_t na = strlen(a), nb = strlen(b);
   char *p = (char *)malloc(na + nb + 1);
-  if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  if (!p) { 分配失败(); }
   memcpy(p, a, na);
   memcpy(p + na, b, nb + 1);
   return p;
@@ -954,7 +958,7 @@ static void 字节串放(字节串 *b, const char *s, size_t n) {
     size_t 新 = b->cap ? b->cap : 4096;
     while (b->n + n + 1 > 新) 新 *= 2;
     b->p = (char *)realloc(b->p, 新);
-    if (!b->p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    if (!b->p) { 分配失败(); }
     b->cap = 新;
   }
   memcpy(b->p + b->n, s, n);
@@ -1122,11 +1126,11 @@ static 索引 *索引造(void) {
     t = (索引 *)gc_分配(sizeof(索引), 3);   /* 种类 3：里面只有指针与计数，没有 Value */
     /* 判空要在 memset 之前：写成「先 memset 再统一判空」时，裸机那一份的 -Wnonnull
      * 会说「argument 1 null where non-null expected」，而它说的是实情。 */
-    if (!t) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    if (!t) { 分配失败(); }
     memset(t, 0, sizeof(索引));
   } else {
     t = (索引 *)hm_calloc(1, sizeof(索引));
-    if (!t) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    if (!t) { 分配失败(); }
   }
   t->已排 = 1;
   return t;
@@ -1146,7 +1150,7 @@ static void 索引留(索引 *t, uint32_t 要) {
   } else {
     项 = (索引项 *)hm_calloc(新, sizeof(索引项));
   }
-  if (!项) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  if (!项) { 分配失败(); }
   if (t->n) memcpy(项, t->项, (size_t)t->n * sizeof(索引项));
   t->项 = 项;
   t->cap = 新;
@@ -1196,7 +1200,7 @@ static void 索引放(索引 *t, const uint16_t *键, uint32_t 键长, Value 值
   索引留(t, t->n + 1);
   {
     uint16_t *拷贝 = 串存(键长 ? 键长 : 1);
-    if (!拷贝) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    if (!拷贝) { 分配失败(); }
     for (uint32_t i = 0; i < 键长; i++) 拷贝[i] = 键[i];
     t->项[t->n].键 = 拷贝;
     t->项[t->n].键长 = 键长;
@@ -1214,7 +1218,7 @@ static Value case_fold(Value s, int up) {
   const uint16_t *src = s.s;
   uint32_t n = s.slen;
   uint16_t *p = 串存((size_t)((size_t)n * 3 + 1));
-  if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  if (!p) { 分配失败(); }
   uint32_t i = 0, out = 0;
   while (i < n) {
     uint32_t cp = 0;
@@ -1251,7 +1255,7 @@ static Value normalize_nfc(Value s) {
   compose_all(&b);
   /* 码点回到单元。一个码点最多摊成两个单元，按两倍算够用。 */
   uint16_t *p = 串存((size_t)(b.n ? b.n * 2 : 1));
-  if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  if (!p) { 分配失败(); }
   uint32_t out = 0;
   for (size_t k = 0; k < b.n; k++) {
     uint32_t cp = b.p[k];
@@ -1318,7 +1322,7 @@ static const uint16_t *rd_str(Reader *r, uint32_t *out_len) {
   /* The image is byte-aligned; we cannot hand out a uint16_t* safely unless we
    * copy, so each string gets its own buffer. */
   uint16_t *buf = (uint16_t *)malloc((size_t)(n ? n : 1) * sizeof(uint16_t));
-  if (!buf) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  if (!buf) { 分配失败(); }
   for (uint32_t i = 0; i < n; i++) buf[i] = rd_u16(r);
   *out_len = n;
   return buf;
@@ -1373,7 +1377,7 @@ static int64_t pool_add(const uint16_t *p, uint32_t len) {
     pool_cap = pool_cap ? pool_cap * 2 : 256;
     pool_p = (uint16_t **)realloc(pool_p, pool_cap * sizeof(uint16_t *));
     pool_len = (uint32_t *)realloc(pool_len, pool_cap * sizeof(uint32_t));
-    if (!pool_p || !pool_len) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    if (!pool_p || !pool_len) { 分配失败(); }
   }
   pool_p[pool_n] = (uint16_t *)p;
   pool_len[pool_n] = len;
@@ -1551,10 +1555,51 @@ static void put_utf8(uint32_t cp) {
  */
 #include "hmyr-port.h"
 
-static Hmyr平台 g_平台 = { NULL, NULL };
+static Hmyr平台 g_平台 = { NULL, NULL, NULL };
 
 void hmyr_装平台(const Hmyr平台 *p) {
   if (p) g_平台 = *p;
+}
+
+/* 要命的事说出去：先给平台口那一份（板子上把它写进串口），
+ * 没有平台口才退回 stderr（桌面上一直是这样）。
+ *
+ * 为什么顺序是这个：板子上 stderr 是空的，而桌面上平台口通常是空的 ——
+ * 谁装着谁说话，两边都不会两遍。 */
+static void 报错出去(const char *话, size_t 长) {
+  if (g_平台.错误) { g_平台.错误(话, 长); return; }
+  fwrite(话, 1, 长, stderr);
+}
+
+/* 分配失败：说清当时堆已经用了多少，然后停。
+ *
+ * 为什么报「已经用了多少」而不是「这次要多少」：失败点在十几处，每处的要量变量名
+ * 都不同，逐个传参会让这一条改动散到十几个函数里；而「堆峰值到哪儿了」是同一件事，
+ * 且它比单次的要量更能说明「这个程序超出了这块板子多少」。
+ *
+ * 为什么这一条值得单独一个函数：原来的写法是 fprintf(stderr, ...) 之后 exit(70)，
+ * 而那在板子上等于「什么也没说就停了」—— 串口一片空白，与「程序根本没跑」
+ * 看起来一模一样。design/BOARD.txt 第十一节那张边界表里，40 与 50 块两格
+ * 就是这种空白。现在它们会说自己是谁。 */
+static void 分配失败(void) {
+  char 话[96];
+  int 位 = 0;
+  const char *头 = "hmyr: out of memory, heap peak ";
+  while (*头) 话[位++] = *头++;
+  {
+    char 数[24];
+    int 数位 = 0;
+    size_t 值 = g_mem_peak;
+    if (值 == 0) 数[数位++] = '0';
+    while (值 > 0) { 数[数位++] = (char)('0' + (值 % 10)); 值 /= 10; }
+    while (数位 > 0) 话[位++] = 数[--数位];
+  }
+  {
+    const char *尾 = " bytes\n";
+    while (*尾) 话[位++] = *尾++;
+  }
+  报错出去(话, (size_t)位);
+  exit(70);
 }
 
 /* 一个码点编成 UTF-8，交回用掉了几个字节。 */
@@ -1598,7 +1643,7 @@ static void write_utf8(const uint16_t *s, uint32_t len, FILE *out) {
 static char *utf16_to_utf8(const uint16_t *s, uint32_t len) {
   size_t cap = (size_t)len * 4 + 1;
   char *out = (char *)malloc(cap);
-  if (!out) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  if (!out) { 分配失败(); }
   size_t n = 0;
   for (uint32_t i = 0; i < len; i++) {
     uint32_t cp = s[i];
@@ -1627,7 +1672,7 @@ static char *utf16_to_utf8(const uint16_t *s, uint32_t len) {
  * UTF-16 code units, so every read goes through this. */
 static uint16_t *utf8_to_utf16(const char *s, size_t len, uint32_t *out_len) {
   uint16_t *out = 串存(len + 1);
-  if (!out) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  if (!out) { 分配失败(); }
   size_t n = 0, i = 0;
   while (i < len) {
     unsigned char b = (unsigned char)s[i];
@@ -1794,7 +1839,7 @@ static void push(Value v) {
   if (g_机->stack_n == g_机->stack_cap) {
     g_机->stack_cap = g_机->stack_cap ? g_机->stack_cap * 2 : 256;
     g_机->stack = (Value *)realloc(g_机->stack, g_机->stack_cap * sizeof(Value));
-    if (!g_机->stack) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    if (!g_机->stack) { 分配失败(); }
   }
   g_机->stack[g_机->stack_n++] = v;
 }
@@ -2243,7 +2288,7 @@ static void 全局放(const uint16_t *名, uint32_t 名长, Value 值) {
   if (g_全局数 + 1 > g_全局容) {
     g_全局容 = g_全局容 ? g_全局容 * 2 : 16;
     g_全局项 = (全局项 *)realloc(g_全局项, sizeof(全局项) * (size_t)g_全局容);
-    if (!g_全局项) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    if (!g_全局项) { 分配失败(); }
   }
   g_全局项[g_全局数].名 = 名;
   g_全局项[g_全局数].名长 = 名长;
@@ -2947,7 +2992,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     /* 键序是「第一次放进去的顺序」。表若被二分过，物理顺序已经不是那个了 ——
      * 所以按序号另排一份下标。插入排序够用：这一支的键数是几千这个量级。 */
     序 = (uint32_t *)hm_calloc(t->n ? t->n : 1, sizeof(uint32_t));
-    if (!序) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    if (!序) { 分配失败(); }
     for (uint32_t i = 0; i < t->n; i++) 序[i] = i;
     for (uint32_t i = 1; i < t->n; i++) {
       uint32_t k = 序[i], j = i;
@@ -3331,7 +3376,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     {
       size_t cap = 256, n = 0;
       char *buf = (char *)malloc(cap);
-      if (!buf) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+      if (!buf) { 分配失败(); }
       int c = 0;
       for (;;) {
         c = fgetc(stdin);
@@ -3339,7 +3384,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
         if (n + 1 >= cap) {
           cap *= 2;
           buf = (char *)realloc(buf, cap);
-          if (!buf) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+          if (!buf) { 分配失败(); }
         }
         buf[n++] = (char)c;
       }
@@ -3379,7 +3424,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
       size_t 得 = 0;
       int 结束 = 1;
       unsigned char *buf = (unsigned char *)malloc((size_t)(want ? want : 1));
-      if (!buf) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+      if (!buf) { 分配失败(); }
 #if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
       /* 板子上没有标准输入：一个字节也读不到。 */
       结束 = 1;
@@ -3424,7 +3469,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     {
       uint32_t 数 = args[0].ilen;
       unsigned char *buf = (unsigned char *)malloc((size_t)(数 ? 数 : 1));
-      if (!buf) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+      if (!buf) { 分配失败(); }
       for (uint32_t i = 0; i < 数; i++) {
         int ok = 0;
         double b = as_num(args[0].items[i], &ok);
@@ -3843,7 +3888,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     if (nargs >= 2 && args[1].tag == T_TUPLE) {
       参量 = (int)args[1].ilen;
       参们 = (char **)calloc((size_t)(参量 ? 参量 : 1), sizeof(char *));
-      if (!参们) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+      if (!参们) { 分配失败(); }
       for (uint32_t i = 0; i < args[1].ilen; i++) {
         Value t;
         value_to_text(args[1].items[i], &t);
@@ -4648,7 +4693,7 @@ static uint8_t *桌面读文件(const char *path, size_t *out_len) {
   long n = ftell(f);
   fseek(f, 0, SEEK_SET);
   uint8_t *buf = (uint8_t *)malloc((size_t)(n > 0 ? n : 1));
-  if (!buf) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+  if (!buf) { 分配失败(); }
   size_t got = fread(buf, 1, (size_t)n, f);
   fclose(f);
   *out_len = got;
@@ -5297,7 +5342,7 @@ static int cli_main(int argc, char **argv) {
   {
     int nrest = argc - 2;
     char **参 = (char **)malloc(sizeof(char *) * (size_t)(nrest > 0 ? nrest : 1));
-    if (!参) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
+    if (!参) { 分配失败(); }
     for (int i = 0; i < nrest; i++) 参[i] = argv[i + 2];
     int 码 = run_bytecode(临时, argv[1], nrest, 参, 步限从环境(argv[1]));
     /* HMYR_KEEP 留着那份字节码：查「编错了还是跑错了」的时候，
