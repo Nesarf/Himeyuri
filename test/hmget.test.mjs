@@ -8,8 +8,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import http from "node:http";
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { spawnSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -39,6 +40,17 @@ const 造包 = (名, 内容, 改) => {
 };
 
 const 跑 = (参) => spawnSync(process.execPath, [工具, ...参], { encoding: "utf8", timeout: 120000 });
+
+// 异步的一版：http 那一条要用它。spawnSync 会把父进程的循环堵住，
+// 而「本地起一个服务器再让子进程去取」需要父进程的循环是活的。
+const 跑异步 = (参) => new Promise((解, 拒) => {
+  const 子 = spawn(process.execPath, [工具, ...参], { stdio: ["ignore", "pipe", "pipe"] });
+  let 出 = "", 错 = "";
+  子.stdout.on("data", (d) => { 出 += d; });
+  子.stderr.on("data", (d) => { 错 += d; });
+  子.on("close", (码) => 解({ status: 码, stdout: 出, stderr: 错 }));
+  子.on("error", 拒);
+});
 
 console.log("一、本地目录来源：取进来，哈希对得上");
 {
@@ -109,11 +121,40 @@ console.log("七、已经在了而且内容相同：不报错，也不重装");
   ok("没有重写文件", fs.statSync(path.join(根, "己包", "index.hmoca")).mtimeMs === 之前, "");
 }
 
-console.log("八、http 来源：这一版明说不做");
+console.log("八、http 来源：从一台本机服务器取，仍然不联网");
 {
-  const r = 跑(["--from", "https://example.com/pkg", "--into", 根, "庚包"]);
-  ok("拒绝并说清为什么", r.status !== 0 && String(r.stderr || "").includes("不从网络取"),
-    String(r.stderr || "").slice(0, 160));
+  // 这一条原来测的是「明确拒绝 http」。2026-10-28 起 http 支持了，所以它换了内容 ——
+  // 而判据仍然满足「可复现、不联网」：服务器是这一节自己起来的，端口是随机的，
+  // 内容就是同一个临时来源目录。换句话说，http 那一份实现与被测的另外两条
+  // 走的是同一批字节。
+  造包("庚包", "pub fn 庚() -> Int {\n  return 11\n}\n");
+  const 服务器 = http.createServer((请, 应) => {
+    const 相对 = decodeURIComponent(请.url.replace(/^\/+/, ""));
+    const 全 = path.join(源, 相对);
+    if (!全.startsWith(源) || !fs.existsSync(全) || !fs.statSync(全).isFile()) {
+      应.writeHead(404); 应.end("no"); return;
+    }
+    应.writeHead(200); 应.end(fs.readFileSync(全));
+  });
+  await new Promise((解) => 服务器.listen(0, "127.0.0.1", 解));
+  const 端口 = 服务器.address().port;
+  const 根2 = path.join(临, "根-http");
+  const r = await 跑异步(["--from", "http://127.0.0.1:" + 端口, "--into", 根2, "庚包"]);
+  服务器.close();
+  ok("退出码 0", r.status === 0, String(r.stderr || "").slice(0, 200));
+  ok("包装到位", fs.existsSync(path.join(根2, "庚包", "index.hmoca")), "");
+  ok("哈希也验过（错的话会报 E0309）", !String(r.stderr || "").includes("HMYR-E0309"), String(r.stderr || "").slice(0, 120));
+  ok("它说了来源是 http", String(r.stdout || "").includes("http"), String(r.stdout || "").slice(0, 160));
+}
+
+console.log("八半、http 来源上取一个不存在的包：E0308");
+{
+  const 服务器 = http.createServer((请, 应) => { 应.writeHead(404); 应.end("no"); });
+  await new Promise((解) => 服务器.listen(0, "127.0.0.1", 解));
+  const 端口 = 服务器.address().port;
+  const r = await 跑异步(["--from", "http://127.0.0.1:" + 端口, "--into", 根, "没有的包"]);
+  服务器.close();
+  ok("报 E0308", String(r.stderr || "").includes("HMYR-E0308"), String(r.stderr || "").slice(0, 160));
 }
 
 console.log("九、卸载：包没了，包根还在");

@@ -2,12 +2,22 @@
 // 取一个包：从一条显式来源搬进一个包根，并验它。
 //
 //   node tools/hmget.mjs --from <来源> --into <包根> <包名>
+//   node tools/hmget.mjs --remove --into <包根> [--dry-run] [--force] <包名>
 //
-// 来源可以是本地目录，也可以是 file:/// 开头的 URL —— 这一版只做这两种，
-// 因为判据必须是可复现的、不需要联网的。怎么从网上取是另一层的事
-// （鉴权、重试、镜像），它会在这一层之上而不是在里面。见 design/HMGET.txt 第二节。
+// 来源三种写法，都落到同一个接口（见下面 造来源）：
 //
-// 这个工具是**唯一**会去「外面拿东西」的地方。语言侧一行都不碰网络：
+//   本地目录   D:/我的包库
+//   file://    file:///D:/我的包库
+//   http(s):// http://127.0.0.1:8080/包库
+//
+// 三种都只读两个文件：<来源>/<包名>/hmyr.hmkit 与 <来源>/<包名>/index.hmoca。
+// http 那一侧没有目录列表，也不需要 —— 缺哪个文件就是 404，而那正好是 E0308。
+//
+// 这一版仍然**不做**鉴权、不做重试、不做镜像：那些是这一层之上的事，
+// 而「判据必须可复现」这一条不因为多了 http 就放松 —— 判据用本机起的服务器，
+// 不联网。见 design/HMGET.txt 第二节。
+//
+// 这个工具是全仓唯一会去外面拿东西的地方。语言侧一行都不碰网络：
 // 运行时不许偷下载那一条在 SPEC 2.4 里，而它靠的就是这条分工。
 import fs from "node:fs";
 import path from "node:path";
@@ -37,7 +47,7 @@ const 错 = (码, 话) => { console.error(码 + " " + 话); process.exit(1); };
 // ---- 卸载 ------------------------------------------------------------
 //
 // 与「装」共用一套解析，但它是另一件事：装是「往一个地方放」，删是「从一堆东西里
-// 拿走一个」—— 而后者要先问「还有谁需要它」。见 design/HMGET.txt 第五节。
+// 拿走一个」—— 而后者要先问「还有谁需要它」。见 design/HMGET.txt 第八节。
 if (要删) {
   const 根 = path.resolve(包根);
   const 目标 = path.join(根, 名);
@@ -78,93 +88,125 @@ if (要删) {
   process.exit(0);
 }
 
-// 来源 → 一个本地目录。file:// 与非 file 的两种写法都落到同一处：
-// 这一层只做「把来源变成一个可以读的目录」，不做网络。
-const 来源目录 = (() => {
-  if (来源.startsWith("file://")) {
-    try { return fileURLToPath(来源); }
-    catch (e) { console.error("来源不是合法的 file URL：" + 来源); process.exit(2); }
+// ---- 来源 ------------------------------------------------------------
+//
+// 一个来源只回答一个问题：「<包>/<文件> 的字节是什么」，交回 Buffer 或 null。
+// 三种写法各一份实现，而它们之下的一切（哈希校验、清单检查、搬运、依赖检查）
+// 完全一样 —— 那一层不该知道字节是从磁盘来的还是从端口来的。
+const 造来源 = (说明) => {
+  if (/^https?:/i.test(说明)) {
+    const 底 = 说明.replace(/\/+$/, "");
+    return {
+      类: "http",
+      说: 底,
+      读: async (包, 文) => {
+        const 址 = 底 + "/" + encodeURIComponent(包) + "/" + 文;
+        // 401/403 与 404 在这一层不区分：对「这个包在不在来源里」这个问题，
+        // 两种答案都是「拿不到」。鉴权是上面一层的事。
+        try {
+          const r = await fetch(址);
+          if (!r.ok) return null;
+          return Buffer.from(await r.arrayBuffer());
+        } catch (e) {
+          return null;
+        }
+      },
+    };
   }
-  if (/^https?:/i.test(来源)) {
-    console.error("这一版不从网络取。见 design/HMGET.txt 第二节 ——");
-    console.error("判据必须可复现，所以 http 会在这一层之上，而不是在里面。");
-    process.exit(2);
+  const 目录 = 说明.startsWith("file://") ? (() => {
+    try { return fileURLToPath(说明); }
+    catch { 错("HMYR-E0308", "来源不是合法的 file URL：" + 说明); }
+  })() : path.resolve(说明);
+  return {
+    类: "文件",
+    说: 目录,
+    读: async (包, 文) => {
+      const p = path.join(目录, 包, 文);
+      return fs.existsSync(p) && fs.statSync(p).isFile() ? fs.readFileSync(p) : null;
+    },
+  };
+};
+
+const 算 = (buf) => "sha256:" + createHash("sha256").update(buf).digest("hex");
+
+const 主 = async () => {
+  const 源 = 造来源(来源);
+
+  // 一、来源里有没有这个包，它的清单说得通不通。
+  // 「包在不在」在这一层就是「两个文件都拿得到吗」—— 目录与端口用同一个判据。
+  const 源清单字节 = await 源.读(名, "hmyr.hmkit");
+  const 源入口字节 = await 源.读(名, "index.hmoca");
+  if (!源清单字节 && !源入口字节) {
+    错("HMYR-E0308", "来源里没有这个包：'" + 名 + "'（来源是 " + 源.说 + "）");
   }
-  return path.resolve(来源);
-})();
+  if (!源清单字节) 错("HMYR-E0308", "这个包没有 hmyr.hmkit：" + 源.说 + "/" + 名);
+  if (!源入口字节) 错("HMYR-E0308", "这个包没有 index.hmoca：" + 源.说 + "/" + 名);
 
-const 算 = (路) => "sha256:" + createHash("sha256").update(fs.readFileSync(路)).digest("hex");
+  let 清单;
+  try { 清单 = JSON.parse(源清单字节.toString("utf8")); }
+  catch { 错("HMYR-E0304", "清单不是 JSON：" + 源.说 + "/" + 名 + "/hmyr.hmkit"); }
+  if (!清单 || typeof 清单 !== "object" || Array.isArray(清单)) 错("HMYR-E0304", "清单不是一个对象");
+  if (清单.名字 !== 名) 错("HMYR-E0304", "清单说它是 '" + String(清单.名字) + "'，而目录叫 '" + 名 + "'");
 
-// 一、来源里有没有这个包，它的清单说得通不通。
-const 源包 = path.join(来源目录, 名);
-if (!fs.existsSync(源包) || !fs.statSync(源包).isDirectory()) {
-  错("HMYR-E0308", "来源里没有这个包：'" + 名 + "'（找的是 " + 源包 + "）");
-}
-const 源清单路 = path.join(源包, "hmyr.hmkit");
-const 源入口 = path.join(源包, "index.hmoca");
-if (!fs.existsSync(源清单路)) 错("HMYR-E0308", "这个包没有 hmyr.hmkit：" + 源包);
-if (!fs.existsSync(源入口)) 错("HMYR-E0308", "这个包没有 index.hmoca：" + 源包);
-
-let 清单;
-try { 清单 = JSON.parse(fs.readFileSync(源清单路, "utf8")); }
-catch { 错("HMYR-E0304", "清单不是 JSON：" + 源清单路); }
-if (!清单 || typeof 清单 !== "object" || Array.isArray(清单)) 错("HMYR-E0304", "清单不是一个对象");
-if (清单.名字 !== 名) 错("HMYR-E0304", "清单说它是 '" + String(清单.名字) + "'，而目录叫 '" + 名 + "'");
-
-// 二、入口文件的哈希要对得上清单说的那个。
-const 真 = 算(源入口);
-if (清单.哈希 !== 真) {
-  错("HMYR-E0309", "入口文件的哈希与清单不符：清单说 " + String(清单.哈希).slice(0, 20) +
-     "…，文件是 " + 真.slice(0, 20) + "…（来源被人动过？）");
-}
-
-// 三、目标：存在且内容不同就拒绝，除非 --force。
-const 目标 = path.join(path.resolve(包根), 名);
-if (fs.existsSync(目标)) {
-  const 同 = fs.existsSync(path.join(目标, "index.hmoca")) &&
-    fs.existsSync(path.join(目标, "hmyr.hmkit")) &&
-    fs.readFileSync(path.join(目标, "index.hmoca")).equals(fs.readFileSync(源入口)) &&
-    fs.readFileSync(path.join(目标, "hmyr.hmkit")).equals(fs.readFileSync(源清单路));
-  if (同) {
-    console.log("已经在了，而且内容相同：" + 目标);
-    process.exit(0);
+  // 二、入口文件的哈希要对得上清单说的那个。
+  const 真 = 算(源入口字节);
+  if (清单.哈希 !== 真) {
+    错("HMYR-E0309", "入口文件的哈希与清单不符：清单说 " + String(清单.哈希).slice(0, 20) +
+      "…，文件是 " + 真.slice(0, 20) + "…（来源被人动过？）");
   }
-  if (!强制) {
-    错("HMYR-E0310", "目标已经存在且内容不同：" + 目标 + "（要覆盖就加 --force）");
+
+  // 三、目标：存在且内容不同就拒绝，除非 --force。
+  const 根 = path.resolve(包根);
+  const 目标 = path.join(根, 名);
+  if (fs.existsSync(目标)) {
+    const 旧入口 = path.join(目标, "index.hmoca");
+    const 旧清单 = path.join(目标, "hmyr.hmkit");
+    const 同 = fs.existsSync(旧入口) && fs.existsSync(旧清单) &&
+      fs.readFileSync(旧入口).equals(源入口字节) &&
+      fs.readFileSync(旧清单).equals(源清单字节);
+    if (同) {
+      console.log("已经在了，而且内容相同：" + 目标);
+      return;
+    }
+    if (!强制) {
+      错("HMYR-E0310", "目标已经存在且内容不同：" + 目标 + "（要覆盖就加 --force）");
+    }
+    fs.rmSync(目标, { recursive: true, force: true });
   }
-  fs.rmSync(目标, { recursive: true, force: true });
-}
 
-// 四、搬过去。包根不在就造它，并放一个空的 hmyr.hmkit —— 那是「这里是包根」的记号，
-// 不是清单（清单在每个包自己的目录里）。
-const 根 = path.resolve(包根);
-fs.mkdirSync(根, { recursive: true });
-const 根记号 = path.join(根, "hmyr.hmkit");
-if (!fs.existsSync(根记号)) fs.writeFileSync(根记号, "[]", "utf8");
-fs.mkdirSync(目标, { recursive: true });
-fs.copyFileSync(源入口, path.join(目标, "index.hmoca"));
-fs.copyFileSync(源清单路, path.join(目标, "hmyr.hmkit"));
+  // 四、搬过去。包根不在就造它，并放一个空的 hmyr.hmkit —— 那是「这里是包根」的记号，
+  // 不是清单（清单在每个包自己的目录里）。
+  fs.mkdirSync(根, { recursive: true });
+  const 根记号 = path.join(根, "hmyr.hmkit");
+  if (!fs.existsSync(根记号)) fs.writeFileSync(根记号, "[]", "utf8");
+  fs.mkdirSync(目标, { recursive: true });
+  fs.writeFileSync(path.join(目标, "index.hmoca"), 源入口字节);
+  fs.writeFileSync(path.join(目标, "hmyr.hmkit"), 源清单字节);
 
-// 五、依赖：缺哪个就报哪个，不递归取。
-// 「一次装一棵树」要一个求解器，而这一页先要一条可验的路（design/HMGET.txt 第一节）。
-const 依赖 = 清单.依赖 && typeof 清单.依赖 === "object" && !Array.isArray(清单.依赖) ? 清单.依赖 : {};
-const 缺 = [];
-for (const 依赖名 of Object.keys(依赖)) {
-  const p = path.join(根, 依赖名, "hmyr.hmkit");
-  if (!fs.existsSync(p)) { 缺.push(依赖名); continue; }
-  let 它 = null;
-  try { 它 = JSON.parse(fs.readFileSync(p, "utf8")); } catch { continue; }
-  if (它 && Number.isInteger(它.版本) && Number.isInteger(依赖[依赖名]) && 它.版本 < 依赖[依赖名]) {
-    缺.push(依赖名 + "（要至少 " + 依赖[依赖名] + "，装的是 " + 它.版本 + "）");
+  // 五、依赖：缺哪个就报哪个，不递归取。
+  // 「一次装一棵树」要一个求解器，而这一页先要一条可验的路（design/HMGET.txt 第一节）。
+  const 依赖 = 清单.依赖 && typeof 清单.依赖 === "object" && !Array.isArray(清单.依赖) ? 清单.依赖 : {};
+  const 缺 = [];
+  for (const 依赖名 of Object.keys(依赖)) {
+    const p = path.join(根, 依赖名, "hmyr.hmkit");
+    if (!fs.existsSync(p)) { 缺.push(依赖名); continue; }
+    let 它 = null;
+    try { 它 = JSON.parse(fs.readFileSync(p, "utf8")); } catch { continue; }
+    if (它 && Number.isInteger(它.版本) && Number.isInteger(依赖[依赖名]) && 它.版本 < 依赖[依赖名]) {
+      缺.push(依赖名 + "（要至少 " + 依赖[依赖名] + "，装的是 " + 它.版本 + "）");
+    }
   }
-}
-if (缺.length > 0) {
-  错("HMYR-E0305", "这个包装好了，但它要的依赖还缺：" + 缺.join("、") +
-    "（这一步不递归取，逐个再跑一次 hmget）");
-}
+  if (缺.length > 0) {
+    错("HMYR-E0305", "这个包装好了，但它要的依赖还缺：" + 缺.join("、") +
+      "（这一步不递归取，逐个再跑一次 hmget）");
+  }
 
-// 六、验收：让 hmkit-check 说它过，而不是这个工具自己说。
-console.log("装上：" + 目标);
-console.log("清单哈希：" + 真.slice(0, 20) + "… 对得上");
-if (Object.keys(依赖).length > 0) console.log("依赖：" + Object.keys(依赖).join("、") + " 都在");
-console.log("验收：node tools/hmkit-check.mjs --all " + 根);
+  // 六、验收：让 hmkit-check 说它过，而不是这个工具自己说。
+  console.log("装上：" + 目标);
+  console.log("来源：" + 源.类 + " · " + 源.说);
+  console.log("清单哈希：" + 真.slice(0, 20) + "… 对得上");
+  if (Object.keys(依赖).length > 0) console.log("依赖：" + Object.keys(依赖).join("、") + " 都在");
+  console.log("验收：node tools/hmkit-check.mjs --all " + 根);
+};
+
+主().catch((e) => { console.error("HMYR-E0399 意外：" + (e && e.message ? e.message : String(e))); process.exit(1); });
