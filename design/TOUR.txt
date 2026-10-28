@@ -95,7 +95,9 @@
       C-VM.txt       「全局值还没有落盘」—— 字节码格式仍如此，而全局早就能用
       CHECKING.txt   「运行期拼路径的测试将来得手工声明」—— hmget 是那种测试，而结论相反
       BOOTSTRAP.txt  「仍然不接线到任何地方」—— 它是默认路径
-      COMPILER.txt   「自举 parser 的节点里没有行号列号」—— 与 BOOTSTRAP 矛盾，以后者为准
+      COMPILER.txt   两处：「自举 parser 的节点里没有行号列号」—— 与 BOOTSTRAP 矛盾，以后者为准；
+                 以及「还借在 JS 那边的」第一条（.hmoks 的落盘）—— 自举那一份早就有，
+                 现在被 test/pack-bytes.test.mjs 钉住，且 tools/compile-hmyr.mjs 也改走它了
 
     读过而没有过期句子的：ARRAY · AUDIT · DEFLATE · TOOLING
       （DEFLATE 那句「常量时间的数据结构还没有」与 TOOLING 那句「还没有一等函数」
