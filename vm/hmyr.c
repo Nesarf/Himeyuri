@@ -357,9 +357,19 @@ static void 行号记一笔(unsigned 行) {
  * 声明在这里，因为失败点在十几个地方，而它们大多在平台口之前。 */
 static void 分配失败(void);
 
+/* 失败时要说清三件事：这次要多少、当时用了多少、一共分了多少块。
+ *
+ * 为什么块数也算一件：统计的 live 只是「请求量之和」，而真实堆里还有每块四字节的头
+ * 与分配器的元数据。同样是 50 多 KB 的请求量，块数多一倍，真实占用就差一截 ——
+ * 板子上那两次装载的失败点（53796 与 66936）互不相容，就是因为这个差。
+ * 三个数并排，才分得清「请求太大」与「块太碎」。 */
+static 线程局部 size_t g_失败请求 = 0;
+static 线程局部 size_t g_块数 = 0;
+
 static void *hm_malloc_at(size_t n, unsigned 行) {
   unsigned char *p = (unsigned char *)原malloc(n + sizeof(size_t));
-  if (!p) { 分配失败(); }
+  if (!p) { g_失败请求 = n; 分配失败(); }
+  g_块数++;
   *(size_t *)p = n;
   记一笔(n);
   直方记一笔(n);
@@ -1415,9 +1425,22 @@ typedef struct Func {
    * 为什么保留指令序号而不是全改成字节偏移：pc 与所有跳转目标都是序号，
    * 而改成字节偏移会动字节码格式 —— 那是另一件事，且它会让两台机器之间
    * 的字节码不再通用。 */
+  /* 分段表：每 码段宽 条指令记一个段内偏移（四字节）。
+   *
+   * 为什么还要这一步：两字节一条、一万四千项仍然是 28 KB，而板子上一次装载
+   * 能拿到的全部约 75 KB —— 它一个人占了近四成。分段之后约 1 KB，
+   * 而顺序执行那一部分不受影响：执行循环里有一条「下一条的起点」缓存，
+   * 只有跳转才需要从段头扫过去（见 跑函数 里那段）。
+   *
+   * 为什么段宽是 64：跳转时最多扫 63 条字节流，而顺序执行命中缓存。
+   * 段再窄省不了多少内存（表本身已经很小），段再宽就变成每次跳转都扫很久。 */
   uint32_t code_base;
-  uint16_t *code_at;
+  uint32_t seg_n;
+  uint32_t *seg_at;
 } Func;
+
+/* 一条指令占几项分段表 —— 见 Func 里 seg_at 的注释。 */
+#define 码段宽 64
 
 /* A name pool: every string a caller might need to compare by name. */
 static 线程局部 uint16_t **pool_p;
@@ -1581,15 +1604,16 @@ static void load_program(const uint8_t *bytes, size_t len) {
 /* 指令只记偏移，不建 Ins 数组 —— 现场解一条（读一条 的第二参数传 NULL）。
      * 这一句是「不整份驻留」的全部：把两字节的段内偏移换掉几十万字节的指令数组。 */
     f->code_base = (uint32_t)r.at;
-    f->code_at = (uint16_t *)calloc(f->ncode ? f->ncode : 1, sizeof(uint16_t));
+    /* 每 码段宽 条指令记一个段内偏移 —— 见 Func 里 seg_at 那段注释。
+     *
+     * 表项是四字节而不是两字节：段内偏移本来能放进两字节（一个函数的指令流
+     * 不会跨过 64 KB），但一张几百项的表用四字节只多几百字节，而
+     * 两字节版本要带一条越界检查 —— 那条检查现在不必有了，因为四字节的
+     * 段内偏移在这个程序里不会溢出。少一条错误路径就是少一处将来会骗人的地方。 */
+    f->seg_n = f->ncode ? (f->ncode + 码段宽 - 1) / 码段宽 : 1;
+    f->seg_at = (uint32_t *)calloc(f->seg_n, sizeof(uint32_t));
     for (uint32_t c = 0; c < f->ncode; c++) {
-      size_t 段内 = r.at - (size_t)f->code_base;
-      if (段内 > 0xFFFFu) {
-        /* 越界要说出来：悄悄截断会让执行跳到错的指令上，而那种错查起来最费时间。 */
-        fprintf(stderr, "hmyr: a function instruction stream exceeds 64 KB\n");
-        exit(2);
-      }
-      f->code_at[c] = (uint16_t)段内;
+      if (c % 码段宽 == 0) f->seg_at[c / 码段宽] = (uint32_t)(r.at - (size_t)f->code_base);
       读一条(&r, NULL);
     }
   }
@@ -1658,29 +1682,58 @@ static void 报错出去(const char *话, size_t 长) {
   fwrite(话, 1, 长, stderr);
 }
 
-/* 分配失败：说清当时堆已经用了多少，然后停。
+/* 分配失败：说清当时堆已经用了多少、峰值到过哪里，然后停。
  *
  * 为什么报「已经用了多少」而不是「这次要多少」：失败点在十几处，每处的要量变量名
- * 都不同，逐个传参会让这一条改动散到十几个函数里；而「堆峰值到哪儿了」是同一件事，
+ * 都不同，逐个传参会让这一条改动散到十几个函数里；而「堆已经用了多少」是同一件事，
  * 且它比单次的要量更能说明「这个程序超出了这块板子多少」。
+ *
+ * 为什么这一行的数越加越多：每一次都是上一个数分不出两种情形。
+ *
+ *   2026-10-28  只有 peak。板子上「装不下」从一片空白变成一句话。
+ *   2026-10-30  加 live。分段表那一轮，板子两次装载给出的失败点是 53796（分段表）
+ *               与 66936（每条两字节的偏移表），而后者明明占的内存更多 ——
+ *               两个数互不相容，需要「失败那一刻」与「历史最高」并排看。
+ *   2026-10-30  再加 want 与 blocks。live 与 peak 相等时分不出「一次大请求把剩下的
+ *               要光」与「总量到头」，因为失败的那次请求没成功、不进 live。
+ *               want 是那一次的请求量（分配器里记下来的，不必逐个调用点传参），
+ *               blocks 是一共分了多少块 —— 而块数正是统计学缺的那一项：
+ *               live 只算请求量之和，每块四字节的头与分配器元数据都不在里面。
  *
  * 为什么这一条值得单独一个函数：原来的写法是 fprintf(stderr, ...) 之后 exit(70)，
  * 而那在板子上等于「什么也没说就停了」—— 串口一片空白，与「程序根本没跑」
  * 看起来一模一样。design/BOARD.txt 第十一节那张边界表里，40 与 50 块两格
  * 就是这种空白。现在它们会说自己是谁。 */
+static int 追加数(char *话, int 位, size_t 值) {
+  char 数[24];
+  int 数位 = 0;
+  if (值 == 0) 数[数位++] = '0';
+  while (值 > 0) { 数[数位++] = (char)('0' + (值 % 10)); 值 /= 10; }
+  while (数位 > 0) 话[位++] = 数[--数位];
+  return 位;
+}
+
 static void 分配失败(void) {
-  char 话[96];
+  char 话[160];
   int 位 = 0;
-  const char *头 = "hmyr: out of memory, heap peak ";
+  const char *头 = "hmyr: out of memory, want ";
   while (*头) 话[位++] = *头++;
+  位 = 追加数(话, 位, g_失败请求);
   {
-    char 数[24];
-    int 数位 = 0;
-    size_t 值 = g_mem_peak;
-    if (值 == 0) 数[数位++] = '0';
-    while (值 > 0) { 数[数位++] = (char)('0' + (值 % 10)); 值 /= 10; }
-    while (数位 > 0) 话[位++] = 数[--数位];
+    const char *甲 = " live ";
+    while (*甲) 话[位++] = *甲++;
   }
+  位 = 追加数(话, 位, g_mem_live);
+  {
+    const char *乙 = " peak ";
+    while (*乙) 话[位++] = *乙++;
+  }
+  位 = 追加数(话, 位, g_mem_peak);
+  {
+    const char *丙 = " blocks ";
+    while (*丙) 话[位++] = *丙++;
+  }
+  位 = 追加数(话, 位, g_块数);
   {
     const char *尾 = " bytes\n";
     while (*尾) 话[位++] = *尾++;
@@ -4421,16 +4474,35 @@ static Value run_func(Func *f, Value *args, int nargs) {
   Func *外函 = g_机->当前函数;
   g_机->当前函数 = f;
   int32_t pc = 0;
+  /* 下一条指令的起点缓存 —— 见 Func 里 seg_at 那段注释。
+   *
+   * 顺序执行时 pc 几乎总是加一，而缓存里放的正是「下一条指令的起点」，
+   * 那一条于是不必从段头扫过来。跳转与函数的第一条走另一条路：
+   * 从所在段的起点顺着字节流扫到目标，最多 码段宽 减一条。
+   * 缓存放在帧里而不是机器里 —— 同一个函数递归时每一帧各有自己的位置。 */
+  int32_t 缓存条 = 0;
+  size_t 缓存位 = (size_t)f->code_base;
   for (;;) {
     if (g_failed) FRAME_RET(v_null());
     if (++g_机->步数 > g_机->步限) { fail("HMYR-R0102", "the program ran for too long"); FRAME_RET(v_null()); }
     if ((uint32_t)pc >= f->ncode) { fail("HMYR-R0110", "the instruction stream ran off its end"); FRAME_RET(v_null()); }
-    /* 现场解一条：不预先建 Ins 数组（见 Func 里 code_at 那段注释）。
+    /* 现场解一条：不预先建 Ins 数组（见 Func 里 seg_at 那段注释）。
      * 解出来的这一份活在栈上，只够这一轮用 —— 而这一轮的其余部分照旧读 *in。 */
     Ins 本条;
+    size_t 本条位;
+    if (缓存条 == pc) {
+      本条位 = 缓存位;
+    } else {
+      /* 跳转到了别处：从所在段的起点顺着字节流扫到这一条。 */
+      Reader 扫 = { g_码起, g_码长, (size_t)f->code_base + f->seg_at[(uint32_t)pc / 码段宽] };
+      for (uint32_t k = (uint32_t)pc % 码段宽; k > 0; k--) 读一条(&扫, NULL);
+      本条位 = 扫.at;
+    }
     {
-      Reader rr = { g_码起, g_码长, (size_t)f->code_base + f->code_at[(uint32_t)pc] };
+      Reader rr = { g_码起, g_码长, 本条位 };
       读一条(&rr, &本条);
+      缓存条 = pc + 1;
+      缓存位 = rr.at;
     }
     Ins *in = &本条;
     if (g_trace_on) {
