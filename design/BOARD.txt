@@ -20,7 +20,7 @@
 
     [成] 在模拟器上跑通：QEMU 的 mps2-an385（Cortex-M3）
 
-         examples/zone-ledger.hmoca 的完整输出：
+         examples/zone-ledger.hmoca 的完整输出（与板子上逐字一致）：
            行=4 总长=15
            各段=5,3,4,3
            关之前 held=5
@@ -29,11 +29,21 @@
          这个示例同时用上 arena、owned、managed 三区 —— 也就是说
          区模型在真 ARM 上是对的，不只是「打印了个数」。
 
-    [未成] 板子上的串口：port/uart.c 写了 USART2（PA2/PA3，AF7，BRR 0x8B），
-           而它在 QEMU 的 stm32f4 模型上 TXE 不置起，所以没验过。
-           真板子上的第一件事就是验它（见第四节的验法）。
+    [成] 2026-10-28 烧上真板子并跑通
 
-    [未成] 烧写：ST-Link 那一侧还没有接到构建里。
+         同一份映像、同一个程序，串口（ST-Link 的 VCP，COM5，115200）
+         读到四行输出与退出码 0。烧写用 OpenOCD：
+
+           openocd -f interface/stlink.cfg -f target/stm32f4x.cfg \
+             -c "program build/hmyr-board.elf verify reset exit"
+           → device id 0x10006431 · flash size 512 KiB · Verified OK
+
+         hello.hmoca 的判据也在真板上验过：串口读到 0x35（"5"），
+         前面那一个 0xFF 是复位时线路上的伪字节，不是程序输出。
+
+    [未成] 更小的栈：现在用的是 link.ld 里 8 KB 的栈（_estack 下方留的），
+           而桌面上量到三区示例在 64 KB 栈下也跑得动 —— 板子上到底要多少，
+           还没有逐档压过。
 
 二、两个文件各自管什么
 --------------------------------------------------------------------
@@ -101,25 +111,47 @@
       而 bss 48128 字节已经是板子 SRAM 的三分之一 —— 下一次要量的是
       跑自举层那一格需要多少。
 
-七、烧写卡在驱动（2026-10-27 实测）
+七、烧写：两个坑，都不是代码
 --------------------------------------------------------------------
 
-    板子插上了，Windows 也认出了设备，但没有驱动：
+    第一个：驱动没装。板子插上之后 Windows 认出了设备，但 problem code 是 28
+    （CM_PROB_FAILED_INSTALL），于是 pyocd 报 "No available debug probes
+    connected"。而 Keil 的安装目录里自带那一套：
 
-      设备        ST-Link Debug   [Error]
-      problem     28（CM_PROB_FAILED_INSTALL —— 驱动未安装）
-      pyocd list  No available debug probes are connected
+      D:\Keil_v5\ARM\STLink\USBDriver\stlink_dbg_winusb.inf   ← ST-Link Debug
+      D:\Keil_v5\ARM\STLink\USBDriver\stlink_VCP.inf          ← 虚拟串口
 
-    所以「烧」这一步不是命令没写对：port/Makefile 的 flash 目标已经就位
-    （make flash PROBE=pyocd 或 PROBE=st-flash），而它跑不动是因为设备打不开。
+    用 pnputil 装上（不需要 dpinst，它在这台机器上报了一个错误码）：
 
-    两条路：
+      pnputil /add-driver stlink_dbg_winusb.inf /install
+      pnputil /add-driver stlink_VCP.inf /install
 
-      一、装 ST 的官方驱动（STSW-LINK009）。它带 WinUSB 兼容层，装完 pyocd 与
-          STM32CubeProgrammer 都能用。winget 里搜不到 ST 的包，所以是手动下载。
-      二、用 zadig 把那个设备换成 WinUSB。不装 ST 的软件，但会顶掉原驱动，
-          以后要用官方工具得再换回来。
+    装完之后 pyocd 能认到探针（STM32 STLink，唯一 ID 0666FF485282494867205545），
+    虚拟串口也出现了（COM5）。
 
-    第一件在这台机器上还没有做。做完之后要验的第一件事是「吐一个叹号」——
-    那是 design/BOARD.txt 第五节说的心跳，它一次验四件事：串口接线、时钟、
-    引脚复用、以及启动文件把控制权交给了 C。
+    第二个：pyocd 与这块探针不合。驱动装好、探针认得、串口也在，
+    但 pyocd 仍然报 STLink error (5): No device connected；
+    connect_mode=attach / pre-reset 与 frequency=1MHz / 100kHz 四种组合都一样。
+
+    而同一个探针在 OpenOCD 下一次就通了：
+
+      STLINK V2J28M18 (API v2) VID:PID 0483:374B
+      Target voltage: 3.260887
+      [stm32f4x.cpu] Cortex-M4 r0p1 processor detected
+
+    所以「烧不了」这件事在换了后端之后就没了。现在 Makefile 的 flash 目标
+    用 pyocd；真要烧的时候用 OpenOCD 那一行（第 4 节的命令），或者把
+    PROBE 换成 openocd（这一条还没写进 Makefile）。
+
+八、读串口时的两个讲究
+--------------------------------------------------------------------
+
+    一、复位与读取要同时进行。程序跑得比人快：main 返回之后才吐字节，
+       而那时候串口工具往往还没打开。所以要先开串口、再复位，
+       在 3 到 4 秒的窗口里收字节。
+
+    二、收到的第一个字节常常是 0xFF。它不是程序输出，是复位时线路上的
+       伪字节（起始位被当成数据）。判据要看 0x35 而不是看「有没有东西」。
+
+    QEMU 的 stm32f4 模型里 USART 的 TXE 不置起，所以那条路只能验到
+    「程序跑完」，验不到「串口通」—— 串口这件事只有真板子能验。

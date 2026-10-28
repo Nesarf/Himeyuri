@@ -113,19 +113,23 @@ qemu-mps2:
 	$(MAKE) elf PROGRAM=$(PROGRAM) $(QEMU_MPS2_FLAGS)
 	qemu-system-arm -M mps2-an385 -kernel $(TARGET).elf -nographic -monitor none -serial stdio
 
-# 烧板子。两条路，看本机装了哪一件：
+# 烧板子。三条路，看本机装了哪一件：
 #
-#   make flash PROBE=pyocd     用 pyocd（已经装在 pythoncore-3.14-64 里）
-#   make flash PROBE=st-flash  用 stlink 那一套
+#   make flash                  OpenOCD（默认 —— 这块探针只有它通得过）
+#   make flash PROBE=pyocd      pyocd（装了驱动也连不上，见 design/BOARD.txt 第七节）
+#   make flash PROBE=st-flash   stlink 那一套
 #
-# 现在烧不了，不是命令的问题：那个设备的 problem code 是 28（驱动未安装），
-# 于是 pyocd 报 "No available debug probes are connected"。见 design/BOARD.txt 第七节。
-PROBE       ?= pyocd
+# OpenOCD 要显式 INIT 之后才能 reset —— 少了那一句会报 invalid command name "reset"。
+PROBE       ?= openocd
 PYOCD       ?= /e/DaShaoHuo/Python-managed/pythoncore-3.14-64/Scripts/pyocd.exe
+OPENOCD     ?= openocd
 TARGET_CHIP ?= stm32f411re
 
 flash: $(TARGET).elf
-ifeq ($(PROBE),pyocd)
+ifeq ($(PROBE),openocd)
+	$(OPENOCD) -f interface/stlink.cfg -f target/stm32f4x.cfg \
+	  -c "program $(TARGET).elf verify reset exit"
+else ifeq ($(PROBE),pyocd)
 	$(PYOCD) flash --target $(TARGET_CHIP) $(TARGET).elf
 else
 	st-flash --reset write $(TARGET).bin 0x08000000
