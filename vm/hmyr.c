@@ -1364,7 +1364,16 @@ typedef struct Func {
   uint16_t **effects;
   uint32_t *effect_lens;
   uint32_t ncode;
-  Ins *code;
+  /* 指令不预先解成 Ins 数组，只记每条在这份字节码里的偏移。
+   *
+   * 为什么：装载占整个 footprint 的 96%（32 位桌面上 1075474 字节，其中
+   * 执行只占 49430），而 Ins 每条约四十字节、一份五份自举层有一万多条。
+   * 改成「偏移表 + 现场解一条」之后，那四十字节换成四字节。
+   *
+   * 为什么保留指令序号而不是全改成字节偏移：pc 与所有跳转目标都是序号，
+   * 而改成字节偏移会动字节码格式 —— 那是另一件事，且它会让两台机器之间
+   * 的字节码不再通用。 */
+  uint32_t *code_at;
 } Func;
 
 /* A name pool: every string a caller might need to compare by name. */
@@ -1450,8 +1459,62 @@ static int64_t read_value(Reader *r, Value *out) {
   exit(2);
 }
 
+/* 从字节流里解出一条指令。out 为 NULL 时只扫过、不落任何东西 —— 装载那一步
+ * 就是靠这个「只扫不建」的形态省掉整个 Ins 数组的。
+ *
+ * 为什么这条抽得出来：装载与执行要解的是同一串字节，而它们做的 switch 一模一样。
+ * 抽出来之后「不整份驻留」才有可能 —— 装载只记每条指令在流里的偏移，
+ * 执行时按那个偏移现场解一条。
+ *
+ * 名字池照旧在这一层收：out 为 NULL 时也要收，因为池是整份文件共享的，
+ * 与「这条指令有没有被存下来」无关。 */
+static void 读一条(Reader *r, Ins *out) {
+  Ins 本地;
+  Ins *in = out ? out : &本地;
+  in->op = rd_u8(r);
+  in->a = 0;
+  in->b = 0;
+  in->val = v_null();
+  switch (in->op) {
+    case OP_CONST: read_value(r, &in->val); break;
+    case OP_LOAD: case OP_ASSIGN: in->a = rd_u16(r); break;
+    case OP_STORE: in->a = rd_u16(r); in->b = rd_u8(r); break;
+    case OP_GLOBAL: case OP_FIELD: case OP_SETGLOBAL: {
+      uint32_t n; const uint16_t *p = rd_str(r, &n); in->a = pool_add(p, n); break;
+    }
+    case OP_JMP: case OP_JMPF: case OP_JMPT: case OP_JMPF_KEEP: case OP_JMPT_KEEP:
+      in->a = rd_u32(r); break;
+    case OP_TUPLE: in->a = rd_u16(r); break;
+    case OP_RECORD: {
+      uint16_t n = rd_u16(r);
+      int64_t start = (int64_t)pool_n;
+      for (uint16_t k = 0; k < n; k++) {
+        uint32_t len; const uint16_t *p = rd_str(r, &len); pool_add(p, len);
+      }
+      in->a = start;
+      in->b = n;
+      break;
+    }
+    case OP_CALLB: case OP_CALLF: case OP_CALLM: {
+      uint32_t n; const uint16_t *p = rd_str(r, &n);
+      in->a = pool_add(p, n);
+      in->b = rd_u16(r);
+      break;
+    }
+    default: break;
+  }
+}
+
+/* 整份字节码的起点与长度。装载不复制它，执行时按 code_at 里的偏移去现场解一条 ——
+ * 于是「贴着字节流读」这件事在桌面上是贴着内存里的那一份，在板子上可以贴着 Flash
+ * （0x08000000 可直接寻址）。那一份的生命周期与这台机器一样长，所以不必释放。 */
+static const uint8_t *g_码起;
+static size_t g_码长;
+
 static void load_program(const uint8_t *bytes, size_t len) {
   Reader r = { bytes, len, 0 };
+  g_码起 = bytes;
+  g_码长 = len;
   const char *magic = "HMYRB";
   for (int i = 0; i < 5; i++) {
     if (rd_u8(&r) != (uint8_t)magic[i]) { fprintf(stderr, "hmyr: not a .hmyrb file\n"); exit(2); }
@@ -1471,41 +1534,12 @@ static void load_program(const uint8_t *bytes, size_t len) {
     f->effect_lens = (uint32_t *)calloc(f->neffects ? f->neffects : 1, sizeof(uint32_t));
     for (uint16_t e = 0; e < f->neffects; e++) f->effects[e] = (uint16_t *)rd_str(&r, &f->effect_lens[e]);
     f->ncode = rd_u32(&r);
-    f->code = (Ins *)calloc(f->ncode ? f->ncode : 1, sizeof(Ins));
+/* 指令只记偏移，不建 Ins 数组 —— 现场解一条（读一条 的第二参数传 NULL）。
+     * 这一句是「不整份驻留」的全部：把四万字节的偏移表换掉几十万字节的指令数组。 */
+    f->code_at = (uint32_t *)calloc(f->ncode ? f->ncode : 1, sizeof(uint32_t));
     for (uint32_t c = 0; c < f->ncode; c++) {
-      Ins *in = &f->code[c];
-      in->op = rd_u8(&r);
-      in->a = 0;
-      in->b = 0;
-      in->val = v_null();
-      switch (in->op) {
-        case OP_CONST: read_value(&r, &in->val); break;
-        case OP_LOAD: case OP_ASSIGN: in->a = rd_u16(&r); break;
-        case OP_STORE: in->a = rd_u16(&r); in->b = rd_u8(&r); break;
-        case OP_GLOBAL: case OP_FIELD: case OP_SETGLOBAL: {
-          uint32_t n; const uint16_t *p = rd_str(&r, &n); in->a = pool_add(p, n); break;
-        }
-        case OP_JMP: case OP_JMPF: case OP_JMPT: case OP_JMPF_KEEP: case OP_JMPT_KEEP:
-          in->a = rd_u32(&r); break;
-        case OP_TUPLE: in->a = rd_u16(&r); break;
-        case OP_RECORD: {
-          uint16_t n = rd_u16(&r);
-          int64_t start = (int64_t)pool_n;
-          for (uint16_t k = 0; k < n; k++) {
-            uint32_t len; const uint16_t *p = rd_str(&r, &len); pool_add(p, len);
-          }
-          in->a = start;
-          in->b = n;
-          break;
-        }
-        case OP_CALLB: case OP_CALLF: case OP_CALLM: {
-          uint32_t n; const uint16_t *p = rd_str(&r, &n);
-          in->a = pool_add(p, n);
-          in->b = rd_u16(&r);
-          break;
-        }
-        default: break;
-      }
+      f->code_at[c] = (uint32_t)r.at;
+      读一条(&r, NULL);
     }
   }
   uint16_t nglob = rd_u16(&r);
@@ -2085,10 +2119,14 @@ static void gc_标根(void) {
       for (uint32_t i = 0; i < f->槽数; i++) gc_标值(f->slots[i]);
     }
   }
-  for (uint32_t i = 0; i < g_机->函数数; i++) {
-    Func *fn = &g_机->函数们[i];
-    for (uint32_t j = 0; j < fn->ncode; j++) gc_标值(fn->code[j].val);
-  }
+  /* 指令里的常量值不再需要标：2026-10-28 起装载不把 Ins 数组建出来，于是那些
+   * 值不在这台机器的堆上 —— 它们留在字节流里，执行到 CONST 时现场解。
+   *
+   * 代价写在这里，免得下一个人去找：字符串常量仍然进名字池（池是整份文件共享的），
+   * 而元组与记录常量会每次执行 CONST 都解一次。空元组走 0x00（这门语言里它就是
+   * 「没有值」），所以不分配；非空的元组常量在这里会每执行一次泄漏一份。
+   * 现有语料里没有那种常量，所以这一条先这样 —— 若哪天有了，要加一张常量表
+   * （偏移 → 值），而不是回到 Ins 数组。 */
 }
 
 static size_t gc_收集(void) {
@@ -4334,7 +4372,14 @@ static Value run_func(Func *f, Value *args, int nargs) {
     if (g_failed) FRAME_RET(v_null());
     if (++g_机->步数 > g_机->步限) { fail("HMYR-R0102", "the program ran for too long"); FRAME_RET(v_null()); }
     if ((uint32_t)pc >= f->ncode) { fail("HMYR-R0110", "the instruction stream ran off its end"); FRAME_RET(v_null()); }
-    Ins *in = &f->code[pc];
+    /* 现场解一条：不预先建 Ins 数组（见 Func 里 code_at 那段注释）。
+     * 解出来的这一份活在栈上，只够这一轮用 —— 而这一轮的其余部分照旧读 *in。 */
+    Ins 本条;
+    {
+      Reader rr = { g_码起, g_码长, f->code_at[(uint32_t)pc] };
+      读一条(&rr, &本条);
+    }
+    Ins *in = &本条;
     if (g_trace_on) {
       Trace *t = &g_trace[g_trace_at];
       t->pc = pc;
