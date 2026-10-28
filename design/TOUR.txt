@@ -85,3 +85,21 @@
     node tools/impact.mjs self/body.hmoca       给一个文件，答「改动会碰到哪些套件」而不必试跑
     node tools/hmget.mjs --from <来源> --into <包根> <包名>   取一个包（只从文件，不联网）
     node tools/hmget.mjs --remove --into <包根> --dry-run <包名>  说清会删什么而不动手
+
+  而 design/ 里那些稿子隔一阵就要对一次实现，因为它们写的时候都在赌某件事。
+  2026-10-28 通了一遍，结果记在这里：
+
+    有过期句子、已追加带日期的更正：
+      WINDOWS.txt    「等能力契约扩出一组 surface」—— surface 已经在了
+      F64.txt        「还没有接进执行器」—— src/numbers.mjs 就在 import 它
+      C-VM.txt       「全局值还没有落盘」—— 字节码格式仍如此，而全局早就能用
+      CHECKING.txt   「运行期拼路径的测试将来得手工声明」—— hmget 是那种测试，而结论相反
+      BOOTSTRAP.txt  「仍然不接线到任何地方」—— 它是默认路径
+      COMPILER.txt   「自举 parser 的节点里没有行号列号」—— 与 BOOTSTRAP 矛盾，以后者为准
+
+    读过而没有过期句子的：ARRAY · AUDIT · DEFLATE · TOOLING
+      （DEFLATE 那句「常量时间的数据结构还没有」与 TOOLING 那句「还没有一等函数」
+        都仍然成立，不是漏改。）
+
+  这一段的用法：下一份稿子写完之后的半年里，先看它有没有出现在上面那个「已更正」
+  名单里 —— 在的话先读更正，再读原文。
