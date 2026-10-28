@@ -98,9 +98,40 @@ $(TARGET).bin: $(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
 
 qemu: $(TARGET).elf
-	qemu-system-arm -M netduinoplus2 -kernel $(TARGET).elf -nographic -serial stdio
+	qemu-system-arm -M netduinoplus2 -kernel $(TARGET).elf -nographic -monitor none -serial stdio
+
+# 模拟器上验（Cortex-M3 的 MPS2：串口与链接脚本都换那一套）：
+#   make qemu-mps2 PROGRAM=examples/hello.hmoca
+#
+# 它跑起来之后不会自己退出 —— 串口一直开着，要手动停（Ctrl-C）。
+# 所以脚本里调它要带 timeout，否则会像「卡住」：
+#   timeout 8 qemu-system-arm -M mps2-an385 -kernel build/hmyr-board.elf \
+#     -nographic -monitor none -serial stdio
+QEMU_MPS2_FLAGS := UART=uart-mps2.c LDSCRIPT=link-mps2.ld CPU=cortex-m3
+
+qemu-mps2:
+	$(MAKE) elf PROGRAM=$(PROGRAM) $(QEMU_MPS2_FLAGS)
+	qemu-system-arm -M mps2-an385 -kernel $(TARGET).elf -nographic -monitor none -serial stdio
+
+# 烧板子。两条路，看本机装了哪一件：
+#
+#   make flash PROBE=pyocd     用 pyocd（已经装在 pythoncore-3.14-64 里）
+#   make flash PROBE=st-flash  用 stlink 那一套
+#
+# 现在烧不了，不是命令的问题：那个设备的 problem code 是 28（驱动未安装），
+# 于是 pyocd 报 "No available debug probes are connected"。见 design/BOARD.txt 第七节。
+PROBE       ?= pyocd
+PYOCD       ?= /e/DaShaoHuo/Python-managed/pythoncore-3.14-64/Scripts/pyocd.exe
+TARGET_CHIP ?= stm32f411re
+
+flash: $(TARGET).elf
+ifeq ($(PROBE),pyocd)
+	$(PYOCD) flash --target $(TARGET_CHIP) $(TARGET).elf
+else
+	st-flash --reset write $(TARGET).bin 0x08000000
+endif
 
 clean:
 	rm -rf $(BUILD)
 
-.PHONY: elf bin qemu clean
+.PHONY: elf bin qemu qemu-mps2 flash clean

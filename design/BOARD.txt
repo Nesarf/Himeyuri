@@ -100,3 +100,26 @@
     ・然后才是「更大的程序」：现在的三区示例只用了 bss 的一部分，
       而 bss 48128 字节已经是板子 SRAM 的三分之一 —— 下一次要量的是
       跑自举层那一格需要多少。
+
+七、烧写卡在驱动（2026-10-27 实测）
+--------------------------------------------------------------------
+
+    板子插上了，Windows 也认出了设备，但没有驱动：
+
+      设备        ST-Link Debug   [Error]
+      problem     28（CM_PROB_FAILED_INSTALL —— 驱动未安装）
+      pyocd list  No available debug probes are connected
+
+    所以「烧」这一步不是命令没写对：port/Makefile 的 flash 目标已经就位
+    （make flash PROBE=pyocd 或 PROBE=st-flash），而它跑不动是因为设备打不开。
+
+    两条路：
+
+      一、装 ST 的官方驱动（STSW-LINK009）。它带 WinUSB 兼容层，装完 pyocd 与
+          STM32CubeProgrammer 都能用。winget 里搜不到 ST 的包，所以是手动下载。
+      二、用 zadig 把那个设备换成 WinUSB。不装 ST 的软件，但会顶掉原驱动，
+          以后要用官方工具得再换回来。
+
+    第一件在这台机器上还没有做。做完之后要验的第一件事是「吐一个叹号」——
+    那是 design/BOARD.txt 第五节说的心跳，它一次验四件事：串口接线、时钟、
+    引脚复用、以及启动文件把控制权交给了 C。
