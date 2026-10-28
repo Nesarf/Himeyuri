@@ -5091,6 +5091,20 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
     return 1;
   }
   load_program(bytes, len);
+  /* HMYR_LOAD_ONLY=1：装载完就停，只报装载本身花了多少。
+   *
+   * 为什么要有这一条：装完再跑，heap 峰值是两件事的和，于是「读法装不下」
+   * 这句话会被「程序跑起来也要内存」搅在一起。而 design/BOARD.txt 第十二节
+   * 要回答的是前者 —— 那份字节码读进来本身要多少。分开量才有落点。
+   *
+   * 只在桌面上有用：板子上 getenv 返回 0，那一条开不起来。 */
+  if (getenv("HMYR_LOAD_ONLY")) {
+    /* 用 %llu 而不是 %zu：这台机器上的那个 gcc 走的是 MSVCRT 的 printf，
+     * 它不认 z 修饰符 —— 而 c-vm 那一套把「编译时一条警告都没有」当判据，
+     * 于是这条诊断会把它弄红。 */
+    fprintf(stderr, "load=%llu\n", (unsigned long long)hmyr_堆峰值());
+    return 0;
+  }
   g_机->步限 = 限;
   g_机->步数 = 0;
   g_failed = 0;
