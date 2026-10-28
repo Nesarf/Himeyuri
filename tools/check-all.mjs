@@ -123,6 +123,7 @@ const SUITES = [
   ["ownedstate", "test/owned-state.test.mjs", "design/MEMORY.txt section 2 - the owned state machine in two languages: the JavaScript table is the only truth, the HMYR mirror is hand-written, and both answer the same on the same input"],
   ["namespace", "test/namespace.test.mjs", "SPEC 6.4 step two, first half - a declaration without pub that is used from another module gets a notice (W0303), and the notice names both files so the namespace work has a list to start from"],
   ["pkgmanifest", "test/pkg-manifest.test.mjs", "design/PKGMAN.txt - a package says who it is: four fields, a shape check while loading (E0304), and a hash check by a tool that is allowed to borrow a crypto library"],
+  ["packbytes", "test/pack-bytes.test.mjs", "design/COMPILER.txt - two packers, one bytecode: self/pack.hmoca and src/code-file.mjs write the same bytes for the same source, which is what retires the last thing the compiler layer borrowed from JavaScript"],
   ["hmget", "test/hmget.test.mjs", "design/HMGET.txt - taking a package: a local directory or a file URL as the source, the manifest hash checked before anything moves, an existing different package refused unless asked, and http refused by name because the criterion has to be reproducible"],
   ["surface", "test/surface.test.mjs", "SPEC M7 - several sub surfaces composited onto the main one, the way real windows will be"],
   ["pixel", "test/pixel.test.mjs", "SPEC M7 - a second kind of buffer: pixels, and a real PNG comes out the other end"],

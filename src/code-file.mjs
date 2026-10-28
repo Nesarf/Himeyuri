@@ -65,6 +65,14 @@ class 写者 {
     if (typeof v === "number") { this.u8(0x01); this.f64(v); return; }
     if (typeof v === "string") { this.u8(0x02); this.串(v); return; }
     if (v && v.tag === "tuple") {
+      // 空元组与「没有值」在这门语言里是同一个东西 —— 它没有 null，
+      // 空元组就是它。所以空元组写成 0x00，而不是 0x04 加一个零长度。
+      //
+      // 这条规矩 C 那一侧一直是这么做的（vm/hmyr.c 的 pack_value 里有一句
+      // 「空元组编成 null」），而这一侧原先写成了 0x04 加长度零 —— 于是
+      // 同一个程序两边写出来的字节差两个。逐字节那条判据第一次真的抓到东西，
+      // 抓到的就是这个（2026-10-28）。
+      if (v.items.length === 0) { this.u8(0x00); return; }
       this.u8(0x04); this.u16(v.items.length);
       for (const 项 of v.items) this.值(项);
       return;
