@@ -116,6 +116,50 @@ console.log("八、http 来源：这一版明说不做");
     String(r.stderr || "").slice(0, 160));
 }
 
+console.log("九、卸载：包没了，包根还在");
+{
+  造包("辛包", "pub fn 辛() -> Int {\n  return 7\n}\n");
+  跑(["--from", 源, "--into", 根, "辛包"]);
+  const r = 跑(["--remove", "--into", 根, "辛包"]);
+  ok("退出码 0", r.status === 0, String(r.stderr || "").slice(0, 160));
+  ok("包目录没了", !fs.existsSync(path.join(根, "辛包")), "");
+  ok("包根那个记号还在", fs.existsSync(path.join(根, "hmyr.hmkit")), "");
+  ok("别的包没受影响", fs.existsSync(path.join(根, "甲包", "index.hmoca")), "");
+}
+
+console.log("十、卸载一个不存在的包：E0311");
+{
+  const r = 跑(["--remove", "--into", 根, "从来没有的包"]);
+  ok("报 E0311", String(r.stderr || "").includes("HMYR-E0311"), String(r.stderr || "").slice(0, 140));
+}
+
+console.log("十一、有包依赖它：拒绝，--force 才照删");
+{
+  造包("壬包", "pub fn 壬() -> Int {\n  return 8\n}\n");
+  跑(["--from", 源, "--into", 根, "壬包"]);
+  造包("癸包", "pub fn 癸() -> Int {\n  return 9\n}\n", (清单) => { 清单.依赖 = { 壬包: 1 }; });
+  跑(["--from", 源, "--into", 根, "癸包"]);
+
+  const r1 = 跑(["--remove", "--into", 根, "壬包"]);
+  ok("不加 --force 被拒（E0312）", String(r1.stderr || "").includes("HMYR-E0312"), String(r1.stderr || "").slice(0, 160));
+  ok("被拒时它还在", fs.existsSync(path.join(根, "壬包")), "");
+
+  const r2 = 跑(["--remove", "--into", 根, "--force", "壬包"]);
+  ok("--force 就照删", r2.status === 0 && !fs.existsSync(path.join(根, "壬包")), String(r2.stderr || "").slice(0, 160));
+  ok("而它说了会留下缺口", String(r2.stdout || "").includes("癸包"), String(r2.stdout || "").slice(0, 160));
+}
+
+console.log("十二、--dry-run：只说话，不动手");
+{
+  造包("子包", "pub fn 子() -> Int {\n  return 10\n}\n");
+  跑(["--from", 源, "--into", 根, "子包"]);
+  const r = 跑(["--remove", "--into", 根, "--dry-run", "子包"]);
+  ok("退出码 0", r.status === 0, String(r.stderr || "").slice(0, 120));
+  ok("说了会删什么", String(r.stdout || "").includes("会删掉"), String(r.stdout || "").slice(0, 160));
+  ok("说了这是 dry-run", String(r.stdout || "").includes("什么都没动"), String(r.stdout || "").slice(0, 160));
+  ok("包还在", fs.existsSync(path.join(根, "子包", "index.hmoca")), "");
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
