@@ -74,7 +74,40 @@ const 键队列 = [];
 // 可变数组的标记：与原版解释器同一个约定（一个 symbol 属性）。
 const 数组标 = "__hmyr_array";
 
+// CRC32 的表：第一次算，之后一直用。二百五十六项，一次生成比每次循环里算便宜得多。
+let 校验表缓存 = null;
+const 校验表 = () => {
+  if (校验表缓存) return 校验表缓存;
+  const 表 = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = c & 1 ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    表[i] = c >>> 0;
+  }
+  校验表缓存 = 表;
+  return 表;
+};
+
 const 内置 = {
+  // CRC32（多吉性与 ZIP 都用它）。与宿主那一份同一套语义：
+  // 收字节的元组，元素可以是一字节，也可以是一块（与 write_bytes 同一条规矩），
+  // 交回一个 32 位无符号数。表第一次用时生成 —— 它是纯算术，
+  // 不该为了它让宿主少一项自由（宿主依赖那张清单由 test/host-deps.test.mjs 盯着）。
+  //
+  // 这一条原来在最小求值器上根本不存在，于是带它的程序在默认跑法里会以
+  // 「没有这个内置」停下 —— 而另外三台都有。examples/view-window.hmoca
+  // 为此少写了半截演示，design/FFI.txt 第六节留着那条缺口。
+  校验和: (rt, a) => {
+    const 元组 = a[0];
+    if (!Array.isArray(元组)) rt.坏("HMYR-R0130", "校验和 wants a tuple of bytes");
+    const 表 = 校验表();
+    let c = -1;
+    const 吃一个 = (b) => { c = (c >>> 8) ^ 表[(c ^ (rt.成数(b) & 0xff)) & 0xff]; };
+    for (const x of 元组) {
+      if (Array.isArray(x)) { for (const y of x) 吃一个(y); } else 吃一个(x);
+    }
+    return (c ^ -1) >>> 0;
+  },
   // 32 位位运算：与宿主那份同一套语义（无符号 32 位，移位按 31 取模）。
   位与: (rt, a) => Math.floor(rt.成数(a[0])) & Math.floor(rt.成数(a[1])),
   位或: (rt, a) => (Math.floor(rt.成数(a[0])) | Math.floor(rt.成数(a[1]))) >>> 0,

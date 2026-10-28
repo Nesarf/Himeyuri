@@ -94,6 +94,22 @@ if (!有编译器) {
   }
 }
 
+console.log("四、最小求值器（默认跑法走的那一台）");
+{
+  // 这一节是后加的，而它当时缺得很彻底：这个内置在那台机器上**根本不存在**，
+  // 于是任何带 校验和 的程序在默认路径上都会以「没有这个内置」停下。
+  // 补的时候照宿主那一份的语义写（元素可以是一字节，也可以是一块），
+  // 所以判据与上面三节同一个 —— 逐字相同。
+  const 具 = path.join(ROOT, "bin", "hmyr.mjs");
+  const r = spawnSync(process.execPath, [具, 程序路, 样本], { encoding: "utf8", timeout: 300000 });
+  ok("最小求值器退出码 0", r.status === 0, String(r.stderr || "").slice(0, 160));
+  // 那一台会把 main 的返回值也打出来（启动器顺手写了一行），而另三台不会 ——
+  // 所以比之前先剥掉末尾那一行。它不是程序的输出，是启动器的。
+  const 行们 = String(r.stdout || "").trim().split("\n");
+  if (行们.length > 1) 行们.pop();
+  ok("与另三台逐字相同", 行们.join("\n").trim() === 出A.trim(), JSON.stringify(行们.join("\n").slice(0, 120)));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 
 console.log("");
