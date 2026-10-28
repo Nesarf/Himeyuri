@@ -286,12 +286,24 @@ static void 直方记一笔(size_t n) {
   g_桶[档]++;
 }
 
+/* 行号证据的声明要在「报一下」之前：那个函数会把它们打出来。
+ * 分工上它们属于同一组设施，所以摆在一起读更顺，而不是把打印拆成两处。 */
+#define 行号桶数 32
+static unsigned g_行号[行号桶数];
+static unsigned g_行号次[行号桶数];
+static int g_行号用 = 0;
+
 static void 直方报一下(void) {
   fprintf(stderr, "hist:");
   for (int i = 0; i < 桶数; i++) {
     if (g_桶[i] == 0) continue;
     fprintf(stderr, " %d:%llu", (int)(i * 8), (unsigned long long)g_桶[i]);
   }
+  fprintf(stderr, "\n");
+  /* 行号证据另起一行：与 hist 的分工是「哪一档」对「谁在要它」。
+   * 两行都要，因为一个说尺寸、一个说来源，而对不上就说明两边算的不是同一件事。 */
+  fprintf(stderr, "lines:");
+  for (int i = 0; i < g_行号用; i++) fprintf(stderr, " %u:%llu", g_行号[i], (unsigned long long)g_行号次[i]);
   fprintf(stderr, "\n");
 }
 
@@ -300,21 +312,41 @@ static void 直方开(void) {
   atexit(直方报一下);
 }
 
-static void *hm_malloc(size_t n) {
+/* 调用点证据：哪一行的分配最多。
+ *
+ * 为什么要有这一条：直方图把「差一半」落到 24 到 31 字节那一档之后，下一个问题
+ * 就是「谁在要那个尺寸」。板子上没有 backtrace，也没有好的办法去拿返回地址，
+ * 但有一个更好也更便宜的东西：__LINE__。它是编译期常数，传一次是一个立即数，
+ * 而这个宏在关了统计时编出来与原来那一次调用没有区别。
+ *
+ * 只在 HMYR_MALLOC_HIST=1 时记录，桶按行号存（一张小表，满了就记进「其它」）。 */
+
+static void 行号记一笔(unsigned 行) {
+  if (!g_记直方) return;
+  for (int i = 0; i < g_行号用; i++) if (g_行号[i] == 行) { g_行号次[i]++; return; }
+  if (g_行号用 < 行号桶数) { g_行号[g_行号用] = 行; g_行号次[g_行号用] = 1; g_行号用++; }
+}
+
+static void *hm_malloc_at(size_t n, unsigned 行) {
   unsigned char *p = (unsigned char *)原malloc(n + sizeof(size_t));
   if (!p) { fprintf(stderr, "hmyr: out of memory\n"); exit(70); }
   *(size_t *)p = n;
   记一笔(n);
   直方记一笔(n);
+  行号记一笔(行);
   return p + sizeof(size_t);
 }
 
-static void *hm_calloc(size_t a, size_t b) {
+static void *hm_calloc_at(size_t a, size_t b, unsigned 行) {
   size_t n = a * b;
-  void *p = hm_malloc(n);
+  void *p = hm_malloc_at(n, 行);
   memset(p, 0, n);
   return p;
 }
+
+/* 两个宏把行号钉在每个调用点上。名字与原来的函数一样，所以下面的代码一行都不用改。 */
+#define hm_malloc(n)      hm_malloc_at((n), __LINE__)
+#define hm_calloc(a, b)   hm_calloc_at((a), (b), __LINE__)
 
 static void *hm_realloc(void *q, size_t n) {
   if (!q) return hm_malloc(n);
@@ -359,6 +391,14 @@ size_t hmyr_堆峰值(void) { return g_mem_peak; }
 size_t hmyr_分配档(int i) { return (i >= 0 && i < 桶数) ? g_桶[i] : 0; }
 int hmyr_分配档数(void) { return 桶数; }
 void hmyr_开直方(void) { g_记直方 = 1; }
+
+/* 行号证据：第 i 个记下来的调用点在哪一行、分配了多少次。
+ *
+ * 与 size_t hmyr_分配档(int) 那一对的分工：那个说「哪一档最多」，这个说「谁在要它」。
+ * 板子上两样都要，因为没有别的地方能把这两件事对上。 */
+unsigned hmyr_分配行(int i) { return (i >= 0 && i < g_行号用) ? g_行号[i] : 0; }
+size_t hmyr_分配行次(int i) { return (i >= 0 && i < g_行号用) ? g_行号次[i] : 0; }
+int hmyr_分配行数(void) { return g_行号用; }
 
 /* HMYR_HEAP_ONLY=1：只报峰值，不开诊断。
  *
