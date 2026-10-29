@@ -787,14 +787,25 @@ typedef struct {
 
 struct Value {
   Tag tag;
-  double num;
-  int boolean;
-  const uint16_t *s;   /* string: points into the file image, or into a heap copy */
-  uint32_t slen;
-  Value *items;        /* tuple items */
-  uint32_t ilen;
-  Record rec;
-  索引 *idx;           /* index: a keyed table, see below */
+  /* 2026-11-01：下面这几个字段互斥 —— 一个值在任一时刻只能是这几种之一，
+   * 所以它们共用一个 union。板子上量出来的五十六字节（design/BOARD.txt
+   * 第三十九节）说明每一份 Value 都在为「它可能是什么」付全部字段的钱：
+   * 一个整数也在为一个字符串指针、一个元组数组、一张索引表留位置。
+   *
+   * 为什么字段名一个字都不改：C11 的匿名 union 包里再放匿名 struct，
+   * 于是 .num / .s / .slen / .items / .ilen / .rec / .idx 全都照旧 ——
+   * 那五百多处调用点一行都不用动，而这一次改的只是布局。
+   *
+   * 板子上（三十二位）union 最大是 Record 的十六字节，所以 Value 从五十六降到二十；
+   * 桌面上（六十四位）Record 是三十二，Value 从五十六降到四十。 */
+  union {
+    double num;
+    int boolean;
+    struct { const uint16_t *s; uint32_t slen; };
+    struct { Value *items; uint32_t ilen; };
+    Record rec;
+    索引 *idx;
+  };
 };
 
 /* ---- 这台机器：状态收在一个地方 -------------------------------------
