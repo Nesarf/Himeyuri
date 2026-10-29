@@ -792,12 +792,15 @@ struct Value {
    * 第三十九节）说明每一份 Value 都在为「它可能是什么」付全部字段的钱：
    * 一个整数也在为一个字符串指针、一个元组数组、一张索引表留位置。
    *
-   * 为什么字段名一个字都不改：C11 的匿名 union 包里再放匿名 struct，
-   * 于是 .num / .s / .slen / .items / .ilen / .rec / .idx 全都照旧 ——
+   * 为什么字段名一个字都不改：匿名 union 包里再放匿名 struct，于是
+   * .num / .s / .slen / .items / .ilen / .rec / .idx 全都照旧 ——
    * 那五百多处调用点一行都不用动，而这一次改的只是布局。
    *
-   * 板子上（三十二位）union 最大是 Record 的十六字节，所以 Value 从五十六降到二十；
-   * 桌面上（六十四位）Record 是三十二，Value 从五十六降到四十。 */
+   * 而匿名成员是 C11 的（MSVC 从 2015 起也支持）。老编译器那一支退回旧布局：
+   * 字段名一模一样，所以调用点两边都成立，只是不再省那三十二字节
+   * （design/BOARD.txt 第四十二节记着这条界线与它的价码）。 */
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) \
+  || (defined(_MSC_VER) && _MSC_VER >= 1900)
   union {
     double num;
     int boolean;
@@ -806,6 +809,16 @@ struct Value {
     Record rec;
     索引 *idx;
   };
+#else
+  double num;
+  int boolean;
+  const uint16_t *s;
+  uint32_t slen;
+  Value *items;
+  uint32_t ilen;
+  Record rec;
+  索引 *idx;
+#endif
 };
 
 /* ---- 这台机器：状态收在一个地方 -------------------------------------
