@@ -760,6 +760,23 @@ fn 函数名们(源码: String) -> Int {
   return 函数名从(全部.fns, 0, ())
 }
 
+// 给适配层用的公开入口（2026-11-01）。
+//
+// 为什么需要它：加载走 不是 pub，而 src/loader.mjs 的替身要跨模块叫它。
+// 交回的是加载顺序（一个文件一行，从目录算起），不是语法树 —— 树由宿主的
+// subset-parse 来建，形状才自动一致（design/FULLSELF.txt 第五节）。
+// 出错时第一行以「错 」开头，后面是码与路径。
+pub fn 加载顺序公开(目录: String, 相对: String) -> String effects(file) {
+  let r = 加载走(目录, 相对, (), ())
+  if r.错 != "" { return "错 " + r.错 + chr(10) }
+  return 拼行从(r.已载, 0, "")
+}
+
+fn 拼行从(们: Int, i: Int, acc: String) -> String {
+  if i >= len(们) { return acc }
+  return 拼行从(们, i + 1, acc + 们[i] + chr(10))
+}
+
 fn main() -> Int effects(process) {
   print("1 + 2 * 3 → " + 跑("1 + 2 * 3") + "\n")
   print("(1 + 2) * 3 → " + 跑("(1 + 2) * 3") + "\n")

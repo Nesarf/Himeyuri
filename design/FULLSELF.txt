@@ -119,6 +119,21 @@ src/loader.mjs 同形状的东西。那件事做完，这个数才量得出来�
 外加三处形状工作」—— 而 self/ 那边这两件都已经对齐（selfmod 的 order 与错误码、
 selfloa 的 27/27）。
 
+适配层的两条通道（2026-11-01 试过）
+
+一、宿主启动器能跑自举层的模块。probe-load 里 import ../self/lex.hmoca 并调它的
+    pub 函数，两侧都是「词数=13」—— 默认路径与 C 机器一字不差。
+
+二、import 一个有 main 的自举模块时，后到的 main 赢。probe-load2 里 import
+    ../self/run.hmoca 并写自己的 main，跑出来的是探针那一行。所以适配层可以借
+    run.hmoca 并拥有自己的入口 —— 合并规矩是「后到者覆盖先到者」。
+
+三、pub 包装也编得过：run.hmoca 加了 加载顺序公开 与 拼行从，函数数从五十九到
+    六十一（selfcompile 那条期望跟着改了）。
+
+四、而执行时卡在 call depth exceeded (500)。它连「没有 import 的文件」也一样，
+    所以不是 import 递归。那两个函数里谁在递归还没缩出来 —— 这是下一步的第一件事。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 E0301；
 另外引的文件不在就报 E0302（宿主也是这个码）。顺序取后序，于是 order 逐项相同。

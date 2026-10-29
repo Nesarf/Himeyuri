@@ -1,0 +1,11 @@
+// 第二条通道：import 一个有 main 的自举模块，看 main 谁赢。
+//
+// 为什么要试（2026-11-01）：self/run.hmoca 有它自己的 main（那六行自测），
+// 而合并的规矩是「被依赖的在前，于是函数表里先到的那一份赢」。
+// 若这里跑出来的是那六行，说明适配层不能借 main 当入口，得靠 pub 函数加 argv。
+import "../self/run.hmoca"
+
+fn main() -> Int effects(process) {
+  print("这是探针的 main" + chr(10))
+  return 0
+}

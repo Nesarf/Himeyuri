@@ -1,0 +1,12 @@
+// 最小试验：宿主启动器能不能 import 自举层的模块，并跑到它的函数。
+//
+// 为什么从这里试（2026-11-01）：适配层要用 self/run.hmoca 的加载顺序，
+// 而那条路的第一步是「bin/hmyr.mjs 能不能把一个 import 了 self/ 的程序跑起来」。
+// 这一步通了，pub 包装才有意义；不通的话，适配层得换一条通道。
+import "../self/lex.hmoca"
+
+fn main() -> Int effects(process) {
+  let tokens = scan_lines("fn a() -> Int {\n  return 1\n}\n")
+  print("自举层词法在宿主上跑通，词数=" + str(len(tokens)) + chr(10))
+  return 0
+}

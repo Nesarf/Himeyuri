@@ -1,0 +1,20 @@
+// 适配层的入口：把「加载顺序」交回宿主。
+//
+// 用法：hmyr self/adapter.hmoca <目录> <相对路径>
+// 输出：一个文件一行（从目录算起）；出错时第一行以「错」开头。
+//
+// 为什么要有这一份（2026-11-01）：src/loader.mjs 的替身要拿自举层的加载顺序，
+// 而宿主与自举层之间需要一个能对上的出口 —— 这一份就是那个出口。
+// 它只交回顺序与源码，语法树由宿主的 subset-parse 建，形状才自动一致
+// （design/FULLSELF.txt 第五节）。
+import "./run.hmoca"
+
+fn main() -> Int effects(process, file) {
+  let 参们 = argv()
+  if len(参们) < 3 {
+    print_err("用法：adapter.hmoca <目录> <相对路径>" + chr(10))
+    return 1
+  }
+  print(加载顺序公开(参们[1], 参们[2]))
+  return 0
+}
