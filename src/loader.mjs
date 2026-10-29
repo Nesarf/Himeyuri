@@ -4,6 +4,7 @@
 // 而函数表是扁平的。第一步只做三件事，做完就能让加载有确定性：
 //
 //   ・import 真的加载本地文件（路径形式；包名留给包管理器那一步）
+import { loadUnitSelf } from "./loader-self.mjs";
 //   ・**只加载一次**：同一个文件被两处 import，只跑一遍
 //   ・**循环引用被拒**：HMYR-E0301
 //
@@ -199,6 +200,15 @@ function resolveImport(cap, fromFile, spec, diagnostics) {
  * Returns { ok, order, modules, diagnostics }.
  */
 export function loadUnit(entry, options = {}) {
+  /* 自举替身（2026-11-01）：HMYR_LOADER=self 时把这一次加载交给 src/loader-self.mjs。
+   *
+   * 为什么要这个开关：FULLSELF 第一段要的那个数 —— 「换掉 src/loader.mjs 之后，
+   * 一百七十七套里还有多少套绿」—— 只能这样量。而替身与本体同签名，所以
+   * 调用方一行都不用改。
+   *
+   * 动态 import 是为了避开一个循环：替身要用 lexer 与 subset-parse，而它不 import
+   * 本体，所以真正的理由是「只在开关打开时才付出那份模块加载的代价」。 */
+  if (process.env.HMYR_LOADER === "self") return loadUnitSelf(entry, options);
   const diagnostics = options.diagnostics || new Diagnostics();
   // 加载器也借世界：它读文件、拼路径。于是它也拿一份能力，而不是自己去 import fs。
   // 默认给本机那一份；换掉它就能让「加载一份工程」这件事发生在没有文件系统的地方。
