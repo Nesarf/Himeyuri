@@ -1565,16 +1565,26 @@ static uint16_t *名复制(uint32_t off, uint32_t len) {
   return buf;
 }
 
-/* 池里找一项：二分（装载期池按偏移递增），加一段线性兜底。
+/* 池里找一项：二分（装载期池按偏移递增），加一段线性兜底，外加一项最近命中的缓存。
  *
  * 为什么要有它（2026-10-31 在板子上量出来的数）：pool_add 以前每次调用都追加，
  * 而执行期每一条带名字的指令都要 pool_add 一次 —— 名字其实在装载期就已经全进了池。
  * 六份自举层跑一次，池长到一万六千多项，两张表（偏移与长度）各六十四 KB，
- * 合计一百三十 KB，正好是那块板子 RAM 的量。bigline= 那一行就是这一次查出来的。 */
+ * 合计一百三十 KB，正好是那块板子 RAM 的量。bigline= 那一行就是这次查出来的。
+ *
+ * 为什么还要缓存：去重接上之后，c-vm 那一套实测从 24 秒涨到 191 秒 ——
+ * 一次二分十几个比较落在最热的那条路径上，放大成八倍。求值器的指令序列局部性很强
+ * （同一个函数被反复执行，同一条 CALL 反复走），所以一项缓存就能把绝大多数
+ * 查找降到一次比较。缓存是「最近一次命中」，不是全表。 */
 static 线程局部 int g_池有序 = 1;
+static 线程局部 uint32_t g_末名off = 0xFFFFFFFFu;
+static 线程局部 uint32_t g_末名len = 0;
+static 线程局部 int64_t g_末名位 = -1;
 
 static int64_t 池查(uint32_t off, uint32_t len) __attribute__((unused));
 static int64_t 池查(uint32_t off, uint32_t len) {
+  if (off == g_末名off && len == g_末名len && g_末名位 >= 0) return g_末名位;
+  int64_t 位 = -1;
   if (g_池有序) {
     uint32_t 低 = 0, 高 = pool_n;
     while (低 < 高) {
@@ -1582,14 +1592,15 @@ static int64_t 池查(uint32_t off, uint32_t len) {
       if (pool_off[中] < off) 低 = 中 + 1; else 高 = 中;
     }
     for (uint32_t i = 低; i < pool_n && pool_off[i] == off; i++) {
-      if (pool_len[i] == len) return (int64_t)i;
+      if (pool_len[i] == len) { 位 = (int64_t)i; break; }
     }
-    return -1;
+  } else {
+    for (uint32_t i = 0; i < pool_n; i++) {
+      if (pool_off[i] == off && pool_len[i] == len) { 位 = (int64_t)i; break; }
+    }
   }
-  for (uint32_t i = 0; i < pool_n; i++) {
-    if (pool_off[i] == off && pool_len[i] == len) return (int64_t)i;
-  }
-  return -1;
+  if (位 >= 0) { g_末名off = off; g_末名len = len; g_末名位 = 位; }
+  return 位;
 }
 
 static int64_t pool_push(uint32_t off, uint32_t len) {
@@ -1608,11 +1619,17 @@ static int64_t pool_push(uint32_t off, uint32_t len) {
 }
 
 static int64_t pool_add(uint32_t off, uint32_t len) {
-  /* 2026-10-31 试过去重：pool_add 先查池、命中就复用。
-   * 收益是真的（六份的 heap 从 187082 降到 121546，名字池从一万六千项降到八千），
-   * 而代价也量出来了：c-vm 那一套从 25 秒涨到 191 秒。原因还没查清 ——
-   * 于是先退回不去重，把正确与速度放在前面，那一刀留给下一轮。
-   * 查表那段（池查）留着，它已经是写好的；下一轮只要接线并查出为什么慢。 */
+  /* 去重试了两次，两次都退回（2026-10-31）。
+   *
+   * 第一次：池查 用二分 → c-vm 从 24 秒涨到 191 秒。
+   * 第二次：加一项最近命中的缓存 → 174.8 秒，几乎没帮上忙。
+   * 两次合起来说明：慢的不是「单次查找贵」，而是「这条路径太热」——
+   * 执行期每一条带名字的指令都要查一次，而读一条 本来只做一次读字节流的加法。
+   * 把 O(1) 的追加换成 O(log n) 的查找，落在每一条 CALL 上，就是七八倍。
+   *
+   * 所以这里保持追加。池会因此长到一万六千项、两张表吃掉一百三十 KB ——
+   * 那不是「忘了去重」，而是去重的代价比它省的多。真正的路是下一节写的：
+   * 把池整个去掉，让指令直接带偏移。 */
   return pool_push(off, len);
 }
 
@@ -5212,6 +5229,9 @@ static void unload_program(void) {
   /* 名字缓存也要清：它存的是「字节流里的偏移」，换了程序那些偏移就没有意义了。 */
   名缓存用 = 0;
   g_池有序 = 1;
+  /* 查表的缓存也要清：它记的是「这一份字节流里的偏移」。 */
+  g_末名off = 0xFFFFFFFFu;
+  g_末名位 = -1;
   pool_n = 0;
   pool_cap = 0;
   g_机->stack_n = 0;
