@@ -258,7 +258,16 @@ const 串行 = new Set([
 // 并行数：八路。这台是 12 核 16 GB，八路留四核给系统与 gcc 的子进程，
 // 同时把内存峰值压在 8 × 768 MB 的名义上限之内。
 // 原来写死四路，等于让八核闲着，而全量的墙钟由最慢那一套决定。
-const 并行数 = 8;
+//
+// 2026-11-01：改成可配置，而且在「宿主 loader 换成自举替身」那一档默认降到一路。
+// 为什么：那一档里每一次 loadUnit 都要起一个 C 机器进程，于是八路并行会把机器上的
+// node 进程推到几百个并持续创建（实测过一次，内存被吃满，整台机器发卡）。
+// 想快就自己说 HMYR_JOBS=8 —— 但那时要自己盯着进程数。
+const 并行数 = (() => {
+  const 要 = Number(process.env.HMYR_JOBS);
+  if (Number.isFinite(要) && 要 > 0) return Math.floor(要);
+  return process.env.HMYR_LOADER === "self" ? 1 : 8;
+})();
 
 // ---- 只跑该跑的 ----
 //
