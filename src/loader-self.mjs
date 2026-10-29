@@ -10,6 +10,7 @@
 // 没有它的时候这一层只交回 order，不交回 ast —— 那仍然够 FULLSELF 那 115 个
 // 「只要顺序」的调用方用。
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,9 +39,30 @@ function 编适配层() {
   return r.status === 0 && fs.existsSync(码) ? 码 : null;
 }
 
+// 缓存：同一个入口文件、同一个 mtime，它的 order 不会变 —— 而 check-all 里每个套件
+// 都是一个独立进程，所以进程内的 Map 没有用，要落到磁盘上（2026-11-01）。
+// 键里带 mtime：文件一改就是新键，旧的留着无害。
+function 缓存路(绝对) {
+  let stamp = 0;
+  try {
+    stamp = Math.floor(fs.statSync(绝对).mtimeMs);
+  } catch {
+    stamp = 0;
+  }
+  const 名 = createHash("sha1").update(绝对 + ":" + stamp).digest("hex").slice(0, 16);
+  return path.join(缓存目录, "loader-self", 名 + ".json");
+}
+
 // 自举层交回的 order：一个路径一行。它的 拼路径 不做归一（会留下 /a/../b 这种），
 // 所以这里补一次 path.resolve —— 那是这一层唯一要替它做的事。
-function 取顺序(机器, 码, 目录, 相对) {
+function 取顺序(机器, 码, 目录, 相对, 绝对) {
+  const 存 = 缓存路(绝对);
+  try {
+    const 旧 = JSON.parse(fs.readFileSync(存, "utf8"));
+    if (Array.isArray(旧) && 旧.length) return { order: 旧.map((s) => path.resolve(s)) };
+  } catch {
+    /* 没有缓存或读坏了 —— 往下走，去问自举层。 */
+  }
   const r = spawnSync(机器, [码, 目录, 相对], {
     encoding: "utf8",
     // 步限提到启动器主路径那一档：默认的五百万步对 self/ 下几百行的文件不够，
@@ -55,7 +77,14 @@ function 取顺序(机器, 码, 目录, 相对) {
     .map((s) => s.trim())
     .filter(Boolean);
   if (行们.length === 1 && 行们[0].startsWith("错 ")) return { 错: 行们[0].slice(2) };
-  return { order: 行们.map((s) => path.resolve(s)) };
+  const order = 行们.map((s) => path.resolve(s));
+  try {
+    fs.mkdirSync(path.dirname(存), { recursive: true });
+    fs.writeFileSync(存, JSON.stringify(order), "utf8");
+  } catch {
+    /* 缓存写不进去不影响这一次的结果。 */
+  }
+  return { order };
 }
 
 /**
@@ -81,7 +110,7 @@ export function loadUnitSelf(entry, options = {}) {
     return { ok: false, order: [], modules: new Map(), 别名表: new Map(), diagnostics };
   }
 
-  const 结果 = 取顺序(机器, 码, 目录, 相对);
+  const 结果 = 取顺序(机器, 码, 目录, 相对, 绝对);
   if (结果.错) {
     /* 自举层交回的错码是 E0301（环）与 E0302（缺文件），与本仓库宿主那一侧同码。 */
     const 码名 = 结果.错.slice(0, 5);
