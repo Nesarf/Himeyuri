@@ -21,6 +21,11 @@ import { 展开模块 } from "./expand.mjs";
 import { 区检查 } from "./zone-check.mjs";
 import { 实时检查 } from "./realtime-check.mjs";
 import { 持有格检查 } from "./owned-check.mjs";
+import { 本机能力 } from "./capabilities.mjs";
+// 包名与包清单从 loader.mjs 借同一份实现 —— 复制一份就等于两份知识，而两份知识
+// 迟早会分叉。循环 import 在这里是安全的：那边 import 的是这一层的 loadUnitSelf
+// （函数声明，提升），这里 import 的也是函数声明，两边都只在调用时求值。
+import { resolveImport, 找包根, 读包清单 } from "./loader.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 适配源 = path.join(ROOT, "self", "adapter.hmoca");
@@ -186,7 +191,6 @@ export function loadUnitSelf(entry, options = {}) {
   //     而这一层原来把这个选择吞掉了。三条套件（minimal-eval、stage0-eval、
   //     subset-load）正是靠它递进宿主的完整解析器 —— 它们自己的用例里有子集不认的
   //     写法（match），于是吞掉 reader 的后果是「子集不含 match」当场抛出去。
-  const order = 结果.order;
   const modules = new Map();
   const 默认读 = (源) => {
     const 解 = 子集解(切(源));
@@ -200,7 +204,28 @@ export function loadUnitSelf(entry, options = {}) {
     return { ...解, ast };
   };
   const reader = options.reader || 默认读;
-  for (const abs of order) {
+  const 是路径形式 = (s) =>
+    typeof s === "string" && (s.startsWith("./") || s.startsWith("../") || s.startsWith("/") || /^[A-Za-z]:[\\/]/.test(s));
+  // 包名补件（2026-11-02）：自举层的 加载走 把非路径形式的 import 当成「不是文件」
+  // 跳过（那段注释写着「报 E0302 会把包当成缺文件」），于是 order 里从来没有包名那一支。
+  // 而 pkg-manifest 与 owned-check 剩下的判据全在那一支上。
+  //
+  // 这里补：用宿主那份 resolveImport 解析成 包根/名/index.hmoca，读清单时那些
+  // E0304 到 E0307 的诊断由同一份实现给出。
+  //
+  // 这一补是过渡，不是终点：包名解析本该住在 self/run.hmoca 的 加载走 里 ——
+  // 「关于 HMYR 的知识归 HMYR」。眼下先在适配层，理由是自举层要重写一遍得连
+  // JSON 解析一起搬，那是另一段工程（design/FULLSELF.txt 第五节记着这笔账）。
+  // 顺序上有一处仍是临时形状：包里的入口排在被它引用的那一份之后，而后序要求
+  // 相反；今天没有判据测这个次序，所以先留着，跟着那条待办一起搬。
+  const 能力 = 本机能力();
+  const order = [];
+  const 已见 = new Set();
+  const 队列 = [...结果.order];
+  while (队列.length) {
+    const abs = 队列.shift();
+    if (已见.has(abs)) continue;
+    已见.add(abs);
     let 源 = "";
     try {
       源 = fs.readFileSync(abs, "utf8");
@@ -229,6 +254,37 @@ export function loadUnitSelf(entry, options = {}) {
       }
     }
     modules.set(abs, ast);
+    order.push(abs);
+    // 清单的版本与入口顶部的 rev 必须一致（宿主第 325 到 340 行，design/PKGMAN.txt 第二节）。
+    // 两处写同一件事看着冗余，但它们的读者不同：清单给包管理看，rev 给装载器看。
+    // 只对「某个包的 index.hmoca」做这一条 —— 别的文件没有清单可对。
+    if (path.basename(abs) === "index.hmoca") {
+      const 包目录 = path.dirname(abs);
+      const 包根 = 找包根(能力, abs);
+      // 先问一句「这真的是某个包的入口吗」：判据是它旁边有没有 hmyr.hmkit。
+      // 为什么（2026-11-02 实测）：套件写的临时文件往往就叫 index.hmoca，而没有清单 ——
+      // 少了这一句，检查会对着一个临时文件报 E0304，c-vm 那套当场变红（它不检查 ok）。
+      const 清单路 = path.join(包根, path.basename(包目录), "hmyr.hmkit");
+      if (fs.existsSync(清单路)) {
+        const 清单 = 读包清单(能力, 包根, path.basename(包目录), diagnostics);
+        if (清单 && Number.isInteger(清单.版本) && ast.rev !== null && ast.rev !== undefined && ast.rev !== 清单.版本) {
+          diagnostics.error(
+            "HMYR-E0304",
+            "package '" + path.basename(包目录) + "' declares 版本 " + 清单.版本 + " but its index.hmoca says rev " + ast.rev +
+              "; the two places that name a revision have to agree",
+            0,
+            0,
+          );
+        }
+      }
+    }
+    // 包名那一支：解析出来排到队头，让它先于后面那些被处理（尽量靠前，见上面那条
+    // 关于顺序的说明）。解析失败（不是「像名字」的形状）就交给包管理器，这里不管。
+    for (const imp of ast.imports || []) {
+      if (!imp || 是路径形式(imp.path)) continue;
+      const 目标 = resolveImport(能力, abs, imp.path, diagnostics);
+      if (目标 && !已见.has(目标) && fs.existsSync(目标)) 队列.unshift(目标);
+    }
   }
 
   // 第二趟：别名、共享名字。宿主在 visit 与 return 之间做这两件
@@ -237,15 +293,19 @@ export function loadUnitSelf(entry, options = {}) {
   // 症状（2026-11-01 实测）：namespace 那五条判据全部报 HMYR-R0104「没有这个名字」——
   // 因为 命名空间::名字 这种写法要靠别名表才认得出，而交回的是一个空 Map；
   // 而 self-chain2 要的 HMYR-W0302（两个模块声明同一个名字）从来没出现过。
-  const 是路径形式 = (s) =>
-    typeof s === "string" && (s.startsWith("./") || s.startsWith("../") || s.startsWith("/") || /^[A-Za-z]:[\\/]/.test(s));
   const 别名表 = new Map();
   for (const abs of order) {
     const ast = modules.get(abs);
     if (!ast) continue;
     for (const imp of ast.imports || []) {
-      if (!imp || !是路径形式(imp.path)) continue;
-      const 目标 = path.resolve(path.dirname(abs), imp.path);
+      if (!imp) continue;
+      // 包名也要走同一套：别名、版本协商都与路径形式一样，只是「解析成哪个文件」
+      // 这一步交给 resolveImport（它懂包根与清单）。诊断传 null —— 清单那半边在
+      // 第一趟已经报过了，这里只需要路径。
+      const 目标 = 是路径形式(imp.path)
+        ? path.resolve(path.dirname(abs), imp.path)
+        : resolveImport(能力, abs, imp.path, null);
+      if (!目标) continue;
       if (imp.alias) 别名表.set(imp.alias, 目标);
       // 版本协商：调用方要第 M 版，模块提供到第 N 版，M <= N 就成 ——
       // 模块向下兼容，所以「N 能提供 M」这一条是可判的（宿主第 313 到 317 行同样的判断）。

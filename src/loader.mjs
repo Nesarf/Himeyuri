@@ -30,7 +30,7 @@ const short = (file) => file.split(/[\\/]/).pop() || file;
  * import "乙包" 会被解析成 甲包/乙包/index.hmoca。往上走到底、取最后遇到的那个，
  * 才是这个工程的外壳。
  */
-function 找包根(cap, fromFile) {
+export function 找包根(cap, fromFile) {
   let 目录 = cap.path.dirname(fromFile);
   let 最后 = null;
   for (let i = 0; i < 64; i++) {
@@ -49,7 +49,7 @@ function 找包根(cap, fromFile) {
  * 哈希由 tools/hmkit-check.mjs 算。这里只验：能读、四项齐、名字与目录一致、
  * 版本是整数、许可非空、哈希的形状对。
  */
-function 读包清单(cap, 包根, 名, diagnostics) {
+export function 读包清单(cap, 包根, 名, diagnostics) {
   const 路 = cap.path.join(包根, 名, "hmyr.hmkit");
   if (!cap.file.exists(路)) {
     diagnostics.error("HMYR-E0304", "package '" + 名 + "' has no hmyr.hmkit beside its index.hmoca", 0, 0);
@@ -181,7 +181,7 @@ function 读包清单(cap, 包根, 名, diagnostics) {
  * 一条规则、一个约定文件名 —— 因为它要在四台机器上给出同一个答案，
  * 而任何「按清单字段去猜」的写法都会把答案藏进解析顺序里。
  */
-function resolveImport(cap, fromFile, spec, diagnostics) {
+export function resolveImport(cap, fromFile, spec, diagnostics) {
   if (spec.startsWith("./") || spec.startsWith("../") || /^[A-Za-z]:[\\/]/.test(spec) || cap.path.isAbsolute(spec)) {
     return cap.path.resolve(cap.path.dirname(fromFile), spec);
   }
