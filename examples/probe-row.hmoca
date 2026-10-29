@@ -1,0 +1,11 @@
+// 最小的探针：只调 拼行从（辅助函数），完全不碰 加载走。
+//
+// 为什么要它（2026-11-01）：adapter.hmoca 撞上 call depth exceeded (500)，
+// 而那连「没有 import 的文件」也一样。两个函数里谁在递归还没缩出来，
+// 所以先把最简单的那个单独拎出来：拼行从 对三元素的元组应当是三层。
+import "./run.hmoca"
+
+fn main() -> Int effects(process) {
+  print(拼行从(("甲", "乙", "丙"), 0, ""))
+  return 0
+}
