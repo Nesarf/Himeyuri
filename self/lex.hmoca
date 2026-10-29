@@ -77,18 +77,15 @@ fn skip_block(s: String, i: Int) -> Int {
   return skip_block(s, i + 1)
 }
 
-// 取一段。终点越过末尾时截到末尾（2026-11-01 补）。
+// 取一段直接用语言的内置 slice，这一层不再自己定义（2026-11-01 删）。
 //
-// 为什么要补：原来只有 if from >= to 一条，于是 slice("a", 0, 5) 会让 from 一路
-// 涨过 len(s)，s[from] 就落在界外。C 机器对界外下标交回空、最小求值器报 R0151 ——
-// 同一份源码两台机器两种结果，而这件事一直到 scan_lines 上才被看见
-// （design/BOARD.txt 第三十四节）。
-pub fn slice(s: String, from: Int, to: Int) -> String {
-  if from >= to { return "" }
-  if from >= len(s) { return "" }
-  if to > len(s) { return slice(s, from, len(s)) }
-  return s[from] + slice(s, from + 1, to)
-}
+// 为什么要删：原来这里有 pub fn slice(s, from, to)，实现是「s[from] 再递归取剩下」——
+// 取长度 L 的一段要复制 L 的平方那么多个字符。宿主那一侧因为「内置优先」，
+// 这个定义从来没被调到过（src/eval.mjs 第 52 行写着这条规矩），于是它只活在 C 机器上：
+// 加载 self/eval.hmoca（1309 行、38 KB）时十六秒内吃完四个吉字节，而同一份源码在宿主上
+// 毫无异样。删除之后两台机器都落到同一个内置，边界行为也因此一致（起点截到零、
+// 终点截到末尾、终点小于起点交回空）—— design/BOARD.txt 第三十四节那条裂缝正是
+// 「手写版越界交回空、内置版截断」造成的。
 
 fn starts_with(s: String, from: Int, p: String, k: Int) -> Bool {
   if k >= len(p) { return true }

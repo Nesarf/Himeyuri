@@ -21,10 +21,32 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 适配源 = path.join(ROOT, "self", "adapter.hmoca");
 const 缓存目录 = process.env.HMYR_CACHE || path.join(ROOT, ".cache");
 
+// 适配层的字节码是「adapter.hmoca 加它 import 的整条链」合并出来的，所以判断
+// 「还能不能用」必须看整条链的最新修改时间，不能只看 adapter.hmoca 一个。
+//
+// 为什么（2026-11-01）：原来只比较 adapter.hmoca，于是改了 self/run.hmoca 与
+// self/lex.hmoca 之后字节码从不重编 —— 一整轮实验都跑在旧码上，读数全是假的。
+// 这里用「整个 self/ 目录里最晚的 .hmoca」当判据：链的成员随时会变，
+// 而多编一次的代价只有一秒，比读到一份假读数便宜得多。
+function 链最新() {
+  let 新 = 0;
+  try {
+    const 目录 = path.join(ROOT, "self");
+    for (const 名 of fs.readdirSync(目录)) {
+      if (!名.endsWith(".hmoca")) continue;
+      const m = fs.statSync(path.join(目录, 名)).mtimeMs;
+      if (m > 新) 新 = m;
+    }
+  } catch {
+    /* 目录读不出来就当作没有更新，走下面那条「不重编」的路。 */
+  }
+  return 新;
+}
+
 function 编适配层() {
   const 码 = path.join(缓存目录, "adapter-self.hmoks");
   try {
-    if (fs.existsSync(码) && fs.statSync(码).mtimeMs >= fs.statSync(适配源).mtimeMs) return 码;
+    if (fs.existsSync(码) && fs.statSync(码).mtimeMs >= 链最新()) return 码;
   } catch {
     /* 缓存目录不存在或读不到 —— 往下走，去编一份。 */
   }
@@ -33,8 +55,11 @@ function 编适配层() {
   } catch {
     return null;
   }
+  if (process.env.HMYR_SELF_TRACE) console.error("[self] 编适配层 → " + 码);
   const r = spawnSync(process.execPath, [path.join(ROOT, "tools", "emit-code.mjs"), 适配源, 码], {
     encoding: "utf8",
+    // 没有超时的时候，一次坏掉的编译可以把整个套件挂住（2026-11-01 实测：三十分钟无输出）。
+    timeout: 120000,
   });
   return r.status === 0 && fs.existsSync(码) ? 码 : null;
 }
@@ -74,11 +99,14 @@ function 取顺序(机器, 码, 目录, 相对, 绝对) {
   } catch {
     /* 没有缓存或读坏了 —— 往下走，去问自举层。 */
   }
+  if (process.env.HMYR_SELF_TRACE) console.error("[self] 取顺序 → " + 绝对);
   const r = spawnSync(机器, [码, 目录, 相对], {
     encoding: "utf8",
     // 步限提到启动器主路径那一档：默认的五百万步对 self/ 下几百行的文件不够，
     // 症状是 HMYR-R0102 the program ran for too long（2026-11-01 实测）。
     env: 子环境(),
+    // 同上：一次运行没有上限，就是一颗能挂住整个套件的钉子。
+    timeout: 120000,
   });
   if (r.status !== 0) {
     return { 错: String(r.stderr || r.stdout || "").trim() || "适配层退出码 " + r.status };
