@@ -1039,7 +1039,28 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
     }
     return 坏("没有这个名字：" + 节点.text)
   }
-  if 种 == "Binary" { return 求二元(节点.op, 求值(节点.left, 环境), 求值(节点.right, 环境)) }
+  if 种 == "Binary" {
+    // && 与 || 要短路：右边在有结论时不该被求值。
+    //
+    // 2026-11-01 补。在这一天之前，两个操作数在调进 求二元 之前都求过 ——
+    // 那条限制写在 求二元 的注释里，而它让 lex.hmoca 里「先检查再访问」的写法
+    // 全部失效：s[i] == "/" && i + 1 < len(s) && s[i + 1] == "/" 的右边会被求值，
+    // 越界就在那里（design/BOARD.txt 第三十五节）。
+    // 短路是规范的一部分，所以这一条不是优化，是补语义。
+    if 节点.op == "&&" {
+      let 左 = 求值(节点.left, 环境)
+      if 左.ok == false { return 左 }
+      if 左.value == false { return 好(false) }
+      return 求值(节点.right, 环境)
+    }
+    if 节点.op == "||" {
+      let 左 = 求值(节点.left, 环境)
+      if 左.ok == false { return 左 }
+      if 左.value == true { return 好(true) }
+      return 求值(节点.right, 环境)
+    }
+    return 求二元(节点.op, 求值(节点.left, 环境), 求值(节点.right, 环境))
+  }
   if 种 == "Unary" { return 求一元(节点.op, 求值(节点.operand, 环境)) }
   if 种 == "Call" { return 求调用(节点, 环境) }
   if 种 == "Index" {
