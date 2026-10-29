@@ -55,6 +55,17 @@ function 缓存路(绝对) {
 
 // 自举层交回的 order：一个路径一行。它的 拼路径 不做归一（会留下 /a/../b 这种），
 // 所以这里补一次 path.resolve —— 那是这一层唯一要替它做的事。
+// 子进程的环境：别把 HMYR_LOADER 传下去。
+//
+// 为什么（2026-11-01）：那个开关会传染 —— 子进程也会用自举加载器，而每用一次
+// 又起一个 C 机器。量起点数那一次就是这样把机器推到五百个 node 进程的。
+// 步限也给足：默认的五百万步对 self/ 下几百行的文件不够。
+function 子环境() {
+  const 环境 = { ...process.env, HMYR_STEPS: "200000000" };
+  delete 环境.HMYR_LOADER;
+  return 环境;
+}
+
 function 取顺序(机器, 码, 目录, 相对, 绝对) {
   const 存 = 缓存路(绝对);
   try {
@@ -67,7 +78,7 @@ function 取顺序(机器, 码, 目录, 相对, 绝对) {
     encoding: "utf8",
     // 步限提到启动器主路径那一档：默认的五百万步对 self/ 下几百行的文件不够，
     // 症状是 HMYR-R0102 the program ran for too long（2026-11-01 实测）。
-    env: { ...process.env, HMYR_STEPS: "200000000" },
+    env: 子环境(),
   });
   if (r.status !== 0) {
     return { 错: String(r.stderr || r.stdout || "").trim() || "适配层退出码 " + r.status };
