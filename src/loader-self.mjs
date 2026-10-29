@@ -18,6 +18,8 @@ import { Diagnostics } from "./lexer.mjs";
 import { 切 } from "./subset-lex.mjs";
 import { 子集解 } from "./subset-parse.mjs";
 import { 展开模块 } from "./expand.mjs";
+import { 区检查 } from "./zone-check.mjs";
+import { 实时检查 } from "./realtime-check.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 适配源 = path.join(ROOT, "self", "adapter.hmoca");
@@ -69,6 +71,12 @@ function 编适配层() {
 // 缓存：同一个入口文件、同一个 mtime，它的 order 不会变 —— 而 check-all 里每个套件
 // 都是一个独立进程，所以进程内的 Map 没有用，要落到磁盘上（2026-11-01）。
 // 键里带 mtime：文件一改就是新键，旧的留着无害。
+//
+// 键里还要带适配层字节码的 mtime（2026-11-01 深夜补）。为什么：order 是那段字节码
+// 算出来的，而它的语义会变 —— 把 加载走 从先序改成后序那次，缓存里的旧 order 就
+// 一直是先序的，于是 loadUnitSelf 交出 [stmt, chain, lex]，而 selfmod 那八项
+// 却全过（它直接跑自举层，不过这层缓存）。症状是「改了源码没效果」的另一种写法：
+// 缓存的语义来自它的生产者，生产者变了，缓存就得跟着失效。
 function 缓存路(绝对) {
   let stamp = 0;
   try {
@@ -76,7 +84,13 @@ function 缓存路(绝对) {
   } catch {
     stamp = 0;
   }
-  const 名 = createHash("sha1").update(绝对 + ":" + stamp).digest("hex").slice(0, 16);
+  let 产者 = 0;
+  try {
+    产者 = Math.floor(fs.statSync(path.join(缓存目录, "adapter-self.hmoks")).mtimeMs);
+  } catch {
+    产者 = 0;
+  }
+  const 名 = createHash("sha1").update(绝对 + ":" + stamp + ":" + 产者).digest("hex").slice(0, 16);
   return path.join(缓存目录, "loader-self", 名 + ".json");
 }
 
@@ -192,7 +206,28 @@ export function loadUnitSelf(entry, options = {}) {
     } catch {
       continue;
     }
-    modules.set(abs, reader(源, abs).ast);
+    const ast = reader(源, abs).ast;
+    // 区与实时那两条编译期检查：宿主在 visit 里做（src/loader.mjs 第 282 与 291 行），
+    // 而这一层原来没做 —— 于是换掉 loader 之后那些诊断就没人报了。
+    //
+    // 症状（2026-11-01 实测）：zone-static 两条判据要的是「装载应当失败，诊断里应当有
+    // R0301」，拿到的却是 ok:true 与一个空数组。而 zone-static 在宿主档下四十三项全过、
+    // 在自举档下四十一项 —— 差的正是这两条。
+    //
+    // 持有格检查（owned-check）不在这里：它要两张跨模块的表，是装载的第二趟，
+    // 照抄过来得连那两张表一起搬，那是另一件事。
+    if (options.zoneCheck !== false) {
+      for (const d of 区检查(ast, { 文件: path.basename(abs) })) {
+        if (d.severity === "error") diagnostics.error(d.code, d.message, d.line, d.column);
+        else diagnostics.warn(d.code, d.message, d.line, d.column);
+      }
+    }
+    if (options.realtimeCheck !== false) {
+      for (const d of 实时检查(ast, { 文件: path.basename(abs) })) {
+        diagnostics.error(d.code, d.message, d.line, d.column);
+      }
+    }
+    modules.set(abs, ast);
   }
   return { ok: diagnostics.errors.length === 0, order, modules, 别名表: new Map(), diagnostics };
 }
