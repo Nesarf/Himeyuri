@@ -324,7 +324,14 @@ if (跳过.size) 选中 = 选中.filter(([名]) => !跳过.has(名));
 const 名单 = new Set(选中.map(([名]) => 名));
 
 const 跑一套 = (script) => new Promise((resolve) => {
-  const 子 = spawn(process.execPath, ["--max-old-space-size=768", path.join(ROOT, script)], { cwd: ROOT });
+  /* 每个工人的堆上限。2026-11-01 从写死的 768 改成可配置，缺省 512。
+   *
+   * 为什么：八路 × 768 MB 就是 6 GB 的名义上限，而每套件内部还会起子进程
+   * （cvm 编 gcc、launcher 反复起 bin/hmyr.mjs），16 GB 的机器很容易被吃满 ——
+   * 那是「内存持续爆满」的一半来源，另一半是子进程本身。
+   * 512 仍然容得下全库最重的那几套；真撞上就 HMYR_HEAP_MB 调回去。 */
+  const 堆 = Number(process.env.HMYR_HEAP_MB) > 0 ? Number(process.env.HMYR_HEAP_MB) : 512;
+  const 子 = spawn(process.execPath, ["--max-old-space-size=" + 堆, path.join(ROOT, script)], { cwd: ROOT });
   let 出 = "", 错 = "";
   子.stdout.setEncoding("utf8");
   子.stderr.setEncoding("utf8");
