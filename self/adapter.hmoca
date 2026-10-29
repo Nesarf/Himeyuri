@@ -9,9 +9,23 @@
 // （design/FULLSELF.txt 第五节）。
 import "./run.hmoca"
 
-fn main() -> Int effects(process, file) {
-  // 最小的一次（2026-11-01）：连 argv 都不碰。
-  // 若这一句也打不出来，那问题在字节码装载那一段，而与 main 里写什么无关。
-  print("hi" + chr(10))
+// C 机器的约定（vm/hmyr.c 第 5754 行）：带参数时入口换成「命令行入口」，
+// 不带参数时才是 main。而 run.hmoca 里已经有一个命令行入口（它读文件、跑程序），
+// 合并规矩是后到者覆盖先到者 —— 所以这一份定义自己的，就把那一个盖住了。
+//
+// 这一条是这一轮最贵的一课：之前所有的 print 都不出现，是因为程序根本没跑到 main。
+fn 命令行入口() -> Int effects(process, file) {
+  print("adapter 的命令行入口被叫到了" + chr(10))
+  let 参们 = argv()
+  if len(参们) < 3 {
+    print("用法：adapter.hmoca <目录> <相对路径>" + chr(10))
+    return 1
+  }
+  print(加载顺序公开(参们[1], 参们[2]))
+  return 0
+}
+
+fn main() -> Int effects(process) {
+  print("adapter：请带 <目录> <相对路径> 两个参数" + chr(10))
   return 0
 }

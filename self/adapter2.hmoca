@@ -1,0 +1,9 @@
+// 最小的一刀（2026-11-01）：与 examples/probe-load2.hmoca 同样的形状，
+// 但放在 self/ 里 —— 于是它能分开两件事：是「import run.hmoca」本身，
+// 还是 adapter.hmoca 的内容。
+import "./run.hmoca"
+
+fn main() -> Int effects(process) {
+  print("self 里的最小探针跑起来了" + chr(10))
+  return 0
+}
