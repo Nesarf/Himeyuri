@@ -20,6 +20,7 @@ import { 子集解 } from "./subset-parse.mjs";
 import { 展开模块 } from "./expand.mjs";
 import { 区检查 } from "./zone-check.mjs";
 import { 实时检查 } from "./realtime-check.mjs";
+import { 持有格检查 } from "./owned-check.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 适配源 = path.join(ROOT, "self", "adapter.hmoca");
@@ -229,5 +230,125 @@ export function loadUnitSelf(entry, options = {}) {
     }
     modules.set(abs, ast);
   }
-  return { ok: diagnostics.errors.length === 0, order, modules, 别名表: new Map(), diagnostics };
+
+  // 第二趟：别名、共享名字。宿主在 visit 与 return 之间做这两件
+  // （src/loader.mjs 第 305 行与第 366 行），而适配层原来一件都没做。
+  //
+  // 症状（2026-11-01 实测）：namespace 那五条判据全部报 HMYR-R0104「没有这个名字」——
+  // 因为 命名空间::名字 这种写法要靠别名表才认得出，而交回的是一个空 Map；
+  // 而 self-chain2 要的 HMYR-W0302（两个模块声明同一个名字）从来没出现过。
+  const 是路径形式 = (s) =>
+    typeof s === "string" && (s.startsWith("./") || s.startsWith("../") || s.startsWith("/") || /^[A-Za-z]:[\\/]/.test(s));
+  const 别名表 = new Map();
+  for (const abs of order) {
+    const ast = modules.get(abs);
+    if (!ast) continue;
+    for (const imp of ast.imports || []) {
+      if (!imp || !是路径形式(imp.path)) continue;
+      const 目标 = path.resolve(path.dirname(abs), imp.path);
+      if (imp.alias) 别名表.set(imp.alias, 目标);
+      // 版本协商：调用方要第 M 版，模块提供到第 N 版，M <= N 就成 ——
+      // 模块向下兼容，所以「N 能提供 M」这一条是可判的（宿主第 313 到 317 行同样的判断）。
+      const 被引 = modules.get(目标);
+      if (
+        被引 && 被引.rev !== null && 被引.rev !== undefined &&
+        imp.rev !== null && imp.rev !== undefined && imp.rev > 被引.rev
+      ) {
+        diagnostics.error(
+          "HMYR-E0303",
+          "module '" + imp.path + "' offers revision " + 被引.rev + ", but the import asks for " + imp.rev +
+            "; there is no version both sides support",
+          imp.line || 0,
+          imp.column || 0,
+        );
+      }
+    }
+  }
+  // 函数表是扁平的，所以两个模块声明同一个名字就是一次静默覆盖 —— 说一声。
+  const 已声明 = new Map();
+  for (const abs of order) {
+    const ast = modules.get(abs);
+    if (!ast) continue;
+    for (const decl of ast.decls || []) {
+      if (decl.kind !== "Fn" && decl.kind !== "Const" && decl.kind !== "TypeAlias") continue;
+      if (已声明.has(decl.name)) {
+        diagnostics.warn(
+          "HMYR-W0302",
+          "two modules declare '" + decl.name + "' (" + path.basename(已声明.get(decl.name)) + " and " + path.basename(abs) +
+            "); the later one wins until namespaces exist",
+          0,
+          0,
+        );
+      } else {
+        已声明.set(decl.name, abs);
+      }
+    }
+  }
+  // 可见性的第一步（SPEC 6.4 第二步，宿主第 380 到 423 行）：非 pub 的声明被别的
+  // 模块用到时说一声。它是提示不是拒绝 —— 函数表还是扁平的，那个名字照样调得到。
+  //
+  // 这一条在适配层原来完全没有，而 namespace 那两条判据要的正是它（报 W0303，
+  // 并且那句话里要出现两个文件名）。只把「调用」算作引用：局部变量与参数不是
+  // 对全局声明的引用，把它们算进去会盘出一半误报（宿主那一版踩过这个坑）。
+  {
+    const 非公开 = new Map();
+    for (const abs of order) {
+      const ast = modules.get(abs);
+      if (!ast) continue;
+      for (const decl of ast.decls || []) {
+        if (decl.kind !== "Fn" && decl.kind !== "Const" && decl.kind !== "TypeAlias") continue;
+        if (decl.pub) continue;
+        非公开.set(decl.name, abs);
+      }
+    }
+    const 走 = (n, 报) => {
+      if (!n || typeof n !== "object") return;
+      if (Array.isArray(n)) {
+        for (const x of n) 走(x, 报);
+        return;
+      }
+      if (n.kind === "Ident") return;
+      if (n.kind === "Call" && n.callee && n.callee.kind === "Ident") 报(n);
+      for (const [k, v] of Object.entries(n)) {
+        if (k === "line" || k === "column" || k === "kind") continue;
+        走(v, 报);
+      }
+    };
+    for (const abs of order) {
+      const ast = modules.get(abs);
+      if (!ast) continue;
+      走(ast, (n) => {
+        const 家 = 非公开.get(n.callee.name);
+        if (家 && 家 !== abs) {
+          diagnostics.warn(
+            "HMYR-W0303",
+            "'" + n.callee.name + "' is declared in " + path.basename(家) + " without pub, and it is called in " +
+              path.basename(abs) + "; the flat table still lets it through, so this is a notice rather than a refusal",
+            n.line || 0,
+            n.column || 0,
+          );
+        }
+      });
+    }
+  }
+  // 持有格检查（design/MEMORY.txt 那条硬规则，宿主第 345 与 355 行）：它要两张跨模块的
+  // 表，所以是两趟 —— 先把每个模块的签名收集起来，再回来报错。一趟报不了，因为
+  // 「被调者可能先在别的模块里装载过」这件事只有收齐了才知道。
+  const 跨模块 = { 签名: new Map(), 脏: new Map() };
+  if (options.ownedCheck !== false) {
+    for (const abs of order) {
+      const ast = modules.get(abs);
+      if (!ast) continue;
+      持有格检查(ast, { 文件: path.basename(abs), 外部: 跨模块, 只收集: true });
+    }
+    for (const abs of order) {
+      const ast = modules.get(abs);
+      if (!ast) continue;
+      for (const d of 持有格检查(ast, { 文件: path.basename(abs), 外部: 跨模块 })) {
+        diagnostics.error(d.code, d.message, d.line, d.column);
+      }
+    }
+  }
+
+  return { ok: diagnostics.errors.length === 0, order, modules, 别名表, diagnostics };
 }
