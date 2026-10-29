@@ -46,10 +46,25 @@ LDFLAGS := -mcpu=$(CPU) -mthumb -T $(LDSCRIPT) --specs=nosys.specs -Wl,--gc-sect
 OBJS    := $(BUILD)/startup.o $(BUILD)/arm-port.o $(BUILD)/board-main.o \
            $(BUILD)/$(UART:.c=.o) $(BUILD)/hmyr.o $(BUILD)/program.o
 
+# 编字节码用谁。默认 tools/emit-code.mjs —— 那条路整条是 JS 的（src/bytecode.mjs 编、
+# src/code-file.mjs 写）。COMPILER=hmyr 时换成 tools/compile-hmyr.mjs：那边由
+# self/compile.hmoca 编、self/pack.hmoca 落盘，node 只做启动。
+#
+# 为什么这个开关值得有（2026-10-30）：板子那条线的判据是「不依赖宿主单独运行」，
+# 而默认这一条把「字节码从哪儿来」留在了 JS 侧 —— 执行不依赖宿主了，产出还依赖。
+# 开关让同一个判据能覆盖那一步，而两条路产出的字节码在那个判据下必须跑出同样的字节。
+COMPILER ?= js
+
+ifeq ($(COMPILER),hmyr)
+EMIT := tools/compile-hmyr.mjs
+else
+EMIT := tools/emit-code.mjs
+endif
+
 # 先编字节码，再把它打成对象：两段符号由 objcopy 给。
 $(BUILD)/program.hmoks: ../$(PROGRAM)
 	@mkdir -p $(BUILD)
-	cd .. && $(NODE) tools/emit-code.mjs "$(PROGRAM)" "port/$(BUILD)/program.hmoks"
+	cd .. && $(NODE) $(EMIT) "$(PROGRAM)" "port/$(BUILD)/program.hmoks"
 
 $(BUILD)/program.o: $(BUILD)/program.hmoks
 	# 先 cd 进 build 再 objcopy：符号名由「objcopy 看到的路径」决定，

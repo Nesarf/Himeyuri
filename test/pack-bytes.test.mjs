@@ -104,6 +104,37 @@ console.log("四、pack 写出来的东西读得回来，而且跑得出同一�
   }
 }
 
+console.log("五、两条编译路径：字节码从哪儿来，换掉之后答案不变");
+{
+  // 这一条问的不是「字节一样吗」—— 两位编译者编出的字节本来就不同
+  // （self/compile.hmoca 是子集）。它问的是那个更弱、也是真正要紧的：
+  // 两份不同的字节码，在同一台机器上跑出的输出是否逐字节相同。
+  //
+  // 为什么它属于这一套：板子那条线的判据是「不依赖宿主单独运行」，而
+  // tools/emit-code.mjs 与 tools/compile-hmyr.mjs 的分别是「字节码从哪儿来」。
+  // 那一步换了之后程序的输出没有变 —— 这就是「产出也不依赖宿主」的可核对形式。
+  // 板子上那一次（同一个文件烧进 Nucleo-F411RE，串口字节与桌面相同）记在
+  // design/BOARD.txt 第十七节，它依赖硬件，不进套件。
+  const 源 = "examples/board-run.hmoca";
+  const js = path.join(临, "board-run-js.hmoks");
+  const hm = path.join(临, "board-run-hmyr.hmoks");
+  const r1 = 跑(["tools/emit-code.mjs", 源, js]);
+  const r2 = 跑(["tools/compile-hmyr.mjs", 源, hm]);
+  ok("两条路都写出了文件", fs.existsSync(js) && fs.existsSync(hm),
+     ((r1.stderr || "") + (r2.stderr || "")).slice(0, 200));
+  if (fs.existsSync(js) && fs.existsSync(hm)) {
+    const 长 = [fs.statSync(js).size, fs.statSync(hm).size];
+    ok("两位编译者交出的长度不同（这是说明，不是判据：它们本来就是两位）",
+       长[0] !== 长[1], 长[0] + " / " + 长[1]);
+    const a = 跑(["tools/run-bytecode.mjs", js]);
+    const b = 跑(["tools/run-bytecode.mjs", hm]);
+    ok("两条路跑出同样的字节", (a.stdout || "") === (b.stdout || ""),
+       JSON.stringify((a.stdout || "").slice(0, 80)) + " vs " + JSON.stringify((b.stdout || "").slice(0, 80)));
+    ok("输出里有那四行", (b.stdout || "").includes("和=55") && (b.stdout || "").includes("串=ABCDE"),
+       JSON.stringify((b.stdout || "").slice(0, 80)));
+  }
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 
 console.log("");
