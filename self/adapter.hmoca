@@ -11,10 +11,18 @@ import "./run.hmoca"
 
 fn main() -> Int effects(process, file) {
   let 参们 = argv()
-  if len(参们) < 3 {
+  // argv 的形状：两台机器实测一致（2026-11-01）——
+  //   [0] 是程序或字节码的路径，[1] 是目录，[2] 是相对路径，len=3。
+  // 而这里不依赖那个 3：最后两个元素永远是「目录」与「相对路径」，
+  // 所以按尾部取，前面有几个都不影响。
+  if len(参们) < 2 {
     print_err("用法：adapter.hmoca <目录> <相对路径>" + chr(10))
     return 1
   }
-  print(加载顺序公开(参们[1], 参们[2]))
+  let 目录 = 参们[len(参们) - 2]
+  let 相对 = 参们[len(参们) - 1]
+  // 临时诊断（2026-11-01）：C 机器上报 cannot read 目录，而 argv 里两个值都该在。
+  print_err("目录=[" + 目录 + "] 相对=[" + 相对 + "]" + chr(10))
+  print(加载顺序公开(目录, 相对))
   return 0
 }

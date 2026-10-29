@@ -1,0 +1,14 @@
+// 把 argv 的实际内容打出来：两台机器上它到底装了什么。
+//
+// 为什么（2026-11-01）：adapter 在 C 机器上报 cannot read 'D:/himeyuri'，
+// 而它拿到的目录与相对路径都是由 argv 决定的。形状写对之前，别的不必谈。
+fn main() -> Int effects(process) {
+  let 参们 = argv()
+  print("len=" + str(len(参们)) + chr(10))
+  var i = 0
+  while i < len(参们) {
+    print(str(i) + "=[" + 参们[i] + "]" + chr(10))
+    i = i + 1
+  }
+  return 0
+}
