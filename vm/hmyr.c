@@ -2048,9 +2048,31 @@ static uint32_t g_depth_cap = 0;
 static 线程局部 void *g_栈高 = 0;
 static 线程局部 void *g_栈低 = 0;
 
+/* 栈预算：桌面上的「像板子那样只有这么点栈」。
+ *
+ * 为什么要在桌面上有它（2026-10-30）：那块板子的栈与堆共享剩下的一百二十八 KB 减去
+ * 静态段，而「六份跑不跑得动」这件事以前只有插上板子才知道。有了这个数，同一份程序
+ * 在桌面上带 HMYR_STACK_LIMIT=... 就能复现那次失败，不必等硬件。
+ *
+ * 尺子与板子上那两行 depth=/stack= 是同一把：最深帧地址减最浅帧地址。 */
+static 线程局部 size_t g_栈限 = 0;
+
+static Value fail(const char *code, const char *msg);
+
 static void 记栈(void *帧) {
   if (!g_栈高 || 帧 > g_栈高) g_栈高 = 帧;
   if (!g_栈低 || 帧 < g_栈低) g_栈低 = 帧;
+  if (g_栈限) {
+    size_t 用 = (size_t)((const char *)g_栈高 - (const char *)帧);
+    if (用 > g_栈限) {
+      char 话[160];
+      snprintf(话, sizeof 话, "the stack budget is %llu bytes and this call is %llu bytes into it",
+               (unsigned long long)g_栈限, (unsigned long long)用);
+      /* 码用 R0108：语义是「层次太深」，而栈预算是它的字节版本 ——
+       * 平台给不了那么多栈，与深度超限是同一件事的两种量法。 */
+      fail("HMYR-R0108", 话);
+    }
+  }
 }
 
 /* 给板侧读的两个数：最深的调用层数，与这一趟递归用掉的栈字节。
@@ -4607,8 +4629,10 @@ static Value run_func(Func *f, Value *args, int nargs) {
     return v_null();
   }
   记深度(f, g_机->当前函数);
-  /* 这一帧的地址交给 记栈：最深与最浅的差就是递归用掉的栈字节。 */
+  /* 这一帧的地址交给 记栈：最深与最浅的差就是递归用掉的栈字节。
+   * 栈预算超了的话 记栈 里已经 fail —— 这里立刻交回去，不再往下走这一帧。 */
   记栈(__builtin_frame_address(0));
+  if (g_failed) return v_null();
   Value 槽栈[帧槽上限];
   int 用栈 = (f->nslots <= 帧槽上限);
   Value *slots = 用栈 ? 槽栈 : alloc_values(f->nslots);
@@ -5846,6 +5870,15 @@ int main(int argc, char **argv) {
     if (ml) {
       long v = atol(ml);
       g_mem_limit = v > 0 ? (size_t)v * 1024 * 1024 : 0;
+    }
+  }
+  {
+    /* 栈预算：桌面上的「像板子那样只有这么点栈」，单位是字节。
+     * 与 HMYR_MEM_LIMIT 的分工：那个管堆，这个管递归用掉的栈。 */
+    const char *sl = getenv("HMYR_STACK_LIMIT");
+    if (sl) {
+      long v = atol(sl);
+      if (v > 0) g_栈限 = (size_t)v;
     }
   }
 
