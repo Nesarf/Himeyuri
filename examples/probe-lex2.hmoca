@@ -1,0 +1,25 @@
+// 二分：从最短的源码往上加，看哪一档在默认路径上崩。
+//
+// 为什么（2026-11-01）：probe-lex 说 scan 正常而 scan_lines 崩，而 probe-len 说
+// 字符串本身两侧一致。于是把「一个串怎么被切成词」按长度分层问一遍 ——
+// 崩的那一档就是越界发生的形状。
+import "../self/lex.hmoca"
+
+fn 试(源码: String) -> Int effects(process) {
+  let t = scan_lines(源码)
+  print("好 长" + str(len(源码)) + " 词" + str(len(t)) + chr(10))
+  return 0
+}
+
+fn main() -> Int effects(process) {
+  试("a")
+  试("a\n")
+  试("ab\n")
+  试("a b\n")
+  试("fn\n")
+  试("fn m\n")
+  试("fn m(\n")
+  试("fn m()\n")
+  试("fn m() {\n")
+  return 0
+}
