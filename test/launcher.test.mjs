@@ -205,6 +205,35 @@ console.log("默认那份最小求值器，与 --host-eval 那条做同一件事
   }
 }
 
+// 短路：&& 与 || 的右边在有结论时不该被求值。
+//
+// 为什么这一条在 launcher 里（2026-11-01）：跑程序的是自举层的求值器，
+// 而它曾经不短路 —— 那条限制写在 self/eval.hmoca 的注释里，代价是整个词法器
+// 里「先检查再访问」的写法全部失效，默认路径在 scan_lines("a") 上越界
+// （design/BOARD.txt 第三十五节）。这一条钉住的是：自举层跑程序时短路也在。
+{
+  const 目录 = fs.mkdtempSync(path.join(process.env.TEMP || "/tmp", "hmyr-short-"));
+  try {
+    const 源 = path.join(目录, "s.hmoca");
+    fs.writeFileSync(源,
+      "fn main() -> Int effects(process) {\n"
+      + "  let s = \"a\"\n"
+      + "  if 1 > 2 && s[9] == \"x\" {\n"
+      + "    print(\"右边被求值了\" + chr(10))\n"
+      + "  }\n"
+      + "  if 1 < 2 || s[9] == \"x\" {\n"
+      + "    print(\"完\" + chr(10))\n"
+      + "  }\n"
+      + "  return 0\n"
+      + "}\n", "utf8");
+    const 出 = String(spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), 源], { encoding: "utf8" }).stdout);
+    ok("与短路：右边没被求值", !出.includes("右边被求值了"), JSON.stringify(出));
+    ok("或短路：左边为真就不求右边", 出.includes("完"), JSON.stringify(出));
+  } finally {
+    fs.rmSync(目录, { recursive: true, force: true });
+  }
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
