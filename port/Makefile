@@ -115,6 +115,11 @@ $(TARGET).bin: $(TARGET).elf
 qemu: $(TARGET).elf
 	qemu-system-arm -M netduinoplus2 -kernel $(TARGET).elf -nographic -monitor none -serial stdio
 
+# 桌面上跑同一份镜像，不必插板子：QEMU 的 MPS2（Cortex-M3）把串口写进文件，
+# 工具等一个时限再收。它验逻辑，不验容量 —— 理由与两者的差别见 design/BOARD.txt 第十八节。
+qemu-desktop: $(TARGET).elf
+	cd .. && $(NODE) tools/qemu-board.mjs "port/$(TARGET).elf" --machine mps2
+
 # 模拟器上验（Cortex-M3 的 MPS2：串口与链接脚本都换那一套）：
 #   make qemu-mps2 PROGRAM=examples/hello.hmoca
 #

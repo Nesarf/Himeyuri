@@ -91,6 +91,7 @@
     node tools/impact.mjs self/body.hmoca       给一个文件，答「改动会碰到哪些套件」而不必试跑
     node tools/hmget.mjs --from <来源> --into <包根> <包名>   取一个包（只从文件，不联网）
     node tools/hmget.mjs --remove --into <包根> --dry-run <包名>  说清会删什么而不动手
+    make -C port qemu-desktop                   同一份 ARM 镜像在桌面上跑（不必插板子；验逻辑，不验容量）
 
   而 design/ 里那些稿子隔一阵就要对一次实现，因为它们写的时候都在赌某件事。
   2026-10-28 通了一遍，结果记在这里：
