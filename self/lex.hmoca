@@ -73,8 +73,16 @@ fn skip_block(s: String, i: Int) -> Int {
   return skip_block(s, i + 1)
 }
 
+// 取一段。终点越过末尾时截到末尾（2026-11-01 补）。
+//
+// 为什么要补：原来只有 if from >= to 一条，于是 slice("a", 0, 5) 会让 from 一路
+// 涨过 len(s)，s[from] 就落在界外。C 机器对界外下标交回空、最小求值器报 R0151 ——
+// 同一份源码两台机器两种结果，而这件事一直到 scan_lines 上才被看见
+// （design/BOARD.txt 第三十四节）。
 pub fn slice(s: String, from: Int, to: Int) -> String {
   if from >= to { return "" }
+  if from >= len(s) { return "" }
+  if to > len(s) { return slice(s, from, len(s)) }
   return s[from] + slice(s, from + 1, to)
 }
 

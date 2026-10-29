@@ -1054,7 +1054,8 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
     // 结论。而自举层的词法器在那之前就已经在某个下标上越了界，正是这台宽松的机器
     // 让它一直没被发现（design/BOARD.txt 第三十三节）。
     if 位.value < 0 || 位.value >= len(标.value) {
-      return 坏("下标越界：" + str(位.value) + "，而长度是 " + str(len(标.value)))
+      return 坏("下标越界：" + str(位.value) + "，而长度是 " + str(len(标.value))
+        + "，在第 " + str(节点.line) + " 行")
     }
     return 好(标.value[位.value])
   }
