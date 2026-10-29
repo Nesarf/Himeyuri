@@ -18,13 +18,16 @@ ENTRY(Reset_Handler)
 MEMORY
 {
   FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 512K
-  RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 112K
+  /* 2026-11-01 改：112K → 128K。F411RE 的 SRAM 是 0x20000000 起 128 KB，
+   * 而这一份先前只切到 0x2001C000 —— 十六 KB 一直躺在那里没人用。
+   * 自编译在板子上撞墙时 live 是 68102，把这一段拿回来就不必再省。 */
+  RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 128K
 }
 
 /* 栈顶与 link.sct 里 ARM_LIB_STACK 那一条同源：
  * start 0x2001C000、向下 8 KB。两处不一致时，症状是「中断一来就进 HardFault」，
  * 而没人会想到去看链接脚本。 */
-_estack = 0x2001C000;
+_estack = 0x20020000;
 
 SECTIONS
 {
