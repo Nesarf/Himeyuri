@@ -14,8 +14,14 @@
 
   跑它：node bin/hmyr.mjs 你的文件.hmoca
 
+  不装 Node 也能跑：vm/hmyr.c 编出来的那个可执行文件把种子编在自己里面
+  （vm/pack_seed.h，三百四十二 KB 的 .hmtn 变成一个 C 数组），
+  所以一个 exe 加一份源码就够，旁边什么也不用放：
+
+    hmyr.exe 你的文件.hmoca
+
   就这些。没有 package.json，没有 tsconfig，没有 bundler，没有 node_modules。
-  整个仓库是一堆源码，而它跑起来只需要 Node。
+  整个仓库是一堆源码；它跑起来需要 Node，或者需要那一个 exe 与它自带的那份种子。
 
 它主张什么
 --------------------------------------------------------------------
