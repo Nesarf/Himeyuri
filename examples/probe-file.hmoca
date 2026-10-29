@@ -1,0 +1,11 @@
+// 最小的一问：C 机器上 file 效果通不通。
+//
+// 为什么（2026-11-01）：adapter 在 C 机器上报 cannot read 一个目录，而 print_err
+// 一行都没打出来 —— 说明那件事发生在 main 之前。这一份只做一件事：
+// 读一个确定存在的文件，把长度打出来。它过了，说明 file 通道是好的，
+// 那 adapter 的问题在别处；它不过，那缺口就在这道口上。
+fn main() -> Int effects(process, file) {
+  let 源 = read_text("D:\\himeyuri\\examples\\probe-argv.hmoca", "utf8")
+  print("长度=" + str(len(源)) + chr(10))
+  return 0
+}
