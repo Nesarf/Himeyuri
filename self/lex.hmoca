@@ -9,7 +9,10 @@
 //   ・字符串保留原文，不解转义；对拍字符串时只比种类，不比内容（解转义是下一件活）。
 //   ・块注释不嵌套（JS 版嵌套）；进制字面量按十六进制字符集读取；小数与整数同归 int 一类。
 //
-// 这个文件自足：模块系统还没有，所以 starts_with 一类的工具在这里重写了一遍。
+// 这个文件当时是自足的：那会儿模块系统还没有，starts_with 一类的工具在这里
+// 重写了一遍（scan.hmoca 里至今还留着一份同样的）。模块系统现在有了 ——
+// run.hmoca 就是靠 import 把五份串起来的 —— 所以这一段只剩历史价值。
+// 合并那两份工具不急，但它已经不是「必须自足」，而是一份可以收的重复。
 
 fn letters() -> String {
   return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
