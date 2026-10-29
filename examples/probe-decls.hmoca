@@ -1,0 +1,19 @@
+// 一个只问形状的探针：把「一份带 fn 声明的程序」交给自举层的解析器，
+// 把声明表与每项的长度打出来。
+//
+// 为什么需要它（2026-11-01）：默认路径跑 run.hmoca 时在 选[2] 那里报
+// index 9 outside length 9，而同一份在 C 机器上跑得好好的。两侧对「函数声明」
+// 这个元组的表示应当一致，所以先问形状，不猜。
+import "../self/lex.hmoca"
+import "../self/body.hmoca"
+
+fn main() -> Int effects(process) {
+  let 源码 = "fn main() -> Int {\n  print(str(6 * 7) + chr(10))\n  return 0\n}\n"
+  let tokens = scan_lines(源码)
+  print("tokens=" + str(len(tokens)) + chr(10))
+  let 全部 = parse_decls(tokens)
+  print("fns=" + str(len(全部.fns)) + chr(10))
+  print("首项=" + str(len(全部.fns[0])) + chr(10))
+  print("语句们=" + str(len(全部.fns[0][2])) + chr(10))
+  return 0
+}
