@@ -15,7 +15,6 @@ import "./run.hmoca"
 //
 // 这一条是这一轮最贵的一课：之前所有的 print 都不出现，是因为程序根本没跑到 main。
 fn 命令行入口() -> Int effects(process, file) {
-  print("adapter 的命令行入口被叫到了" + chr(10))
   let 参们 = argv()
   if len(参们) < 3 {
     print("用法：adapter.hmoca <目录> <相对路径>" + chr(10))
