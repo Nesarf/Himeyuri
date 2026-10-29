@@ -1500,13 +1500,10 @@ typedef struct Func {
 
 /* A name pool: every string a caller might need to compare by name.
  *
- * 2026-10-30 起它只记两样东西：这个名字在字节流里的起点，以及它的码元数。
- * 以前它存的是 uint16_t*，而每一个指针背后都是一次 malloc —— 板子上三千次。
- * 码元本来就在文件映像里，所以「取第 k 个码元」是一条读两字节的算式，
- * 而「这不是一次复制」正是这一整刀要的东西。 */
-static 线程局部 uint32_t *pool_off;
-static 线程局部 uint32_t *pool_len;
-static 线程局部 uint32_t pool_n, pool_cap;
+ * 2026-10-31 起，池本身也没有了。它以前记「名字在字节流里的起点与码元数」，
+ * 而这两样都能从字节流当场取出来（名长 读长度那两字节，名码 读第 k 个码元），
+ * 于是指令里只留一个偏移就够 —— 池的两张表（一万六千项，各六十四 KB）省掉了。
+ * 那块板子一共一百二十八 KB，这一刀拿掉的正好一半。见 design/BOARD.txt 第二十二节。 */
 
 /* 字节流的起点与长度：名字要从这里读。定义在装载那一段，声明提到这儿。 */
 static const uint8_t *g_码起;
@@ -1518,18 +1515,49 @@ static uint16_t 名码(uint32_t off, uint32_t k) {
   return (uint16_t)(g_码起[位] | ((uint16_t)g_码起[位 + 1] << 8));
 }
 
-/* 第 idx 个名字的第 k 个码元。 */
-static uint16_t 池码(uint32_t idx, uint32_t k) { return 名码(pool_off[idx], k); }
+/* 名字的长度就在它的码元前面两字节 —— rd_str 读的就是它。
+ *
+ * 有了它，指令里只存一个偏移就够：长度、码元都能从字节流当场取出来。
+ * 而这就是「名字池可以整个去掉」的依据（design/BOARD.txt 第二十二节）。 */
+static uint32_t 名长(uint32_t off) {
+  return (uint32_t)(g_码起[off - 2] | ((uint16_t)g_码起[off - 1] << 8));
+}
+
+/* 按 UTF-16 码元比名字。参数是字节流里的偏移，不再是池索引。 */
+static int name_is16(uint32_t off, const uint16_t *u, uint32_t n) {
+  if (名长(off) != n) return 0;
+  for (uint32_t i = 0; i < n; i++) if (名码(off, i) != u[i]) return 0;
+  return 1;
+}
+
+/* 按 ASCII 字节比名字。name_is 用的是字节，而中文名字（数组、设）
+ * 在名字表里是码元 —— 拿字节去比永远不相等。 */
+static int name_is(uint32_t off, const char *ascii) {
+  uint32_t n = 名长(off);
+  if (n != strlen(ascii)) return 0;
+  for (uint32_t i = 0; i < n; i++) if (名码(off, i) != (uint16_t)(unsigned char)ascii[i]) return 0;
+  return 1;
+}
+
+/* 把一段名字解到调用方给的缓冲里，交回写进去的码元数。 */
+static uint32_t 名解到(uint32_t off, uint16_t *buf, uint32_t cap) {
+  uint32_t n = 名长(off);
+  uint32_t k = n < cap ? n : cap;
+  for (uint32_t i = 0; i < k; i++) buf[i] = 名码(off, i);
+  return k;
+}
+
+/* 这个名字与 名码 是同一件事。它保留旧名字，是因为调用点有二十多处，
+ * 而它们现在传的东西已经从「池索引」换成了「字节流里的偏移」——
+ * 语义的变更写在 design/BOARD.txt 第二十二节，函数签名一个字没动。 */
+static uint16_t 池码(uint32_t off, uint32_t k) { return 名码(off, k); }
 
 /* 把一段名字解到调用方给的缓冲里，交回写进去的码元数。
- * 名字比缓冲长时截断，而截断不会造成静默的错误相等：长度比较用的是 pool_len，
+ * 名字比缓冲长时截断，而截断不会造成静默的错误相等：长度比较用的是 名长，
  * 两边长度相等才进逐码元比较，所以一个超长名字只可能与另一个同样超长、且前 cap
  * 个码元相同的名字误配 —— 标识符不会有那么长。 */
-static uint32_t 池取到(uint32_t idx, uint16_t *buf, uint32_t cap) {
-  uint32_t n = pool_len[idx];
-  uint32_t k = n < cap ? n : cap;
-  for (uint32_t i = 0; i < k; i++) buf[i] = 池码(idx, i);
-  return k;
+static uint32_t 池取到(uint32_t off, uint16_t *buf, uint32_t cap) {
+  return 名解到(off, buf, cap);
 }
 
 /* 复制一份出来，给「必须长期持有」的地方（记录字面量的字段名）。
@@ -1564,92 +1592,6 @@ static uint16_t *名复制(uint32_t off, uint32_t len) {
   }
   return buf;
 }
-
-/* 池里找一项：二分（装载期池按偏移递增），加一段线性兜底，外加一项最近命中的缓存。
- *
- * 为什么要有它（2026-10-31 在板子上量出来的数）：pool_add 以前每次调用都追加，
- * 而执行期每一条带名字的指令都要 pool_add 一次 —— 名字其实在装载期就已经全进了池。
- * 六份自举层跑一次，池长到一万六千多项，两张表（偏移与长度）各六十四 KB，
- * 合计一百三十 KB，正好是那块板子 RAM 的量。bigline= 那一行就是这次查出来的。
- *
- * 为什么还要缓存：去重接上之后，c-vm 那一套实测从 24 秒涨到 191 秒 ——
- * 一次二分十几个比较落在最热的那条路径上，放大成八倍。求值器的指令序列局部性很强
- * （同一个函数被反复执行，同一条 CALL 反复走），所以一项缓存就能把绝大多数
- * 查找降到一次比较。缓存是「最近一次命中」，不是全表。 */
-static 线程局部 int g_池有序 = 1;
-static 线程局部 uint32_t g_末名off = 0xFFFFFFFFu;
-static 线程局部 uint32_t g_末名len = 0;
-static 线程局部 int64_t g_末名位 = -1;
-
-static int64_t 池查(uint32_t off, uint32_t len) __attribute__((unused));
-static int64_t 池查(uint32_t off, uint32_t len) {
-  if (off == g_末名off && len == g_末名len && g_末名位 >= 0) return g_末名位;
-  int64_t 位 = -1;
-  if (g_池有序) {
-    uint32_t 低 = 0, 高 = pool_n;
-    while (低 < 高) {
-      uint32_t 中 = 低 + (高 - 低) / 2;
-      if (pool_off[中] < off) 低 = 中 + 1; else 高 = 中;
-    }
-    for (uint32_t i = 低; i < pool_n && pool_off[i] == off; i++) {
-      if (pool_len[i] == len) { 位 = (int64_t)i; break; }
-    }
-  } else {
-    for (uint32_t i = 0; i < pool_n; i++) {
-      if (pool_off[i] == off && pool_len[i] == len) { 位 = (int64_t)i; break; }
-    }
-  }
-  if (位 >= 0) { g_末名off = off; g_末名len = len; g_末名位 = 位; }
-  return 位;
-}
-
-static int64_t pool_push(uint32_t off, uint32_t len) {
-  /* 强制追加。给「字段名必须连续」那条规矩用 —— 见 读一条 的 RECORD 分支：
-   * 执行期按 in->a + i 取字段名，所以装载期那一段必须是连续的一段池索引。 */
-  if (pool_n && g_池有序 && off < pool_off[pool_n - 1]) g_池有序 = 0;
-  if (pool_n == pool_cap) {
-    pool_cap = pool_cap ? pool_cap * 2 : 256;
-    pool_off = (uint32_t *)realloc(pool_off, pool_cap * sizeof(uint32_t));
-    pool_len = (uint32_t *)realloc(pool_len, pool_cap * sizeof(uint32_t));
-    if (!pool_off || !pool_len) { 分配失败(); }
-  }
-  pool_off[pool_n] = off;
-  pool_len[pool_n] = len;
-  return (int64_t)pool_n++;
-}
-
-static int64_t pool_add(uint32_t off, uint32_t len) {
-  /* 去重试了两次，两次都退回（2026-10-31）。
-   *
-   * 第一次：池查 用二分 → c-vm 从 24 秒涨到 191 秒。
-   * 第二次：加一项最近命中的缓存 → 174.8 秒，几乎没帮上忙。
-   * 两次合起来说明：慢的不是「单次查找贵」，而是「这条路径太热」——
-   * 执行期每一条带名字的指令都要查一次，而读一条 本来只做一次读字节流的加法。
-   * 把 O(1) 的追加换成 O(log n) 的查找，落在每一条 CALL 上，就是七八倍。
-   *
-   * 所以这里保持追加。池会因此长到一万六千项、两张表吃掉一百三十 KB ——
-   * 那不是「忘了去重」，而是去重的代价比它省的多。真正的路是下一节写的：
-   * 把池整个去掉，让指令直接带偏移。 */
-  return pool_push(off, len);
-}
-
-// 按 UTF-16 码元比名字。name_is 用的是 ASCII 字节，而中文名字（数组、设）
-// 在名字表里是码元 —— 拿字节去比永远不相等。
-static int name_is16(int64_t idx, const uint16_t *u, uint32_t n) {
-  if (idx < 0 || (uint32_t)idx >= pool_n) return 0;
-  if (pool_len[idx] != n) return 0;
-  for (uint32_t i = 0; i < n; i++) if (池码((uint32_t)idx, i) != u[i]) return 0;
-  return 1;
-}
-
-static int name_is(int64_t idx, const char *ascii) {
-  if (idx < 0 || (uint32_t)idx >= pool_n) return 0;
-  uint32_t n = pool_len[idx];
-  if (n != strlen(ascii)) return 0;
-  for (uint32_t i = 0; i < n; i++) if (池码((uint32_t)idx, i) != (uint16_t)(unsigned char)ascii[i]) return 0;
-  return 1;
-}
-
 
 static int64_t read_value(Reader *r, Value *out);
 
@@ -1741,30 +1683,30 @@ static void 读一条(Reader *r, Ins *out) {
     case OP_LOAD: case OP_ASSIGN: in->a = rd_u16(r); break;
     case OP_STORE: in->a = rd_u16(r); in->b = rd_u8(r); break;
     case OP_GLOBAL: case OP_FIELD: case OP_SETGLOBAL: {
-      uint32_t n; uint32_t off = rd_str(r, &n); in->a = pool_add(off, n); break;
+      /* 名字只留偏移：长度与码元都能从字节流当场取（名长 读的就是长度那两字节）。 */
+      uint32_t n; uint32_t off = rd_str(r, &n); (void)n; in->a = off; break;
     }
     case OP_JMP: case OP_JMPF: case OP_JMPT: case OP_JMPF_KEEP: case OP_JMPT_KEEP:
       in->a = rd_u32(r); break;
     case OP_TUPLE: in->a = rd_u16(r); break;
     case OP_RECORD: {
       uint16_t n = rd_u16(r);
-      /* 字段名必须是一段连续的池索引：执行期按 in->a + i 取它们。
-       * 所以装载期强制追加（pool_push），执行期去重（pool_add，命中装载期那一段）。
-       * 这一条是 2026-10-31 池去重之后暴露的：去重把「连续」这个前提打破了，
-       * 症状是 HMYR-R0106 no field with that name。 */
-      int64_t start = -1;
+      /* 字段名只留第一个的偏移：执行期从那里顺着字节流读 n 段
+       * （每段是「u16 长度 + 码元」，所以下一个的偏移能算出来）。
+       * 2026-10-31 之前这里存的是一段连续的池索引 —— 池去掉之后改成这个样子，
+       * 那个「必须连续」的坑也跟着消失了。 */
+      uint32_t off0 = 0;
       for (uint16_t k = 0; k < n; k++) {
         uint32_t len; uint32_t off = rd_str(r, &len);
-        int64_t idx = out ? pool_add(off, len) : pool_push(off, len);
-        if (k == 0) start = idx;
+        if (k == 0) off0 = off;
       }
-      in->a = start < 0 ? 0 : start;
+      in->a = (int64_t)off0;
       in->b = n;
       break;
     }
     case OP_CALLB: case OP_CALLF: case OP_CALLM: {
-      uint32_t n; uint32_t off = rd_str(r, &n);
-      in->a = pool_add(off, n);
+      uint32_t n; uint32_t off = rd_str(r, &n); (void)n;
+      in->a = off;
       in->b = rd_u16(r);
       break;
     }
@@ -1821,16 +1763,10 @@ static void load_program(const uint8_t *bytes, size_t len) {
   uint16_t nglob = rd_u16(&r);
   for (uint16_t i = 0; i < nglob; i++) { uint32_t n; rd_str(&r, &n); }
   报装载步("全局名");
-
-  /* HMYR_POOL=1：把这个名字池按索引打出来。它与 JS 侧按同一顺序模拟出来的
-   * 池并排 diff，第一处不同就是文件读取（或池分配）出错的地方。 */
-  if (getenv("HMYR_POOL")) {
-    for (uint32_t i = 0; i < pool_n; i++) {
-      fprintf(stderr, "%u ", (unsigned)i);
-      for (uint32_t k = 0; k < pool_len[i] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)池码(i, k));
-      fprintf(stderr, "\n");
-    }
-  }
+  /* HMYR_POOL 那一段随名字池一起去掉了（2026-10-31）。
+   * 它当年干的事是「把池按索引打出来与 JS 侧对拍」，而池现在不存在了 ——
+   * 名字只剩下偏移，对拍的对象换成了字节流本身，那一条已经由 装载步步 与
+   * 两台机器同一个答案的套件覆盖。 */
 }
 
 /* ---- writing UTF-8 --------------------------------------------------- */
@@ -2750,12 +2686,13 @@ static int 全局取(const uint16_t *名, uint32_t 名长, Value *出) {
 /* 按名字找函数，交回它在表里的位置；找不到交回 -1。
  * 交回位置而不是指针，是因为调用序列要跨机器对齐，而函数名多是中文 ——
  * 两台机器都打「第几个」，那个数字是共同的。 */
-static int64_t find_func_index(int64_t name_idx) {
+static int64_t find_func_index(uint32_t 名off) {
+  uint32_t 长 = 名长(名off);
   for (uint32_t i = 0; i < g_机->函数数; i++) {
-    if (g_机->函数们[i].name_len != pool_len[name_idx]) continue;
+    if (g_机->函数们[i].name_len != 长) continue;
     uint32_t same = 1;
-    for (uint32_t k = 0; k < g_机->函数们[i].name_len; k++) {
-      if (名码(g_机->函数们[i].name_off, k) != 池码((uint32_t)name_idx, k)) { same = 0; break; }
+    for (uint32_t k = 0; k < 长; k++) {
+      if (名码(g_机->函数们[i].name_off, k) != 名码(名off, k)) { same = 0; break; }
     }
     if (same) return (int64_t)i;
   }
@@ -3126,11 +3063,11 @@ static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *
   return 0;
 }
 
-static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
-  if (name_is(name_idx, "print") || name_is(name_idx, "print_err")) {
+static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
+  if (name_is(名off, "print") || name_is(名off, "print_err")) {
     /* 编译那一段的 print 改道到标准错误：启动器编源码时种子会打印「N 个字节」，
      * 那不该落在用户程序的输出里。改道而不是丢弃 —— 编译失败时那几行就是诊断。 */
-    FILE *to = (name_is(name_idx, "print") && !g_compile_quiet) ? stdout : stderr;
+    FILE *to = (name_is(名off, "print") && !g_compile_quiet) ? stdout : stderr;
     for (int i = 0; i < nargs; i++) {
       Value t;
       value_to_text(args[i], &t);
@@ -3139,55 +3076,55 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_null();
     return 1;
   }
-  if (name_is(name_idx, "str")) {
+  if (name_is(名off, "str")) {
     if (nargs != 1) { fail("HMYR-R0101", "str wants one argument"); return 1; }
     value_to_text(args[0], out);
     return 1;
   }
   // 32 位位运算：与 JS 那三份同一套语义（无符号 32 位，移位按 31 取模）。
-  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x4E0E}, 2)) {      /* 位与 */
+  if (name_is16(名off, (const uint16_t[]){0x4F4D, 0x4E0E}, 2)) {      /* 位与 */
     if (nargs != 2) { fail("HMYR-R0160", "位与 wants two arguments"); return 1; }
     *out = v_num((double)(uint32_t)((uint32_t)args[0].num & (uint32_t)args[1].num));
     return 1;
   }
-  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x6216}, 2)) {      /* 位或 */
+  if (name_is16(名off, (const uint16_t[]){0x4F4D, 0x6216}, 2)) {      /* 位或 */
     if (nargs != 2) { fail("HMYR-R0160", "位或 wants two arguments"); return 1; }
     *out = v_num((double)(uint32_t)((uint32_t)args[0].num | (uint32_t)args[1].num));
     return 1;
   }
-  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x5F02, 0x6216}, 3)) { /* 位异或 */
+  if (name_is16(名off, (const uint16_t[]){0x4F4D, 0x5F02, 0x6216}, 3)) { /* 位异或 */
     if (nargs != 2) { fail("HMYR-R0160", "位异或 wants two arguments"); return 1; }
     *out = v_num((double)(uint32_t)((uint32_t)args[0].num ^ (uint32_t)args[1].num));
     return 1;
   }
-  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x975E}, 2)) {      /* 位非 */
+  if (name_is16(名off, (const uint16_t[]){0x4F4D, 0x975E}, 2)) {      /* 位非 */
     if (nargs != 1) { fail("HMYR-R0160", "位非 wants one argument"); return 1; }
     *out = v_num((double)(uint32_t)(~(uint32_t)args[0].num));
     return 1;
   }
-  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x53F3, 0x79FB}, 3)) { /* 位右移 */
+  if (name_is16(名off, (const uint16_t[]){0x4F4D, 0x53F3, 0x79FB}, 3)) { /* 位右移 */
     if (nargs != 2) { fail("HMYR-R0160", "位右移 wants two arguments"); return 1; }
     *out = v_num((double)(uint32_t)((uint32_t)args[0].num >> ((uint32_t)args[1].num & 31u)));
     return 1;
   }
-  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x52A0}, 2)) {      /* 位加 */
+  if (name_is16(名off, (const uint16_t[]){0x4F4D, 0x52A0}, 2)) {      /* 位加 */
     if (nargs != 2) { fail("HMYR-R0160", "位加 wants two arguments"); return 1; }
     *out = v_num((double)(uint32_t)((uint32_t)args[0].num + (uint32_t)args[1].num));
     return 1;
   }
-  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x5FAA, 0x73AF, 0x53F3, 0x79FB}, 5)) { /* 位循环右移 */
+  if (name_is16(名off, (const uint16_t[]){0x4F4D, 0x5FAA, 0x73AF, 0x53F3, 0x79FB}, 5)) { /* 位循环右移 */
     if (nargs != 2) { fail("HMYR-R0160", "位循环右移 wants two arguments"); return 1; }
     uint32_t x = (uint32_t)args[0].num, n = (uint32_t)args[1].num & 31u;
     *out = v_num((double)(n == 0 ? x : ((x >> n) | (x << (32 - n)))));
     return 1;
   }
-  if (name_is16(name_idx, (const uint16_t[]){0x4F4D, 0x5FAA, 0x73AF, 0x5DE6, 0x79FB}, 5)) { /* 位循环左移 */
+  if (name_is16(名off, (const uint16_t[]){0x4F4D, 0x5FAA, 0x73AF, 0x5DE6, 0x79FB}, 5)) { /* 位循环左移 */
     if (nargs != 2) { fail("HMYR-R0160", "位循环左移 wants two arguments"); return 1; }
     uint32_t x = (uint32_t)args[0].num, n = (uint32_t)args[1].num & 31u;
     *out = v_num((double)(n == 0 ? x : ((x << n) | (x >> (32 - n)))));
     return 1;
   }
-  if (name_is16(name_idx, (const uint16_t[]){0x6570, 0x7EC4}, 2)) {
+  if (name_is16(名off, (const uint16_t[]){0x6570, 0x7EC4}, 2)) {
     if (nargs != 1) { fail("HMYR-R0150", "数组 wants one argument"); return 1; }
     if (args[0].tag != T_TUPLE) { fail("HMYR-R0150", "数组 wants a tuple"); return 1; }
     Value v = v_null(); v.tag = T_ARRAY; v.ilen = args[0].ilen;
@@ -3196,7 +3133,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v;
     return 1;
   }
-  if (name_is16(name_idx, (const uint16_t[]){0x8BBE}, 1)) {
+  if (name_is16(名off, (const uint16_t[]){0x8BBE}, 1)) {
     if (nargs != 3) { fail("HMYR-R0151", "设 wants three arguments"); return 1; }
     if (args[0].tag != T_ARRAY) { fail("HMYR-R0151", "设 wants an array built by 数组"); return 1; }
     int64_t i = (int64_t)args[1].num;
@@ -3205,14 +3142,14 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = args[0];
     return 1;
   }
-  if (name_is(name_idx, "len")) {
+  if (name_is(名off, "len")) {
     if (nargs != 1) { fail("HMYR-R0101", "len wants one argument"); return 1; }
     if (args[0].tag == T_STR) { *out = v_num((double)args[0].slen); return 1; }
     if (args[0].tag == T_TUPLE || args[0].tag == T_ARRAY) { *out = v_num((double)args[0].ilen); return 1; }
     fail("HMYR-R0107", "len wants a string or a tuple");
     return 1;
   }
-  if (name_is(name_idx, "chr")) {
+  if (name_is(名off, "chr")) {
     if (nargs != 1) { fail("HMYR-R0101", "chr wants one argument"); return 1; }
     int ok = 0; double cp = as_num(args[0], &ok);
     if (!ok) { fail("HMYR-R0130", "chr wants a number"); return 1; }
@@ -3236,7 +3173,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_str(p, 长);
     return 1;
   }
-  if (name_is(name_idx, "ord")) {
+  if (name_is(名off, "ord")) {
     if (nargs != 1) { fail("HMYR-R0101", "ord wants one argument"); return 1; }
     if (args[0].tag != T_STR || args[0].slen == 0) { fail("HMYR-R0206", "ord of an empty string"); return 1; }
     /* 一个「字符」是一个码点，不是一个单元：基本平面之外的字符要连着它后面
@@ -3246,7 +3183,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_num((double)cp);
     return 1;
   }
-  if (name_is(name_idx, "to_int")) {
+  if (name_is(名off, "to_int")) {
     if (nargs != 1) { fail("HMYR-R0101", "to_int wants one argument"); return 1; }
     if (args[0].tag == T_NUM) { *out = args[0]; return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "to_int wants a number or a string"); return 1; }
@@ -3265,19 +3202,19 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   }
   /* 算术那一组：纯函数，不碰世界。两台机器对这五个该给出同一个数，
    * 所以它们进了字节码内置表 —— 以前只在宿主求值器里有，编成字节码就找不着。 */
-  if (name_is(name_idx, "abs") || name_is(name_idx, "floor") || name_is(name_idx, "int")) {
+  if (name_is(名off, "abs") || name_is(名off, "floor") || name_is(名off, "int")) {
     if (nargs != 1) { fail("HMYR-R0101", "that builtin wants one argument"); return 1; }
     int ok = 0;
     double x = as_num(args[0], &ok);
     if (!ok) { fail("HMYR-R0130", "that builtin wants a number"); return 1; }
-    if (name_is(name_idx, "abs")) *out = v_num(x < 0 ? -x : x);
-    else if (name_is(name_idx, "floor")) *out = v_num(floor(x));
+    if (name_is(名off, "abs")) *out = v_num(x < 0 ? -x : x);
+    else if (name_is(名off, "floor")) *out = v_num(floor(x));
     else *out = v_num(trunc(x));
     return 1;
   }
-  if (name_is(name_idx, "min") || name_is(name_idx, "max")) {
+  if (name_is(名off, "min") || name_is(名off, "max")) {
     if (nargs < 1) { fail("HMYR-R0101", "that builtin wants at least one argument"); return 1; }
-    int 取大 = name_is(name_idx, "max");
+    int 取大 = name_is(名off, "max");
     double 佳 = 0;
     for (int i = 0; i < nargs; i++) {
       int ok = 0;
@@ -3288,7 +3225,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_num(佳);
     return 1;
   }
-  if (name_is(name_idx, "slice")) {
+  if (name_is(名off, "slice")) {
     if (nargs != 3) { fail("HMYR-R0101", "slice wants three arguments"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "slice wants a string"); return 1; }
     int ok1 = 0, ok2 = 0;
@@ -3311,7 +3248,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   /* 按分隔串切开。语义照 JavaScript 的 String.prototype.split：
    * 空分隔按码元切（空串给空元组），其余按不重叠的子串切，
    * 连续或末尾的分隔都会留下空段 —— 那三种情形各写在测试里。 */
-  if (name_is(name_idx, "split")) {
+  if (name_is(名off, "split")) {
     if (nargs != 2) { fail("HMYR-R0101", "split wants two arguments"); return 1; }
     Value s, d;
     value_to_text(args[0], &s);
@@ -3355,41 +3292,41 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     return 1;
   }
   /* ---- the character tables ---- */
-  if (name_is(name_idx, "is_letter") || name_is(name_idx, "is_mark")) {
+  if (name_is(名off, "is_letter") || name_is(名off, "is_mark")) {
     if (nargs != 1) { fail("HMYR-R0101", "that builtin wants one argument"); return 1; }
     if (args[0].tag != T_STR || args[0].slen == 0) { *out = v_bool(0); return 1; }
     uint32_t cp = args[0].s[0];
-    if (name_is(name_idx, "is_letter")) *out = v_bool(in_ranges(ucd_letter_ranges, ucd_letter_count, cp));
+    if (name_is(名off, "is_letter")) *out = v_bool(in_ranges(ucd_letter_ranges, ucd_letter_count, cp));
     else *out = v_bool(in_ranges(ucd_mark_ranges, ucd_mark_count, cp));
     return 1;
   }
   /* 归一化：以前这里是「把文本原样交回」，理由是真表是十七兆语料。
    * 那说的是测试语料；生成一张表只要分解、组合类、组合对三样小东西，
    * 而三样都在仓库里 —— 于是这台机器也真的归一化了。 */
-  if (name_is(name_idx, "nfc")) {
+  if (name_is(名off, "nfc")) {
     if (nargs != 1) { fail("HMYR-R0101", "nfc wants one argument"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "nfc wants a string"); return 1; }
     *out = normalize_nfc(args[0]);
     return 1;
   }
-  if (name_is(name_idx, "to_upper") || name_is(name_idx, "to_lower")) {
+  if (name_is(名off, "to_upper") || name_is(名off, "to_lower")) {
     if (nargs != 1) { fail("HMYR-R0101", "that builtin wants one argument"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "that builtin wants a string"); return 1; }
-    *out = case_fold(args[0], name_is(name_idx, "to_upper"));
+    *out = case_fold(args[0], name_is(名off, "to_upper"));
     return 1;
   }
   /* ---- 索引 ---- */
   /* 一个按键查的东西，约定在 design/INDEX.txt。这一台以前在这里答一句具体的拒绝
    * （「键是运行时的字符串，那要一张真正的哈希表」）—— 现在做出来了，
    * 用的是排序数组加二分，理由写在 索引造 那一节的头注释里。 */
-  if (name_is(name_idx, "index_new")) {
+  if (name_is(名off, "index_new")) {
     if (nargs != 0) { fail("HMYR-R0101", "index_new wants no arguments"); return 1; }
     *out = v_null();
     out->tag = T_INDEX;
     out->idx = 索引造();
     return 1;
   }
-  if (name_is(name_idx, "index_set")) {
+  if (name_is(名off, "index_set")) {
     if (nargs != 3) { fail("HMYR-R0101", "index_set wants (index, key, value)"); return 1; }
     if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-R0219", "index_set wants an index"); return 1; }
     if (args[1].tag != T_STR) { fail("HMYR-R0130", "index_set wants a string key, found "); return 1; }
@@ -3398,7 +3335,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = args[0];
     return 1;
   }
-  if (name_is(name_idx, "index_get")) {
+  if (name_is(名off, "index_get")) {
     int 处;
     if (nargs != 2) { fail("HMYR-R0101", "index_get wants (index, key)"); return 1; }
     if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-R0219", "index_get wants an index"); return 1; }
@@ -3409,19 +3346,19 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     return 1;
   }
   /* index_has 是纯函数：给错东西也交回 false，不抛 —— 问「有没有」不是失败。 */
-  if (name_is(name_idx, "index_has")) {
+  if (name_is(名off, "index_has")) {
     if (nargs != 2) { fail("HMYR-R0101", "index_has wants (index, key)"); return 1; }
     if (args[0].tag != T_INDEX || !args[0].idx || args[1].tag != T_STR) { *out = v_bool(0); return 1; }
     *out = v_bool(索引找(args[0].idx, args[1].s, args[1].slen) >= 0);
     return 1;
   }
-  if (name_is(name_idx, "index_len")) {
+  if (name_is(名off, "index_len")) {
     if (nargs != 1) { fail("HMYR-R0101", "index_len wants one argument"); return 1; }
     if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-R0219", "index_len wants an index"); return 1; }
     *out = v_num((double)args[0].idx->n);
     return 1;
   }
-  if (name_is(name_idx, "index_keys")) {
+  if (name_is(名off, "index_keys")) {
     索引 *t;
     Value v;
     uint32_t *序;
@@ -3451,7 +3388,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     return 1;
   }
   /* ---- records ---- */
-  if (name_is(name_idx, "record_new")) {
+  if (name_is(名off, "record_new")) {
     if (nargs != 1) { fail("HMYR-R0101", "record_new wants one argument"); return 1; }
     if (args[0].tag != T_TUPLE) { fail("HMYR-R0214", "record_new wants a tuple of (name, value) pairs"); return 1; }
     uint32_t n = args[0].ilen;
@@ -3492,10 +3429,10 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v;
     return 1;
   }
-  if (name_is(name_idx, "field_get") || name_is(name_idx, "field_has")) {
+  if (name_is(名off, "field_get") || name_is(名off, "field_has")) {
     if (nargs != 2) { fail("HMYR-R0101", "that builtin wants two arguments"); return 1; }
     if (args[0].tag != T_RECORD) {
-      if (name_is(name_idx, "field_has")) { *out = v_bool(0); return 1; }
+      if (name_is(名off, "field_has")) { *out = v_bool(0); return 1; }
       fail("HMYR-R0215", "field_get wants a record");
       return 1;
     }
@@ -3507,16 +3444,16 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
         if (args[0].rec.names[i][k] != args[1].s[k]) { same = 0; break; }
       }
       if (same) {
-        if (name_is(name_idx, "field_has")) { *out = v_bool(1); return 1; }
+        if (name_is(名off, "field_has")) { *out = v_bool(1); return 1; }
         *out = args[0].rec.vals[i];
         return 1;
       }
     }
-    if (name_is(name_idx, "field_has")) { *out = v_bool(0); return 1; }
+    if (name_is(名off, "field_has")) { *out = v_bool(0); return 1; }
     fail("HMYR-R0216", "no field with that name on that record");
     return 1;
   }
-  if (name_is(name_idx, "field_names")) {
+  if (name_is(名off, "field_names")) {
     if (nargs != 1) { fail("HMYR-R0101", "field_names wants one argument"); return 1; }
     if (args[0].tag != T_RECORD) { fail("HMYR-R0217", "field_names wants a record"); return 1; }
     uint32_t n = args[0].rec.n;
@@ -3529,7 +3466,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     return 1;
   }
   /* ---- files ---- */
-  if (name_is(name_idx, "file_exists")) {
+  if (name_is(名off, "file_exists")) {
     if (nargs != 1) { fail("HMYR-R0101", "file_exists wants one argument"); return 1; }
     if (args[0].tag != T_STR) { *out = v_bool(0); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
@@ -3541,7 +3478,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   }
   /* 列目录：顺序已经由 列目录 排好，这里只把名字搬成语言的值。
    * 打不开是 R0211（与 read_text 同一类：文件系统没给），空目录不是错。 */
-  if (name_is(name_idx, "read_dir")) {
+  if (name_is(名off, "read_dir")) {
     if (nargs != 1) { fail("HMYR-R0101", "read_dir wants one argument"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_dir wants a path string"); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
@@ -3572,7 +3509,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   /* 这是不是一个目录。问不到就是 false —— 与 file_exists 同一个态度：
    * 「问不到」与「不是」在调用者眼里通常是同一件事。
    * 裸机上没有这种东西，一并与 unistd.h 同一个条件。 */
-  if (name_is(name_idx, "is_dir")) {
+  if (name_is(名off, "is_dir")) {
     if (nargs != 1) { fail("HMYR-R0101", "is_dir wants one argument"); return 1; }
     if (args[0].tag != T_STR) { *out = v_bool(0); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
@@ -3601,7 +3538,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   /* CRC32：纯算术，不需要效果。参数收字节元组，元素可以是一字节，也可以是一块。
    * 表第一次用时生成（256 项，多项式 0xEDB88320），与 src/eval.mjs、src/vm-builtins.mjs
    * 是同一张 —— 三处对同一串字节必须给出同一个值，否则 ZIP 不互通。 */
-  if (name_is16(name_idx, (const uint16_t[]){0x6821, 0x9A8C, 0x548C}, 3)) {  /* 校验和 */
+  if (name_is16(名off, (const uint16_t[]){0x6821, 0x9A8C, 0x548C}, 3)) {  /* 校验和 */
     if (nargs != 1) { fail("HMYR-R0101", "校验和 wants one argument"); return 1; }
     if (args[0].tag != T_TUPLE && args[0].tag != T_ARRAY) { fail("HMYR-R0130", "校验和 wants a tuple of bytes"); return 1; }
     static uint32_t 校验表[256];
@@ -3632,7 +3569,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_num((double)(c ^ 0xFFFFFFFFu));
     return 1;
   }
-  if (name_is(name_idx, "read_text")) {
+  if (name_is(名off, "read_text")) {
     if (nargs < 1) { fail("HMYR-R0101", "read_text wants at least one argument"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_text wants a path string"); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
@@ -3655,7 +3592,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   }
   /* 原始字节：嵌入与打包要它。与 read_text 同一条读法，只是不解码 ——
    * 二进制一过 UTF-8 就坏，而「坏」在这里不报错，只会变成一串替换字符。 */
-  if (name_is(name_idx, "read_bytes")) {
+  if (name_is(名off, "read_bytes")) {
     if (nargs != 1) { fail("HMYR-R0101", "read_bytes wants one argument"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_bytes wants a path string"); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
@@ -3677,7 +3614,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     free(buf);
     return 1;
   }
-  if (name_is(name_idx, "write_text")) {
+  if (name_is(名off, "write_text")) {
     if (nargs != 2) { fail("HMYR-R0101", "write_text wants two arguments"); return 1; }
     if (args[0].tag != T_STR || args[1].tag != T_STR) { fail("HMYR-R0130", "write_text wants two strings"); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
@@ -3694,7 +3631,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   }
   /* 写一串字节。字节在语言里是「0 到 255 的整数元组」——
    * 这门语言没有字节类型，而 .hmyrb 的落盘需要一个能交出字节的出口。 */
-  if (name_is(name_idx, "write_bytes")) {
+  if (name_is(名off, "write_bytes")) {
     if (nargs != 2) { fail("HMYR-R0101", "write_bytes wants two arguments"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "write_bytes wants a path string"); return 1; }
     if (args[1].tag != T_TUPLE) { fail("HMYR-R0130", "write_bytes wants a tuple of bytes"); return 1; }
@@ -3732,7 +3669,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
    *
    * 这一条本该在语言里写，但语言里没有 typeof，也没有 try ——
    * 判不出类型的编码器只会猜错。所以编码留在这里：这一份本来就懂每个标签。 */
-  if (name_is(name_idx, "pack_value")) {
+  if (name_is(名off, "pack_value")) {
     if (nargs != 1) { fail("HMYR-R0101", "pack_value wants one argument"); return 1; }
     uint8_t *段 = NULL;
     size_t 长 = 0, 容 = 0;
@@ -3747,7 +3684,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v;
     return 1;
   }
-  if (name_is(name_idx, "f64_bytes")) {
+  if (name_is(名off, "f64_bytes")) {
     if (nargs != 1) { fail("HMYR-R0101", "f64_bytes wants one argument"); return 1; }
     int ok0 = 0;
     double d = as_num(args[0], &ok0);
@@ -3764,7 +3701,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   }
   /* 按行读：从偏移读一行，交回 {行, 下一起点}；读完交回 下一起点 = -1。
    * 语言里没有文件句柄，所以每次调用自己开、自己关 —— 语义封闭，能一段一段读。 */
-  if (name_is(name_idx, "read_line")) {
+  if (name_is(名off, "read_line")) {
     if (nargs != 2) { fail("HMYR-R0101", "read_line wants two arguments"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_line wants a path string"); return 1; }
     int ok = 0;
@@ -3808,7 +3745,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
    * 「结束」是 EOF —— 与「读到一个空行」是两件事，LSP 那种「读到没有为止」
    * 的循环要能分清它们。板子上没有标准输入，于是那里一律交回结束。
    * 不添换行、也不去尾随空白（行尾的 \r 除外）：这是原始的一行。 */
-  if (name_is(name_idx, "read_stdin_line")) {
+  if (name_is(名off, "read_stdin_line")) {
     if (nargs != 0) { fail("HMYR-R0101", "read_stdin_line takes no arguments"); return 1; }
     uint16_t *行 = NULL;
     uint32_t 行长 = 0;
@@ -3856,7 +3793,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
    * 与 read_stdin_line 分开，是因为 JSON-RPC 那类东西的请求体未必只有一行：
    * 先读头拿到长度，再按长度读这么多字节 —— 两件事，两格。
    * 结束表示「没读满」：EOF 先到了。 */
-  if (name_is(name_idx, "read_stdin_bytes")) {
+  if (name_is(名off, "read_stdin_bytes")) {
     if (nargs != 1) { fail("HMYR-R0101", "read_stdin_bytes wants one argument"); return 1; }
     {
       int ok = 0;
@@ -3906,7 +3843,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   /* 字节元组转文本：按 UTF-8 解码。read_stdin_bytes 交回的是字节，
    * 而 JSON 之类的体是 UTF-8 —— 两格之间需要这一格。
    * 它不管编码猜测：给的就是 UTF-8，坏字节按替换字符走（与 read_text 同一条路）。 */
-  if (name_is(name_idx, "bytes_to_text")) {
+  if (name_is(名off, "bytes_to_text")) {
     if (nargs != 1) { fail("HMYR-R0101", "bytes_to_text wants one argument"); return 1; }
     if (args[0].tag != T_TUPLE) { fail("HMYR-R0130", "bytes_to_text wants a tuple of bytes"); return 1; }
     {
@@ -3926,7 +3863,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     return 1;
   }
   /* 整份按行切好。给「知道自己要全部」的调用者一个省事的入口。 */
-  if (name_is(name_idx, "read_lines")) {
+  if (name_is(名off, "read_lines")) {
     if (nargs != 1) { fail("HMYR-R0101", "read_lines wants one argument"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-R0130", "read_lines wants a path string"); return 1; }
     char *路 = utf16_to_utf8(args[0].s, args[0].slen);
@@ -3974,7 +3911,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
    * 所以测试能断言它们，而板子没有终端也不会假装有。
    * term_size 在桌面上问一次控制台；问不到就给 24 行 80 列，
    * 与 JS 那一侧的默认一致（capabilities.terminal.size 的缺省值）。 */
-  if (name_is(name_idx, "term_size")) {
+  if (name_is(名off, "term_size")) {
     if (nargs != 0) { fail("HMYR-R0101", "term_size takes no arguments"); return 1; }
     long 行 = 24, 列 = 80;
 #ifdef _WIN32
@@ -3996,22 +3933,22 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v;
     return 1;
   }
-  if (name_is(name_idx, "term_clear")) {
+  if (name_is(名off, "term_clear")) {
     if (nargs != 0) { fail("HMYR-R0101", "term_clear takes no arguments"); return 1; }
     *out = ascii_text("\x1b[2J");
     return 1;
   }
-  if (name_is(name_idx, "term_hide")) {
+  if (name_is(名off, "term_hide")) {
     if (nargs != 0) { fail("HMYR-R0101", "term_hide takes no arguments"); return 1; }
     *out = ascii_text("\x1b[?25l");
     return 1;
   }
-  if (name_is(name_idx, "term_show")) {
+  if (name_is(名off, "term_show")) {
     if (nargs != 0) { fail("HMYR-R0101", "term_show takes no arguments"); return 1; }
     *out = ascii_text("\x1b[?25h");
     return 1;
   }
-  if (name_is(name_idx, "term_escape")) {
+  if (name_is(名off, "term_escape")) {
     if (nargs != 2) { fail("HMYR-R0101", "term_escape wants two arguments"); return 1; }
     int o1 = 0, o2 = 0;
     double r = as_num(args[0], &o1), c = as_num(args[1], &o2);
@@ -4024,7 +3961,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = ascii_text(buf);
     return 1;
   }
-  if (name_is(name_idx, "term_color")) {
+  if (name_is(名off, "term_color")) {
     if (nargs < 1 || nargs > 2) { fail("HMYR-R0101", "term_color wants one or two arguments"); return 1; }
     int o1 = 0;
     double fg = as_num(args[0], &o1);
@@ -4048,12 +3985,12 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
    * 它们破坏可复现性，这一条写在设计里（CAPABILITIES.txt 第六组）。
    * 测试只断言形状 —— 钟走过的方向、sleep_ms 交回它答应等的那个数 ——
    * 不断言具体值，因为那件事本来就不该被断言。 */
-  if (name_is(name_idx, "now_ms")) {
+  if (name_is(名off, "now_ms")) {
     if (nargs != 0) { fail("HMYR-R0101", "now_ms takes no arguments"); return 1; }
     *out = v_num(现在毫秒());
     return 1;
   }
-  if (name_is(name_idx, "sleep_ms")) {
+  if (name_is(名off, "sleep_ms")) {
     if (nargs != 1) { fail("HMYR-R0101", "sleep_ms wants one argument"); return 1; }
     int o1 = 0;
     double ms = as_num(args[0], &o1);
@@ -4065,21 +4002,21 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     return 1;
   }
   /* ---- 环境与路径：读这台机器在哪儿 ---------------------------------- */
-  if (name_is(name_idx, "cwd")) {
+  if (name_is(名off, "cwd")) {
     if (nargs != 0) { fail("HMYR-R0101", "cwd takes no arguments"); return 1; }
     char *p = 现在工作在();
     *out = 路径值(p);
     free(p);
     return 1;
   }
-  if (name_is(name_idx, "home_dir")) {
+  if (name_is(名off, "home_dir")) {
     if (nargs != 0) { fail("HMYR-R0101", "home_dir takes no arguments"); return 1; }
     const char *h = 环境("USERPROFILE");
     if (!*h) h = 环境("HOME");
     *out = 路径值(h);
     return 1;
   }
-  if (name_is(name_idx, "temp_path")) {
+  if (name_is(名off, "temp_path")) {
     if (nargs != 1) { fail("HMYR-R0101", "temp_path wants one argument"); return 1; }
     Value 名;
     value_to_text(args[0], &名);
@@ -4108,7 +4045,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     free(全);
     return 1;
   }
-  if (name_is(name_idx, "repo_path")) {
+  if (name_is(名off, "repo_path")) {
     if (nargs != 1) { fail("HMYR-R0101", "repo_path wants one argument"); return 1; }
     Value 相对;
     value_to_text(args[0], &相对);
@@ -4128,18 +4065,18 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     free(rel);
     return 1;
   }
-  if (name_is(name_idx, "python_path")) {
+  if (name_is(名off, "python_path")) {
     if (nargs != 0) { fail("HMYR-R0101", "python_path takes no arguments"); return 1; }
     const char *p = 环境("HMYR_PYTHON");
     *out = ascii_text(*p ? p : "python");
     return 1;
   }
-  if (name_is(name_idx, "locale_current")) {
+  if (name_is(名off, "locale_current")) {
     if (nargs != 0) { fail("HMYR-R0101", "locale_current takes no arguments"); return 1; }
     *out = ascii_text(g_locale);
     return 1;
   }
-  if (name_is(name_idx, "locale_set")) {
+  if (name_is(名off, "locale_set")) {
     if (nargs != 1) { fail("HMYR-R0101", "locale_set wants one argument"); return 1; }
     Value 名;
     value_to_text(args[0], &名);
@@ -4162,7 +4099,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     free(文);
     return 1;
   }
-  if (name_is(name_idx, "locale_env")) {
+  if (name_is(名off, "locale_env")) {
     if (nargs != 0) { fail("HMYR-R0101", "locale_env takes no arguments"); return 1; }
     const char *l = 环境("LANG");
     if (!*l) l = 环境("LC_ALL");
@@ -4182,7 +4119,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = ascii_text(名);
     return 1;
   }
-  if (name_is(name_idx, "console_codepage")) {
+  if (name_is(名off, "console_codepage")) {
     if (nargs != 0) { fail("HMYR-R0101", "console_codepage takes no arguments"); return 1; }
 #ifdef _WIN32
     {
@@ -4200,7 +4137,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
    * 于是「按一个键就停」这种程序可以在没有终端的地方被断言。
    * 队列有界（64 项）：满了就不收，交回当前长度。JS 那一侧是无界的，
    * 这一条差异写在契约里，而不是让板子在某个规模上悄悄变慢。 */
-  if (name_is(name_idx, "key_push")) {
+  if (name_is(名off, "key_push")) {
     if (nargs != 1) { fail("HMYR-R0101", "key_push wants one argument"); return 1; }
     Value s;
     value_to_text(args[0], &s);
@@ -4212,12 +4149,12 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_num((double)g_机->键数);
     return 1;
   }
-  if (name_is(name_idx, "key_available")) {
+  if (name_is(名off, "key_available")) {
     if (nargs != 0) { fail("HMYR-R0101", "key_available takes no arguments"); return 1; }
     *out = v_bool(g_机->键数 > 0);
     return 1;
   }
-  if (name_is(name_idx, "key_read")) {
+  if (name_is(名off, "key_read")) {
     if (nargs != 0) { fail("HMYR-R0101", "key_read takes no arguments"); return 1; }
     if (g_机->键数 > 0) { *out = 键出队(); return 1; }
 #if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
@@ -4243,7 +4180,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
 #endif
     return 1;
   }
-  if (name_is(name_idx, "key_start")) {
+  if (name_is(名off, "key_start")) {
     if (nargs != 1) { fail("HMYR-R0101", "key_start wants one argument"); return 1; }
 #ifdef _WIN32
     int 开 = truthy(args[0]);
@@ -4273,7 +4210,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
    * 成功就交回新的目录（与 JS 那侧同一条约定）；进不去报 R0209。
    * 板子上没有目录概念，于是这一条在那里一律报进不去 ——
    * 它不装作成功，因为「换了个地方」在板子上不成立。 */
-  if (name_is(name_idx, "chdir")) {
+  if (name_is(名off, "chdir")) {
     if (nargs != 1) { fail("HMYR-R0101", "chdir wants one argument"); return 1; }
     Value 路;
     value_to_text(args[0], &路);
@@ -4313,7 +4250,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     return 1;
   }
   /* ---- 进程：跑一个程序 ---------------------------------------------- */
-  if (name_is(name_idx, "run_program")) {
+  if (name_is(名off, "run_program")) {
     if (nargs < 1 || nargs > 4) {
       fail("HMYR-R0101", "run_program wants one to four arguments");
       return 1;
@@ -4481,7 +4418,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
    * 上下文、线程表与三个辅助函数的声明在文件头部（g_机 那一段之后），
    * 它们的定义在 run_bytecode 之后 —— 那批函数在文件更靠后的位置。 */
 #if defined(_WIN32)
-  if (name_is(name_idx, "thr_spawn")) {
+  if (name_is(名off, "thr_spawn")) {
     if (nargs != 2) { fail("HMYR-R0101", "thr_spawn wants (source, entry)"); return 1; }
     {
       Value s = v_null(), e = v_null();
@@ -4498,7 +4435,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     }
     return 1;
   }
-  if (name_is(name_idx, "thr_join")) {
+  if (name_is(名off, "thr_join")) {
     线程上下文 *c;
     int 号;
     DWORD 到;
@@ -4524,7 +4461,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     清线程(c);
     return 1;
   }
-  if (name_is(name_idx, "thr_cancel")) {
+  if (name_is(名off, "thr_cancel")) {
     线程上下文 *c;
     int 号;
     if (nargs != 1) { fail("HMYR-R0101", "thr_cancel wants one argument"); return 1; }
@@ -4536,29 +4473,29 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v_num((double)号);
     return 1;
   }
-  if (name_is(name_idx, "thr_count")) {
+  if (name_is(名off, "thr_count")) {
     int n = 0;
     for (int i = 0; i < 线程上限; i++) if (g_线程们[i] && !g_线程们[i]->完) n++;
     *out = v_num((double)n);
     return 1;
   }
 #else
-  if (name_is(name_idx, "thr_spawn")) {
+  if (name_is(名off, "thr_spawn")) {
     *out = v_num(-1);
     return 1;
   }
-  if (name_is(name_idx, "thr_join") || name_is(name_idx, "thr_cancel")) {
+  if (name_is(名off, "thr_join") || name_is(名off, "thr_cancel")) {
     fail("HMYR-R0221", "no thread handle on this machine: this machine has no thread capability");
     return 1;
   }
-  if (name_is(name_idx, "thr_count")) {
+  if (name_is(名off, "thr_count")) {
     *out = v_num(0);
     return 1;
   }
 #endif
   /* arena：区在这一台也是真的了（2026-10-27）。交回的是一条索引；
    * 五个方法由 OP_CALLM 分派到 调区方法 —— 与另外两台同一套判词。 */
-  if (name_is(name_idx, "arena")) {
+  if (name_is(名off, "arena")) {
     if (nargs != 0) { fail("HMYR-R0101", "arena takes no arguments"); return 1; }
     *out = 区新建();
     return 1;
@@ -4566,7 +4503,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   /* FFI 的最小形状（design/FFI.txt 第四节）：一段不拷贝的窗口。
    * 用索引表示：kind = view，三个字段 src / start / len —— 与另三台同一套判词，
    * 内部键照这一台的规矩用 ASCII。 */
-  if (name_is(name_idx, "bytes_view")) {
+  if (name_is(名off, "bytes_view")) {
     if (nargs != 3) { fail("HMYR-R0101", "bytes_view wants three arguments"); return 1; }
     Value 源 = args[0];
     if (源.tag != T_TUPLE && 源.tag != T_ARRAY) {
@@ -4592,7 +4529,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = v;
     return 1;
   }
-  if (name_is(name_idx, "view_len")) {
+  if (name_is(名off, "view_len")) {
     if (nargs != 1) { fail("HMYR-R0101", "view_len wants one argument"); return 1; }
     Value 类值, 长值;
     if (args[0].tag != T_INDEX || !区取键(args[0].idx, "kind", &类值) || !串是字(类值, "view")) {
@@ -4603,7 +4540,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = 长值;
     return 1;
   }
-  if (name_is(name_idx, "view_get")) {
+  if (name_is(名off, "view_get")) {
     if (nargs != 2) { fail("HMYR-R0101", "view_get wants two arguments"); return 1; }
     Value 类值, 源值, 起值, 长值;
     if (args[0].tag != T_INDEX || !区取键(args[0].idx, "kind", &类值) || !串是字(类值, "view")) {
@@ -4628,7 +4565,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = 源值.items[位];
     return 1;
   }
-  if (name_is(name_idx, "view_set")) {
+  if (name_is(名off, "view_set")) {
     if (nargs != 3) { fail("HMYR-R0101", "view_set wants three arguments"); return 1; }
     Value 类值, 源值, 起值, 长值;
     if (args[0].tag != T_INDEX || !区取键(args[0].idx, "kind", &类值) || !串是字(类值, "view")) {
@@ -4662,7 +4599,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
   /* fmt_number(值, 档案)：按档案格式化数字（design/LOCALES.txt 那一节）。
    * 中文按四位分组（万进位），其余按三位；小数点是句点、负号前置 —— 所以只动
    * 整数部分的分隔符。这一台也不转发，自己拼：四台各写一份，才有「四台一致」可验。 */
-  if (name_is(name_idx, "fmt_number")) {
+  if (name_is(名off, "fmt_number")) {
     if (nargs != 2) { fail("HMYR-R0101", "fmt_number wants two arguments"); return 1; }
     if (args[0].tag != T_NUM || args[1].tag != T_STR) {
       fail("HMYR-R0101", "fmt_number wants a number and a profile name");
@@ -4696,7 +4633,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     return 1;
   }
   /* owned：单一所有者的持有格（design/MEMORY.txt 第 2 节）。 */
-  if (name_is(name_idx, "owned")) {
+  if (name_is(名off, "owned")) {
     if (nargs != 0) { fail("HMYR-R0101", "owned takes no arguments"); return 1; }
     Value 格 = 持有格新建();
     帧记录 *帧 = g_机->帧链;
@@ -4704,7 +4641,7 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     *out = 格;
     return 1;
   }
-  if (name_is(name_idx, "argv")) {
+  if (name_is(名off, "argv")) {
     if (nargs != 0) { fail("HMYR-R0101", "argv takes no arguments"); return 1; }
     *out = g_机->argv;
     return 1;
@@ -4713,10 +4650,10 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
     /* Say which builtin is missing. A machine that only says "no" makes the
      * gap a guessing game; the name is the whole diagnostic. */
     char msg[256];
-    uint32_t n = pool_len[name_idx];
+    uint32_t n = 名长(名off);
     if (n > 200) n = 200;
     for (uint32_t i = 0; i < n; i++) {
-      uint16_t ch = 池码((uint32_t)name_idx, i);
+      uint16_t ch = 名码(名off, i);
       msg[i] = (ch < 128) ? (char)ch : '?';
     }
     msg[n] = 0;
@@ -4956,9 +4893,14 @@ static Value run_func(Func *f, Value *args, int nargs) {
         v.rec.vals = alloc_values(n);
         uint32_t *lens = (uint32_t *)calloc(n ? n : 1, sizeof(uint32_t));
         const uint16_t **names = (const uint16_t **)calloc(n ? n : 1, sizeof(uint16_t *));
+        /* 字段名从 in->a 那个偏移起顺着字节流读：每一段是「u16 长度 + 码元」，
+         * 所以下一个的码元起点是 本段起点 加 长度乘二 再加二（跳过下一个长度字段）。
+         * 2026-10-31 之前这里按「连续的一段池索引」取，池去掉之后改成这个样子。 */
+        uint32_t off = (uint32_t)in->a;
         for (uint32_t i = 0; i < n; i++) {
-          lens[i] = pool_len[in->a + i];
-          names[i] = 名复制(pool_off[in->a + i], pool_len[in->a + i]);
+          lens[i] = 名长(off);
+          names[i] = 名复制(off, lens[i]);
+          off += 2 + lens[i] * 2;
         }
         for (uint32_t i = 0; i < n; i++) v.rec.vals[i] = g_机->stack[g_机->stack_n - n + i];
         g_机->stack_n -= n;
@@ -4980,7 +4922,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
           /* 说清楚是哪个字段、哪条指令、拿到的是什么 —— 「no field on that value」
            * 只说了一半，而查的时候要的是另一半。 */
           char 名[64];
-          uint32_t nl = pool_len[in->a] < 63 ? pool_len[in->a] : 63;
+          uint32_t nl = 名长((uint32_t)in->a) < 63 ? 名长((uint32_t)in->a) : 63;
           for (uint32_t k = 0; k < nl; k++) { uint16_t 码 = 池码((uint32_t)in->a, k); 名[k] = (码 < 128) ? (char)码 : '?'; }
           名[nl] = 0;
           char m[220];
@@ -4997,7 +4939,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         int found = 0;
         int 位 = -1;
         for (uint32_t i = 0; i < t.rec.n; i++) {
-          if (t.rec.name_lens[i] != pool_len[in->a]) continue;
+          if (t.rec.name_lens[i] != 名长((uint32_t)in->a)) continue;
           uint32_t same = 1;
           for (uint32_t k = 0; k < t.rec.name_lens[i]; k++) {
             if (t.rec.names[i][k] != 池码((uint32_t)in->a, k)) { same = 0; break; }
@@ -5010,7 +4952,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         if (g_fields_on) {
           fprintf(stderr, "EV %ld ", g_ev++);
           fprintf(stderr, "FIELD pc=%u n=%u i=%d name=", (unsigned)pc, (unsigned)t.rec.n, 位);
-          for (uint32_t k = 0; k < pool_len[in->a] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)池码((uint32_t)in->a, k));
+          for (uint32_t k = 0; k < 名长((uint32_t)in->a) && k < 8; k++) fprintf(stderr, "%04x", (unsigned)池码((uint32_t)in->a, k));
           if (位 >= 0) {
             Value v = t.rec.vals[位];
             if (v.tag == T_BOOL) fprintf(stderr, " val=bool:%d", v.boolean ? 1 : 0);
@@ -5045,7 +4987,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
         uint32_t n = (uint32_t)in->b;
         if (g_calls_on && g_calls_n < 200000) {
           char bn[64];
-          uint32_t bl = pool_len[in->a] < 63 ? pool_len[in->a] : 63;
+          uint32_t bl = 名长((uint32_t)in->a) < 63 ? 名长((uint32_t)in->a) : 63;
           for (uint32_t k = 0; k < bl; k++) { uint16_t 码 = 池码((uint32_t)in->a, k); bn[k] = (码 < 128) ? (char)码 : '?'; }
           bn[bl] = 0;
           fprintf(stderr, "EV %ld CALLB %s n=%u\n", g_ev++, bn, (unsigned)n);
@@ -5101,7 +5043,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
             fprintf(stderr, "ARGS79 base=%u stackn=%u n=%u tags=", (unsigned)base, (unsigned)g_机->stack_n, (unsigned)in->b);
             for (uint32_t i = 0; i < (uint32_t)in->b; i++) fprintf(stderr, " %d", (int)g_机->stack[g_机->stack_n - (uint32_t)in->b + i].tag);
             fprintf(stderr, " lastfield=");
-            if (g_last_field >= 0) { for (uint32_t k = 0; k < pool_len[g_last_field] && k < 8; k++) fprintf(stderr, "%04x", (unsigned)池码((uint32_t)g_last_field, k)); }
+            if (g_last_field >= 0) { for (uint32_t k = 0; k < 名长((uint32_t)g_last_field) && k < 8; k++) fprintf(stderr, "%04x", (unsigned)池码((uint32_t)g_last_field, k)); }
             fprintf(stderr, "\n");
           }
           /* 栈深要减掉本帧基线：C 这边所有帧共用一条栈，而 JS 那边每帧一条。
@@ -5219,21 +5161,14 @@ static uint8_t *read_file(const char *path, size_t *out_len) {
 
 /* 编译那一段的 print 改道到标准错误 —— 理由写在 print 那个内置旁边。 */
 
-/* 把装载过的那一份放下，好装下一份。不清的话第二份的槽位与名字池会接在第一份
- * 后面，症状是「程序跑起来了，但用的是别人的常数」—— 那种错比崩溃难查。 */
+/* 把装载过的那一份放下，好装下一份。不清的话第二份的槽位会接在第一份后面，
+ * 症状是「程序跑起来了，但用的是别人的常数」—— 那种错比崩溃难查。
+ * 名字池没了（2026-10-31），这里要清的只剩名字缓存 —— 它存的是偏移，
+ * 换了程序那些偏移就没有意义了。 */
 static void unload_program(void) {
   g_机->函数们 = NULL;
   g_机->函数数 = 0;
-  pool_off = NULL;
-  pool_len = NULL;
-  /* 名字缓存也要清：它存的是「字节流里的偏移」，换了程序那些偏移就没有意义了。 */
   名缓存用 = 0;
-  g_池有序 = 1;
-  /* 查表的缓存也要清：它记的是「这一份字节流里的偏移」。 */
-  g_末名off = 0xFFFFFFFFu;
-  g_末名位 = -1;
-  pool_n = 0;
-  pool_cap = 0;
   g_机->stack_n = 0;
   g_机->基址 = 0;
   g_机->当前函数 = NULL;
