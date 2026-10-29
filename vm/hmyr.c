@@ -2308,13 +2308,29 @@ typedef struct 帧记录 {
 } 帧记录;
 
 
-#if defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
+#if 0
+/* 2026-11-01：这两个桩停用，板子上也要回收。
+ *
+ * 原地的理由是「板子上不编回收」—— 而它让每一次分配都只增不减：
+ * 六份自编译一段新程序要一四六八三〇字节，而板子只给 79552（design/BOARD.txt
+ * 第三十九节）。而板子上的 malloc/free 早在第五百五十四行就映射到
+ * hm_malloc/hm_free/realloc，所以下面那一份在裸机上照样编得过、跑得动。 */
 static void *gc_分配(size_t 字节, int 种类) { (void)字节; (void)种类; return NULL; }
 static uint16_t *gc_串分配(size_t 码元数) { (void)码元数; return NULL; }
 #else
 /* 这三个只在桌面那一支里用：板子上不编回收，也就没有账可记。 */
 static size_t g_gc字节 = 0, g_gc数 = 0, g_gc阈值 = 32 * 1024 * 1024;
 static int g_gc日志 = 0;
+
+/* 板子上开回收（2026-11-01）。
+ *
+ * 裸机没有 getenv，所以回收的那一档设置到不了这里 —— 由板侧直接说：开，阈值多少。
+ * 阈值必须小：桌面默认三十二兆，而板子的堆只有八万字节，用那个数等于永不回收。 */
+void hmyr_开回收(size_t 阈值) {
+  g_gc开 = 1;
+  g_gc阈值 = 阈值 ? 阈值 : (size_t)48 * 1024;
+  g_gc日志 = 0;
+}
 typedef struct Gc块 {
   struct Gc块 *下;
   size_t 载荷;
