@@ -16,6 +16,7 @@
 // 立刻报 E0303 —— 那也是一种读数：它说明这台机器上量不了，而不是套件坏了。
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -27,6 +28,33 @@ const 取数 = (名, 默认) => {
 };
 const 上限 = Number(取数("limit", "0")) || 0;
 const 每场秒 = Number(取数("timeout", "180")) || 180;
+// 整机水位：可用内存低于这个数就先等一等，等不到就停手并把这件事说出来。
+// 为什么要有它（2026-11-01）：前两次手工量都把机器拖坏了 —— 一次八百个 node 进程，
+// 一次五百一十七个。串行与每进程堆上限都挡不住「子进程一层套一层」，
+// 而这一道闸不看谁在起进程，只看这台机器还有没有地方放它们。
+const 水位MB = Number(取数("mem", "1500")) || 1500;
+const 水位最多等秒 = Number(取数("memWait", "120")) || 120;
+
+const 睡 = (毫秒) => {
+  try {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 毫秒);
+  } catch {
+    const 末 = Date.now() + 毫秒;
+    while (Date.now() < 末) {
+      /* 水位检查很少走到这里；走到了也只是把这一小段等完。 */
+    }
+  }
+};
+
+function 等水位() {
+  const 限 = Date.now() + 水位最多等秒 * 1000;
+  while (os.freemem() / (1024 * 1024) < 水位MB) {
+    if (Date.now() > 限) return false;
+    console.log("  （可用内存低于 " + 水位MB + " MB，先等一等）");
+    睡(3000);
+  }
+  return true;
+}
 
 // 直接依赖：test/ 下哪些套件自己 import 了 src/loader.mjs。
 // 只算直接依赖 —— 那正是 tools/impact.mjs 报的一百零一套，也是「换掉 loader 会立刻
@@ -51,8 +79,15 @@ console.log("机器：" + (机器 || "(未给 HMYR_C_VM —— 每一场都会�
 console.log("");
 
 const 结果 = [];
+let 中止 = false;
 let t0 = Date.now();
 for (const 名 of 要跑) {
+  // 每一场之前先看这台机器还有没有地方放它 —— 这是那三道闸里唯一管「整机」的一道。
+  if (!等水位()) {
+    中止 = true;
+    console.log("  可用内存一直低于 " + 水位MB + " MB，停在这里 —— 后面的套件这一次没量。");
+    break;
+  }
   const t = Date.now();
   const r = spawnSync(process.execPath, [path.join(ROOT, "test", 名)], {
     encoding: "utf8",

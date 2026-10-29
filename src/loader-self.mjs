@@ -14,8 +14,10 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { lex, Diagnostics } from "./lexer.mjs";
+import { Diagnostics } from "./lexer.mjs";
+import { 切 } from "./subset-lex.mjs";
 import { 子集解 } from "./subset-parse.mjs";
+import { 展开模块 } from "./expand.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 适配源 = path.join(ROOT, "self", "adapter.hmoca");
@@ -157,6 +159,14 @@ export function loadUnitSelf(entry, options = {}) {
     return { ok: false, order: [], modules: new Map(), 别名表: new Map(), diagnostics };
   }
 
+  // 树照宿主那条路建，一个字都不改（2026-11-01 深夜）。
+  //
+  // 为什么必须与 src/loader.mjs 的 reader 一模一样：树是 loader 交出去的东西里
+  // 唯一会被 runUnit 拿去装满一个运行环境的那一件。原来这里用完整词法器的 lex，
+  // 而宿主用子集那层的 切 —— 形状不同，于是 self/eval.hmoca 的 modules 明明有一项、
+  // ok 也是 true，runUnit 却装出零个函数（探针五：宿主五十七个、自举零个，
+  // 两档的 order 与 modules 计数都相同）。宏展开也一样：宿主展开，这里不展开，
+  // 那又是一处「同一个文件两种树」。
   const order = 结果.order;
   const modules = new Map();
   for (const abs of order) {
@@ -166,9 +176,15 @@ export function loadUnitSelf(entry, options = {}) {
     } catch {
       continue;
     }
-    const 切好 = lex(源);
-    const 解 = 子集解(切好);
-    modules.set(abs, 解.ast);
+    const 解 = 子集解(切(源));
+    for (const d of 解.diagnostics.items) diagnostics.add(d.severity, d.code, d.message, d.line, d.column);
+    let ast = 解.ast;
+    try {
+      ast = 展开模块(解.ast);
+    } catch (e) {
+      diagnostics.error("HMYR-E0103", String(e.message).replace(/^HMYR-E0103\s*/, ""), 0, 0);
+    }
+    modules.set(abs, ast);
   }
   return { ok: diagnostics.errors.length === 0, order, modules, 别名表: new Map(), diagnostics };
 }

@@ -195,6 +195,16 @@ function resolveImport(cap, fromFile, spec, diagnostics) {
   return cap.path.join(包根, 名, "index.hmoca");
 }
 
+// 自举替身的开关只在「这一次运行」里有效，不留进环境变量给子进程继承（2026-11-01）。
+//
+// 为什么：HMYR_LOADER=self 打开之后，套件自己 spawn 的 bin/hmyr.mjs 也看得见它，
+// 于是那个子进程又去用自举加载器、每次加载再起一台 C 机器 —— 一层套一层，而每一层
+// 都以为自己只是「多花一秒」。手工量那两次都因此把机器推到几百个 node 进程
+// （一次八百个，一次五百一十七个）。这里在模块加载时读一次就删掉：本进程仍走
+// 自举那一侧，本进程之后 spawn 的任何东西都读不到它。
+const 自举替身 = process.env.HMYR_LOADER === "self";
+if (自举替身) delete process.env.HMYR_LOADER;
+
 /**
  * Load a file and everything it imports, in dependency order.
  * Returns { ok, order, modules, diagnostics }.
@@ -208,7 +218,7 @@ export function loadUnit(entry, options = {}) {
    *
    * 动态 import 是为了避开一个循环：替身要用 lexer 与 subset-parse，而它不 import
    * 本体，所以真正的理由是「只在开关打开时才付出那份模块加载的代价」。 */
-  if (process.env.HMYR_LOADER === "self") return loadUnitSelf(entry, options);
+  if (自举替身) return loadUnitSelf(entry, options);
   const diagnostics = options.diagnostics || new Diagnostics();
   // 加载器也借世界：它读文件、拼路径。于是它也拿一份能力，而不是自己去 import fs。
   // 默认给本机那一份；换掉它就能让「加载一份工程」这件事发生在没有文件系统的地方。
