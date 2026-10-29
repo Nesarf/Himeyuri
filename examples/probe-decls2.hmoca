@@ -1,0 +1,12 @@
+// 只问一件：只解析 会不会把调用链撑到 500 层。
+//
+// 为什么是它（2026-11-01）：加载走 里 已载 的累积读过、是对的（148 行把自己加进去），
+// 而它剩下最重的一步就是 只解析 —— scan_lines 加 parse_decls，两个都是递归。
+// 这一条不崩，那 500 层就在 加载走 的别处；崩了，就在这里。
+import "./run.hmoca"
+
+fn main() -> Int effects(process) {
+  print("只解析 -> " + 只解析公开("fn a() -> Int {\n  return 1\n}\n") + chr(10))
+  print("只解析两函数 -> " + 只解析公开("fn a() -> Int {\n  return 1\n}\n\nfn b() -> Int {\n  return 2\n}\n") + chr(10))
+  return 0
+}
