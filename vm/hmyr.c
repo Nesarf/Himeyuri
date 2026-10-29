@@ -4694,66 +4694,119 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
  * 代价要说清：run_func 的帧会因此变大，栈每层的数要重量（design/BOARD.txt 第二十节）。 */
 #define 小参上限 8
 
-static Value run_func(Func *f, Value *args, int nargs) {
-  if (g_failed) return v_null();
+/* ---- 显式帧：求值器不再靠 C 递归（2026-11-01，design/BOARD.txt 第二十五节）----
+ *
+ * 为什么：每层六点九 KB 的栈里，槽数组与诊断缓冲搬走之后还剩四千多 —— 那是
+ * C 调用本身的成本（返回地址、被保存的寄存器、那个大 switch 的临时区）。
+ * 搬不走，只能不递归。改成帧池之后，每帧只是这块内存里的一个结构，
+ * 而 CALLF 压一帧、RET 弹一帧，C 栈不再随 HMYR 的调用深度增长。
+ */
+typedef struct 活帧 {
+  Func *f;
+  Value *slots;
+  uint32_t base;
+  Func *外函;
+  int32_t pc;
+  int32_t 缓存条;
+  size_t 缓存位;
+  帧记录 记录;
+} 活帧;
+
+static 线程局部 活帧 *g_活帧池 = NULL;
+static 线程局部 int g_活帧容量 = 0;
+static 线程局部 int g_活帧深 = 0;
+
+/* 压一帧。交回 0 表示这一帧没建起来（参数不对或栈预算超了），调用方负责清池。 */
+static int 压帧(Func *f, Value *args, int nargs) {
   if (nargs != (int)f->nargs) {
     fail("HMYR-R0101", "that function got the wrong number of arguments");
-    return v_null();
+    return 0;
   }
-  记深度(f, g_机->当前函数);
-  /* 这一帧的地址交给 记栈：最深与最浅的差就是递归用掉的栈字节。
-   * 栈预算超了的话 记栈 里已经 fail —— 这里立刻交回去，不再往下走这一帧。 */
+  if (g_活帧深 == g_活帧容量) {
+    int 新 = g_活帧容量 ? g_活帧容量 * 2 : 32;
+    活帧 *再 = (活帧 *)realloc(g_活帧池, (size_t)新 * sizeof(活帧));
+    if (!再) { 分配失败(); }
+    g_活帧池 = 再;
+    g_活帧容量 = 新;
+    /* realloc 之后每一帧的地址都变了，而 记录.上 与 g_机->帧链 存的是绝对指针 ——
+     * 不重建的话，下一次 GC 标记会走到旧地址上（症状是访问违例，实测过）。 */
+    for (int i = 1; i < g_活帧深; i++) {
+      g_活帧池[i].记录.上 = &g_活帧池[i - 1].记录;
+    }
+    if (g_活帧深 > 0) {
+      g_活帧池[0].记录.上 = NULL;
+      g_机->帧链 = &g_活帧池[g_活帧深 - 1].记录;
+    }
+  }
+  活帧 *fr = &g_活帧池[g_活帧深];
+  fr->f = f;
+  fr->slots = alloc_values(f->nslots ? f->nslots : 1);
+  fr->base = g_机->stack_n;
+  fr->外函 = g_机->当前函数;
+  fr->pc = 0;
+  fr->缓存条 = 0;
+  fr->缓存位 = f->code_base;
+  for (int i = 0; i < nargs && i < (int)f->nslots; i++) fr->slots[i] = args[i];
+  fr->记录.slots = fr->slots;
+  fr->记录.槽数 = f->nslots;
+  fr->记录.上 = g_机->帧链;
+  fr->记录.持有格数 = 0;
+  fr->记录.槽在堆 = 1;
+  g_机->帧链 = &fr->记录;
+  g_机->基址 = fr->base;
+  g_机->当前函数 = f;
+  记深度(f, fr->外函);
   记栈(__builtin_frame_address(0));
-  if (g_failed) return v_null();
-  /* 槽数组一律在堆上（2026-11-01，显式帧的第一步）。
-   *
-   * 四十个 Value 是二二四〇字节，占 run_func 那个六九六八字节栈帧的三分之一 ——
-   * 而板子装载之后只剩两万三给栈。挪到堆上之后栈每层少二二四〇，
-   * 而堆只在递归活着的时候占着，返回就还。
-   *
-   * 那两个分支的差别要记清：托管区开着时（桌面默认）这一份归回收器，不能 free；
-   * 关着时（板子上没有 GC）走 hm_calloc，返回时必须 free，否则每层漏一帧。 */
-  Value *slots = alloc_values(f->nslots ? f->nslots : 1);
-  for (int i = 0; i < nargs && i < (int)f->nslots; i++) slots[i] = args[i];
-  /* 帧链：GC 靠它看见递归中的槽；出口要还原，否则它指向一个已经没了的栈帧。 */
-  帧记录 帧;
-  帧.slots = slots;
-  帧.槽数 = f->nslots;
-  帧.上 = g_机->帧链;
-  帧.持有格数 = 0;
-  帧.槽在堆 = 1;
-  g_机->帧链 = &帧;
+  g_活帧深++;
+  if (g_failed) return 0;
 #if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
   if (g_gc开 && g_gc字节 > g_gc阈值) gc_收集();
 #endif
-/* 帧退出：先把这一帧登记的持有格关掉，再还原帧链，最后把槽数组还回去。
- * 两条规则（design/MEMORY.txt 第 2 节）：登记在进帧时清零，交出去的在「放」那一步移走，
- * 所以这里剩下的一律是「没交出去」的，关掉正是对的。 */
-#define FRAME_RET(x) do { \
-    关本帧持有格(&帧); \
-    g_机->帧链 = 帧.上; \
-    帧.slots = NULL; \
-    if (!g_gc开) free(slots); \
-    return (x); \
-  } while (0)
-  uint32_t base = g_机->stack_n;
-  /* 进帧时把基线交给 pop：从那以后弹栈不会越过它。
-   * 退出时要还原 —— 否则回到调用者之后，它自己也弹不动自己压的东西了。 */
-  uint32_t 外base = g_机->基址;
-  g_机->基址 = base;
-  Func *外函 = g_机->当前函数;
-  g_机->当前函数 = f;
-  int32_t pc = 0;
-  /* 下一条指令的起点缓存 —— 见 Func 里 seg_at 那段注释。
-   *
-   * 顺序执行时 pc 几乎总是加一，而缓存里放的正是「下一条指令的起点」，
-   * 那一条于是不必从段头扫过来。跳转与函数的第一条走另一条路：
-   * 从所在段的起点顺着字节流扫到目标，最多 码段宽 减一条。
-   * 缓存放在帧里而不是机器里 —— 同一个函数递归时每一帧各有自己的位置。 */
-  int32_t 缓存条 = 0;
-  size_t 缓存位 = (size_t)f->code_base;
+  return 1;
+}
+
+/* 弹一帧：关掉它的持有格、还原帧链、还槽数组、恢复调用者的当前函数与基址。 */
+static void 弹帧(void) {
+  活帧 *fr = &g_活帧池[g_活帧深 - 1];
+  /* 用副本关格：关的是同一批持有格对象，而 持有格数 这一栏不必写回。 */
+  帧记录 副本 = fr->记录;
+  关本帧持有格(&副本);
+  g_机->帧链 = fr->记录.上;
+  fr->记录.slots = NULL;
+  if (!g_gc开) free(fr->slots);
+  fr->slots = NULL;
+  if (g_深度) g_深度--;
+  g_机->当前函数 = fr->外函;
+  g_活帧深--;
+  g_机->基址 = (g_活帧深 > 0) ? g_活帧池[g_活帧深 - 1].base : 0;
+}
+
+/* 清空整个帧池：出错路径用它，语义是「整机停」。 */
+static void 清帧池(void) {
+  while (g_活帧深 > 0) 弹帧();
+  g_机->帧链 = NULL;
+  g_机->当前函数 = NULL;
+  g_机->基址 = 0;
+}
+
+static Value run_func(Func *f, Value *args, int nargs) {
+  /* 顶层调用从零开始：线程体与两处入口都走这里。 */
+  g_活帧深 = 0;
+  if (!压帧(f, args, nargs)) { 清帧池(); return v_null(); }
+/* 出错路径：整机停 —— 那几十处 FRAME_RET 用的都是这个语义。 */
+#define FRAME_RET(x) do { 清帧池(); return (x); } while (0)
   for (;;) {
     if (g_failed) FRAME_RET(v_null());
+    /* 每轮从帧池里取出状态：CALLF 与 RET 都会换帧，所以不能只取一次。
+     * 名字仍用原来那套（f、slots、base、外函、pc、缓存条、缓存位），
+     * 于是 switch 那八百行一个字都不用改。 */
+    活帧 *fr = &g_活帧池[g_活帧深 - 1];
+    f = fr->f;
+    Value *slots = fr->slots;
+    uint32_t base = fr->base;
+    int32_t pc = fr->pc;
+    int32_t 缓存条 = fr->缓存条;
+    size_t 缓存位 = fr->缓存位;
     if (++g_机->步数 > g_机->步限) { fail("HMYR-R0102", "the program ran for too long"); FRAME_RET(v_null()); }
     if ((uint32_t)pc >= f->ncode) { fail("HMYR-R0110", "the instruction stream ran off its end"); FRAME_RET(v_null()); }
     /* 现场解一条：不预先建 Ins 数组（见 Func 里 seg_at 那段注释）。
@@ -5121,12 +5174,26 @@ static Value run_func(Func *f, Value *args, int nargs) {
         Value *args = n <= 小参上限 ? 小参 : (Value *)malloc((size_t)n * sizeof(Value));
         for (uint32_t i = 0; i < n; i++) args[i] = g_机->stack[g_机->stack_n - n + i];
         g_机->stack_n -= n;
-        Value r = run_func(callee, args, (int)n);
+        /* 显式帧：先把当前帧的状态写回（pc 停在 CALL 上，等 RET 之后前进），
+         * 再压一帧回到主循环 —— 这里不再递归。 */
+        fr->pc = pc; fr->缓存条 = 缓存条; fr->缓存位 = 缓存位;
+        int 压上 = 压帧(callee, args, (int)n);
         if (args != 小参) free(args);
-        if (g_failed) FRAME_RET(v_null());
-        push(r); pc++; break;
+        if (!压上) FRAME_RET(v_null());
+        continue;
       }
-      case OP_RET: { Value v = pop(); g_机->stack_n = base; g_机->基址 = 外base; g_机->当前函数 = 外函; if (g_深度) g_深度--; FRAME_RET(v); }
+      case OP_RET: {
+        Value v = pop();
+        /* 清掉本帧留在操作数栈上的东西，然后弹帧。弹帧会恢复调用者的
+         * 当前函数与基址（见 弹帧），所以这里不再手动还原那三样。 */
+        g_机->stack_n = base;
+        弹帧();
+        if (g_活帧深 == 0) return v;
+        /* 调用者停在 CALL 上：返回值压回它的栈，然后它前进一条。 */
+        g_活帧池[g_活帧深 - 1].pc++;
+        push(v);
+        continue;
+      }
       default: {
         char *msg = g_诊s;
         uint32_t k = in->op;
@@ -5136,6 +5203,9 @@ static Value run_func(Func *f, Value *args, int nargs) {
         FRAME_RET(v_null());
       }
     }
+    /* 每条指令跑完之后把状态写回帧里 —— 下一轮从帧里取，所以 CALLF 与 RET
+     * 换了帧之后，接着跑的自然是新的那一帧。 */
+    fr->pc = pc; fr->缓存条 = 缓存条; fr->缓存位 = 缓存位;
   }
 }
 

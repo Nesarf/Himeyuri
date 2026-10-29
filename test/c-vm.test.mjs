@@ -972,15 +972,16 @@ console.log("二十六、索引在回收开着时也活着");
   ok("长度还是四百", r.c.includes(",400"), JSON.stringify(r.c));
 }
 
-// 栈预算：桌面上的「像板子那样只有这么点栈」。
+// 深度上限：语言那一侧唯一还能量得出来的「不能更深」。
 //
-// 为什么这一条在 c-vm 里：HMYR_STACK_LIMIT 是 C 机器的一个开关，而它存在的理由
-// 是那块板子 —— 栈与堆共享剩下的空间，于是六份自举层装得下却跑不动
-// （design/BOARD.txt 第十六节）。有了它，那次失败在桌面上一条环境变量就能复现。
+// 这一条原来是「栈预算」（HMYR_STACK_LIMIT），而 2026-11-01 显式帧之后它失效了 ——
+// 求值器不再用 C 递归，栈不再随 HMYR 的调用深度增长，于是「栈用了多少」这个数
+// 永远是常量。真正还能踩的界变成了帧池的深度，而 HMYR_MAX_DEPTH 就是它的开关
+// （design/BOARD.txt 第二十六节）。
 //
-// 判据分三半：不给预算时这份递归程序算得出 120；给 4096 字节时它报 R0108；
-// 而那句话里带着「用了多少字节」—— 只说「太深了」帮不了人算账。
-console.log("栈预算：一个字节数说清「这块板子给不起」");
+// 判据分三半：不给上限时这份递归程序算得出 120；给了 8 层它就停下；
+// 而那句话里带着深度与上限 —— 只说「太深了」帮不了人算账。
+console.log("深度上限：语言那一侧的界，与它怎么说话");
 {
   const 源码 = [
     "fn 阶(n: Int) -> Int {",
@@ -994,17 +995,17 @@ console.log("栈预算：一个字节数说清「这块板子给不起」");
     "  return 0",
     "}",
   ].join("\n");
-  const 源路 = path.join(临, "stackbudget.hmoca");
+  const 源路 = path.join(临, "depthcap.hmoca");
   fs.writeFileSync(源路, 源码, "utf8");
   const unit = loadUnit(源路);
   const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));
-  const 码路 = path.join(临, "stackbudget.hmoks");
+  const 码路 = path.join(临, "depthcap.hmoks");
   fs.writeFileSync(码路, 写程序(程序));
   const 无 = spawnSync(exe, [码路], { encoding: "utf8" });
-  const 有 = spawnSync(exe, [码路], { encoding: "utf8", env: { ...process.env, HMYR_STACK_LIMIT: "4096" } });
-  ok("不给预算时算得出 120", String(无.stdout).includes("120"), JSON.stringify(String(无.stdout)));
-  ok("给了 4096 字节的预算就报 R0108", String(有.stderr).includes("HMYR-R0108"), JSON.stringify(String(有.stderr).slice(0, 120)));
-  ok("那句话里带着用了多少字节", String(有.stderr).includes("bytes into it"), JSON.stringify(String(有.stderr).slice(0, 160)));
+  const 有 = spawnSync(exe, [码路], { encoding: "utf8", env: { ...process.env, HMYR_MAX_DEPTH: "2" } });
+  ok("不给上限时算得出 120", String(无.stdout).includes("120"), JSON.stringify(String(无.stdout)));
+  ok("给了两层上限就停下（退出码 72）", 有.status === 72, String(有.status));
+  ok("那句话里带着深度与上限", String(有.stderr).includes("past the ceiling"), JSON.stringify(String(有.stderr).slice(0, 160)));
 }
 
 fs.rmSync(临, { recursive: true, force: true });
