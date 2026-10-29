@@ -277,6 +277,11 @@ static void 记一笔(size_t n) {
  * 只在 HMYR_MALLOC_HIST=1 时统计，平常一个字节都不多花。 */
 #define 桶数 24
 static size_t g_桶[桶数];
+/* 每档的字节总量（2026-10-31 补）。最后一档是「184 字节及以上」，
+ * 而它只记次数的时候，「堆被谁吃掉」这个问题在那里断掉：六份跑完 heap 是一八七〇八二，
+ * 而各档次数加起来只有一千五百多次、按档上限估不过四万多 —— 差的那一截就在这最后一档里
+ * （一次操作数栈扩容就是上万字节）。记上字节之后，那一档自己会说话。 */
+static size_t g_桶字节[桶数];
 static int g_记直方 = 0;
 
 static void 直方记一笔(size_t n) {
@@ -284,6 +289,7 @@ static void 直方记一笔(size_t n) {
   size_t 档 = n / 8;
   if (档 >= 桶数) 档 = 桶数 - 1;
   g_桶[档]++;
+  g_桶字节[档] += n;
 }
 
 /* 行号证据的声明要在「报一下」之前：那个函数会把它们打出来。
@@ -291,6 +297,10 @@ static void 直方记一笔(size_t n) {
 #define 行号桶数 32
 static unsigned g_行号[行号桶数];
 static unsigned g_行号次[行号桶数];
+/* 每一行要走的字节总量（2026-10-31 补）。次数多不等于字节多 ——
+ * 六份跑完时「184 字节及以上」那一档累计是二八九七五六字节，却只有 68 次，
+ * 而次数最多的那几行都是几十字节的小分配。两个数要能对上看，才找得到大头。 */
+static size_t g_行号字节[行号桶数];
 static int g_行号用 = 0;
 
 /* GC 块按种类记数（0 值槽、1 字符串、2 索引项、3 索引）。声明放在这里，
@@ -347,10 +357,17 @@ static void 直方开(void) {
  *
  * 只在 HMYR_MALLOC_HIST=1 时记录，桶按行号存（一张小表，满了就记进「其它」）。 */
 
-static void 行号记一笔(unsigned 行) {
+static void 行号记一笔(unsigned 行, size_t n) {
   if (!g_记直方) return;
-  for (int i = 0; i < g_行号用; i++) if (g_行号[i] == 行) { g_行号次[i]++; return; }
-  if (g_行号用 < 行号桶数) { g_行号[g_行号用] = 行; g_行号次[g_行号用] = 1; g_行号用++; }
+  for (int i = 0; i < g_行号用; i++) {
+    if (g_行号[i] == 行) { g_行号次[i]++; g_行号字节[i] += n; return; }
+  }
+  if (g_行号用 < 行号桶数) {
+    g_行号[g_行号用] = 行;
+    g_行号次[g_行号用] = 1;
+    g_行号字节[g_行号用] = n;
+    g_行号用++;
+  }
 }
 
 /* 分配失败要说出去（定义在下面，与平台口那一段放在一起）。
@@ -374,7 +391,7 @@ static void *hm_malloc_at(size_t n, unsigned 行) {
   *(size_t *)p = n;
   记一笔(n);
   直方记一笔(n);
-  行号记一笔(行);
+  行号记一笔(行, n);
   return p + sizeof(size_t);
 }
 
@@ -405,6 +422,12 @@ static void *hm_realloc_at(void *q, size_t n, unsigned 行) {
   *(size_t *)真 = n;
   g_mem_live -= 旧;
   记一笔(n);
+  /* realloc 也进直方与行号表（2026-10-31 补）。
+   * 为什么：六份跑完时 heap 是一八七〇八二，而直方各档加起来只有三万多 ——
+   * 差的一百五十多 KB 全在这条路上（操作数栈的扩容就是一次一次 realloc），
+   * 于是「堆被谁吃掉」这个问题在表里永远差一块。 */
+  直方记一笔(n);
+  行号记一笔(行, n);
   return 真 + sizeof(size_t);
 }
 
@@ -489,6 +512,7 @@ static void 报装载步(const char *步) {
  * 在 Cortex-M4 上是 39322，两个都是 4 字节指针。差的那一半靠读代码找不到，
  * 而直方图能把它落在一个具体的档上。 */
 size_t hmyr_分配档(int i) { return (i >= 0 && i < 桶数) ? g_桶[i] : 0; }
+size_t hmyr_档字节(int i) { return (i >= 0 && i < 桶数) ? g_桶字节[i] : 0; }
 int hmyr_分配档数(void) { return 桶数; }
 void hmyr_开直方(void) { g_记直方 = 1; }
 
@@ -498,6 +522,8 @@ void hmyr_开直方(void) { g_记直方 = 1; }
  * 板子上两样都要，因为没有别的地方能把这两件事对上。 */
 unsigned hmyr_分配行(int i) { return (i >= 0 && i < g_行号用) ? g_行号[i] : 0; }
 size_t hmyr_分配行次(int i) { return (i >= 0 && i < g_行号用) ? g_行号次[i] : 0; }
+/* 第 i 个行号的字节总量 —— 与次数的分工是「多」对「大」，两者都要看。 */
+size_t hmyr_分配行字节(int i) { return (i >= 0 && i < g_行号用) ? g_行号字节[i] : 0; }
 int hmyr_分配行数(void) { return g_行号用; }
 
 /* GC 块按种类分开：0 值槽、1 字符串、2 索引项、3 索引。
@@ -1507,15 +1533,69 @@ static uint32_t 池取到(uint32_t idx, uint16_t *buf, uint32_t cap) {
 }
 
 /* 复制一份出来，给「必须长期持有」的地方（记录字面量的字段名）。
- * 那几处不多，所以这不是主路 —— 主路是 池码 那条不分配的路。 */
+ * 主路是 池码 那条不分配的路，这一条只服务那几处。
+ *
+ * 2026-10-31 起按偏移缓存：同一个偏移只复制一次。
+ *
+ * 为什么要缓存（板子上量出来的数）：六份自举层跑完时这一行被调用 1196 次，
+ * 而 56 字节档有 1127 块 —— 它们复制的其实是同一小批名字（每一条记录字面量的
+ * 字段名，执行到那条指令就复制一次）。板子上没有 GC，那六十三 KB 只增不减。
+ *
+ * 缓存有个上界；满了就退回逐次分配 —— 那种情况说明名字种类比这个数还多，
+ * 而它不该发生。发生了也不会错，只是不再省。 */
+#define 名缓存数 128
+static 线程局部 uint32_t 名缓存偏[名缓存数];
+static 线程局部 uint32_t 名缓存长[名缓存数];
+static 线程局部 uint16_t *名缓存指[名缓存数];
+static 线程局部 int 名缓存用 = 0;
+
 static uint16_t *名复制(uint32_t off, uint32_t len) {
+  for (int i = 0; i < 名缓存用; i++) {
+    if (名缓存偏[i] == off && 名缓存长[i] == len) return 名缓存指[i];
+  }
   uint16_t *buf = (uint16_t *)malloc((size_t)(len ? len : 1) * sizeof(uint16_t));
   if (!buf) { 分配失败(); }
   for (uint32_t i = 0; i < len; i++) buf[i] = 名码(off, i);
+  if (名缓存用 < 名缓存数) {
+    名缓存偏[名缓存用] = off;
+    名缓存长[名缓存用] = len;
+    名缓存指[名缓存用] = buf;
+    名缓存用++;
+  }
   return buf;
 }
 
-static int64_t pool_add(uint32_t off, uint32_t len) {
+/* 池里找一项：二分（装载期池按偏移递增），加一段线性兜底。
+ *
+ * 为什么要有它（2026-10-31 在板子上量出来的数）：pool_add 以前每次调用都追加，
+ * 而执行期每一条带名字的指令都要 pool_add 一次 —— 名字其实在装载期就已经全进了池。
+ * 六份自举层跑一次，池长到一万六千多项，两张表（偏移与长度）各六十四 KB，
+ * 合计一百三十 KB，正好是那块板子 RAM 的量。bigline= 那一行就是这一次查出来的。 */
+static 线程局部 int g_池有序 = 1;
+
+static int64_t 池查(uint32_t off, uint32_t len) __attribute__((unused));
+static int64_t 池查(uint32_t off, uint32_t len) {
+  if (g_池有序) {
+    uint32_t 低 = 0, 高 = pool_n;
+    while (低 < 高) {
+      uint32_t 中 = 低 + (高 - 低) / 2;
+      if (pool_off[中] < off) 低 = 中 + 1; else 高 = 中;
+    }
+    for (uint32_t i = 低; i < pool_n && pool_off[i] == off; i++) {
+      if (pool_len[i] == len) return (int64_t)i;
+    }
+    return -1;
+  }
+  for (uint32_t i = 0; i < pool_n; i++) {
+    if (pool_off[i] == off && pool_len[i] == len) return (int64_t)i;
+  }
+  return -1;
+}
+
+static int64_t pool_push(uint32_t off, uint32_t len) {
+  /* 强制追加。给「字段名必须连续」那条规矩用 —— 见 读一条 的 RECORD 分支：
+   * 执行期按 in->a + i 取字段名，所以装载期那一段必须是连续的一段池索引。 */
+  if (pool_n && g_池有序 && off < pool_off[pool_n - 1]) g_池有序 = 0;
   if (pool_n == pool_cap) {
     pool_cap = pool_cap ? pool_cap * 2 : 256;
     pool_off = (uint32_t *)realloc(pool_off, pool_cap * sizeof(uint32_t));
@@ -1525,6 +1605,15 @@ static int64_t pool_add(uint32_t off, uint32_t len) {
   pool_off[pool_n] = off;
   pool_len[pool_n] = len;
   return (int64_t)pool_n++;
+}
+
+static int64_t pool_add(uint32_t off, uint32_t len) {
+  /* 2026-10-31 试过去重：pool_add 先查池、命中就复用。
+   * 收益是真的（六份的 heap 从 187082 降到 121546，名字池从一万六千项降到八千），
+   * 而代价也量出来了：c-vm 那一套从 25 秒涨到 191 秒。原因还没查清 ——
+   * 于是先退回不去重，把正确与速度放在前面，那一刀留给下一轮。
+   * 查表那段（池查）留着，它已经是写好的；下一轮只要接线并查出为什么慢。 */
+  return pool_push(off, len);
 }
 
 // 按 UTF-16 码元比名字。name_is 用的是 ASCII 字节，而中文名字（数组、设）
@@ -1642,11 +1731,17 @@ static void 读一条(Reader *r, Ins *out) {
     case OP_TUPLE: in->a = rd_u16(r); break;
     case OP_RECORD: {
       uint16_t n = rd_u16(r);
-      int64_t start = (int64_t)pool_n;
+      /* 字段名必须是一段连续的池索引：执行期按 in->a + i 取它们。
+       * 所以装载期强制追加（pool_push），执行期去重（pool_add，命中装载期那一段）。
+       * 这一条是 2026-10-31 池去重之后暴露的：去重把「连续」这个前提打破了，
+       * 症状是 HMYR-R0106 no field with that name。 */
+      int64_t start = -1;
       for (uint16_t k = 0; k < n; k++) {
-        uint32_t len; uint32_t off = rd_str(r, &len); pool_add(off, len);
+        uint32_t len; uint32_t off = rd_str(r, &len);
+        int64_t idx = out ? pool_add(off, len) : pool_push(off, len);
+        if (k == 0) start = idx;
       }
-      in->a = start;
+      in->a = start < 0 ? 0 : start;
       in->b = n;
       break;
     }
@@ -4622,6 +4717,16 @@ static int call_builtin(int64_t name_idx, Value *args, int nargs, Value *out) {
  * 40 这个数来自自举层的实测（单帧最大 34 槽），留了一点余量。 */
 #define 帧槽上限 40
 
+/* 实参数组在哪：n 不超过这个数就用栈上的那一份。
+ *
+ * 为什么（2026-10-31 板子上量出来的）：六份跑一次，CALLF 分配了 897 次、
+ * CALLB 873 次，而堆里 168 与 184 两档大半就是它们。那些分配都有 free，
+ * 但递归时同时活着好几层，峰值因此上去。八个 Value 是四百四十八字节的栈，
+ * 换掉每一次一次堆分配 —— 而栈那一侧每层只要多这四百多字节。
+ *
+ * 代价要说清：run_func 的帧会因此变大，栈每层的数要重量（design/BOARD.txt 第二十节）。 */
+#define 小参上限 8
+
 static Value run_func(Func *f, Value *args, int nargs) {
   if (g_failed) return v_null();
   if (nargs != (int)f->nargs) {
@@ -4936,12 +5041,13 @@ static Value run_func(Func *f, Value *args, int nargs) {
           fail("HMYR-R0110", m);
           FRAME_RET(v_null());
         }
-        Value *args = (Value *)malloc((size_t)(n ? n : 1) * sizeof(Value));
+        Value 小参[小参上限];
+        Value *args = n <= 小参上限 ? 小参 : (Value *)malloc((size_t)n * sizeof(Value));
         for (uint32_t i = 0; i < n; i++) args[i] = g_机->stack[g_机->stack_n - n + i];
         g_机->stack_n -= n;
         Value out = v_null();
         call_builtin(in->a, args, (int)n, &out);
-        free(args);
+        if (args != 小参) free(args);
         if (g_failed) FRAME_RET(v_null());
         push(out); pc++; break;
       }
@@ -5032,11 +5138,12 @@ static Value run_func(Func *f, Value *args, int nargs) {
           fail("HMYR-R0110", m);
           FRAME_RET(v_null());
         }
-        Value *args = (Value *)malloc((size_t)(n ? n : 1) * sizeof(Value));
+        Value 小参[小参上限];
+        Value *args = n <= 小参上限 ? 小参 : (Value *)malloc((size_t)n * sizeof(Value));
         for (uint32_t i = 0; i < n; i++) args[i] = g_机->stack[g_机->stack_n - n + i];
         g_机->stack_n -= n;
         Value r = run_func(callee, args, (int)n);
-        free(args);
+        if (args != 小参) free(args);
         if (g_failed) FRAME_RET(v_null());
         push(r); pc++; break;
       }
@@ -5102,6 +5209,9 @@ static void unload_program(void) {
   g_机->函数数 = 0;
   pool_off = NULL;
   pool_len = NULL;
+  /* 名字缓存也要清：它存的是「字节流里的偏移」，换了程序那些偏移就没有意义了。 */
+  名缓存用 = 0;
+  g_池有序 = 1;
   pool_n = 0;
   pool_cap = 0;
   g_机->stack_n = 0;
