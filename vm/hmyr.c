@@ -2773,6 +2773,19 @@ static int g_effects_on = 1;
 /* 编译那一段的 print 改道到标准错误 —— 理由写在 print 那个内置那里。 */
 static 线程局部 int g_compile_quiet = 0;
 
+/* 诊断缓冲：从栈上移到线程局部静态（2026-11-01，显式帧的第二步）。
+ *
+ * 为什么：run_func 的栈帧里这些数组加起来约一千四百字节，而板子上十六层就是两万多。
+ * 它们只在出错那一条路上用，而那时机器马上就要停 —— 所以不值得每层各备一份。
+ * 线程局部：多线程各一份，互不影响（与 记深度 那些计数同一种做法）。
+ * 位置放在这里而不是 run_func 旁边：装载那一段（read_value 与 跑函数 之前）也要用 m，
+ * 而它在这条线更前面。 */
+static 线程局部 char g_诊m[520];   /* 各类 m[]：最大的一处是 512 */
+static 线程局部 char g_诊n[64];    /* 名[] */
+static 线程局部 char g_诊f[64];    /* 函名[]、fname[]、bn[] */
+static 线程局部 char g_诊g[64];    /* 效[] */
+static 线程局部 char g_诊s[288];   /* msg[]：最大的一处是 256 */
+
 static Value run_func(Func *f, Value *args, int nargs);
 
 /* Builtins. Each returns 1 on success and stores into *out; 0 means "not a
@@ -4086,8 +4099,8 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
       if (文 && strcmp(文, locale_名字们[i]) == 0) { 认 = 1; break; }
     }
     if (!认) {
-      char m[220];
-      snprintf(m, sizeof m,
+      char *m = g_诊m;
+      snprintf(m, sizeof g_诊m,
                "no such locale profile: '%s' (have: zh-CN.gbk, zh-CN.utf8, ja-JP.shift_jis, en-US.utf8)",
                文 ? 文 : "");
       free(文);
@@ -4235,8 +4248,8 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     成 = (chdir(目标) == 0);
 #endif
     if (!成) {
-      char m[512];
-      snprintf(m, sizeof m, "cannot enter '%s'", 目标);
+      char *m = g_诊m;
+      snprintf(m, sizeof g_诊m, "cannot enter '%s'", 目标);
       free(p);
       fail("HMYR-R0209", m);
       return 1;
@@ -4649,7 +4662,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
   {
     /* Say which builtin is missing. A machine that only says "no" makes the
      * gap a guessing game; the name is the whole diagnostic. */
-    char msg[256];
+    char *msg = g_诊s;
     uint32_t n = 名长(名off);
     if (n > 200) n = 200;
     for (uint32_t i = 0; i < n; i++) {
@@ -4692,10 +4705,15 @@ static Value run_func(Func *f, Value *args, int nargs) {
    * 栈预算超了的话 记栈 里已经 fail —— 这里立刻交回去，不再往下走这一帧。 */
   记栈(__builtin_frame_address(0));
   if (g_failed) return v_null();
-  Value 槽栈[帧槽上限];
-  int 用栈 = (f->nslots <= 帧槽上限);
-  Value *slots = 用栈 ? 槽栈 : alloc_values(f->nslots);
-  if (用栈) memset(slots, 0, sizeof(Value) * (size_t)f->nslots);
+  /* 槽数组一律在堆上（2026-11-01，显式帧的第一步）。
+   *
+   * 四十个 Value 是二二四〇字节，占 run_func 那个六九六八字节栈帧的三分之一 ——
+   * 而板子装载之后只剩两万三给栈。挪到堆上之后栈每层少二二四〇，
+   * 而堆只在递归活着的时候占着，返回就还。
+   *
+   * 那两个分支的差别要记清：托管区开着时（桌面默认）这一份归回收器，不能 free；
+   * 关着时（板子上没有 GC）走 hm_calloc，返回时必须 free，否则每层漏一帧。 */
+  Value *slots = alloc_values(f->nslots ? f->nslots : 1);
   for (int i = 0; i < nargs && i < (int)f->nslots; i++) slots[i] = args[i];
   /* 帧链：GC 靠它看见递归中的槽；出口要还原，否则它指向一个已经没了的栈帧。 */
   帧记录 帧;
@@ -4703,17 +4721,19 @@ static Value run_func(Func *f, Value *args, int nargs) {
   帧.槽数 = f->nslots;
   帧.上 = g_机->帧链;
   帧.持有格数 = 0;
-  帧.槽在堆 = !用栈;
+  帧.槽在堆 = 1;
   g_机->帧链 = &帧;
 #if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
   if (g_gc开 && g_gc字节 > g_gc阈值) gc_收集();
 #endif
-/* 帧退出：先把这一帧登记的持有格关掉，再还原帧链。
+/* 帧退出：先把这一帧登记的持有格关掉，再还原帧链，最后把槽数组还回去。
  * 两条规则（design/MEMORY.txt 第 2 节）：登记在进帧时清零，交出去的在「放」那一步移走，
  * 所以这里剩下的一律是「没交出去」的，关掉正是对的。 */
 #define FRAME_RET(x) do { \
     关本帧持有格(&帧); \
     g_机->帧链 = 帧.上; \
+    帧.slots = NULL; \
+    if (!g_gc开) free(slots); \
     return (x); \
   } while (0)
   uint32_t base = g_机->stack_n;
@@ -4766,24 +4786,24 @@ static Value run_func(Func *f, Value *args, int nargs) {
       case OP_CONST: push(in->val); pc++; break;
       case OP_LOAD:
         if (in->a < 0 || (uint32_t)in->a >= f->nslots) {
-          char m[160];
-          snprintf(m, sizeof m, "load from slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
+          char *m = g_诊m;
+          snprintf(m, sizeof g_诊m, "load from slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
           fail("HMYR-R0110", m);
           FRAME_RET(v_null());
         }
         push(slots[in->a]); pc++; break;
       case OP_STORE:
         if (in->a < 0 || (uint32_t)in->a >= f->nslots) {
-          char m[160];
-          snprintf(m, sizeof m, "store to slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
+          char *m = g_诊m;
+          snprintf(m, sizeof g_诊m, "store to slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
           fail("HMYR-R0110", m);
           FRAME_RET(v_null());
         }
         slots[in->a] = pop(); pc++; break;
       case OP_ASSIGN:
         if (in->a < 0 || (uint32_t)in->a >= f->nslots) {
-          char m[160];
-          snprintf(m, sizeof m, "assign to slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
+          char *m = g_诊m;
+          snprintf(m, sizeof g_诊m, "assign to slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
           fail("HMYR-R0110", m);
           FRAME_RET(v_null());
         }
@@ -4921,16 +4941,16 @@ static Value run_func(Func *f, Value *args, int nargs) {
         if (t.tag != T_RECORD) {
           /* 说清楚是哪个字段、哪条指令、拿到的是什么 —— 「no field on that value」
            * 只说了一半，而查的时候要的是另一半。 */
-          char 名[64];
+          char *名 = g_诊n;
           uint32_t nl = 名长((uint32_t)in->a) < 63 ? 名长((uint32_t)in->a) : 63;
           for (uint32_t k = 0; k < nl; k++) { uint16_t 码 = 池码((uint32_t)in->a, k); 名[k] = (码 < 128) ? (char)码 : '?'; }
           名[nl] = 0;
-          char m[220];
-          char 函名[48];
+          char *m = g_诊m;
+          char *函名 = g_诊f;
           uint32_t fl3 = (g_机->当前函数 && g_机->当前函数->name_len < 47) ? g_机->当前函数->name_len : 0;
           for (uint32_t k = 0; k < fl3; k++) { uint16_t 码 = 名码(g_机->当前函数->name_off, k); 函名[k] = (码 < 128) ? (char)码 : '?'; }
           函名[fl3] = 0;
-          snprintf(m, sizeof m, "field '%s' read off a value that is not a record (tag=%d, %s pc=%u)",
+          snprintf(m, sizeof g_诊m, "field '%s' read off a value that is not a record (tag=%d, %s pc=%u)",
                    名, (int)t.tag, 函名, (unsigned)pc);
           fail("HMYR-R0106", m);
           FRAME_RET(v_null());
@@ -4986,7 +5006,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
       case OP_CALLB: {
         uint32_t n = (uint32_t)in->b;
         if (g_calls_on && g_calls_n < 200000) {
-          char bn[64];
+          char *bn = g_诊f;
           uint32_t bl = 名长((uint32_t)in->a) < 63 ? 名长((uint32_t)in->a) : 63;
           for (uint32_t k = 0; k < bl; k++) { uint16_t 码 = 池码((uint32_t)in->a, k); bn[k] = (码 < 128) ? (char)码 : '?'; }
           bn[bl] = 0;
@@ -4994,8 +5014,8 @@ static Value run_func(Func *f, Value *args, int nargs) {
           g_calls_n++;
         }
         if (g_机->stack_n < base || g_机->stack_n - base < n) {
-          char m[160];
-          snprintf(m, sizeof m, "a builtin call wants %u argument(s), the frame has %u",
+          char *m = g_诊m;
+          snprintf(m, sizeof g_诊m, "a builtin call wants %u argument(s), the frame has %u",
                    (unsigned)n, (unsigned)(g_机->stack_n - base));
           fail("HMYR-R0110", m);
           FRAME_RET(v_null());
@@ -5072,27 +5092,27 @@ static Value run_func(Func *f, Value *args, int nargs) {
               }
             }
             if (has_effect(f, callee->effect_offs[e], callee->effect_lens[e])) continue;
-            char 效[32];
+            char *效 = g_诊g;
             uint32_t el = callee->effect_lens[e] < 31 ? callee->effect_lens[e] : 31;
             for (uint32_t k = 0; k < el; k++) { uint16_t 码 = 名码(callee->effect_offs[e], k); 效[k] = (码 < 128) ? (char)码 : '?'; }
             效[el] = 0;
-            char 名[64];
+            char *名 = g_诊n;
             uint32_t fl2 = callee->name_len < 63 ? callee->name_len : 63;
             for (uint32_t k = 0; k < fl2; k++) { uint16_t 码 = 名码(callee->name_off, k); 名[k] = (码 < 128) ? (char)码 : '?'; }
             名[fl2] = 0;
-            char m[200];
-            snprintf(m, sizeof m, "%s uses effect '%s', which the caller did not declare", 名, 效);
+            char *m = g_诊m;
+            snprintf(m, sizeof g_诊m, "%s uses effect '%s', which the caller did not declare", 名, 效);
             fail("HMYR-R0201", m);
             FRAME_RET(v_null());
           }
         }
         if (g_机->stack_n < base || g_机->stack_n - base < n) {
-          char fname[64];
+          char *fname = g_诊f;
           uint32_t fl = callee->name_len < 63 ? callee->name_len : 63;
           for (uint32_t k = 0; k < fl; k++) { uint16_t 码 = 名码(callee->name_off, k); fname[k] = (码 < 128) ? (char)码 : '?'; }
           fname[fl] = 0;
-          char m[260];
-          snprintf(m, sizeof m, "calling %s (#%lld) wants %u argument(s), the frame has %u (pc=%u)",
+          char *m = g_诊m;
+          snprintf(m, sizeof g_诊m, "calling %s (#%lld) wants %u argument(s), the frame has %u (pc=%u)",
                    fname, (long long)位, (unsigned)n, (unsigned)(g_机->stack_n - base), (unsigned)pc);
           fail("HMYR-R0110", m);
           FRAME_RET(v_null());
@@ -5108,10 +5128,10 @@ static Value run_func(Func *f, Value *args, int nargs) {
       }
       case OP_RET: { Value v = pop(); g_机->stack_n = base; g_机->基址 = 外base; g_机->当前函数 = 外函; if (g_深度) g_深度--; FRAME_RET(v); }
       default: {
-        char msg[160];
+        char *msg = g_诊s;
         uint32_t k = in->op;
         const char *nm = (k < sizeof op_names / sizeof *op_names) ? op_names[k] : "?";
-        snprintf(msg, sizeof msg, "cannot execute the instruction %s", nm);
+        snprintf(msg, sizeof g_诊s, "cannot execute the instruction %s", nm);
         fail("HMYR-R0110", msg);
         FRAME_RET(v_null());
       }
@@ -5619,7 +5639,7 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
 static DWORD WINAPI 线程体(LPVOID 参) {
   线程上下文 *c = (线程上下文 *)参;
   Hmyr机器 m;
-  memset(&m, 0, sizeof m);
+  memset(&m, 0, sizeof g_诊m);
   m.步限 = 200000000;
   /* 这一句就是「独立实例」：从此刻起，这个线程里每一处 g_机 都是自己那一台。 */
   g_机 = &m;
