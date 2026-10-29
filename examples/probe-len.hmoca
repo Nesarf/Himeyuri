@@ -1,0 +1,14 @@
+// 最小的一件事：这一台机器怎么看一个含换行的字符串。
+//
+// 为什么（2026-11-01）：scan 在两台机器上都是 10 个 token，而 scan_lines 在默认路径
+// 崩在 index 32（越界 1）。那个 32 正是串的长度，所以先问 len 与末字符 ——
+// 若 len 少算一个，或者末字符不是换行，越界的位置就解释得通。
+import "../self/lex.hmoca"
+
+fn main() -> Int effects(process) {
+  let 源码 = "fn main() -> Int {\n  return 0\n}\n"
+  print("len=" + str(len(源码)) + chr(10))
+  print("末码=" + str(ord(slice(源码, len(源码) - 1, len(源码)))) + chr(10))
+  print("第十八个=" + str(ord(slice(源码, 18, 19))) + chr(10))
+  return 0
+}

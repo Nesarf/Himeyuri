@@ -1,0 +1,17 @@
+// 更小的探针：只问「这一份源码被切成几个词」。
+//
+// 为什么（2026-11-01）：probe-decls 在默认路径上还没打印就崩了，而它在 C 机器上
+// 给出 tokens=28。若两台机器切出的词数不同，越界就落在 scan_lines 之后的
+// 第一处读取上，而不是声明解析里更深的地方。先问最小的一件事。
+import "../self/lex.hmoca"
+
+fn main() -> Int effects(process) {
+  let 源码 = "fn main() -> Int {\n  return 0\n}\n"
+  // 先走不保留换行的那一条：它同样经过 tokenize 与 补位置，差别只在
+  // keep_lines 这一个开关。若这一条正常而 scan_lines 崩，越界就落在换行那一支上。
+  let 平 = scan(源码)
+  print("scan=" + str(len(平)) + chr(10))
+  let tokens = scan_lines(源码)
+  print("tokens=" + str(len(tokens)) + chr(10))
+  return 0
+}
