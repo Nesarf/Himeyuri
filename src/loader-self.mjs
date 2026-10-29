@@ -159,23 +159,21 @@ export function loadUnitSelf(entry, options = {}) {
     return { ok: false, order: [], modules: new Map(), 别名表: new Map(), diagnostics };
   }
 
-  // 树照宿主那条路建，一个字都不改（2026-11-01 深夜）。
+  // 树照宿主那条路建，而且调用方给了解析器就听它的（2026-11-01 深夜两处补齐）。
   //
-  // 为什么必须与 src/loader.mjs 的 reader 一模一样：树是 loader 交出去的东西里
-  // 唯一会被 runUnit 拿去装满一个运行环境的那一件。原来这里用完整词法器的 lex，
-  // 而宿主用子集那层的 切 —— 形状不同，于是 self/eval.hmoca 的 modules 明明有一项、
-  // ok 也是 true，runUnit 却装出零个函数（探针五：宿主五十七个、自举零个，
-  // 两档的 order 与 modules 计数都相同）。宏展开也一样：宿主展开，这里不展开，
-  // 那又是一处「同一个文件两种树」。
+  // 一、为什么必须与 src/loader.mjs 的 reader 一模一样：树是 loader 交出去的东西里
+  //     唯一会被 runUnit 拿去装满一个运行环境的那一件。原来这里用完整词法器的 lex，
+  //     宿主用子集那层的 切 —— 形状不同，于是 self/eval.hmoca 的 modules 明明有一项、
+  //     ok 也是 true，runUnit 却装出零个函数（探针五：宿主五十七个、自举零个，
+  //     两档的 order 与 modules 计数都相同）。宏展开也一样：宿主展开，这里不展开。
+  //
+  // 二、为什么 options.reader 要透传：宿主那一层允许调用方换掉「怎么把源码变成树」，
+  //     而这一层原来把这个选择吞掉了。三条套件（minimal-eval、stage0-eval、
+  //     subset-load）正是靠它递进宿主的完整解析器 —— 它们自己的用例里有子集不认的
+  //     写法（match），于是吞掉 reader 的后果是「子集不含 match」当场抛出去。
   const order = 结果.order;
   const modules = new Map();
-  for (const abs of order) {
-    let 源 = "";
-    try {
-      源 = fs.readFileSync(abs, "utf8");
-    } catch {
-      continue;
-    }
+  const 默认读 = (源) => {
     const 解 = 子集解(切(源));
     for (const d of 解.diagnostics.items) diagnostics.add(d.severity, d.code, d.message, d.line, d.column);
     let ast = 解.ast;
@@ -184,7 +182,17 @@ export function loadUnitSelf(entry, options = {}) {
     } catch (e) {
       diagnostics.error("HMYR-E0103", String(e.message).replace(/^HMYR-E0103\s*/, ""), 0, 0);
     }
-    modules.set(abs, ast);
+    return { ...解, ast };
+  };
+  const reader = options.reader || 默认读;
+  for (const abs of order) {
+    let 源 = "";
+    try {
+      源 = fs.readFileSync(abs, "utf8");
+    } catch {
+      continue;
+    }
+    modules.set(abs, reader(源, abs).ast);
   }
   return { ok: diagnostics.errors.length === 0, order, modules, 别名表: new Map(), diagnostics };
 }
