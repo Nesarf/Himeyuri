@@ -160,7 +160,10 @@ console.log("五、自举层本身：HMYR 写的解释器，跑在 C 机器上")
     ok("C 机器跑得出自举层的自测", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 120));
     ok("四段表达式的答案都对", 出.includes("1 + 2 * 3 → 7") && 出.includes("(1 + 2) * 3 → 9")
       && 出.includes('len("abcd") → 4') && 出.includes("10 % 4 → 2"), JSON.stringify(出.slice(0, 160)));
-    ok("而且那四行就是全部输出", 出.trim().split("\n").length === 4, String(出.trim().split("\n").length));
+    // 2026-11-01 起是六行：四段表达式之后多了「新程序 →」与它编译执行出来的 42
+    // （design/BOARD.txt 第二十九节那条正面判据）。
+    ok("而且那六行就是全部输出", 出.trim().split("\n").length === 6, String(出.trim().split("\n").length));
+    ok("第六行是板子自己编出来的 42", 出.trim().split("\n")[5] === "42", JSON.stringify(出.trim().split("\n").slice(4)));
   }
 }
 
