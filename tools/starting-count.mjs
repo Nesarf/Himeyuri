@@ -34,6 +34,8 @@ const 每场秒 = Number(取数("timeout", "180")) || 180;
 // 而这一道闸不看谁在起进程，只看这台机器还有没有地方放它们。
 const 水位MB = Number(取数("mem", "1500")) || 1500;
 const 水位最多等秒 = Number(取数("memWait", "120")) || 120;
+// --loader=host 跑基准：同样这些套件，不打开关。两个数一比的差，才是 loader 的账。
+const 用替身 = 取数("loader", "self") !== "host";
 
 const 睡 = (毫秒) => {
   try {
@@ -75,8 +77,16 @@ const 名单 = 直接依赖();
 const 要跑 = 上限 > 0 ? 名单.slice(0, 上限) : 名单;
 
 console.log("起点数：直接依赖 src/loader.mjs 的套件 " + 名单.length + " 个，这一次跑 " + 要跑.length + " 个");
+console.log("档位：" + (用替身 ? "自举（HMYR_LOADER=self）" : "宿主（基准，不打开关）"));
 console.log("机器：" + (机器 || "(未给 HMYR_C_VM —— 每一场都会报 E0303)"));
 console.log("");
+
+// 基准环境：先把自己继承到的开关删掉，再按档位加回去。
+// 为什么（2026-11-01）：两个数一比才知道「哪些套是 loader 弄红的、哪些本来就红」——
+// minimal-eval 与 stage0-eval 两档读数完全相同，说明它们那几项与 loader 无关，
+// 而 86 与 87 那样的单个数看不出来。
+const 基础环境 = { ...process.env };
+delete 基础环境.HMYR_LOADER;
 
 const 结果 = [];
 let 中止 = false;
@@ -94,8 +104,8 @@ for (const 名 of 要跑) {
     cwd: ROOT,
     timeout: 每场秒 * 1000,
     env: {
-      ...process.env,
-      HMYR_LOADER: "self",
+      ...基础环境,
+      ...(用替身 ? { HMYR_LOADER: "self" } : {}),
       HMYR_C_VM: 机器,
       HMYR_JOBS: "1",
       HMYR_HEAP_MB: "512",
@@ -133,6 +143,28 @@ if (挂.length) {
   for (const r of 挂) console.log("  " + r.名 + (r.超时 ? "（超时）" : "") + "  " + (r.错 || r.汇).slice(0, 100));
 }
 const 存 = 取数("out", "");
+// 与另一份明细对照（--diff=基准.json）：跑同一批套件、只换档位，两次一比的差
+// 才是 loader 自己的账。没有这一步，一个数（八十七）会把「本来就红」的套件
+// 一起算到 loader 头上 —— 而那六套的读数两档完全相同（2026-11-01 实测）。
+const 比 = 取数("diff", "");
+if (比) {
+  try {
+    const 旧 = JSON.parse(fs.readFileSync(比, "utf8"));
+    const 旧表 = new Map((旧.结果 || []).map((r) => [r.名, !!r.通过]));
+    const 新表 = new Map(结果.map((r) => [r.名, r.通过]));
+    const 只这次红 = [...新表].filter(([n, ok]) => !ok && 旧表.get(n) === true).map(([n]) => n);
+    const 只这次绿 = [...新表].filter(([n, ok]) => ok && 旧表.get(n) === false).map(([n]) => n);
+    const 都红 = [...新表].filter(([n, ok]) => !ok && 旧表.get(n) === false).map(([n]) => n);
+    console.log("");
+    console.log("对照 " + 比);
+    console.log("  基准通过 " + [...旧表.values()].filter(Boolean).length + " / " + 旧表.size);
+    console.log("  两档都红（" + 都红.length + " 套，不算 loader 的账）：" + (都红.join(" ") || "无"));
+    console.log("  基准绿而这次红（" + 只这次红.length + " 套）：" + (只这次红.join(" ") || "无"));
+    console.log("  基准红而这次绿（" + 只这次绿.length + " 套）：" + (只这次绿.join(" ") || "无"));
+  } catch (e) {
+    console.log("  对照没读成：" + String(e.message).slice(0, 120));
+  }
+}
 if (存) {
   fs.writeFileSync(存, JSON.stringify({ 名单: 名单.length, 跑了: 结果.length, 通过: 过, 结果 }, null, 1), "utf8");
   console.log("明细写到 " + 存);

@@ -453,6 +453,29 @@ selfloa 的 27/27）。
       module        仍崩在可见性检查，而它不带开关也崩（宿主档同样是那句
                             beta 没有 pub 却从 alpha 被调用），那是它自己的一笔账。
 
+基准与差：真正属于 loader 的是十套（2026-11-01 深夜，同一夜第五轮）
+
+    起点数只回答「换掉 loader 之后有多少套通过」，它分不开两种红：因 loader 而红，
+    与本来就红。于是量器加了 --loader=host 一档：同样的套件、不打开关，两次一比的差
+    才是 loader 的账。
+
+      宿主基准   97 / 103      三百二十秒
+      自举替身   87 / 103      三百二十九秒
+      差         10 套
+
+    两档都红的有六套，而且读数完全相同：minimal-eval 26/27、module 崩在可见性、
+    realtime 23/24、stage0-eval 23/25、text 19/20、threads-c-vm 4/11。
+    这六套是套件自己的账 —— 拿 loader 去解释它们会得出一个错的结论。
+
+    只在自举档红的十套：
+
+      hmyr-compiler · lsp-hmyr · module-rev · namespace · owned-check
+      pkg-manifest · self-chain2 · self-stmt · verify-hmyr · zone-static
+
+    这才是下一轮真正要收的地方：十套，不是十六套。而其中 zone-static 在基准里
+    四十三项全过、自举档里四十一项 —— 那种「只差两项而基准全绿」的，正是
+    loader 交出去的东西还缺一点的形状。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 E0301；
 另外引的文件不在就报 E0302（宿主也是这个码）。顺序取后序，于是 order 逐项相同。
