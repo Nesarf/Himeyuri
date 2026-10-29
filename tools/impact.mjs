@@ -108,7 +108,7 @@ const src上游 = (路) => {
 
 // ---- 三、总图 ----
 if (要总图) {
-  console.log("工程地图 · " + hmyr们.length + " 份 .hmyr · " + 套件.length + " 个套件");
+  console.log("工程地图 · " + hmyr们.length + " 份 HMYR 源码 · " + 套件.length + " 个套件");
   console.log("");
   console.log("一、谁被 import（左边是被用的，右边是用它的）");
   const 被用 = new Map();

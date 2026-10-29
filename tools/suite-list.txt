@@ -11,6 +11,9 @@ stdlib	test/stdlib.test.mjs
 reflect	test/reflect.test.mjs
 lsp	test/lsp.test.mjs
 lspsymbol	test/lsp-symbol-hmyr.test.mjs
+lspcompletion	test/lsp-completion-hmyr.test.mjs
+lspmodule	test/lsp-module.test.mjs
+macro	test/macro.test.mjs
 adapter	test/adapter.test.mjs
 adapterstatements	test/adapter-statements.test.mjs
 adapterfunctions	test/adapter-functions.test.mjs
@@ -72,6 +75,7 @@ redact	test/redact.test.mjs
 writetext	test/write-text.test.mjs
 codefile	test/code-file.test.mjs
 cvm	test/c-vm.test.mjs
+threadscvm	test/threads-c-vm.test.mjs
 cli	test/cli.test.mjs
 arm	test/arm.test.mjs
 board	test/board.test.mjs
@@ -90,6 +94,19 @@ launcher	test/launcher.test.mjs
 task	test/task.test.mjs
 recordnew	test/record-new.test.mjs
 index	test/index.test.mjs
+zone	test/zone.test.mjs
+zonestatic	test/zone-static.test.mjs
+zoneself	test/zone-self.test.mjs
+globalvar	test/global-var.test.mjs
+realtime	test/realtime.test.mjs
+owned	test/owned.test.mjs
+ownedcheck	test/owned-check.test.mjs
+ffi	test/ffi.test.mjs
+ownedstate	test/owned-state.test.mjs
+namespace	test/namespace.test.mjs
+pkgmanifest	test/pkg-manifest.test.mjs
+packbytes	test/pack-bytes.test.mjs
+hmget	test/hmget.test.mjs
 surface	test/surface.test.mjs
 pixel	test/pixel.test.mjs
 parallel	test/parallel.test.mjs
@@ -119,6 +136,10 @@ lsphmyr	test/lsp-hmyr.test.mjs
 fmthmyr	test/fmt-hmyr.test.mjs
 elsenewline	test/else-newline.test.mjs
 selfcontained	test/self-contained.test.mjs
+seedgap	test/seed-gap.test.mjs
+names	test/names.test.mjs
+profile	test/profile.test.mjs
+ittgn	test/ittgn.test.mjs
 deflate	test/deflate.test.mjs
 tree	test/tree.test.mjs
 array	test/array.test.mjs
@@ -171,7 +192,3 @@ selfassign	test/self-assign.test.mjs
 selfif	test/self-if.test.mjs
 selfcompare	test/self-compare.test.mjs
 selfsig	test/self-sig.test.mjs
-namespace	test/namespace.test.mjs
-packbytes	test/pack-bytes.test.mjs
-pkgmanifest	test/pkg-manifest.test.mjs
-hmget	test/hmget.test.mjs
