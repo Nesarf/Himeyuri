@@ -1047,6 +1047,15 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
     if 标.ok == false { return 标 }
     let 位 = 求值(节点.index, 环境)
     if 位.ok == false { return 位 }
+    // 越界要自己报，不能交给机器去决定（2026-11-01）。
+    //
+    // 为什么：这一句原来是 好(标.value[位.value])，于是「越界」这件事交由各台机器
+    // 自己处置 —— C 机器容忍它，最小求值器报 HMYR-R0151，两边对同一份源码给出不同
+    // 结论。而自举层的词法器在那之前就已经在某个下标上越了界，正是这台宽松的机器
+    // 让它一直没被发现（design/BOARD.txt 第三十三节）。
+    if 位.value < 0 || 位.value >= len(标.value) {
+      return 坏("下标越界：" + str(位.value) + "，而长度是 " + str(len(标.value)))
+    }
     return 好(标.value[位.value])
   }
   if 种 == "Field" {

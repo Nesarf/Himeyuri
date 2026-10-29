@@ -828,7 +828,17 @@ export class 最小运行时 {
         const index = 下整(this.成数(this.求值(node.index, scope, effects)));
         if (码元.是码元序列(target)) {
           const 长 = 码元.长(target);
-          if (!码元.在界内(target, index)) this.坏("HMYR-R0151", "index " + index + " is outside a value of length " + 长);
+          if (!码元.在界内(target, index)) {
+            /* HMYR_INDEX_TRACE=1：把越界那一次的现场打出来。
+             * 为什么（2026-11-01）：自举层的词法器在某个下标上越界，而报错只有
+             * 「index N outside a value of length N」—— 不知道是哪个表达式。
+             * 这一行给的是目标、下标与那个 Index 节点本身，足够指到一行源码。 */
+            if (process.env.HMYR_INDEX_TRACE) {
+              console.error("越界现场 目标=" + JSON.stringify(target).slice(0, 120)
+                + " 下标=" + index + " 节点=" + JSON.stringify(node).slice(0, 260));
+            }
+            this.坏("HMYR-R0151", "index " + index + " is outside a value of length " + 长);
+          }
           // 下标取一个码元，而取出来的那一个码元也是字符串值 —— 所以它是一个只有一位的序列。
           return 码元.码点(码元.元(target, index));
         }
