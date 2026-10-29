@@ -2197,6 +2197,18 @@ static void 记深度(Func *f, Func *父) {
   }
 }
 
+/* 操作数栈的峰值与容量。
+ *
+ * 为什么量它（2026-11-01）：board-spec 那七行程序在板子上的 heap 是 64524，
+ * 而其中 59136 全来自操作数栈那一次扩容到一千零二十四项的 realloc。
+ * 于是要回答一个问题：那七行程序真的需要一千多个槽，还是初始容量太小、翻倍太粗。
+ * 峰值是前一半的答案，容量是后一半 —— 两个数并排一看就知道。
+ */
+static 线程局部 uint32_t g_操作数峰值 = 0;
+
+size_t hmyr_操作数峰值(void) { return (size_t)g_操作数峰值; }
+size_t hmyr_操作数容量(void) { return (size_t)g_机->stack_cap; }
+
 static void push(Value v) {
   if (g_机->stack_n == g_机->stack_cap) {
     /* 初始容量看平台：桌面上 256 一次到位，板子上 64。
@@ -2215,6 +2227,7 @@ static void push(Value v) {
     if (!g_机->stack) { 分配失败(); }
   }
   g_机->stack[g_机->stack_n++] = v;
+  if (g_机->stack_n > g_操作数峰值) g_操作数峰值 = g_机->stack_n;
 }
 
 /* 当前帧的栈基线。弹栈不许越过它 —— 这是全篇最要紧的一处语义对齐。
@@ -2284,8 +2297,13 @@ typedef struct 帧记录 {
    * 栈地址不在其中的表，那是一次访问违规，而它只在递归深、刚好走到 GC 时才现形。 */
   int 槽在堆;
   /* 作用域结束释放（design/MEMORY.txt 第 2 节）：这一帧里建的持有格，栈退出时一律关掉。
-   * 交出去的会在「放」那一步从这里移走 —— 转移的第二层意思。 */
-  Value 持有格们[帧持有格上限];
+   * 交出去的会在「放」那一步从这里移走 —— 转移的第二层意思。
+   *
+   * 2026-11-01 起按需分配：这里以前是内嵌的 Value[32]，而 Value 是五十六字节 ——
+   * 每一帧固定一千七百九十二字节。板子上帧池一开就是三十二帧，光这一项五万七，
+   * 而规范程序根本不碰 owned。改成指针之后，不用它的程序一个字节也不付。
+   * 这是「规范不是扩展」这条边界在数据结构上的落点（design/BOARD.txt 第二十八节）。 */
+  Value *持有格们;
   uint32_t 持有格数;
 } 帧记录;
 
@@ -2870,6 +2888,7 @@ static Value 持有格新建(void) {
 /* 把这一帧登记的持有格一个不留地关掉（design/MEMORY.txt 第 2 节）。
  * 已经关了的不再碰 —— 外面显式关过是正常的。 */
 static void 关本帧持有格(帧记录 *帧) {
+  if (!帧->持有格们) { 帧->持有格数 = 0; return; }
   for (uint32_t i = 0; i < 帧->持有格数; i++) {
     Value 格 = 帧->持有格们[i];
     if (格.tag != T_INDEX || !格.idx) continue;
@@ -2885,7 +2904,7 @@ static void 关本帧持有格(帧记录 *帧) {
 /* 从当前帧的登记表里移走一条（交出去的时候用）。 */
 static void 移出本帧持有格(Value 格) {
   帧记录 *帧 = g_机->帧链;
-  if (!帧) return;
+  if (!帧 || !帧->持有格们) return;
   for (uint32_t i = 0; i < 帧->持有格数; i++) {
     Value 候选 = 帧->持有格们[i];
     if (候选.tag == T_INDEX && 候选.idx && 格.tag == T_INDEX && 候选.idx == 格.idx) {
@@ -4650,7 +4669,16 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     if (nargs != 0) { fail("HMYR-R0101", "owned takes no arguments"); return 1; }
     Value 格 = 持有格新建();
     帧记录 *帧 = g_机->帧链;
-    if (帧 && 帧->持有格数 < 帧持有格上限) 帧->持有格们[帧->持有格数++] = 格;
+    if (帧) {
+      /* 第一次真的用 owned 时才分配这张表 —— 规范程序不走这条路，
+       * 于是每个帧记录只有两个指针大（见 design/BOARD.txt 第二十八节）。 */
+      if (!帧->持有格们) {
+        帧->持有格们 = (Value *)calloc(帧持有格上限, sizeof(Value));
+        if (!帧->持有格们) { 分配失败(); }
+        帧->持有格数 = 0;
+      }
+      if (帧->持有格数 < 帧持有格上限) 帧->持有格们[帧->持有格数++] = 格;
+    }
     *out = 格;
     return 1;
   }
@@ -4750,6 +4778,7 @@ static int 压帧(Func *f, Value *args, int nargs) {
   fr->记录.slots = fr->slots;
   fr->记录.槽数 = f->nslots;
   fr->记录.上 = g_机->帧链;
+  fr->记录.持有格们 = NULL;
   fr->记录.持有格数 = 0;
   fr->记录.槽在堆 = 1;
   g_机->帧链 = &fr->记录;
@@ -4771,6 +4800,8 @@ static void 弹帧(void) {
   /* 用副本关格：关的是同一批持有格对象，而 持有格数 这一栏不必写回。 */
   帧记录 副本 = fr->记录;
   关本帧持有格(&副本);
+  /* 这张表是 owned 用的时候才分配的（hm_calloc 来的），弹帧就还回去。 */
+  if (fr->记录.持有格们) { free(fr->记录.持有格们); fr->记录.持有格们 = NULL; }
   g_机->帧链 = fr->记录.上;
   fr->记录.slots = NULL;
   if (!g_gc开) free(fr->slots);
@@ -4788,6 +4819,11 @@ static void 清帧池(void) {
   g_机->当前函数 = NULL;
   g_机->基址 = 0;
 }
+
+/* 帧池的两个数：用到的深度与容量。
+ * 与 操作数栈 那一对同一种用法 —— 两个并排才知道扩容是必须的，还是泄漏。 */
+size_t hmyr_帧深(void) { return (size_t)g_活帧深; }
+size_t hmyr_帧容量(void) { return (size_t)g_活帧容量; }
 
 static Value run_func(Func *f, Value *args, int nargs) {
   /* 顶层调用从零开始：线程体与两处入口都走这里。 */
