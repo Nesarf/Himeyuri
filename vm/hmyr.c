@@ -2209,6 +2209,16 @@ static 线程局部 uint32_t g_操作数峰值 = 0;
 size_t hmyr_操作数峰值(void) { return (size_t)g_操作数峰值; }
 size_t hmyr_操作数容量(void) { return (size_t)g_机->stack_cap; }
 
+/* sizeof，给板子读（2026-11-01）。
+ *
+ * 为什么量它：自编译在板子上差六万七，而回收收不回来（第三十九节）——
+ * 那就只剩「压表示」这一条，而压之前要知道每个值多大。
+ * Value 五十六字节是这一份一直以来的事实，但它是推算出来的，不是读出来的。
+ *
+ * 只留 Value 这一个：索引 与 帧记录 的定义都在这段代码之后，sizeof 它们
+ * 会撞上「不完整类型」—— 真要量它们，把函数挪到定义之后。 */
+size_t hmyr_值字节(void) { return sizeof(Value); }
+
 static void push(Value v) {
   if (g_机->stack_n == g_机->stack_cap) {
     /* 初始容量看平台：桌面上 256 一次到位，板子上 64。
