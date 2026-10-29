@@ -2036,6 +2036,43 @@ static 线程局部 uint32_t g_最深 = 0;
 static int g_depth_on = 0;
 static uint32_t g_depth_cap = 0;
 
+/* 栈的证据：最深与最浅的帧地址，差就是这一趟递归真正用掉的栈。
+ *
+ * 为什么不用「深度乘估算的帧大小」：一个 run_func 的帧里有四十个 Value 的槽栈
+ * （五十六字节一个），再加上被调用者的保存寄存器与返回地址 —— 估出来的数与
+ * 真实的差一截，而这一整条线已经因为「估」错过一次（载荷与块头）。
+ *
+ * 帧地址由调用者取：__builtin_frame_address(0) 只有在 run_func 里取才是那一帧。
+ * 这个内建在四台机器上都由 gcc 给同一个意思，而读 MSP 要平台口的接口，
+ * 桌面那一侧没有可以对照的东西。 */
+static 线程局部 void *g_栈高 = 0;
+static 线程局部 void *g_栈低 = 0;
+
+static void 记栈(void *帧) {
+  if (!g_栈高 || 帧 > g_栈高) g_栈高 = 帧;
+  if (!g_栈低 || 帧 < g_栈低) g_栈低 = 帧;
+}
+
+/* 给板侧读的两个数：最深的调用层数，与这一趟递归用掉的栈字节。
+ * 两个都无条件记录 —— 板子上没有环境变量，开关只能编译期给。 */
+int hmyr_最深(void) { return (int)g_最深; }
+int hmyr_栈字节(void) {
+  if (!g_栈高 || !g_栈低) return 0;
+  return (int)((const char *)g_栈高 - (const char *)g_栈低);
+}
+
+/* 深度阶梯：每到一个 2 的幂，在「正常栈」上打一行。
+ *
+ * 为什么不能等硬错误那一刻再打（2026-10-30 试过）：栈溢出之后，HardFault 处理
+ * 里再调用任何函数都会立刻再进一次 HardFault —— 串口上于是只剩半行
+ * 「hmyr: hard fault, depth=」被无限重复。崩溃前的输出才是安全的证据。
+ *
+ * 每个档只打一次（g_深度档上 记着已经打到哪儿），所以递归上来又下去不会重复灌串口。 */
+static int g_深度档 = 0;
+static uint32_t g_深度档上 = 0;
+
+void hmyr_开深度档(void) { g_深度档 = 1; }
+
 static void 函数名(Func *f, char *out, size_t cap) {
   size_t n = 0;
   if (f && cap > 1) {
@@ -2059,6 +2096,16 @@ static char *名字成文(Func *f) {
 
 static void 记深度(Func *f, Func *父) {
   g_深度++;
+  /* 深度阶梯：把一个 2 的幂上的深度与当时的栈字节打出去。
+   * 这一路用的是还没坏的栈 —— 硬错误处理里不能再调用函数（见 hmyr_开深度档）。 */
+  if (g_深度档 && g_深度 > g_深度档上 &&
+      (g_深度 == 8 || g_深度 == 16 || g_深度 == 32 || g_深度 == 64 ||
+       g_深度 == 128 || g_深度 == 256 || g_深度 == 512)) {
+    g_深度档上 = g_深度;
+    char 话[88];
+    snprintf(话, sizeof 话, "depth=%u stack=%d\n", (unsigned)g_深度, hmyr_栈字节());
+    报一行(话);
+  }
   if (g_深度 > g_最深) {
     g_最深 = g_深度;
     if (g_depth_on && (g_深度 < 8 || g_深度 % 64 == 0)) {
@@ -4560,6 +4607,8 @@ static Value run_func(Func *f, Value *args, int nargs) {
     return v_null();
   }
   记深度(f, g_机->当前函数);
+  /* 这一帧的地址交给 记栈：最深与最浅的差就是递归用掉的栈字节。 */
+  记栈(__builtin_frame_address(0));
   Value 槽栈[帧槽上限];
   int 用栈 = (f->nslots <= 帧槽上限);
   Value *slots = 用栈 ? 槽栈 : alloc_values(f->nslots);

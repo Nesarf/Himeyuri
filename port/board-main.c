@@ -54,17 +54,31 @@ __attribute__((weak)) void 板子吐字节(uint8_t 字节) {
 
 size_t 板子吐过(void) { return g_吐过; }
 
+/* 一个十进制数写进串口。板侧不拖 snprintf 进来（那会把格式化整个拖进 Flash）。 */
+static void 板子吐数(size_t 值) {
+  char 数[16];
+  int 位 = 0;
+  if (值 == 0) 数[位++] = '0';
+  while (值 > 0) { 数[位++] = (char)('0' + (值 % 10)); 值 /= 10; }
+  while (位 > 0) 板子吐字节((uint8_t)数[--位]);
+}
+
+static void 板子吐字(const char *话) {
+  for (const char *p = 话; *p; p++) 板子吐字节((uint8_t)*p);
+}
+
 /* 硬错误处理：说一句，然后停住。由 port/startup_cm4_gnu.s 的向量表指过来。
  *
  * 为什么要有它（2026-10-30）：六份自举层在板子上装载成功、执行时栈溢出 ——
  * 调试器读到 pc 0x00000000、msp 0x1ffff828（MSP 落在 RAM 下面），
  * 而串口上什么也没有，与「程序根本没跑」一模一样。那句话把两种情形分开。
  *
- * 只写一行就停在原地：进来时栈可能已经不可信，而这一层不再依赖栈上的任何东西。
- * 名字用 ASCII，因为汇编那边要引用它。 */
+ * 为什么这里只有一句固定的话、连数字都不打（同一天试过）：栈溢出之后，处理器
+ * 每调用一个函数就要再压一层栈，于是打印数字的那一版在串口上留下的是半行
+ * 「hmyr: hard fault, depth=」被无限重复。深度与栈字节改在崩溃之前分档打出去
+ * （见 vm/hmyr.c 的深度阶梯），那一路用的是还没坏的栈。 */
 void hmyr_hard_fault(void) {
-  const char *话 = "hmyr: hard fault (stack past its reserve, or a bad access)\n";
-  for (const char *p = 话; *p; p++) 板子吐字节((uint8_t)*p);
+  板子吐字("hmyr: hard fault (stack past its reserve, or a bad access)\n");
   for (;;) { }
 }
 
@@ -93,6 +107,7 @@ int main(void) {
    * 板子只省 482），所以每一步都要能从串口读出来。只在 HMYR_LOAD_TRACE 下打开。 */
 #ifdef HMYR_LOAD_TRACE
   hmyr_开装载跟踪();
+  hmyr_开深度档();
 #endif
 
   char 名[] = "program.hmyrb";
