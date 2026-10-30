@@ -31,7 +31,7 @@ const 映射 = {
   tuple: "组", record: "记录", err: "Error",
   let: "定", var: "变", return: "返回", assign: "赋值", expr: "表达式语句",
   if: "若", while: "当",
-  Fn: "Fn", Block: "Block", Module: "Module", Import: "Import",
+  Fn: "Fn", Block: "Block", Module: "Module", Import: "引入",
 };
 
 // self 侧的元组在 JS 里是类数组对象，宿主侧是数组 —— 统一成数组再用。

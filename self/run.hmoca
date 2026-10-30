@@ -397,7 +397,7 @@ fn 导入节点们(tokens: Int, i: Int, acc: Int) {
     if i + 3 < len(tokens) && tokens[i + 3].kind == "ident" && tokens[i + 3].text == "as" {
       if i + 4 < len(tokens) && tokens[i + 4].kind == "ident" { 别 = tokens[i + 4].text }
     }
-    let 节 = {kind: "Import", path: s.text, alias: 别, rev: 版, line: t.line, column: t.column}
+    let 节 = {kind: "引入", path: s.text, alias: 别, rev: 版, line: t.line, column: t.column}
     return 导入节点们(tokens, i + 2, acc + (节,))
   }
   return 导入节点们(tokens, i + 1, acc)

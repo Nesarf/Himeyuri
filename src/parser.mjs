@@ -121,7 +121,7 @@ export function parse(tokens, options = {}) {
       rev = n ? Number(n.value) : null;
     }
     endStatement();
-    return { kind: "Import", path: pathToken ? pathToken.value : "", alias: alias ? alias.value : null, rev, line: kw.line, column: kw.column };
+    return { kind: "引入", path: pathToken ? pathToken.value : "", alias: alias ? alias.value : null, rev, line: kw.line, column: kw.column };
   }
 
   function parseDecl() {
@@ -287,7 +287,7 @@ export function parse(tokens, options = {}) {
     expectPunct("=", "before the value");
     const value = parseExpr();
     endStatement();
-    return { kind: "VarTop", name: name ? name.value : "<error>", value, line: kw.line, column: kw.column };
+    return { kind: "顶层变", name: name ? name.value : "<error>", value, line: kw.line, column: kw.column };
   }
 
   // 宏：macro 名(参数们) = 表达式

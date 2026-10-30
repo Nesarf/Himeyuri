@@ -401,7 +401,7 @@ export const 编译模块 = (ast) => {
     // Const 与 VarTop 都进上一级那张表：它们的初值都在顶层段里算。
     // 两者的差别只在「函数里能不能写它」—— 而那一半由 Ident / Assign 两支决定，
     // 不由这里决定。
-    else if (decl.kind === "Const" || decl.kind === "VarTop") 全局们.push(decl);
+    else if (decl.kind === "Const" || decl.kind === "顶层变") 全局们.push(decl);
     else throw new 编译错("这一份只认 fn 与 const 声明：" + decl.kind);
   }
   // 有常量就有一段初始化。它走的是普通函数那条路（编译、装栈、RET 交回 nil），

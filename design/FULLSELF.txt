@@ -2052,6 +2052,20 @@ selfloa 的 27/27）。
     Block（16）、Fn（40）、Module（10）、Import（5）、Error（52）。它们之所以留到最后，
     是因为名字容易与模块名、字段值、JS 内置撞，而这一整段躲的就是那种撞。
 
+自立：两种结构词（顶层变、引入）换完了（2026-11-02，新一段第 28 轮）
+
+    VarTop（3 处）与 Import（5 处）都是纯 kind 语境。其中一处在 self-tree.mjs 的映射表
+    （Fn: "Fn", Block: "Block", Module: "Module", Import: "Import"）—— 换了之后
+    那一行成了 Fn: "Fn", Block: "Block", Module: "Module", Import: "引入"。混合状态是
+    预期的：这一整段就是逐个换，而每个中间状态都能跑通（九套全过）。
+
+    读数：eval、codes-eval、minimal-eval、bytecode、vm、parser、module、self-load、docs
+    九套全过；run.hmoks 重编。
+
+    进度：32 种里完成 26 种。剩 6 种：Const（18 处）、Block（16）、Module（10）、
+    Fn（40）、Error（52）。而 Fn 与 Error 是两个大件 —— 它们各自 40 与 52 处，而且
+    都在「名字与别的东西撞」的那一类里。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 HMYR-載-001；
 另外引的文件不在就报 HMYR-載-003（宿主也是这个码）。顺序取后序，于是 order 逐项相同。

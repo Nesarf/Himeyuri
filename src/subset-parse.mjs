@@ -159,7 +159,7 @@ export const 子集解 = (tokens, options = {}) => {
       rev = n ? Number(n.value) : null;
     }
     收句();
-    return { kind: "Import", path: 路 ? 路.value : "", alias: alias ? alias.value : null, rev, line: kw.line, column: kw.column };
+    return { kind: "引入", path: 路 ? 路.value : "", alias: alias ? alias.value : null, rev, line: kw.line, column: kw.column };
   }
 
   function 解析声明() {
@@ -176,7 +176,7 @@ export const 子集解 = (tokens, options = {}) => {
     if (是("keyword", "fn")) return 解析函数();
     if (是("ident", "macro")) return 解析宏();
     if (是("keyword", "const")) return 解析常量("Const");
-    if (是("keyword", "var")) return 解析常量("VarTop");
+    if (是("keyword", "var")) return 解析常量("顶层变");
     // 这两样宿主读得动，而这一份还不认——边界，抛。
     if (是("keyword", "type") || 是("keyword", "effect")) {
       不认("子集不认这个声明，见到 " + 说明(看()));

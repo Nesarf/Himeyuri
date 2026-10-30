@@ -141,7 +141,7 @@ const 深转 = (v) => {
     // rev 0 在这一侧表示「没写」；宿主用 null 表示不提要求。
     // -1 原样留着 —— 它是「写了 rev 但没有数字」，由 loadUnit 报成一条语法错。
     // 这里不能碰 诊断：深转 是模块级函数，那个变量不在它的作用域里。
-    if ((o.kind === "Module" || o.kind === "Import") && o.rev === 0) o.rev = null;
+    if ((o.kind === "Module" || o.kind === "引入") && o.rev === 0) o.rev = null;
     return o;
   }
   if (Array.isArray(v)) return v.map(深转);
