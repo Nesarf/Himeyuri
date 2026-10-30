@@ -25,6 +25,10 @@ fn 要跳过(名: String) -> Bool {
   if 名 == "build" { return true }
   if 名 == "data" { return true }
   if 名 == "swap" { return true }
+  // 点开头的一律跳过：2026-11-02 实测，这一份从 . 起走的时候进了 .tmp-crc-* 与
+  // .tmp-readdir-*（测试留下的临时目录），深度在那里面耗掉一半，于是 design/ 只
+  // 查到两份就停了 —— 19 份对 JS 版的 61 份，差的就是这些。测试的临时目录不是文档。
+  if len(名) > 0 && slice(名, 0, 1) == "." { return true }
   // ucd 是码点表（runtime/ucd/codepoints.txt 有 42 MB），conformance 下是 Unihan 与
   // NFC 的对照表（29 MB 与 17 MB）—— 都是数据，不是我们写下的文档。
   //

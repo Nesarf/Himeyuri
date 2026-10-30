@@ -16,7 +16,12 @@ const EXT = new Set([".txt", ".rst", ".adoc"]);
 // data/ 是第三方原始数据（Unicode 的 UCD 与 Unihan），它们有自己的格式与自己的规矩，
 // 而这份检查针对的是我们写下的文档。把它们扫进来会得到二十八份「不通过」，
 // 而那些「违规」全是数据本身：行首的井号、竖线表格、方括号引用，都是 UCD 的写法。
-const SKIP = new Set(["node_modules", ".git", "build", "data"]);
+//
+// 2026-11-02 补三处，与 tools/check-docs.hmoca 对齐：swap/（量具的临时工作台）、
+// ucd/ 与 conformance/（同样是数据表，前者是码点表 42 MB，后者是 Unihan 与 NFC 的
+// 对照 29 MB 与 17 MB）、以及所有点开头的目录（测试留下的 .tmp-* 也在其中）。
+// 对齐之后两份数一样：61 份变 43 份 —— 少掉的 18 份全是数据，不是我们写下的文档。
+const SKIP = new Set(["node_modules", ".git", "build", "data", "swap", "ucd", "conformance"]);
 
 const MARKERS = [
   [/^#{1,6}\s/m, "hash heading"],
@@ -32,6 +37,7 @@ const MARKERS = [
 function walk(dir, found = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (SKIP.has(entry.name)) continue;
+    if (entry.name.startsWith(".")) continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) walk(full, found);
     else if (EXT.has(path.extname(entry.name))) found.push(full);
