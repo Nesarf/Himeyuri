@@ -29,7 +29,8 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  码 = hmyr_call(vm, "main", &数);
+  const char *名 = argc > 2 ? argv[2] : "main";
+  码 = hmyr_call(vm, 名, &数);
   if (码) {
     fprintf(stderr, "HMYR-器-017 调用失败（返回 %d）\n", 码);
     hmyr_vm_free(vm);

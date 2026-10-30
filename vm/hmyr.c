@@ -5371,7 +5371,9 @@ static Value run_func(Func *f, Value *args, int nargs) {
  * 而板子上它读不到文件 —— 那不是错误，那是「还没装」。 */
 static uint8_t *桌面读文件(const char *path, size_t *out_len) {
   FILE *f = 开文件(path, "rb");
-  if (!f) { fprintf(stderr, "hmyr: cannot open %s\n", path); exit(1); }
+  /* 不在这里 exit：库模式（design/EMBED.txt）下「读不到」是一个返回值，而不是
+   * 宿主的死因。两个调用点（run_bytecode 与 hmyr_load）都处理 NULL。2026-11-02。 */
+  if (!f) { fprintf(stderr, "hmyr: cannot open %s\n", path); return NULL; }
   fseek(f, 0, SEEK_END);
   long n = ftell(f);
   fseek(f, 0, SEEK_SET);
@@ -5389,7 +5391,7 @@ static uint8_t *read_file(const char *path, size_t *out_len) {
     size_t n = 0;
     if (!g_平台.读(path, &p, &n)) {
       fprintf(stderr, "hmyr: the platform could not read %s\n", path);
-      exit(1);
+      return NULL;   /* 同上：交给调用方决定，而不是替宿主 exit */
     }
     *out_len = n;
     return p;

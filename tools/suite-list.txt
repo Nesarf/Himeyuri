@@ -102,6 +102,7 @@ realtime	test/realtime.test.mjs
 owned	test/owned.test.mjs
 ownedcheck	test/owned-check.test.mjs
 ffi	test/ffi.test.mjs
+cembed	test/c-embed.test.mjs
 ownedstate	test/owned-state.test.mjs
 namespace	test/namespace.test.mjs
 pkgmanifest	test/pkg-manifest.test.mjs
