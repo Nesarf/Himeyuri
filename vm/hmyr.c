@@ -1529,9 +1529,16 @@ typedef struct Func {
  * 于是指令里只留一个偏移就够 —— 池的两张表（一万六千项，各六十四 KB）省掉了。
  * 那块板子一共一百二十八 KB，这一刀拿掉的正好一半。见 design/BOARD.txt 第二十二节。 */
 
-/* 字节流的起点与长度：名字要从这里读。定义在装载那一段，声明提到这儿。 */
-static const uint8_t *g_码起;
-static size_t g_码长;
+/* 字节流的起点与长度：名字要从这里读。定义在装载那一段，声明提到这儿。
+ *
+ * 线程局部（2026-11-02 修的真 bug）：这两样是「我现在跑的是哪一份字节码」，
+ * 而一个线程一个独立的 Hmyr机器 —— 它们属于那个「现在」，不属于整个进程。
+ * 原来是普通全局，于是子线程 load_program 一设就把主线程的映像换掉了：
+ * 症状是主线程执行到某条指令时按子线程的长度去读，报
+ * 「the file ends in the middle of something (offset 278)」而那个偏移落在
+ * 主程序自己的长度里 —— 线程读的明明是 116 字节的产物。 */
+static 线程局部 const uint8_t *g_码起;
+static 线程局部 size_t g_码长;
 
 /* 偏移 off 处第 k 个码元（UTF-16LE，与 rd_str 读的是同一份字节）。 */
 static uint16_t 名码(uint32_t off, uint32_t k) {
@@ -5830,6 +5837,10 @@ static DWORD WINAPI 线程体(LPVOID 参) {
       uint8_t *字节 = read_file(c->产物路径, &长);
       Func *入口 = NULL;
       if (!字节) { c->码 = 3; snprintf(c->话, sizeof c->话, "cannot read what the compiler wrote"); break; }
+      /* 可开的现场（2026-11-02）：线程读的到底是哪一个文件、读到多少字节。
+       * 报的是「the file ends in the middle of something」而偏移落在主程序的长度里，
+       * 所以先要看清这一句而不是继续猜。HMYR_THREAD_TRACE=1 才打印。 */
+      if (getenv("HMYR_THREAD_TRACE")) fprintf(stderr, "[线程 %d] 读 %s → %lu 字节\n", c->号, c->产物路径, (unsigned long)长);
       load_program(字节, 长);
       {
         uint32_t 长16 = 0;
