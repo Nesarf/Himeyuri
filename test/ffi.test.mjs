@@ -219,6 +219,45 @@ console.log("六、不可写的源：元组上写要拒");
 // 「这个值能不能取长」的判定，而那是一件单独的事。
 
 fs.rmSync(临, { recursive: true, force: true });
+console.log("六、call_c 的三条失败");
+{
+  // call_c 只在 C 那台上存在（design/ABI.txt 第四节），所以这三条要跑那条路。
+  // 三条各自撞一处：库打不开、符号找不到、参数类型这一版传不了。
+  const 有gcc二 = (() => {
+    try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
+  })();
+  if (!有gcc二) {
+    console.log("  跳过  这台机器上没有 gcc —— call_c 的失败路径不验");
+  } else {
+    const exe = path.join(临, "hmyr-call.exe");
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-Wl,--stack,67108864", "-o", exe,
+      path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
+    if (编.status !== 0) console.log("  跳过  call_c 那台这一次没编出来：" + String(编.stderr || "").slice(0, 100));
+    if (编.status === 0) {
+      const 跑一条 = (库, 符, 参) => {
+        const 源 = 投(行们([
+          "fn main() -> Int effects(process) {",
+          '  print(str(call_c("' + 库 + '", "' + 符 + '", ' + 参 + ')) + chr(10))',
+          "  return 0",
+          "}",
+        ]), "call.hmoca");
+        const 码 = 源.replace(/\.hmoca$/, ".hmoks");
+        const 编程序 = spawnSync(process.execPath, [path.join(ROOT, "tools", "emit-code.mjs"), 源, 码], { encoding: "utf8" });
+        if (编程序.status !== 0) return { stderr: String(编程序.stderr || "") };
+        return spawnSync(exe, [码], { encoding: "utf8", timeout: 300000, env: { ...process.env, HMYR_STEPS: "4000000000" } });
+      };
+      const 甲 = 跑一条("没有这个库.dll", "abs", "(0 - 7,)");
+      ok("打不开库是 HMYR-器-013", String(甲.stderr || "").includes("HMYR-器-013"), String(甲.stderr || "").slice(0, 140));
+      const 乙 = 跑一条("msvcrt.dll", "没有这个符号", "(0 - 7,)");
+      ok("找不到符号是 HMYR-器-014", String(乙.stderr || "").includes("HMYR-器-014"), String(乙.stderr || "").slice(0, 140));
+      const 丙 = 跑一条("msvcrt.dll", "abs", '("不是数",)');
+      ok("传不了的类型是 HMYR-器-015", String(丙.stderr || "").includes("HMYR-器-015"), String(丙.stderr || "").slice(0, 140));
+      const 丁 = 跑一条("msvcrt.dll", "abs", "(0 - 7,)");
+      ok("而对了就给出七", String(丁.stdout || "").includes("7"), String(丁.stdout || "") + " / " + String(丁.stderr || "").slice(0, 100));
+    }
+  }
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
