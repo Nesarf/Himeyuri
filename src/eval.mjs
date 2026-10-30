@@ -66,7 +66,10 @@ const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
 // index 那四个是 2026-10-27 量出来的：区的记账要用可变容器，而记录不可变，
 // 所以 self/eval 的区用索引表示（index_new / set / get / has —— 只用得到这四个，
 // index_len 与 index_keys 自举层没有用，所以不进这张表）。
-const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "f64_bytes", "index_get", "index_has", "index_new", "index_set", "is_dir", "is_letter", "is_mark", "len", "nfc", "ord", "pack_value", "print", "print_err", "read_dir", "read_line", "read_lines", "read_text", "record_new", "slice", "str", "to_int", "write_bytes"]);
+const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "floor", "f64_bytes", "index_get", "index_has", "index_new", "index_set", "is_dir", "is_letter", "is_mark", "len", "nfc", "ord", "pack_value", "print", "print_err", "read_dir", "read_line", "read_lines", "read_text", "record_new", "slice", "str", "to_int", "write_bytes"]);
+// floor 是 2026-11-02 加进来的：自举层的词法器改成分块累积，二分合并那一步要取一半，
+// 而 to_int 对 1.5 是拒绝而不是取整（HMYR-R0208），所以那里只能用 floor。
+// 这张表的意思是「已经量过的必须项」，于是它加了；stage0-eval 那一套的十七也就变十八。
 
 export class Runtime {
   constructor(options = {}) {

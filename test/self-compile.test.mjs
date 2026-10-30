@@ -37,7 +37,9 @@ console.log("一、六份，默认栈下，名字与顺序都与宿主一致");
   // 同日 lex 从 27 变 26：删掉了自己定义的那个 slice。语言里本来就有内置 slice，
   // 而「内置优先」（src/eval.mjs 第 52 行）意味着那一份手写版从来没被调过；
   // 它的实现是逐字符递归拼接，留着只会骗人。删除之后两台机器都落到同一个内置。
-  const 期 = { lex: 26, chain: 27, stmt: 10, body: 28, eval: 57, run: 62 };
+  // 2026-11-02：lex 从 26 到 30 —— 词法器改成分块累积，加了 攒、取范围、合并们、收段
+  // 四个函数（原来是 acc + (t,) 一路拼，长文件是平方级的）。
+  const 期 = { lex: 30, chain: 27, stmt: 10, body: 28, eval: 57, run: 62 };
   for (const 名 of Object.keys(期)) {
     const 路 = path.join(ROOT, "self", 名 + ".hmoca");
     const 甲 = 算名(路);

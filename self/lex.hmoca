@@ -186,37 +186,85 @@ fn skip_trivia(s: String, i: Int, keep_lines: Bool) -> Int {
   return i
 }
 
-fn tokenize(s: String, at: Int, acc: Int, keep_lines: Bool) {
+// 分块累积（2026-11-02）：token 与「带位置的 token」原来都是一路 acc + (t,)，而元组的
+// 加号每次都复制整个元组 —— 一万三千个 token 就是八千五百万个槽，C 机器上要四吉字节
+// （量出来的：self/eval.hmoca 的只解析 撞内存上限）。这里改成两层：段内最多 128 个，
+// 段满就整段挪进「段们」，最后二分合并 —— 累积成本从 n 的平方降到 n 乘块数，
+// 合并成本是 n log 段数。
+//
+// 128 写成字面量而不是 const 名字：模块级的 const 在字节码那条路上不在作用域里，
+// 报的是 HMYR-R0104 没有这个名字（2026-11-02 量出来的，bytecode 那套一红九项）。
+fn 攒(们: Int, 段: Int, t: Int) {
+  let 新 = 段 + (t,)
+  if len(新) >= 128 { return {们: 们 + (新,), 段: ()} }
+  return {们: 们, 段: 新}
+}
+
+// 取一个范围（元组没有切片语法，所以自己走一遍；只在合并时用，量很小）。
+fn 取范围(们: Int, i: Int, 末: Int, acc: Int) {
+  if i >= 末 { return acc }
+  return 取范围(们, i + 1, 末, acc + (们[i],))
+}
+
+// 二分合并：两半各自合并好再相加，于是每一次元素只被复制 log 段数 次。
+//
+// 取一半要用 floor 而不是 to_int：to_int 对 1.5 会抛 HMYR-R0208（它是「字符串转整数」，
+// 不是取整），而段数是奇数时 3 除 2 正好是 1.5 —— 症状是一串「not an integer literal:
+// '1.5' '4.5' '43.5'」，看起来像数字字面量出了问题，其实是在这里（2026-11-02 实测）。
+fn 合并们(段们: Int) {
+  if len(段们) == 0 { return () }
+  if len(段们) == 1 { return 段们[0] }
+  let 半 = floor(len(段们) / 2)
+  let 左 = 合并们(取范围(段们, 0, 半, ()))
+  let 右 = 合并们(取范围(段们, 半, len(段们), ()))
+  return 左 + 右
+}
+
+// 把「段们」与「还没满的最后一段」收成一个元组。
+fn 收段(尾: Int) {
+  var 段们 = 尾.们
+  if len(尾.段) > 0 { 段们 = 段们 + (尾.段,) }
+  return 合并们(段们)
+}
+
+fn tokenize(s: String, at: Int, 们: Int, 段: Int, keep_lines: Bool) {
   let i = skip_trivia(s, at, keep_lines)
-  if i >= len(s) { return acc }
+  if i >= len(s) { return {们: 们, 段: 段} }
   if s[i] == "\n" {
     // 到这里只能是「保留换行」，不保留的情形已在上面被吃掉
-    return tokenize(s, i + 1, acc + ({kind: "newline", text: "\n", at: i},), keep_lines)
+    let 下 = 攒(们, 段, {kind: "newline", text: "\n", at: i})
+    return tokenize(s, i + 1, 下.们, 下.段, keep_lines)
   }
 
   // r"..." 是一个字符串，不是「标识符 r 加一个字符串」
   if (s[i] == "r" || s[i] == "R") && i + 1 < len(s) && s[i + 1] == "\"" {
     let raw = read_string(s, i + 2, "")
-    return tokenize(s, raw.next, acc + ({kind: "string", text: raw.text, at: i},), keep_lines)
+    let 下 = 攒(们, 段, {kind: "string", text: raw.text, at: i})
+    return tokenize(s, raw.next, 下.们, 下.段, keep_lines)
   }
   if is_ident_start(s[i]) {
     let got = read_ident(s, i, "")
-    return tokenize(s, got.next, acc + ({kind: "ident", text: nfc(got.text), at: i},), keep_lines)
+    let 下 = 攒(们, 段, {kind: "ident", text: nfc(got.text), at: i})
+    return tokenize(s, got.next, 下.们, 下.段, keep_lines)
   }
   if is_digit(s[i]) {
     if s[i] == "0" && i + 1 < len(s) && (s[i + 1] == "x" || s[i + 1] == "X" || s[i + 1] == "b" || s[i + 1] == "B" || s[i + 1] == "o" || s[i + 1] == "O") {
       let based = read_based(s, i + 2, slice(s, i, i + 2))
-      return tokenize(s, based.next, acc + ({kind: "int", text: based.text, at: i},), keep_lines)
+      let 下 = 攒(们, 段, {kind: "int", text: based.text, at: i})
+      return tokenize(s, based.next, 下.们, 下.段, keep_lines)
     }
     let got = read_number(s, i, "")
-    return tokenize(s, got.next, acc + ({kind: "int", text: got.text, at: i},), keep_lines)
+    let 下 = 攒(们, 段, {kind: "int", text: got.text, at: i})
+    return tokenize(s, got.next, 下.们, 下.段, keep_lines)
   }
   if s[i] == "\"" {
     let got = read_string(s, i + 1, "")
-    return tokenize(s, got.next, acc + ({kind: "string", text: got.text, at: i},), keep_lines)
+    let 下 = 攒(们, 段, {kind: "string", text: got.text, at: i})
+    return tokenize(s, got.next, 下.们, 下.段, keep_lines)
   }
   let got = read_punct(s, i)
-  return tokenize(s, got.next, acc + ({kind: "punct", text: got.text, at: i},), keep_lines)
+  let 下 = 攒(们, 段, {kind: "punct", text: got.text, at: i})
+  return tokenize(s, got.next, 下.们, 下.段, keep_lines)
 }
 
 // 给每个 token 补上行列。token 本来就带着字符偏移（at），所以这一遍只做一次线性扫描：
@@ -226,7 +274,8 @@ fn tokenize(s: String, at: Int, acc: Int, keep_lines: Bool) {
 // 节点都带 line 与 column。self 这一侧以前只有 at，等于只能给字符偏移 —— 那对读的人
 // 没有意义。位置从词法这一层带上，后面的节点才有东西可抄。
 fn 补位置(tokens: Int, 源码: String) {
-  var 出 = ()
+  var 们 = ()
+  var 段 = ()
   var 行 = 1
   var 列 = 1
   var 看过 = 0
@@ -245,19 +294,23 @@ fn 补位置(tokens: Int, 源码: String) {
       走 = 走 + 1
     }
     看过 = 走
-    出 = 出 + ({kind: t.kind, text: t.text, at: at, line: 行, column: 列},)
+    // 这一趟同样是一万三千次，也分块攒 —— 原来这里是 出 = 出 + (...)，第二个平方在它身上。
+    let 攒好 = 攒(们, 段, {kind: t.kind, text: t.text, at: at, line: 行, column: 列})
+    们 = 攒好.们
+    段 = 攒好.段
     i = i + 1
   }
-  return 出
+  if len(段) > 0 { 们 = 们 + (段,) }
+  return 合并们(们)
 }
 
 pub fn scan(text: String) {
-  return 补位置(tokenize(text, 0, (), false), text)
+  return 补位置(收段(tokenize(text, 0, (), (), false)), text)
 }
 
 // 保留换行的入口：语句边界由此而来。旧入口保持原样，六处既有对拍不受影响。
 pub fn scan_lines(text: String) {
-  return 补位置(tokenize(text, 0, (), true), text)
+  return 补位置(收段(tokenize(text, 0, (), (), true)), text)
 }
 
 fn main() -> Int {
