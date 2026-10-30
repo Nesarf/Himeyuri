@@ -97,7 +97,14 @@ const 深转 = (v) => {
   // 而它一直藏在「产物旧 → 退回解释器」后面，直到产物被重新生成才露出来。
   if (是码元序列(v)) return 成宿主(v);
   // nil 在宿主那边是 {type:"nil", value:null}；这一侧没有 null，所以到 JS 这一层才补上。
-  if (v && v.tag === "record" && v.fields && v.fields.get("type") === "nil") {
+  //
+  // 比较的那一边要先折成宿主串：type 的值在字节码那台是码元序列，拿它去和 "nil"
+  // 比永远不相等 —— 于是这个分支从来没进去过，nil 字面量走了下面那个通用 record 分支，
+  // value 成了 []（空元组转成的数组）。而编译器按 {type:"nil", value:null} 编常量，
+  // 拿到 [] 就编错：str(nil) 在桥那条路上给出空字符串的码元（长度 0），
+  // 而宿主的树上给的是空括号的两个码元（长度 2）。2026-11-02 实测。
+  const 若码元则折 = (x) => (是码元序列(x) ? 成宿主(x) : x);
+  if (v && v.tag === "record" && v.fields && 若码元则折(v.fields.get("type")) === "nil") {
     const o = {};
     for (const [k, x] of v.fields) o[k] = 深转(x);
     o.value = null;
