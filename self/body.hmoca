@@ -232,7 +232,16 @@ fn 收名从(tokens: Int, i: Int, 末: Int, 等下个: Bool, 深: Int, acc: Int)
   if t.kind == "punct" && t.text == ")" { return 收名从(tokens, i + 1, 末, 等下个, 0, acc) }
   if 深 > 0 { return 收名从(tokens, i + 1, 末, 等下个, 深, acc) }
   if t.kind == "punct" && t.text == "," { return 收名从(tokens, i + 1, 末, true, 深, acc) }
-  if 等下个 && t.kind == "ident" { return 收名从(tokens, i + 1, 末, false, 深, acc + (t.text,)) }
+  if 等下个 && t.kind == "ident" {
+    // borrow 与 own 是参数上的前缀词，名字在它们后面一格 —— 所以收到前缀之后
+    // 继续等下一个。原来一律置 false，于是 fn 借(borrow 格: Int) 只交出
+    // ("borrow",)，名字被吞掉；而这正是「跨模块的转移」看不见的原因
+    // （2026-11-02 实测：探针打出 参个数=1、参0=borrow）。
+    if t.text == "borrow" || t.text == "own" {
+      return 收名从(tokens, i + 1, 末, true, 深, acc + (t.text,))
+    }
+    return 收名从(tokens, i + 1, 末, false, 深, acc + (t.text,))
+  }
   return 收名从(tokens, i + 1, 末, 等下个, 深, acc)
 }
 
