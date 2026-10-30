@@ -417,10 +417,10 @@ export const 子集解 = (tokens, options = {}) => {
 
   function 解析首项() {
     const t = 看();
-    if (t.type === "int" || t.type === "float") { 进(); return { kind: "Literal", type: t.type, value: t.numeric !== undefined ? t.numeric : t.value, raw: t.value, line: t.line, column: t.column }; }
-    if (t.type === "string") { 进(); return { kind: "Literal", type: "string", value: t.value, raw: false, line: t.line, column: t.column }; }
-    if (是("keyword", "true") || 是("keyword", "false")) { 进(); return { kind: "Literal", type: "bool", value: t.value === "true", line: t.line, column: t.column }; }
-    if (是("keyword", "nil")) { 进(); return { kind: "Literal", type: "nil", value: null, line: t.line, column: t.column }; }
+    if (t.type === "int" || t.type === "float") { 进(); return { kind: "字", type: t.type, value: t.numeric !== undefined ? t.numeric : t.value, raw: t.value, line: t.line, column: t.column }; }
+    if (t.type === "string") { 进(); return { kind: "字", type: "string", value: t.value, raw: false, line: t.line, column: t.column }; }
+    if (是("keyword", "true") || 是("keyword", "false")) { 进(); return { kind: "字", type: "bool", value: t.value === "true", line: t.line, column: t.column }; }
+    if (是("keyword", "nil")) { 进(); return { kind: "字", type: "nil", value: null, line: t.line, column: t.column }; }
 
     // If 与 While 在这一门语言里也是表达式（if 有值），于是它们出现在这里而不是语句那一层。
     if (是("keyword", "while")) {

@@ -14,9 +14,9 @@ const canon = (v) => {
   if (Array.isArray(v)) return v.map(canon);
   if (v && typeof v === "object") {
     if (v.kind === "Ident") return { kind: "Ident", name: v.name !== undefined ? v.name : v.text };
-    if (v.kind === "Literal") {
+    if (v.kind === "字") {
       const 原 = v.value !== undefined ? v.value : (v.text !== undefined ? v.text : v.raw);
-      return { kind: "Literal", type: v.type, value: v.type === "int" ? Number(原) : 原 };
+      return { kind: "字", type: v.type, value: v.type === "int" ? Number(原) : 原 };
     }
     const o = {};
     for (const key of Object.keys(v)) {
@@ -46,7 +46,7 @@ const readStatement = (source) => {
 function jsShape(node) {
   if (!node) return null;
   if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
-  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", type: "int", text: node.raw };
+  if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
   if (node.kind === "Ident") return { kind: "Ident", text: node.name };
   if (node.kind === "Call") return { kind: "Call", callee: jsShape(node.callee), args: node.args.map(jsShape) };
   if (node.kind === "Index") return { kind: "Index", target: jsShape(node.target), index: jsShape(node.index) };

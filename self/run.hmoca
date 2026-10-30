@@ -220,19 +220,19 @@ fn 列(n: Int) -> Int {
 // 这三件（字面量的值、空 return、Ident 的字段名）是适配器里最后的翻译。把它们挪进 HMYR，
 // 工具那一层就只剩搬运 —— 而「宿主一口吃下去」这句话才算有证据。
 fn 翻表达式(n: Int) {
-  if n.kind == "Literal" {
+  if n.kind == "字" {
     if n.type == "int" {
-      return {kind: "Literal", type: "int", value: 数字值(n.text), raw: n.text, text: n.text, line: 行(n), column: 列(n)}
+      return {kind: "字", type: "int", value: 数字值(n.text), raw: n.text, text: n.text, line: 行(n), column: 列(n)}
     }
-    return {kind: "Literal", type: "string", value: n.text, raw: false, text: n.text, line: 行(n), column: 列(n)}
+    return {kind: "字", type: "string", value: n.text, raw: false, text: n.text, line: 行(n), column: 列(n)}
   }
   if n.kind == "Ident" {
     // true 与 false 在这一侧是标识符（词法把关键字也归在 ident 里），在宿主那边是字面量。
     // 不转的话，宿主会去找一个叫 false 的名字 —— 报 HMYR-行-005，而那句话听起来像拼写错误。
-    if n.text == "true" { return {kind: "Literal", type: "bool", value: true, raw: false, text: n.text, line: 行(n), column: 列(n)} }
-    if n.text == "false" { return {kind: "Literal", type: "bool", value: false, raw: false, text: n.text, line: 行(n), column: 列(n)} }
+    if n.text == "true" { return {kind: "字", type: "bool", value: true, raw: false, text: n.text, line: 行(n), column: 列(n)} }
+    if n.text == "false" { return {kind: "字", type: "bool", value: false, raw: false, text: n.text, line: 行(n), column: 列(n)} }
     // nil 在宿主那边是一个字面量（type "nil"、值 null），不是名字。
-    if n.text == "nil" { return {kind: "Literal", type: "nil", value: (), raw: false, text: n.text, line: 行(n), column: 列(n)} }
+    if n.text == "nil" { return {kind: "字", type: "nil", value: (), raw: false, text: n.text, line: 行(n), column: 列(n)} }
     return {kind: "Ident", name: n.text, text: n.text, line: 行(n), column: 列(n)}
   }
   if n.kind == "Binary" {

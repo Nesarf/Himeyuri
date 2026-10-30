@@ -33,7 +33,7 @@ const 阻塞类别 = (名) => 阻塞内置.get(名) || null;
 
 const 是常量真 = (n) => {
   if (!n) return false;
-  if (n.kind === "Literal") return n.value === true || n.value === 1;
+  if (n.kind === "字") return n.value === true || n.value === 1;
   // 自举那一层把 true 当标识符读（见 self/lex.hmoca 开头），所以两只都要认。
   if (n.kind === "Ident") return n.text === "true";
   return false;
@@ -91,7 +91,7 @@ export function 实时检查(ast, 选项 = {}) {
     // 这边漏报会让回调在别人的现场炸开，所以这边宁可拒。
     if (n.kind === "Binary" && (n.op === "/" || n.op === "%")) {
       const 右 = n.right;
-      const 可证非零 = 右 && 右.kind === "Literal" && typeof 右.value === "number" && 右.value > 0;
+      const 可证非零 = 右 && 右.kind === "字" && typeof 右.value === "number" && 右.value > 0;
       if (!可证非零) {
         报("a division or remainder whose divisor this layer cannot prove positive: a zero there stops the machine, and a realtime callback has nowhere to unwind to", n);
       }

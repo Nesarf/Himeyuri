@@ -3,7 +3,7 @@
 // 为什么需要它：两边的树说的是同一件事，而用的是两套名字。
 //
 //   宿主（src/parser.mjs）      自举（self/eval.hmyr）
-//     {kind:"Literal", type, value}   {kind:"int"|"str", text}
+//     {kind:"字", type, value}   {kind:"int"|"str", text}
 //     {kind:"Ident", name}            {kind:"name", text}
 //     {kind:"Binary", op, left, right} {kind:"bin", op, left, right}
 //     {kind:"Unary", op, operand}     {kind:"unary", op, operand}
@@ -20,11 +20,11 @@ import { parse } from "./parser.mjs";
 // 一个字面量转成自举认的那两种之一。
 const 字面量 = (节点) => {
   if (节点.type === "int" || typeof 节点.value === "number") {
-    return { kind: "Literal", type: "int", text: String(节点.raw !== undefined ? 节点.raw : 节点.value) };
+    return { kind: "字", type: "int", text: String(节点.raw !== undefined ? 节点.raw : 节点.value) };
   }
   // 宿主用的类型名是 "string"，而自举认的是 "str" —— 这个译名差一点就让「字符串」
   // 变成一句「转不了」。而它说出了原因，于是那处错立刻可见，而不是静默地算错。
-  if (节点.type === "str" || 节点.type === "string") return { kind: "Literal", type: "string", text: String(节点.value) };
+  if (节点.type === "str" || 节点.type === "string") return { kind: "字", type: "string", text: String(节点.value) };
   return { kind: "Error", text: "这一版只转整数与字符串字面量，而这里是 " + String(节点.type) };
 };
 
@@ -32,7 +32,7 @@ const 转 = (节点) => {
   if (!节点 || typeof 节点 !== "object") return { kind: "Error", text: "空节点" };
 
   switch (节点.kind) {
-    case "Literal":
+    case "字":
       return 字面量(节点);
 
     case "Ident":

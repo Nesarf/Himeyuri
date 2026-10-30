@@ -122,7 +122,7 @@ class Printer {
   // level is the indentation depth, col the column the expression starts at (for the one-line test)
   expr(node, level, col) {
     switch (node.kind) {
-      case "Literal":
+      case "字":
         if (node.type === "string") {
           // A raw string takes its source characters literally, so printing one must not escape them:
           // r"raw\\n" printed with JSON escaping became r"raw\\\\n" and read back one backslash longer.

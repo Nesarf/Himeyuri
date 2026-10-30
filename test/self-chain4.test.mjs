@@ -33,9 +33,9 @@ const canon = (v) => {
   if (Array.isArray(v)) return v.map(canon);
   if (v && typeof v === "object") {
     if (v.kind === "Ident") return { kind: "Ident", name: v.name !== undefined ? v.name : v.text };
-    if (v.kind === "Literal") {
+    if (v.kind === "字") {
       const 原 = v.value !== undefined ? v.value : (v.text !== undefined ? v.text : v.raw);
-      return { kind: "Literal", type: v.type, value: v.type === "int" ? Number(原) : 原 };
+      return { kind: "字", type: v.type, value: v.type === "int" ? Number(原) : 原 };
     }
     const o = {};
     for (const key of Object.keys(v)) {

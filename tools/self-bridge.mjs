@@ -78,7 +78,7 @@ const 补字面量 = (n) => {
     for (const x of n) 补字面量(x);
     return;
   }
-  if (n.kind === "Literal" && n.value === undefined && typeof n.text === "string") {
+  if (n.kind === "字" && n.value === undefined && typeof n.text === "string") {
     if (n.type === "int") n.value = Number(n.text);
     else if (n.type === "string") n.value = n.text;
   }

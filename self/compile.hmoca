@@ -306,10 +306,10 @@ fn 数字值(s: String) -> Int {
 // 一个表达式：交回 {ok, 状态}。
 fn 表达(节点: Int, 状态: Int) {
   let 种 = 节点.kind
-  if 种 == "Literal" && 节点.type == "int" {
+  if 种 == "字" && 节点.type == "int" {
     return {ok: true, 状态: 发(状态, {op: "CONST", a: 数字值(节点.text)})}
   }
-  if 种 == "Literal" && 节点.type == "string" {
+  if 种 == "字" && 节点.type == "string" {
     return {ok: true, 状态: 发(状态, {op: "CONST", a: 节点.text})}
   }
   if 种 == "Ident" {

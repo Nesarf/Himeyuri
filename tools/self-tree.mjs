@@ -26,7 +26,7 @@ const 造模块 = (源) => rt.callFunction(rt.functions.get("造模块"), [源],
 
 // 名字的映射：self 的 kind → 宿主的 kind。
 const 映射 = {
-  num: "Literal", str: "Literal", name: "Ident",
+  num: "字", str: "字", name: "Ident",
   bin: "Binary", unary: "Unary", call: "Call", field: "Field", index: "Index",
   tuple: "Tuple", record: "Record", err: "Error",
   let: "Let", var: "Var", return: "Return", assign: "Assign", expr: "ExprStmt",
@@ -105,10 +105,10 @@ const 走 = (s, h, 路, 计) => {
     }
   }
   // 字面量：字符串那一侧两边都存解好的值，可以直接比；数字那一侧差一次解析。
-  if (s.kind === "Literal" && s.type === "string" && s.value !== h.value) {
+  if (s.kind === "字" && s.type === "string" && s.value !== h.value) {
     return { 路: 路 + "/text", 因: "字符串：self=" + JSON.stringify(s.text) + " 宿主=" + JSON.stringify(h.value) };
   }
-  if (s.kind === "Literal" && s.type === "int") {
+  if (s.kind === "字" && s.type === "int") {
     if (s.value !== h.value) {
       return { 路: 路 + "/text", 因: "数字：self=" + JSON.stringify(s.text) + " → " + 己数 + " 宿主=" + JSON.stringify(h.value) };
     }

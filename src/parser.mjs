@@ -434,11 +434,11 @@ export function parse(tokens, options = {}) {
 
     if (t.type === "int" || t.type === "float") {
       advance();
-      return { kind: "Literal", type: t.type, value: t.numeric !== undefined ? t.numeric : t.value, raw: t.value, line: t.line, column: t.column };
+      return { kind: "字", type: t.type, value: t.numeric !== undefined ? t.numeric : t.value, raw: t.value, line: t.line, column: t.column };
     }
-    if (t.type === "string") { advance(); return { kind: "Literal", type: "string", value: t.value, raw: t.raw === true, line: t.line, column: t.column }; }
-    if (at("keyword", "true") || at("keyword", "false")) { advance(); return { kind: "Literal", type: "bool", value: t.value === "true", line: t.line, column: t.column }; }
-    if (at("keyword", "nil")) { advance(); return { kind: "Literal", type: "nil", value: null, line: t.line, column: t.column }; }
+    if (t.type === "string") { advance(); return { kind: "字", type: "string", value: t.value, raw: t.raw === true, line: t.line, column: t.column }; }
+    if (at("keyword", "true") || at("keyword", "false")) { advance(); return { kind: "字", type: "bool", value: t.value === "true", line: t.line, column: t.column }; }
+    if (at("keyword", "nil")) { advance(); return { kind: "字", type: "nil", value: null, line: t.line, column: t.column }; }
 
     if (at("keyword", "while")) {
 

@@ -94,7 +94,7 @@ fn 优先(op: String) -> Int {
 }
 
 fn 打印(e: Int, 父: Int, 是右: Bool) -> String {
-  if e.kind == "Literal" { return e.text }
+  if e.kind == "字" { return e.text }
   if e.kind == "Ident" { return e.text }
   let 本 = 优先(e.op)
   let 左 = 打印(e.left, 本, false)

@@ -31,7 +31,7 @@ console.log("\nfn and parameters");
   const fn = r && r.ast.decls[0];
   ok("pub, params, return type, effects and contract all land", fn && fn.pub === true && fn.params.length === 3 && fn.returns.name === "Bytes" && fn.effects.join(",") === "file,net" && fn.contracts.requires.length === 1);
   ok("own and borrow are recorded", fn.params[0].passing === "own" && fn.params[1].passing === "borrow");
-  ok("a parameter default is an expression", fn.params[2].fallback.kind === "Literal");
+  ok("a parameter default is an expression", fn.params[2].fallback.kind === "字");
 }
 {
   ok("a parameter without a type is HMYR-形-001", errorsOf("fn f(x) { }\n").includes("HMYR-形-001"));
@@ -116,7 +116,7 @@ console.log("\nrecovery: one mistake does not become a cascade");
 {
   const r = clean("fn f() {\n  let xs = (1, 2)\n  let t = (1)\n}\n");
   const stmts = r.ast.decls[0].body.statements;
-  ok("a tuple stays a tuple, a group is not", stmts[0].value.kind === "Tuple" && stmts[1].value.kind === "Literal");
+  ok("a tuple stays a tuple, a group is not", stmts[0].value.kind === "Tuple" && stmts[1].value.kind === "字");
 }
 
 console.log("\nthe spec's own example");

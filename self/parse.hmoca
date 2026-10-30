@@ -5,7 +5,7 @@
 // 所以它不会碰到调用深度上限。
 //
 // 形状与 JS 版解析器对齐，只保留结构：
-//   {kind: "Literal", type: "int", text}         整数（原文）
+//   {kind: "字", type: "int", text}         整数（原文）
 //   {kind: "Ident", text}        标识符
 //   {kind: "Binary", op, left, right}
 // 对拍时 JS 侧做同样的映射，行号一类的位置信息两边都不带。
@@ -70,7 +70,7 @@ fn parse_atom(s: String, i: Int) {
   }
   if is_digit_c(c) {
     let got = read_num(s, j, "")
-    return {node: {kind: "Literal", type: "int", text: got.text}, next: got.next}
+    return {node: {kind: "字", type: "int", text: got.text}, next: got.next}
   }
   if is_alpha_c(c) {
     let got = read_name(s, j, "")

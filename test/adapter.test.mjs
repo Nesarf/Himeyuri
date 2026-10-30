@@ -86,7 +86,7 @@ console.log("四、这一层只做表达式，而它说得出这句话");
 {
   const 树 = expression("fn main() -> Int {\n  while 1 < 2 { }\n  return 1\n}\n");
   // while 是语句，而 return 1 里没有可转的表达式以外的麻烦——于是这里能得到 int
-  ok("它不会被语句绊住（只取 return 的表达式）", 树.kind === "Literal" || 树.kind === "Error", JSON.stringify(树).slice(0, 60));
+  ok("它不会被语句绊住（只取 return 的表达式）", 树.kind === "字" || 树.kind === "Error", JSON.stringify(树).slice(0, 60));
 }
 
 console.log("");

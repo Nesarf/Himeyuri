@@ -13,9 +13,9 @@ const canon = (v) => {
   if (Array.isArray(v)) return v.map(canon);
   if (v && typeof v === "object") {
     if (v.kind === "Ident") return { kind: "Ident", name: v.name !== undefined ? v.name : v.text };
-    if (v.kind === "Literal") {
+    if (v.kind === "字") {
       const 原 = v.value !== undefined ? v.value : (v.text !== undefined ? v.text : v.raw);
-      return { kind: "Literal", type: v.type, value: v.type === "int" ? Number(原) : 原 };
+      return { kind: "字", type: v.type, value: v.type === "int" ? Number(原) : 原 };
     }
     const o = {};
     for (const key of Object.keys(v)) {
@@ -51,7 +51,7 @@ ok("it parses", loaded.ok, loaded.ok ? "" : loaded.errors.join("; "));
 function jsShape(node) {
   if (!node) return null;
   if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
-  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", type: "int", text: node.raw };
+  if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
   if (node.kind === "Ident") return { kind: "Ident", text: node.name };
   if (node.kind === "Unary") return { kind: "Unary", op: node.op, operand: jsShape(node.operand) };
   return { kind: "other:" + node.kind };
@@ -107,7 +107,7 @@ console.log("\nprecedence and association, spelled out");
 }
 {
   const tree = myShape("((7))").node;
-  ok("redundant brackets leave the shape alone", tree.kind === "Literal" && tree.text === "7");
+  ok("redundant brackets leave the shape alone", tree.kind === "字" && tree.text === "7");
 }
 
 console.log("\nthe depth is arranged, not lucky");
@@ -124,7 +124,7 @@ console.log("\nthe depth is arranged, not lucky");
 {
   const deep = "(".repeat(60) + "1" + ")".repeat(60);
   const mine = myShape(deep);
-  ok("sixty nested brackets parse", mine && mine.node.kind === "Literal" && mine.node.text === "1", mine ? JSON.stringify(mine.node).slice(0, 60) : "none");
+  ok("sixty nested brackets parse", mine && mine.node.kind === "字" && mine.node.text === "1", mine ? JSON.stringify(mine.node).slice(0, 60) : "none");
 }
 
 console.log("\nwhat it does not do, said out loud");

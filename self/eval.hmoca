@@ -6,7 +6,7 @@
 //
 // 节点形状（由 self/chain.hmyr 与 self/stmt.hmyr 定义）：
 //   {kind: "int" | "num", text}      整数（原文）
-//   {kind: "Literal", type: "string", text}              字符串
+//   {kind: "字", type: "string", text}              字符串
 //   {kind: "Ident", text}             标识符
 //   {kind: "Binary", op, left, right}
 //   {kind: "Unary", op, operand}
@@ -1016,8 +1016,8 @@ fn 数到(s: String) -> Int {
 pub fn 求值(节点: Int, 环境: Int) -> Int {
   let 种 = 节点.kind
   if 种 == "int" { return 好(to_int(节点.text)) }
-  if 种 == "Literal" && 节点.type == "int" { return 好(数字值(节点.text)) }
-  if 种 == "Literal" && 节点.type == "string" { return 好(节点.text) }
+  if 种 == "字" && 节点.type == "int" { return 好(数字值(节点.text)) }
+  if 种 == "字" && 节点.type == "string" { return 好(节点.text) }
   // nil：这门语言没有 null，空元组就是它。而求值器要认得出 {kind: "nil"} 这种节点，
   // 因为 stmt.hmyr 用它在「return 不带值」时占位。
   if 种 == "nil" { return 好(()) }

@@ -24,14 +24,14 @@ const 一 = (label, 节点, 环境, 期望) => {
   ok(label, r === 期望, JSON.stringify(r) + " 期望 " + JSON.stringify(期望));
 };
 const int = (t) => ({ kind: "int", text: t });
-const str = (t) => ({ kind: "Literal", type: "string", text: t });
+const str = (t) => ({ kind: "字", type: "string", text: t });
 const name = (t) => ({ kind: "Ident", text: t });
 const bin = (op, l, r) => ({ kind: "Binary", op, left: l, right: r });
 const 空 = [];
 
 console.log("字面量与名字");
 一("整数", int("42"), 空, "42");
-一("num 也是整数", { kind: "Literal", type: "int", text: "7" }, 空, "7");
+一("num 也是整数", { kind: "字", type: "int", text: "7" }, 空, "7");
 一("字符串", str("hi"), 空, "hi");
 一("名字查环境", name("x"), [["x", 5]], "5");
 一("环境里的字符串", name("s"), [["s", "abc"]], "abc");

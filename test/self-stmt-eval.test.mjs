@@ -18,7 +18,7 @@ ok("求值器加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code +
 const rt = runUnit(unit);
 const 跑 = (语句们) => rt.callFunction(rt.functions.get("跑程序"), [语句们], null);
 const int = (t) => ({ kind: "int", text: t });
-const str = (t) => ({ kind: "Literal", text: t });
+const str = (t) => ({ kind: "字", text: t });
 const name = (t) => ({ kind: "Ident", text: t });
 const bin = (op, l, r) => ({ kind: "Binary", op, left: l, right: r });
 const 无值 = { kind: "nil" };   // 「没有值」与「一个空元组」是两件事，用 nil 节点区分开

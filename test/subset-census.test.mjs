@@ -26,7 +26,7 @@ const 计 = (表, k) => 表.set(k, (表.get(k) || 0) + 1);
 const 走表达式 = (n) => {
   if (!n || typeof n !== "object") return;
   计(表达式, n.kind);
-  if (n.kind === "Literal") 计(字面量, String(n.type));
+  if (n.kind === "字") 计(字面量, String(n.type));
   if (n.kind === "Binary" || n.kind === "Unary") 计(运算符, String(n.op));
   switch (n.kind) {
     case "If": 走表达式(n.condition); 走语句(n.then); 走语句(n.otherwise); break;

@@ -32,8 +32,8 @@ const mine = (source) => call("chain", [call("scan", [source])]).node;
 function jsShape(node) {
   if (!node) return null;
   if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
-  if (node.kind === "Literal" && node.type === "int") return { kind: "Literal", type: "int", raw: node.raw };
-  if (node.kind === "Literal" && node.type === "string") return { kind: "Literal", type: "string", raw: false };
+  if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", raw: node.raw };
+  if (node.kind === "字" && node.type === "string") return { kind: "字", type: "string", raw: false };
   if (node.kind === "Ident") return { kind: "Ident", name: node.name };
   if (node.kind === "Unary") return { kind: "Unary", op: node.op, operand: jsShape(node.operand) };
   if (node.kind === "Tuple") return { kind: "Tuple", items: node.items.map(jsShape) };
@@ -84,8 +84,8 @@ console.log("\nthe parts, spelled out");
   const tree = mine("{name: \"lead\", gain: -3}");
   ok("a record keeps its fields in order", tree.kind === "Record" && tree.fields.length === 2 && tree.fields[0].name === "name" && tree.fields[1].name === "gain",
     JSON.stringify(tree));
-  ok("a string keeps its text", tree.fields[0].value.kind === "Literal" && tree.fields[0].value.text === "lead");
-  ok("a negative number is a unary over a number", tree.fields[1].value.kind === "Unary" || tree.fields[1].value.kind === "Literal",
+  ok("a string keeps its text", tree.fields[0].value.kind === "字" && tree.fields[0].value.text === "lead");
+  ok("a negative number is a unary over a number", tree.fields[1].value.kind === "Unary" || tree.fields[1].value.kind === "字",
     JSON.stringify(tree.fields[1].value));
 }
 {
@@ -98,7 +98,7 @@ console.log("\nthe parts, spelled out");
 }
 {
   const tree = mine("((7))");
-  ok("a group is still not a tuple", tree.kind === "Literal" && tree.text === "7", JSON.stringify(tree));
+  ok("a group is still not a tuple", tree.kind === "字" && tree.text === "7", JSON.stringify(tree));
 }
 {
   const tree = mine("{nested: {a: 1}}");

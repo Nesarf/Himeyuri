@@ -779,7 +779,7 @@ export class 最小运行时 {
     if (++this.steps > this.stepLimit) this.坏("HMYR-行-003", "the program ran for too long without finishing");
     if (!node || node.kind === "Error") this.坏("HMYR-行-004", "a syntax error reached the evaluator");
     switch (node.kind) {
-      case "Literal":
+      case "字":
         // 字符串也可以住在码元序列里（选项 字符串用码元序列）。打开之后，
         // 语言的每一个字符串值都是 Uint16Array，而宿主串只在进出这一层时出现。
         return this.码元串 && typeof node.value === "string" ? 码元.由宿主(node.value) : node.value;

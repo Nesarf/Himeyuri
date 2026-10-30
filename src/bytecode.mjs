@@ -76,7 +76,7 @@ const 类型形状 = (t) => {
 const 表达式形状 = (n) => {
   if (!n) return { k: "?" };
   switch (n.kind) {
-    case "Literal":
+    case "字":
       if (typeof n.value === "number") return { k: "num" };
       if (typeof n.value === "string") return { k: "str" };
       if (typeof n.value === "boolean") return { k: "bool" };
@@ -230,7 +230,7 @@ const 编译函数 = (decl) => {
   // ---- 表达式：结果留在栈顶 ----
   const 表达 = (n) => {
     switch (n.kind) {
-      case "Literal": 发("CONST", n.value); return;
+      case "字": 发("CONST", n.value); return;
       case "Ident": {
         const 有 = 查(n.name);
         if (!有) 发("GLOBAL", n.name);          // 顶层常量之类，交给运行时的全局表
