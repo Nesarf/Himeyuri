@@ -118,7 +118,7 @@ console.log("五、优先级与结合（四则与比较的档位）");
 {
   const 树 = (源) => 子集解(切("fn f(a: Int) -> Int { return " + 源 + " }\n")).ast.decls[0].body.statements[0].value;
   const 乘 = 树("1 + 2 * 3");
-  ok("乘法先于加法", 乘.kind === "Binary" && 乘.op === "+" && 乘.right.op === "*", JSON.stringify(乘));
+  ok("乘法先于加法", 乘.kind === "二元" && 乘.op === "+" && 乘.right.op === "*", JSON.stringify(乘));
   const 减 = 树("1 - 2 - 3");
   ok("减法左结合", 减.left.op === "-", JSON.stringify(减));
   const 比 = 树("1 + 2 < 3 * 4");

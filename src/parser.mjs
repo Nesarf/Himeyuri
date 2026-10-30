@@ -383,7 +383,7 @@ export function parse(tokens, options = {}) {
     while (at("punct") && PRECEDENCE[level].includes(peek().value)) {
       const op = advance();
       const right = parseBinary(level + 1);
-      left = { kind: "Binary", op: op.value, left, right, line: op.line, column: op.column };
+      left = { kind: "二元", op: op.value, left, right, line: op.line, column: op.column };
     }
     return left;
   }

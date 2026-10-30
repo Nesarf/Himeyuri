@@ -88,7 +88,7 @@ console.log("\nthe parts, spelled out");
 }
 {
   const tree = mine("t[i + 1]");
-  ok("the subscript keeps an expression, not just a name", tree.kind === "Index" && tree.index.kind === "Binary", JSON.stringify(tree));
+  ok("the subscript keeps an expression, not just a name", tree.kind === "Index" && tree.index.kind === "二元", JSON.stringify(tree));
 }
 {
   const tree = mine("f(1)[0]");
@@ -96,11 +96,11 @@ console.log("\nthe parts, spelled out");
 }
 {
   const tree = mine("f(t[0]) * 2");
-  ok("they nest inside arithmetic as expected", tree.kind === "Binary" && tree.left.kind === "Call" && tree.left.args[0].kind === "Index", JSON.stringify(tree));
+  ok("they nest inside arithmetic as expected", tree.kind === "二元" && tree.left.kind === "Call" && tree.left.args[0].kind === "Index", JSON.stringify(tree));
 }
 {
   const tree = mine("t[0] + t[1]");
-  ok("two subscripts add", tree.kind === "Binary" && tree.left.kind === "Index" && tree.right.kind === "Index");
+  ok("two subscripts add", tree.kind === "二元" && tree.left.kind === "Index" && tree.right.kind === "Index");
 }
 
 console.log("\nwhat it still cannot read");

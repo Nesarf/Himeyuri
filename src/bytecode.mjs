@@ -85,7 +85,7 @@ const 表达式形状 = (n) => {
     case "Tuple": return { k: "tuple", items: (n.items || []).map(表达式形状) };
     // 记录字面量：字段名与每个字段的形状。有了它，返回类型写成 {…} 时才能真的核对。
     case "Record": return { k: "record", fields: (n.fields || []).map((f) => [f.name, 表达式形状(f.value)]) };
-    case "Binary": {
+    case "二元": {
       const op = n.op;
       if (["==", "!=", "<", "<=", ">", ">=", "&&", "||"].includes(op)) return { k: "bool" };
       if (op === "+") {
@@ -241,7 +241,7 @@ const 编译函数 = (decl) => {
         表达(n.operand);
         发(一元运算[n.op] || (() => { throw new 编译错("不认的一元运算：" + n.op); })());
         return;
-      case "Binary": {
+      case "二元": {
         // 短路：&& 与 || 要跳，不能先算右边。
         if (n.op === "&&" || n.op === "||") {
           表达(n.left);

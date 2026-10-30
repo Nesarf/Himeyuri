@@ -59,7 +59,7 @@ const call = (name, args) => loaded.rt.callFunction(loaded.rt.functions.get(name
 /** The JavaScript chain, reduced to the shapes the small pieces produce. */
 function jsShape(node) {
   if (!node) return null;
-  if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
+  if (node.kind === "二元") return { kind: "二元", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
   if (node.kind === "名") return { kind: "名", text: node.name };
   return { kind: "other:" + node.kind };
@@ -110,7 +110,7 @@ for (const line of LINES) {
 
 function leafTexts(shape) {
   if (!shape) return [];
-  if (shape.kind === "Binary") return [...leafTexts(shape.left), ...leafTexts(shape.right)];
+  if (shape.kind === "二元") return [...leafTexts(shape.left), ...leafTexts(shape.right)];
   if (shape.kind === "字" || shape.kind === "名") return [shape.text];
   return [];
 }

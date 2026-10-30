@@ -5,7 +5,7 @@
 //   宿主（src/parser.mjs）      自举（self/eval.hmyr）
 //     {kind:"字", type, value}   {kind:"int"|"str", text}
 //     {kind:"名", name}            {kind:"name", text}
-//     {kind:"Binary", op, left, right} {kind:"bin", op, left, right}
+//     {kind:"二元", op, left, right} {kind:"bin", op, left, right}
 //     {kind:"Unary", op, operand}     {kind:"unary", op, operand}
 //     Call / Index / Field / Tuple / Record  → 同名小写
 //
@@ -38,8 +38,8 @@ const 转 = (节点) => {
     case "名":
       return { kind: "名", text: String(节点.name) };
 
-    case "Binary":
-      return { kind: "Binary", op: String(节点.op), left: 转(节点.left), right: 转(节点.right) };
+    case "二元":
+      return { kind: "二元", op: String(节点.op), left: 转(节点.left), right: 转(节点.right) };
 
     case "Unary":
       return { kind: "Unary", op: String(节点.op), operand: 转(节点.operand) };

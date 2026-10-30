@@ -50,7 +50,7 @@ ok("it parses", loaded.ok, loaded.ok ? "" : loaded.errors.join("; "));
 /** The JavaScript tree, reduced to the three shapes the small parser knows. */
 function jsShape(node) {
   if (!node) return null;
-  if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
+  if (node.kind === "二元") return { kind: "二元", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
   if (node.kind === "名") return { kind: "名", text: node.name };
   if (node.kind === "Unary") return { kind: "Unary", op: node.op, operand: jsShape(node.operand) };
@@ -95,11 +95,11 @@ for (const source of CASES) {
 console.log("\nprecedence and association, spelled out");
 {
   const tree = myShape("1 + 2 * 3").node;
-  ok("multiplication binds tighter", tree.kind === "Binary" && tree.op === "+" && tree.right.op === "*");
+  ok("multiplication binds tighter", tree.kind === "二元" && tree.op === "+" && tree.right.op === "*");
 }
 {
   const tree = myShape("a - b - c").node;
-  ok("subtraction is left-associative", tree.kind === "Binary" && tree.op === "-" && tree.left.op === "-" && tree.left.left.kind === "名" && tree.left.left.text === "a");
+  ok("subtraction is left-associative", tree.kind === "二元" && tree.op === "-" && tree.left.op === "-" && tree.left.left.kind === "名" && tree.left.left.text === "a");
 }
 {
   const tree = myShape("(1 + 2) * 3").node;
@@ -116,7 +116,7 @@ console.log("\nthe depth is arranged, not lucky");
   // additions - is a matter of the tail loops, not of nesting.
   const long = Array.from({ length: 200 }, (_, i) => String(i)).join(" + ");
   const mine = myShape(long);
-  ok("two hundred additions in one expression parse", mine && mine.node.kind === "Binary", mine ? mine.node.kind : "none");
+  ok("two hundred additions in one expression parse", mine && mine.node.kind === "二元", mine ? mine.node.kind : "none");
   let theirs = null;
   try { theirs = jsExpr(long).node; } catch (e) { theirs = { error: String(e.message) }; }
   ok("and the shape matches the JavaScript one", JSON.stringify(canon(mine.node)) === JSON.stringify(canon(theirs)), JSON.stringify(theirs).slice(0, 80));

@@ -793,7 +793,7 @@ export class 最小运行时 {
         const v = this.求值(node.operand, scope, effects);
         return node.op === "-" ? -this.成数(v) : !this.真(v);
       }
-      case "Binary": return this.二元(node, scope, effects);
+      case "二元": return this.二元(node, scope, effects);
       case "While": {
         // 循环用宿主的 while，于是深度不随迭代次数增长。
         let guard = 0;

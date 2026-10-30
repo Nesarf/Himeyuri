@@ -8,7 +8,7 @@
 //   {kind: "int" | "num", text}      整数（原文）
 //   {kind: "字", type: "string", text}              字符串
 //   {kind: "名", text}             标识符
-//   {kind: "Binary", op, left, right}
+//   {kind: "二元", op, left, right}
 //   {kind: "Unary", op, operand}
 //   {kind: "Call", callee, args}
 //   {kind: "Index", target, index}
@@ -1041,7 +1041,7 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
     }
     return 坏("没有这个名字：" + 节点.text)
   }
-  if 种 == "Binary" {
+  if 种 == "二元" {
     // && 与 || 要短路：右边在有结论时不该被求值。
     //
     // 2026-11-01 补。在这一天之前，两个操作数在调进 求二元 之前都求过 ——
@@ -1361,7 +1361,7 @@ fn 求记录(节点: Int, 环境: Int) -> Int {
 }
 
 fn main() -> Int effects(process) {
-  let 节点 = {kind: "Binary", op: "+", left: {kind: "int", text: "1"}, right: {kind: "Binary", op: "*", left: {kind: "int", text: "2"}, right: {kind: "int", text: "3"}}}
+  let 节点 = {kind: "二元", op: "+", left: {kind: "int", text: "1"}, right: {kind: "二元", op: "*", left: {kind: "int", text: "2"}, right: {kind: "int", text: "3"}}}
   print(求值成文字(节点, ()) + "\n")
   return 0
 }

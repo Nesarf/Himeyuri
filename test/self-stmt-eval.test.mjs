@@ -20,7 +20,7 @@ const 跑 = (语句们) => rt.callFunction(rt.functions.get("跑程序"), [语�
 const int = (t) => ({ kind: "int", text: t });
 const str = (t) => ({ kind: "字", text: t });
 const name = (t) => ({ kind: "名", text: t });
-const bin = (op, l, r) => ({ kind: "Binary", op, left: l, right: r });
+const bin = (op, l, r) => ({ kind: "二元", op, left: l, right: r });
 const 无值 = { kind: "nil" };   // 「没有值」与「一个空元组」是两件事，用 nil 节点区分开
 const 值 = (语句们) => { const r = 跑(语句们); return r.ok ? r.value : "错：" + r.text; };
 

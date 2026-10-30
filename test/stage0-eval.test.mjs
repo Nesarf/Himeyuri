@@ -99,7 +99,7 @@ try {
   ok("import 那个给四十二", 引.码 === 0 && 引.出.trim() === "42", 引.码 + " / " + JSON.stringify(引.出.trim()));
 
   console.log("二、表达式：十一种（宿主有十八种，用不到的那几种不在表里）");
-  const 应表达式 = ["Binary", "Call", "Field", "名", "If", "Index", "字", "Record", "Tuple", "Unary", "While"];
+  const 应表达式 = ["二元", "Call", "Field", "名", "If", "Index", "字", "Record", "Tuple", "Unary", "While"];
   const 实表达式 = [...全部表达式].sort();
   ok("正好十一种", 实表达式.length === 11, 实表达式.join(" "));
   ok("而它们是那十一种", JSON.stringify(实表达式) === JSON.stringify(应表达式), 实表达式.join(" "));

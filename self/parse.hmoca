@@ -7,7 +7,7 @@
 // 形状与 JS 版解析器对齐，只保留结构：
 //   {kind: "字", type: "int", text}         整数（原文）
 //   {kind: "名", text}        标识符
-//   {kind: "Binary", op, left, right}
+//   {kind: "二元", op, left, right}
 // 对拍时 JS 侧做同样的映射，行号一类的位置信息两边都不带。
 //
 // 自足：模块系统还没有，工具函数在这里重写一份。
@@ -86,7 +86,7 @@ fn mul_tail(s: String, i: Int, left: Int) {
   let c = s[j]
   if c == "*" || c == "/" || c == "%" {
     let right = parse_atom(s, j + 1)
-    return mul_tail(s, right.next, {kind: "Binary", op: c, left: left, right: right.node})
+    return mul_tail(s, right.next, {kind: "二元", op: c, left: left, right: right.node})
   }
   return {node: left, next: j}
 }
@@ -103,7 +103,7 @@ fn add_tail(s: String, i: Int, left: Int) {
   let c = s[j]
   if c == "+" || c == "-" {
     let right = parse_mul(s, j + 1)
-    return add_tail(s, right.next, {kind: "Binary", op: c, left: left, right: right.node})
+    return add_tail(s, right.next, {kind: "二元", op: c, left: left, right: right.node})
   }
   return {node: left, next: j}
 }

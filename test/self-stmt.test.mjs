@@ -58,7 +58,7 @@ function jsStatement(source) {
   const stmt = ast.decls[0].body.statements[0];
   const shape = (node) => {
     if (!node) return null;
-    if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: shape(node.left), right: shape(node.right) };
+    if (node.kind === "二元") return { kind: "二元", op: node.op, left: shape(node.left), right: shape(node.right) };
     if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
     if (node.kind === "名") return { kind: "名", text: node.name };
     return { kind: "other:" + node.kind };
@@ -94,7 +94,7 @@ console.log("\nthe parts of a statement");
 {
   const node = readStatement("let x = 1 + 2");
   ok("a binding keeps the name", node.name === "x", JSON.stringify(node));
-  ok("and the value is a tree", node.value && node.value.kind === "Binary" && node.value.op === "+");
+  ok("and the value is a tree", node.value && node.value.kind === "二元" && node.value.op === "+");
 }
 {
   const node = readStatement("return");
@@ -103,7 +103,7 @@ console.log("\nthe parts of a statement");
 }
 {
   const node = readStatement("a + b");
-  ok("a bare expression is an expression statement", node.kind === "ExprStmt" && node.value.kind === "Binary");
+  ok("a bare expression is an expression statement", node.kind === "ExprStmt" && node.value.kind === "二元");
 }
 
 console.log("\nwhat it refuses to guess");

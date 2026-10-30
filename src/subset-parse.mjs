@@ -366,7 +366,7 @@ export const 子集解 = (tokens, options = {}) => {
     while (是("punct") && 优先级[档].includes(看().value)) {
       const op = 进();
       const right = 解析二元(档 + 1);
-      left = { kind: "Binary", op: op.value, left, right, line: op.line, column: op.column };
+      left = { kind: "二元", op: op.value, left, right, line: op.line, column: op.column };
     }
     return left;
   }

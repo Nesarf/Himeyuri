@@ -136,7 +136,7 @@ class Printer {
         return String(node.raw ?? node.value);
       case "名": return node.name;
       case "Unary": return node.op + this.expr(node.operand, level, col + 1);
-      case "Binary": return this.binary(node, level, col);
+      case "二元": return this.binary(node, level, col);
       case "Call": return this.expr(node.callee, level, col) + "(" + node.args.map((a) => this.expr(a, level, col)).join(", ") + ")";
       case "Field": return this.expr(node.target, level, col) + "." + node.name;
       case "Index": return this.expr(node.target, level, col) + "[" + this.expr(node.index, level, col) + "]";
@@ -159,7 +159,7 @@ class Printer {
     const mine = precedenceOf(node.op);
     const wrap = (child, side) => {
       const text = this.expr(child, level, col);
-      if (child.kind !== "Binary") return text;
+      if (child.kind !== "二元") return text;
       const theirs = precedenceOf(child.op);
       // a child binds more loosely, or equally on the right, needs brackets to keep the same tree
       return theirs < mine || (theirs === mine && side === "right") ? "(" + text + ")" : text;

@@ -45,7 +45,7 @@ const readStatement = (source) => {
 /** The JavaScript statement, reduced to the same shapes. */
 function jsShape(node) {
   if (!node) return null;
-  if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
+  if (node.kind === "二元") return { kind: "二元", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
   if (node.kind === "名") return { kind: "名", text: node.name };
   if (node.kind === "Call") return { kind: "Call", callee: jsShape(node.callee), args: node.args.map(jsShape) };
@@ -96,7 +96,7 @@ console.log("\nthe parts, spelled out");
 {
   const node = readStatement("n = n + 1");
   ok("an assignment keeps the name on the left", node.kind === "Assign" && node.name === "n", JSON.stringify(node));
-  ok("and a tree on the right", node.value.kind === "Binary" && node.value.op === "+", JSON.stringify(node.value));
+  ok("and a tree on the right", node.value.kind === "二元" && node.value.op === "+", JSON.stringify(node.value));
 }
 {
   const node = readStatement("value = t[i]");

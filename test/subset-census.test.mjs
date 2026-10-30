@@ -27,11 +27,11 @@ const 走表达式 = (n) => {
   if (!n || typeof n !== "object") return;
   计(表达式, n.kind);
   if (n.kind === "字") 计(字面量, String(n.type));
-  if (n.kind === "Binary" || n.kind === "Unary") 计(运算符, String(n.op));
+  if (n.kind === "二元" || n.kind === "Unary") 计(运算符, String(n.op));
   switch (n.kind) {
     case "If": 走表达式(n.condition); 走语句(n.then); 走语句(n.otherwise); break;
     case "While": 走表达式(n.condition); 走语句(n.body); break;
-    case "Binary": 走表达式(n.left); 走表达式(n.right); break;
+    case "二元": 走表达式(n.left); 走表达式(n.right); break;
     case "Unary": 走表达式(n.operand); break;
     case "Call": 走表达式(n.callee); (n.args || []).forEach(走表达式); break;
     case "Index": 走表达式(n.target); 走表达式(n.index); break;

@@ -235,8 +235,8 @@ fn 翻表达式(n: Int) {
     if n.text == "nil" { return {kind: "字", type: "nil", value: (), raw: false, text: n.text, line: 行(n), column: 列(n)} }
     return {kind: "名", name: n.text, text: n.text, line: 行(n), column: 列(n)}
   }
-  if n.kind == "Binary" {
-    return {kind: "Binary", op: n.op, left: 翻表达式(n.left), right: 翻表达式(n.right), line: 行(n), column: 列(n)}
+  if n.kind == "二元" {
+    return {kind: "二元", op: n.op, left: 翻表达式(n.left), right: 翻表达式(n.right), line: 行(n), column: 列(n)}
   }
   if n.kind == "Unary" {
     return {kind: "Unary", op: n.op, operand: 翻表达式(n.operand), line: 行(n), column: 列(n)}

@@ -58,7 +58,7 @@ const parseCall = (name, args) => parseRt.callFunction(parseRt.functions.get(nam
 /** The JavaScript tree, reduced to the shapes the small pieces produce. */
 function jsShape(node) {
   if (!node) return null;
-  if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
+  if (node.kind === "二元") return { kind: "二元", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
   if (node.kind === "名") return { kind: "名", text: node.name };
   return { kind: "other:" + node.kind };

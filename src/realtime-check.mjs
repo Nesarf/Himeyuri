@@ -89,7 +89,7 @@ export function 实时检查(ast, 选项 = {}) {
     // 「你能证明它非零吗」在这一层只有一种证据：字面量且为正。别的都不算。
     // 这一档与 owned 那条检查的倾向正好相反：那边误报会让检查被关掉，
     // 这边漏报会让回调在别人的现场炸开，所以这边宁可拒。
-    if (n.kind === "Binary" && (n.op === "/" || n.op === "%")) {
+    if (n.kind === "二元" && (n.op === "/" || n.op === "%")) {
       const 右 = n.right;
       const 可证非零 = 右 && 右.kind === "字" && typeof 右.value === "number" && 右.value > 0;
       if (!可证非零) {

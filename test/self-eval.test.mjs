@@ -26,7 +26,7 @@ const 一 = (label, 节点, 环境, 期望) => {
 const int = (t) => ({ kind: "int", text: t });
 const str = (t) => ({ kind: "字", type: "string", text: t });
 const name = (t) => ({ kind: "名", text: t });
-const bin = (op, l, r) => ({ kind: "Binary", op, left: l, right: r });
+const bin = (op, l, r) => ({ kind: "二元", op, left: l, right: r });
 const 空 = [];
 
 console.log("字面量与名字");

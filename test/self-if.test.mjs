@@ -48,7 +48,7 @@ const readStatement = (source) => call("parse_statement", [call("scan_lines", [s
 /** The JavaScript shapes, reduced to the ones this reader produces. */
 function jsShape(node) {
   if (!node) return null;
-  if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
+  if (node.kind === "二元") return { kind: "二元", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
   if (node.kind === "名") return { kind: "名", text: node.name };
   if (node.kind === "Call") return { kind: "Call", callee: jsShape(node.callee), args: node.args.map(jsShape) };

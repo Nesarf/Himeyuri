@@ -31,7 +31,7 @@ const mine = (source) => call("chain", [call("scan", [source])]).node;
 /** The JavaScript tree, reduced to the shapes the chain produces. */
 function jsShape(node) {
   if (!node) return null;
-  if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
+  if (node.kind === "二元") return { kind: "二元", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", raw: node.raw };
   if (node.kind === "字" && node.type === "string") return { kind: "字", type: "string", raw: false };
   if (node.kind === "名") return { kind: "名", name: node.name };
