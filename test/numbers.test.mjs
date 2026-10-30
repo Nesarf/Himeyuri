@@ -138,6 +138,13 @@ const 字节码跑 = (p) => {
   const rt = 跑字节码(层, { write: () => {}, capabilities: 本机能力(), argv: ["hmyr", p] });
   const r = rt.调用("main", [], null);
   if (!r.ok) return "错:" + r.码;
+  // 可开的现场（HMYR_NUM_TRACE=1）：丙（字节码那台）交回的值到底长什么样。
+  // 2026-11-02 实测：六个探针都显示三台一致，而这一条仍报空串 —— 所以要在这里
+  // 看一眼真身，而不是继续怀疑实现。
+  if (process.env.HMYR_NUM_TRACE) {
+    console.error("[字节码] 值=" + JSON.stringify(r.值) + " typeof=" + typeof r.值 +
+      " isArray=" + Array.isArray(r.值) + " ctor=" + (r.值 && r.值.constructor && r.值.constructor.name));
+  }
   return 描述(r.值);
 };
 
