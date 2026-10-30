@@ -18,6 +18,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit as 宿主载, runUnit as 宿主跑 } from "../src/loader.mjs";
 import { 逐模块检查, 全树检查 } from "../src/loader-checks.mjs";
+import { 展开模块 } from "../src/expand.mjs";
 import { resolveImport } from "../src/loader.mjs";
 import { 找包根, 读包清单 } from "../src/loader.mjs";
 import { Diagnostics } from "../src/diagnostics.mjs";
@@ -181,7 +182,18 @@ export function loadUnit(entry, options = {}) {
     // order 与 modules 的键都用本机形式，这样 indexOf(path.join(...)) 才找得到。
     let 键 = String(原).startsWith("./") ? String(原).slice(2) : String(原);
     键 = 键.split("/").join(path.sep);
-    modules.set(键, m);
+    // 宏在装载时展开一次，下游（宿主 Runtime、最小求值器、字节码那台）看到的是
+    // 同一棵没有宏的树。宿主那一路把它放在 reader 里（src/loader.mjs 第 244 行），
+    // 而桥的树是自举层造的，没人做过这一遍 —— 于是 macro 那套在桥这条路上
+    // 「没有这个名字 两次」（2026-11-02）。
+    let 模 = m;
+    try {
+      模 = 展开模块(m);
+    } catch (e) {
+      诊断.error("HMYR-E0103", String(e.message).replace(/^HMYR-E0103\s*/, ""), 0, 0);
+      模 = m;
+    }
+    modules.set(键, 模);
     // 自举层交回的 pub 是 1 / 0（它那一侧没有 JS 的 true / false），而宿主的可见性检查
     // 是严格比较 true（src/eval.mjs 第 129 行）—— 不折的话，一个写了 pub 的跨模块调用
     // 照样被拒成 HMYR-R0250（2026-11-02 实测）。折一次，量与树同大，不随程序走。
