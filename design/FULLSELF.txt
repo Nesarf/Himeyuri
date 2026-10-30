@@ -1133,6 +1133,23 @@ selfloa 的 27/27）。
     这一段至此剩下三套，全是求值器语义：macro 的宏展开、stage0eval 与
     minimaleval 的 match。
 
+第二段：reader 钩子被桥忽略了（2026-11-02，第 18 轮）
+
+    stage0eval 与 minimaleval 都报「没有名字 match」。看判据才明白形状：它们用的是
+    loadUnit(文件, { reader: 宿主读 }) —— reader 是「换解析器」的钩子，用来喂一份
+    含 match 的源码（子集解析器不认 match）。桥的解析固定在自举层那一份，它认不得
+    match，于是那份源码根本没被解析成 Match 节点，只落下一个 R0104。
+
+    修法一行：options.reader 是函数时，交给宿主那条装载路。桥要换的是「装载与求值
+    由谁做」，不是「解析器能不能被换掉」—— 而 reader 恰恰是后一件事。
+
+    之后 stage0eval 全过。minimaleval 只剩「非尾递归撞深度」一条：它要两路都给
+    R0108，而桥那条路上宿主那一路给的是 JS 引擎自己的
+    Maximum call stack size exceeded。那一条与 reader 无关，是下一轮的事。
+
+    读数：stage0eval、numbers、namespace、module 四套在桥那边零套换不动；
+    开关量法上 stage0eval 与 minimal-eval 都过。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 E0301；
 另外引的文件不在就报 E0302（宿主也是这个码）。顺序取后序，于是 order 逐项相同。

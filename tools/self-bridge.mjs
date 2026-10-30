@@ -135,6 +135,11 @@ export function 引导走法() {
 }
 
 export function loadUnit(entry, options = {}) {
+  // reader 是「换解析器」的钩子，而桥的解析固定在自举层那一份 —— 它认不得的语法
+  // （比如 match）会直接变成「没有这个名字」。这种场景下让给宿主 loader：
+  // 桥要换的是「装载与求值由谁做」，不是「解析器能不能被换掉」（2026-11-02：
+  // stage0eval 那套就是用 reader 喂一份含 match 的源码，而桥这边报 R0104）。
+  if (options && typeof options.reader === "function") return 宿主载(entry, options);
   const 诊断 = 新诊断();
   // 仓库下的文件用相对路径（与 order 的说法一致）；仓库外的用绝对路径 ——
   // 测试常把临时文件交进来，那些不在 ROOT 下，转成 ../ 反而让加载器读不到。
