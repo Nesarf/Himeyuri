@@ -51,9 +51,12 @@ const 跑 = (入口, 用最小, argv) => {
     // 给的是引擎自己的栈溢出 —— 而探针里两台都抛 RangeError、depth 停在 1 与 0。
     // 三个数一起打，才分得清是「深度没被数」还是「树的形状让递归更深」。
     if (process.env.HMYR_DEPTH_TRACE) {
+      let 首行 = "";
+      try { 首行 = String(fs.readFileSync(入口, "utf8")).split("\n")[0].slice(0, 70); } catch { 首行 = "（读不到）"; }
       console.error("[depth] " + (用最小 ? "最小" : "宿主") +
         " 错=" + (e.code || e.constructor.name) +
-        " maxDepth=" + (rt && rt.maxDepth) + " depth=" + (rt && rt.depth));
+        " maxDepth=" + (rt && rt.maxDepth) + " depth=" + (rt && rt.depth) +
+        " 入口=" + path.basename(入口) + " 首行=" + JSON.stringify(首行));
     }
     出.e += (e.code || "") + " " + e.message;
   }
