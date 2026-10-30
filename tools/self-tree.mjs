@@ -27,8 +27,8 @@ const 造模块 = (源) => rt.callFunction(rt.functions.get("造模块"), [源],
 // 名字的映射：self 的 kind → 宿主的 kind。
 const 映射 = {
   num: "字", str: "字", name: "名",
-  bin: "二元", unary: "Unary", call: "调用", field: "Field", index: "Index",
-  tuple: "Tuple", record: "Record", err: "Error",
+  bin: "二元", unary: "一元", call: "调用", field: "字段", index: "索引",
+  tuple: "组", record: "记录", err: "Error",
   let: "定", var: "变", return: "返回", assign: "赋值", expr: "表达式语句",
   if: "若", while: "当",
   Fn: "Fn", Block: "Block", Module: "Module", Import: "Import",
@@ -53,10 +53,10 @@ const 子对们 = (s, h) => {
     case "若": return [[s.condition, h.condition]];
     case "当": return [[s.condition, h.condition]];
     case "二元": return [[s.left, h.left], [s.right, h.right]];
-    case "Unary": return [[s.operand, h.operand]];
+    case "一元": return [[s.operand, h.operand]];
     case "调用": return [[s.callee, h.callee], ...列(s.args).map((x, i) => [x, 列(h.args)[i]])];
-    case "Field": case "Index": return [[s.target, h.target]];
-    case "Tuple": return 列(s.items).map((x, i) => [x, 列(h.items)[i]]);
+    case "字段": case "索引": return [[s.target, h.target]];
+    case "组": return 列(s.items).map((x, i) => [x, 列(h.items)[i]]);
     default: return [];
   }
 };

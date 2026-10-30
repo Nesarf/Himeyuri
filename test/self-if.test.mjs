@@ -52,11 +52,11 @@ function jsShape(node) {
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
   if (node.kind === "名") return { kind: "名", text: node.name };
   if (node.kind === "调用") return { kind: "调用", callee: jsShape(node.callee), args: node.args.map(jsShape) };
-  if (node.kind === "Index") return { kind: "Index", target: jsShape(node.target), index: jsShape(node.index) };
-  if (node.kind === "Field") {
+  if (node.kind === "索引") return { kind: "索引", target: jsShape(node.target), index: jsShape(node.index) };
+  if (node.kind === "字段") {
     const target = node.target !== undefined ? node.target : node.object;
     const name = node.name !== undefined ? node.name : node.field;
-    return { kind: "Field", target: jsShape(target), name: name };
+    return { kind: "字段", target: jsShape(target), name: name };
   }
   if (node.kind === "若") {
     const list = (b) => (b && b.statements ? b.statements.map(jsStatement) : []);

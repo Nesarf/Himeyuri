@@ -47,7 +47,7 @@ fn postfix_tail(tokens: Int, i: Int, target: Int) {
       // 这一侧的 token 流不留换行，所以等价写法是「名字的列 + 名字的长度」——
       // 名字后面紧跟的就是那个位子。不照抄，两棵树就永远差一列。
       let 名 = tokens[i + 1]
-      return postfix_tail(tokens, i + 2, {kind: "Field", target: target, name: 名.text, line: 名.line, column: 名.column + len(名.text)})
+      return postfix_tail(tokens, i + 2, {kind: "字段", target: target, name: 名.text, line: 名.line, column: 名.column + len(名.text)})
     }
     return {node: target, next: i + 1}
   }
@@ -55,7 +55,7 @@ fn postfix_tail(tokens: Int, i: Int, target: Int) {
     let 位 = tokens[i]
     let inner = compare(tokens, i + 1)
     if inner.next < len(tokens) && is_punct(tokens[inner.next], "]") {
-      return postfix_tail(tokens, inner.next + 1, {kind: "Index", target: target, index: inner.node, line: 位.line, column: 位.column})
+      return postfix_tail(tokens, inner.next + 1, {kind: "索引", target: target, index: inner.node, line: 位.line, column: 位.column})
     }
     return {node: target, next: inner.next}
   }
@@ -96,7 +96,7 @@ fn atom(tokens: Int, i: Int) {
 // 深度：每个元素各自独立递归一次，所以「元素个数」与「元素的深度」相加，不是相乘。
 fn paren_or_tuple(tokens: Int, i: Int) {
   let j = 跳行(tokens, i)
-  if j < len(tokens) && is_punct(tokens[j], ")") { return {node: {kind: "Tuple", items: ()}, next: j + 1} }
+  if j < len(tokens) && is_punct(tokens[j], ")") { return {node: {kind: "组", items: ()}, next: j + 1} }
   let first = logic(tokens, j)
   if first.next < len(tokens) && is_punct(tokens[first.next], ",") {
     return tuple_tail(tokens, first.next + 1, (first.node,))
@@ -109,8 +109,8 @@ fn paren_or_tuple(tokens: Int, i: Int) {
 
 fn tuple_tail(tokens: Int, i: Int, acc: Int) {
   let j = 跳行(tokens, i)
-  if j >= len(tokens) { return {node: {kind: "Tuple", items: acc}, next: j} }
-  if is_punct(tokens[j], ")") { return {node: {kind: "Tuple", items: acc}, next: j + 1} }
+  if j >= len(tokens) { return {node: {kind: "组", items: acc}, next: j} }
+  if is_punct(tokens[j], ")") { return {node: {kind: "组", items: acc}, next: j + 1} }
   let item = logic(tokens, j)
   var next = item.next
   if next < len(tokens) && is_punct(tokens[next], ",") { next = next + 1 }
@@ -124,9 +124,9 @@ fn record_of(tokens: Int, i: Int) -> Int {
 }
 
 fn record_tail(tokens: Int, i: Int, acc: Int) {
-  if i >= len(tokens) { return {node: {kind: "Record", fields: acc}, next: i} }
+  if i >= len(tokens) { return {node: {kind: "记录", fields: acc}, next: i} }
   let t = tokens[i]
-  if is_punct(t, "}") { return {node: {kind: "Record", fields: acc}, next: i + 1} }
+  if is_punct(t, "}") { return {node: {kind: "记录", fields: acc}, next: i + 1} }
   if t.kind != "ident" { return {node: {kind: "Error", text: t.text, line: t.line, column: t.column}, next: i + 1} }
   let name = t.text
   if i + 1 >= len(tokens) || !is_punct(tokens[i + 1], ":") {
@@ -240,13 +240,13 @@ fn unary_or_mul(tokens: Int, i: Int) {
   if i < len(tokens) && is_punct(tokens[i], "-") {
     let 位 = tokens[i]
     let operand = unary_or_mul(tokens, i + 1)
-    return {node: {kind: "Unary", op: "-", operand: operand.node, line: 位.line, column: 位.column}, next: operand.next}
+    return {node: {kind: "一元", op: "-", operand: operand.node, line: 位.line, column: 位.column}, next: operand.next}
   }
   // 逻辑非：!x。它缺席的样子是「解析器在 ! 上停住，上层报出来的却是别处的错」。
   if i < len(tokens) && is_punct(tokens[i], "!") {
     let 位 = tokens[i]
     let operand = unary_or_mul(tokens, i + 1)
-    return {node: {kind: "Unary", op: "!", operand: operand.node, line: 位.line, column: 位.column}, next: operand.next}
+    return {node: {kind: "一元", op: "!", operand: operand.node, line: 位.line, column: 位.column}, next: operand.next}
   }
   return mul(tokens, i)
 }

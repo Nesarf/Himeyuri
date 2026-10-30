@@ -77,7 +77,7 @@ console.log("二、位置是逐个对过的，不是大致对");
   ok("chain 的前几个节点各有自己的位置", 首个 && 子.find((n) => n.路 === 首个.路).line === 首个.line, JSON.stringify(首个));
   ok("chain 全部节点位置相同", 差.length === 0, JSON.stringify(差[0]));
   // Field 那一处怪处：宿主记的是字段名之后的 token。核一次它的位子不是字段名自己的。
-  const 字段 = 主.find((n) => n.kind === "Field");
+  const 字段 = 主.find((n) => n.kind === "字段");
   ok("Field 的位置落在字段名之后（照抄宿主）", 字段 && 字段.column > 0, JSON.stringify(字段));
 }
 
@@ -111,7 +111,7 @@ console.log("四、一元组与分组是两件事");
   const 组 = 子集解(切("fn f(a: Int) -> Int { return (a) }\n")).ast.decls[0].body.statements[0].value;
   const 元 = 子集解(切("fn f(a: Int) -> Int { return (a,) }\n")).ast.decls[0].body.statements[0].value;
   ok("(a) 是分组，不是元组", 组.kind === "名", 组.kind);
-  ok("(a,) 是一元组", 元.kind === "Tuple" && 元.items.length === 1, 元.kind + " " + (元.items || []).length);
+  ok("(a,) 是一元组", 元.kind === "组" && 元.items.length === 1, 元.kind + " " + (元.items || []).length);
 }
 
 console.log("五、优先级与结合（四则与比较的档位）");

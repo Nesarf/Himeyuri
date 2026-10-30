@@ -57,7 +57,7 @@ class Return extends Error { constructor(value) { super("return"); this.value = 
 // 只卖一个布尔，不卖整张表：表是实现的细节，而「这个名字算不算内置」是可问的事实。
 export const isBuiltin = (name) => Object.prototype.hasOwnProperty.call(BUILTINS, name);
 
-const STAGE0_EXPR = new Set(["二元", "调用", "Field", "名", "若", "Index", "字", "Record", "Tuple", "Unary", "当"]);
+const STAGE0_EXPR = new Set(["二元", "调用", "字段", "名", "若", "索引", "字", "记录", "组", "一元", "当"]);
 const STAGE0_STMT = new Set(["赋值", "表达式语句", "定", "返回", "变"]);
 // 跑 self/ 那六份真正需要的内置。stage0 模式下只放这几个过去。
 // field_names 不在这一张里：自举层现在还不用它，而这张表的意思是「已经量过的必须项」，
@@ -168,7 +168,7 @@ export class Runtime {
    * 别名不是变量，它没有值，去求值只会得到一个「没有这个变量」。
    */
   模块成员(node) {
-    if (!node || node.kind !== "Field") return null;
+    if (!node || node.kind !== "字段") return null;
     const 主 = node.target;
     if (!主 || 主.kind !== "名") return null;
     const 文件 = this.模块别名.get(主.name);
@@ -350,7 +350,7 @@ export class Runtime {
         this.fail("HMYR-行-005", "there is no name '" + node.name + "' in scope");
         break;
       }
-      case "Unary": {
+      case "一元": {
         const v = this.evalExpr(node.operand, scope, effects);
         return node.op === "-" ? -this.asNumber(v) : !this.truthy(v);
       }
@@ -395,20 +395,20 @@ export class Runtime {
         break;
       }
       case "Block": return this.execBlock(node, scope, effects);
-      case "Tuple": return node.items.map((n) => this.evalExpr(n, scope, effects));
-      case "Record": {
+      case "组": return node.items.map((n) => this.evalExpr(n, scope, effects));
+      case "记录": {
         const record = {};
         for (const field of node.fields) record[field.name] = this.evalExpr(field.value, scope, effects);
         return record;
       }
-      case "Field": {
+      case "字段": {
         const target = this.evalExpr(node.target, scope, effects);
         if (target === null || typeof target !== "object" || !(node.name in target)) {
           this.fail("HMYR-行-007", "no field '" + node.name + "' on that value");
         }
         return typeof target[node.name] === "function" ? target[node.name].bind(target) : target[node.name];
       }
-      case "Index": {
+      case "索引": {
         const target = this.evalExpr(node.target, scope, effects);
         // 下标先取下整，与 slice 的起止、设()、chr() 同一条规矩。
         const index = 下整(this.asNumber(this.evalExpr(node.index, scope, effects)));
@@ -458,7 +458,7 @@ export class Runtime {
     // 方法调用：接收者要跟着传下去。少了 apply 这一步，块上的 存/取 就取不到
     // 自己是哪一块 —— 而那是它唯一的上下文。区的方法不需要它（它们是闭包），
     // 块的方法需要（一块内存的内容只属于那一块）。
-    if (node.callee.kind === "Field") {
+    if (node.callee.kind === "字段") {
       const 主 = this.evalExpr(node.callee.target, scope, effects);
       const 法 = 主 === null || 主 === undefined ? undefined : 主[node.callee.name];
       if (typeof 法 === "function") return 法.apply(主, args);

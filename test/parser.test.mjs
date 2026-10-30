@@ -78,11 +78,11 @@ console.log("\nexpressions and precedence");
 {
   const r = clean("fn f() {\n  f(1, 2).field\n}\n");
   const expr = r.ast.decls[0].body.statements[0].expr;
-  ok("call then field access", expr.kind === "Field" && expr.target.kind === "调用" && expr.target.args.length === 2);
+  ok("call then field access", expr.kind === "字段" && expr.target.kind === "调用" && expr.target.args.length === 2);
 }
 {
   const r = clean("fn f() {\n  -a\n}\n");
-  ok("unary minus", r.ast.decls[0].body.statements[0].expr.kind === "Unary");
+  ok("unary minus", r.ast.decls[0].body.statements[0].expr.kind === "一元");
 }
 {
   const r = clean('fn f() {\n  r"raw\\n"\n}\n');
@@ -116,7 +116,7 @@ console.log("\nrecovery: one mistake does not become a cascade");
 {
   const r = clean("fn f() {\n  let xs = (1, 2)\n  let t = (1)\n}\n");
   const stmts = r.ast.decls[0].body.statements;
-  ok("a tuple stays a tuple, a group is not", stmts[0].value.kind === "Tuple" && stmts[1].value.kind === "字");
+  ok("a tuple stays a tuple, a group is not", stmts[0].value.kind === "组" && stmts[1].value.kind === "字");
 }
 
 console.log("\nthe spec's own example");

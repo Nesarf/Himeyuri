@@ -339,7 +339,7 @@ fn 表达(节点: Int, 状态: Int) {
     if 码 == "" { return {ok: false, 错: "不认的二元运算：" + 节点.op} }
     return {ok: true, 状态: 发(r.状态, {op: 码})}
   }
-  if 种 == "Unary" {
+  if 种 == "一元" {
     let o = 表达(节点.operand, 状态)
     if o.ok == false { return o }
     if 节点.op == "-" { return {ok: true, 状态: 发(o.状态, {op: "NEG"})} }
@@ -350,7 +350,7 @@ fn 表达(节点: Int, 状态: Int) {
     // 方法调用（a.alloc(16)）：主先压栈，参数按序压，最后一条 CALLM。
     // 与 src/bytecode.mjs 那一份发同一条指令 —— 两台编译器要给同一个字节流，
     // 而这一点由 selfvmcompile 那套盯着。
-    if 节点.callee.kind == "Field" {
+    if 节点.callee.kind == "字段" {
       let 主 = 表达(节点.callee.target, 状态)
       if 主.ok == false { return 主 }
       let 方的参 = 编实参(节点.args, 主.状态, 0)
@@ -364,20 +364,20 @@ fn 表达(节点: Int, 状态: Int) {
     }
     return {ok: true, 状态: 发(参.状态, {op: "CALLF", a: 节点.callee.text, b: len(节点.args)})}
   }
-  if 种 == "Tuple" {
+  if 种 == "组" {
     let 项 = 编实参(节点.items, 状态, 0)
     if 项.ok == false { return 项 }
     return {ok: true, 状态: 发(项.状态, {op: "TUPLE", a: len(节点.items)})}
   }
-  if 种 == "Record" {
+  if 种 == "记录" {
     return 编记录(节点.fields, 状态, 0)
   }
-  if 种 == "Field" {
+  if 种 == "字段" {
     let t = 表达(节点.target, 状态)
     if t.ok == false { return t }
     return {ok: true, 状态: 发(t.状态, {op: "FIELD", a: 节点.name})}
   }
-  if 种 == "Index" {
+  if 种 == "索引" {
     let t = 表达(节点.target, 状态)
     if t.ok == false { return t }
     let i = 表达(节点.index, t.状态)

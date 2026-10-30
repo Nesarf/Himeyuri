@@ -81,7 +81,7 @@ export function references(ast, name) {
     if (node.kind === "调用" && node.callee && node.callee.kind === "名" && node.callee.name === name) {
       out.push({ line: node.line, use: "call" });
     }
-    if (node.kind === "Field" && node.name === name) out.push({ line: node.line, use: "field" });
+    if (node.kind === "字段" && node.name === name) out.push({ line: node.line, use: "field" });
   });
   // a declaration is not a use of itself
   const declaredAt = new Set(symbols(ast).filter((s) => s.name === name).map((s) => s.line));

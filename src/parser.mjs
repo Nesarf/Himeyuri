@@ -391,7 +391,7 @@ export function parse(tokens, options = {}) {
   function parseUnary() {
     if (atPunct("!") || atPunct("-")) {
       const op = advance();
-      return { kind: "Unary", op: op.value, operand: parseUnary(), line: op.line, column: op.column };
+      return { kind: "一元", op: op.value, operand: parseUnary(), line: op.line, column: op.column };
     }
     return parsePostfix();
   }
@@ -414,14 +414,14 @@ export function parse(tokens, options = {}) {
       if (atPunct(".")) {
         advance();
         const name = at("ident") || at("keyword") ? advance() : expect("ident", "a field name");
-        expr = { kind: "Field", target: expr, name: name ? name.value : "<error>", line: peek().line, column: peek().column };
+        expr = { kind: "字段", target: expr, name: name ? name.value : "<error>", line: peek().line, column: peek().column };
         continue;
       }
       if (atPunct("[")) {
         const open = advance();
         const index = parseExpr();
         expectPunct("]", "to close the subscript");
-        expr = { kind: "Index", target: expr, index, line: open.line, column: open.column };
+        expr = { kind: "索引", target: expr, index, line: open.line, column: open.column };
         continue;
       }
       break;
@@ -512,7 +512,7 @@ export function parse(tokens, options = {}) {
       }
       skipNewlines();
       expectPunct("}", "to close the record");
-      return { kind: "Record", fields, line: open.line, column: open.column };
+      return { kind: "记录", fields, line: open.line, column: open.column };
     }
     if (atPunct("{")) return parseBlock();
 
@@ -528,7 +528,7 @@ export function parse(tokens, options = {}) {
       expectPunct(")");
       // (x) is a group; (x,) is a one-element tuple. Without the second form a description cannot hold
       // a sequence of tuples - joining a note to the rest would splice its elements instead.
-      return items.length === 1 && !trailingComma ? items[0] : { kind: "Tuple", items, line: t.line, column: t.column };
+      return items.length === 1 && !trailingComma ? items[0] : { kind: "组", items, line: t.line, column: t.column };
     }
 
     if (t.type === "ident") { advance(); return { kind: "名", name: t.value, line: t.line, column: t.column }; }

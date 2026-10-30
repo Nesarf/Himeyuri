@@ -102,13 +102,13 @@ console.log("\nwhat it still cannot read, said plainly");
     JSON.stringify(assign.list));
 
   const record = readBody("fn f() {\n  let r = {name: \"x\", gain: -3}\n  return r\n}\n");
-  ok("a record now comes through as a record", record.list[0].value.kind === "Record" && record.list[0].value.fields.length === 2, JSON.stringify(record.list[0]));
+  ok("a record now comes through as a record", record.list[0].value.kind === "记录" && record.list[0].value.fields.length === 2, JSON.stringify(record.list[0]));
 
   const tuple = readBody("fn f() {\n  let t = (10, 20)\n  return t\n}\n");
-  ok("a tuple now comes through as a tuple", tuple.list[0].value.kind === "Tuple" && tuple.list[0].value.items.length === 2, JSON.stringify(tuple.list[0]));
+  ok("a tuple now comes through as a tuple", tuple.list[0].value.kind === "组" && tuple.list[0].value.items.length === 2, JSON.stringify(tuple.list[0]));
 
   const call = readBody("fn f() {\n  print(t[1])\n}\n");
-  ok("a call now comes through as a call whose argument is a subscript", call.list[0].value.kind === "调用" && call.list[0].value.args[0].kind === "Index", JSON.stringify(call.list[0]));
+  ok("a call now comes through as a call whose argument is a subscript", call.list[0].value.kind === "调用" && call.list[0].value.args[0].kind === "索引", JSON.stringify(call.list[0]));
 
   const branch = readBody("fn f() {\n  if a { return 1 }\n  return 2\n}\n");
   ok("if now comes through as an if", branch.list[0].kind === "若" && branch.list[0].then.length === 1, JSON.stringify(branch.list[0]));

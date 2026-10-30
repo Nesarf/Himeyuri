@@ -2039,6 +2039,19 @@ selfloa 的 27/27）。
     声明与结构的词，那些名字最容易与别的东西撞（Fn、Module、Import 同时是模块名与
     字段值）。
 
+自立：最后五个表达式节点一起换（2026-11-02，新一段第 27 轮）
+
+    Unary、Tuple、Record、Index、Field 那五种的 3 条可疑行，全是 kind 语境 ——
+    STAGE0_EXPR 那个集合、self-tree.mjs 的映射表、stage0-eval 的期望列表。所以五种
+    一起换了 173 处、28 份文件，变成 一元 / 组 / 记录 / 索引 / 字段。
+
+    读数：eval、codes-eval、minimal-eval、bytecode、vm、parser、stage0-eval、
+    subset-census、record-new、scalars、docs 十一套全过；run.hmoks 重编。
+
+    进度：32 种里完成 24 种。剩 8 种，全是声明与结构的词 —— VarTop（3 处）、Const（18）、
+    Block（16）、Fn（40）、Module（10）、Import（5）、Error（52）。它们之所以留到最后，
+    是因为名字容易与模块名、字段值、JS 内置撞，而这一整段躲的就是那种撞。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 HMYR-載-001；
 另外引的文件不在就报 HMYR-載-003（宿主也是这个码）。顺序取后序，于是 order 逐项相同。

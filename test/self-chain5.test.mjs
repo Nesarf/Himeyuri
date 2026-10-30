@@ -77,23 +77,23 @@ for (const source of CASES) {
 console.log("\nthe parts, spelled out");
 {
   const tree = mine("r.name");
-  ok("a field keeps its target and its name", tree.kind === "Field" && tree.target.kind === "名" && tree.name === "name", JSON.stringify(tree));
+  ok("a field keeps its target and its name", tree.kind === "字段" && tree.target.kind === "名" && tree.name === "name", JSON.stringify(tree));
 }
 {
   const tree = mine("a.b.c");
-  ok("fields chain left to right", tree.kind === "Field" && tree.target.kind === "Field" && tree.name === "c", JSON.stringify(tree));
+  ok("fields chain left to right", tree.kind === "字段" && tree.target.kind === "字段" && tree.name === "c", JSON.stringify(tree));
 }
 {
   const tree = mine("obj.field(1)");
-  ok("a field can be called", tree.kind === "调用" && tree.callee.kind === "Field" && tree.callee.name === "field", JSON.stringify(tree));
+  ok("a field can be called", tree.kind === "调用" && tree.callee.kind === "字段" && tree.callee.name === "field", JSON.stringify(tree));
 }
 {
   const tree = mine("x.y[2]");
-  ok("a field can be subscripted", tree.kind === "Index" && tree.target.kind === "Field", JSON.stringify(tree));
+  ok("a field can be subscripted", tree.kind === "索引" && tree.target.kind === "字段", JSON.stringify(tree));
 }
 {
   const tree = mine("f().x");
-  ok("a call result can have a field", tree.kind === "Field" && tree.target.kind === "调用", JSON.stringify(tree));
+  ok("a call result can have a field", tree.kind === "字段" && tree.target.kind === "调用", JSON.stringify(tree));
 }
 
 console.log("\nwhat it still cannot read");

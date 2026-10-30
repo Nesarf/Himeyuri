@@ -33,7 +33,7 @@ const 是arena调用 = (n) => {
 
 // 只认 a.方法(...) 这一种形状。认不出目标是一个名字就不认。
 const 方法调用 = (n) => {
-  if (!n || n.kind !== "调用" || !n.callee || n.callee.kind !== "Field") return null;
+  if (!n || n.kind !== "调用" || !n.callee || n.callee.kind !== "字段") return null;
   const 目标 = 名字(n.callee.target);
   if (!目标) return null;
   return { 目标, 方法: n.callee.name, 参数: n.args || [] };
@@ -113,7 +113,7 @@ export function 区检查(ast, 选项 = {}) {
       // 记录可以交出去、可以返回，而区留在原地 —— 于是块跑出了区。
       // 设计稿的原例是「存到模块级变量」，而语言没有那个东西；记录字面量是同一件事
       // 在今天的写法里最近的形状，而且它可静态看见，不用类型系统。
-      if (n.kind === "Record") {
+      if (n.kind === "记录") {
         for (const f of n.fields || []) {
           const 名 = 名字(f.value);
           if (!名) continue;

@@ -53,7 +53,7 @@ function jsShape(node) {
   if (node.kind === "二元") return { kind: "二元", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
   if (node.kind === "名") return { kind: "名", text: node.name };
-  if (node.kind === "Unary") return { kind: "Unary", op: node.op, operand: jsShape(node.operand) };
+  if (node.kind === "一元") return { kind: "一元", op: node.op, operand: jsShape(node.operand) };
   return { kind: "other:" + node.kind };
 }
 

@@ -238,25 +238,25 @@ fn 翻表达式(n: Int) {
   if n.kind == "二元" {
     return {kind: "二元", op: n.op, left: 翻表达式(n.left), right: 翻表达式(n.right), line: 行(n), column: 列(n)}
   }
-  if n.kind == "Unary" {
-    return {kind: "Unary", op: n.op, operand: 翻表达式(n.operand), line: 行(n), column: 列(n)}
+  if n.kind == "一元" {
+    return {kind: "一元", op: n.op, operand: 翻表达式(n.operand), line: 行(n), column: 列(n)}
   }
   if n.kind == "调用" {
     return {kind: "调用", callee: 翻表达式(n.callee), args: 翻表达式们(n.args, 0, ()), line: 行(n), column: 列(n)}
   }
-  if n.kind == "Field" {
-    return {kind: "Field", target: 翻表达式(n.target), name: n.name, line: 行(n), column: 列(n)}
+  if n.kind == "字段" {
+    return {kind: "字段", target: 翻表达式(n.target), name: n.name, line: 行(n), column: 列(n)}
   }
-  if n.kind == "Index" {
-    return {kind: "Index", target: 翻表达式(n.target), index: 翻表达式(n.index), line: 行(n), column: 列(n)}
+  if n.kind == "索引" {
+    return {kind: "索引", target: 翻表达式(n.target), index: 翻表达式(n.index), line: 行(n), column: 列(n)}
   }
-  if n.kind == "Tuple" {
-    return {kind: "Tuple", items: 翻表达式们(n.items, 0, ()), line: 行(n), column: 列(n)}
+  if n.kind == "组" {
+    return {kind: "组", items: 翻表达式们(n.items, 0, ()), line: 行(n), column: 列(n)}
   }
   // 记录字面量：字段的值也是表达式，也要翻。漏了这一步不会报错 —— 它只是把没翻过的
   // Ident 原样交给宿主，然后宿主去找一个叫 undefined 的名字。
-  if n.kind == "Record" {
-    return {kind: "Record", fields: 翻字段们(n.fields, 0, ()), line: 行(n), column: 列(n)}
+  if n.kind == "记录" {
+    return {kind: "记录", fields: 翻字段们(n.fields, 0, ()), line: 行(n), column: 列(n)}
   }
   return n
 }

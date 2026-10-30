@@ -789,7 +789,7 @@ export class 最小运行时 {
         this.坏("HMYR-行-005", "there is no name '" + node.name + "' in scope");
         break;
       }
-      case "Unary": {
+      case "一元": {
         const v = this.求值(node.operand, scope, effects);
         return node.op === "-" ? -this.成数(v) : !this.真(v);
       }
@@ -809,20 +809,20 @@ export class 最小运行时 {
         if (!node.otherwise) return null;
         return node.otherwise.kind === "Block" ? this.执行块(node.otherwise, scope, effects) : this.求值(node.otherwise, scope, effects);
       }
-      case "Tuple": return node.items.map((n) => this.求值(n, scope, effects));
-      case "Record": {
+      case "组": return node.items.map((n) => this.求值(n, scope, effects));
+      case "记录": {
         const record = {};
         for (const field of node.fields) record[field.name] = this.求值(field.value, scope, effects);
         return record;
       }
-      case "Field": {
+      case "字段": {
         const target = this.求值(node.target, scope, effects);
         if (target === null || typeof target !== "object" || !(node.name in target)) {
           this.坏("HMYR-行-007", "no field '" + node.name + "' on that value");
         }
         return typeof target[node.name] === "function" ? target[node.name].bind(target) : target[node.name];
       }
-      case "Index": {
+      case "索引": {
         const target = this.求值(node.target, scope, effects);
         // 下标先取下整，与 slice 的起止、设()、chr() 同一条规矩。
         const index = 下整(this.成数(this.求值(node.index, scope, effects)));

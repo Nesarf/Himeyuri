@@ -135,13 +135,13 @@ class Printer {
         if (node.type === "nil") return "nil";
         return String(node.raw ?? node.value);
       case "名": return node.name;
-      case "Unary": return node.op + this.expr(node.operand, level, col + 1);
+      case "一元": return node.op + this.expr(node.operand, level, col + 1);
       case "二元": return this.binary(node, level, col);
       case "调用": return this.expr(node.callee, level, col) + "(" + node.args.map((a) => this.expr(a, level, col)).join(", ") + ")";
-      case "Field": return this.expr(node.target, level, col) + "." + node.name;
-      case "Index": return this.expr(node.target, level, col) + "[" + this.expr(node.index, level, col) + "]";
-      case "Tuple": return this.sequence("(", ")", node.items, level, col);
-      case "Record": return this.record(node, level, col);
+      case "字段": return this.expr(node.target, level, col) + "." + node.name;
+      case "索引": return this.expr(node.target, level, col) + "[" + this.expr(node.index, level, col) + "]";
+      case "组": return this.sequence("(", ")", node.items, level, col);
+      case "记录": return this.record(node, level, col);
       case "Block": return this.block(node, level);
       case "若": return this.ifExpr(node, level, col);
       case "Match": return this.matchExpr(node, level, col);

@@ -23,7 +23,7 @@ export const 检查码 = "HMYR-載-021";
 import { 转移, 空, 满, 关, 移 } from "./owned-state.mjs";
 
 const 是方法调用 = (n) =>
-  n && n.kind === "调用" && n.callee && n.callee.kind === "Field" &&
+  n && n.kind === "调用" && n.callee && n.callee.kind === "字段" &&
   n.callee.target && n.callee.target.kind === "名";
 
 /**
@@ -260,7 +260,7 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
       if (!n || typeof n !== "object") return;
       if (Array.isArray(n)) { for (const x of n) 走(x); return; }
       if (n.kind === "调用" && n.callee) {
-        const 主 = n.callee.kind === "Field" ? n.callee.target : null;
+        const 主 = n.callee.kind === "字段" ? n.callee.target : null;
         if (主 && 主.kind === "名" && 位们.has(主.name)) {
           const 方法 = n.callee.name;
           if (方法 === "放" || 方法 === "取" || 方法 === "关") 记脏(d.name, 位们.get(主.name));
@@ -318,7 +318,7 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
       if (!n || typeof n !== "object") return false;
       if (Array.isArray(n)) { for (const x of n) if (走(x)) return true; return false; }
       if (n.kind === "调用" && n.callee) {
-        const 主 = n.callee.kind === "Field" ? n.callee.target : null;
+        const 主 = n.callee.kind === "字段" ? n.callee.target : null;
         if (主 && 主.kind === "名" && 位们.has(主.name) && 该报.has(位们.get(主.name))) {
           const 方法 = n.callee.name;
           if (方法 === "放" || 方法 === "取" || 方法 === "关") {

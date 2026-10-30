@@ -27,17 +27,17 @@ const 走表达式 = (n) => {
   if (!n || typeof n !== "object") return;
   计(表达式, n.kind);
   if (n.kind === "字") 计(字面量, String(n.type));
-  if (n.kind === "二元" || n.kind === "Unary") 计(运算符, String(n.op));
+  if (n.kind === "二元" || n.kind === "一元") 计(运算符, String(n.op));
   switch (n.kind) {
     case "若": 走表达式(n.condition); 走语句(n.then); 走语句(n.otherwise); break;
     case "当": 走表达式(n.condition); 走语句(n.body); break;
     case "二元": 走表达式(n.left); 走表达式(n.right); break;
-    case "Unary": 走表达式(n.operand); break;
+    case "一元": 走表达式(n.operand); break;
     case "调用": 走表达式(n.callee); (n.args || []).forEach(走表达式); break;
-    case "Index": 走表达式(n.target); 走表达式(n.index); break;
-    case "Field": 走表达式(n.target); break;
-    case "Tuple": (n.items || []).forEach(走表达式); break;
-    case "Record": (n.fields || []).forEach((f) => 走表达式(f.value)); break;
+    case "索引": 走表达式(n.target); 走表达式(n.index); break;
+    case "字段": 走表达式(n.target); break;
+    case "组": (n.items || []).forEach(走表达式); break;
+    case "记录": (n.fields || []).forEach((f) => 走表达式(f.value)); break;
   }
 };
 const 走语句 = (s) => {

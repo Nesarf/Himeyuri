@@ -35,9 +35,9 @@ function jsShape(node) {
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", raw: node.raw };
   if (node.kind === "字" && node.type === "string") return { kind: "字", type: "string", raw: false };
   if (node.kind === "名") return { kind: "名", name: node.name };
-  if (node.kind === "Unary") return { kind: "Unary", op: node.op, operand: jsShape(node.operand) };
-  if (node.kind === "Tuple") return { kind: "Tuple", items: node.items.map(jsShape) };
-  if (node.kind === "Record") return { kind: "Record", fields: node.fields.map((f) => ({ name: f.name, value: jsShape(f.value) })) };
+  if (node.kind === "一元") return { kind: "一元", op: node.op, operand: jsShape(node.operand) };
+  if (node.kind === "组") return { kind: "组", items: node.items.map(jsShape) };
+  if (node.kind === "记录") return { kind: "记录", fields: node.fields.map((f) => ({ name: f.name, value: jsShape(f.value) })) };
   return { kind: "other:" + node.kind };
 }
 // 位置与原文不参与这次比较：self 那一侧的节点带 line/column，而这里要问的是形状。
@@ -82,19 +82,19 @@ for (const source of CASES) {
 console.log("\nthe parts, spelled out");
 {
   const tree = mine("{name: \"lead\", gain: -3}");
-  ok("a record keeps its fields in order", tree.kind === "Record" && tree.fields.length === 2 && tree.fields[0].name === "name" && tree.fields[1].name === "gain",
+  ok("a record keeps its fields in order", tree.kind === "记录" && tree.fields.length === 2 && tree.fields[0].name === "name" && tree.fields[1].name === "gain",
     JSON.stringify(tree));
   ok("a string keeps its text", tree.fields[0].value.kind === "字" && tree.fields[0].value.text === "lead");
-  ok("a negative number is a unary over a number", tree.fields[1].value.kind === "Unary" || tree.fields[1].value.kind === "字",
+  ok("a negative number is a unary over a number", tree.fields[1].value.kind === "一元" || tree.fields[1].value.kind === "字",
     JSON.stringify(tree.fields[1].value));
 }
 {
   const tree = mine("(1, 2, 3)");
-  ok("a tuple keeps its items", tree.kind === "Tuple" && tree.items.length === 3, JSON.stringify(tree));
+  ok("a tuple keeps its items", tree.kind === "组" && tree.items.length === 3, JSON.stringify(tree));
 }
 {
   const tree = mine("(7,)");
-  ok("a one-element tuple is a tuple, not a group", tree.kind === "Tuple" && tree.items.length === 1, JSON.stringify(tree));
+  ok("a one-element tuple is a tuple, not a group", tree.kind === "组" && tree.items.length === 1, JSON.stringify(tree));
 }
 {
   const tree = mine("((7))");
@@ -102,7 +102,7 @@ console.log("\nthe parts, spelled out");
 }
 {
   const tree = mine("{nested: {a: 1}}");
-  ok("records nest", tree.kind === "Record" && tree.fields[0].value.kind === "Record", JSON.stringify(tree));
+  ok("records nest", tree.kind === "记录" && tree.fields[0].value.kind === "记录", JSON.stringify(tree));
 }
 
 console.log("\nwhat used to be out of reach, and is read now");
@@ -112,7 +112,7 @@ console.log("\nwhat used to be out of reach, and is read now");
 }
 {
   const tree = attempt(() => mine("t[1]"));
-  ok("a subscript is read as a subscript", !tree.error && tree.value.kind === "Index", tree.error || JSON.stringify(tree.value));
+  ok("a subscript is read as a subscript", !tree.error && tree.value.kind === "索引", tree.error || JSON.stringify(tree.value));
 }
 {
   const tree = attempt(() => mine("if a { 1 } else { 2 }"));

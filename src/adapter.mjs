@@ -6,7 +6,7 @@
 //     {kind:"字", type, value}   {kind:"int"|"str", text}
 //     {kind:"名", name}            {kind:"name", text}
 //     {kind:"二元", op, left, right} {kind:"bin", op, left, right}
-//     {kind:"Unary", op, operand}     {kind:"unary", op, operand}
+//     {kind:"一元", op, operand}     {kind:"unary", op, operand}
 //     Call / Index / Field / Tuple / Record  → 同名小写
 //
 // 这一份只做**表达式**。语句那一层（let / var / return / assign / if / while / block）
@@ -41,24 +41,24 @@ const 转 = (节点) => {
     case "二元":
       return { kind: "二元", op: String(节点.op), left: 转(节点.left), right: 转(节点.right) };
 
-    case "Unary":
-      return { kind: "Unary", op: String(节点.op), operand: 转(节点.operand) };
+    case "一元":
+      return { kind: "一元", op: String(节点.op), operand: 转(节点.operand) };
 
     case "调用":
       return { kind: "调用", callee: 转(节点.callee), args: (节点.args || []).map(转) };
 
-    case "Index":
-      return { kind: "Index", target: 转(节点.target), index: 转(节点.index) };
+    case "索引":
+      return { kind: "索引", target: 转(节点.target), index: 转(节点.index) };
 
-    case "Field":
-      return { kind: "Field", target: 转(节点.target), name: String(节点.name) };
+    case "字段":
+      return { kind: "字段", target: 转(节点.target), name: String(节点.name) };
 
-    case "Tuple":
-      return { kind: "Tuple", items: (节点.items || []).map(转) };
+    case "组":
+      return { kind: "组", items: (节点.items || []).map(转) };
 
-    case "Record":
+    case "记录":
       // 记录在宿主里是 { fields: [{name, value}] }，而自举认的是同样的形状。
-      return { kind: "Record", fields: (节点.fields || []).map((f) => ({ name: String(f.name), value: 转(f.value) })) };
+      return { kind: "记录", fields: (节点.fields || []).map((f) => ({ name: String(f.name), value: 转(f.value) })) };
 
     default:
       // 语句与别的种类：如实说不转，而不是硬塞一个形状进去。

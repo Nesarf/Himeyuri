@@ -52,13 +52,13 @@ function jsShape(node) {
   if (node.kind === "二元") return { kind: "二元", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
   if (node.kind === "名") return { kind: "名", text: node.name };
-  if (node.kind === "Unary") return { kind: "Unary", op: node.op, operand: jsShape(node.operand) };
+  if (node.kind === "一元") return { kind: "一元", op: node.op, operand: jsShape(node.operand) };
   if (node.kind === "调用") return { kind: "调用", callee: jsShape(node.callee), args: node.args.map(jsShape) };
-  if (node.kind === "Index") return { kind: "Index", target: jsShape(node.target), index: jsShape(node.index) };
-  if (node.kind === "Field") {
+  if (node.kind === "索引") return { kind: "索引", target: jsShape(node.target), index: jsShape(node.index) };
+  if (node.kind === "字段") {
     const target = node.target !== undefined ? node.target : node.object;
     const name = node.name !== undefined ? node.name : node.field;
-    return { kind: "Field", target: jsShape(target), name: name };
+    return { kind: "字段", target: jsShape(target), name: name };
   }
   return { kind: "other:" + node.kind };
 }
@@ -117,11 +117,11 @@ console.log("\nwhere it reaches");
 }
 {
   const tree = mine("t[a < b]");
-  ok("so can a subscript", tree.kind === "Index" && tree.index.op === "<", JSON.stringify(tree));
+  ok("so can a subscript", tree.kind === "索引" && tree.index.op === "<", JSON.stringify(tree));
 }
 {
   const tree = mine("{flag: a != b}");
-  ok("so can a record value", tree.kind === "Record" && tree.fields[0].value.op === "!=", JSON.stringify(tree));
+  ok("so can a record value", tree.kind === "记录" && tree.fields[0].value.op === "!=", JSON.stringify(tree));
 }
 
 console.log("\nwhat it still cannot read");

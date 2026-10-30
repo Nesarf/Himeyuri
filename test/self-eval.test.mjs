@@ -43,7 +43,7 @@ console.log("二元与一元：括号的优先级由 AST 决定，不由求值�
 一("取余", bin("%", int("7"), int("2")), 空, "1");
 一("比较", bin("<", int("1"), int("2")), 空, "true");
 一("相等", bin("==", str("a"), str("a")), 空, "true");
-一("一元负号", { kind: "Unary", op: "-", operand: int("5") }, 空, "-5");
+一("一元负号", { kind: "一元", op: "-", operand: int("5") }, 空, "-5");
 一("字符串相加", bin("+", str("a"), str("b")), 空, "ab");
 
 console.log("调用：这一版认的内置");
@@ -56,10 +56,10 @@ console.log("调用：这一版认的内置");
 一("参数先求值", { kind: "调用", callee: name("len"), args: [bin("+", str("ab"), str("cd"))] }, 空, "4");
 
 console.log("下标、字段、元组");
-一("下标", { kind: "Index", target: str("abc"), index: int("1") }, 空, "b");
+一("下标", { kind: "索引", target: str("abc"), index: int("1") }, 空, "b");
 // 记录现在造得出来了：空记录取一个不存在的字段，报的是「没有这个字段」。
-一("空记录取字段被拒绝", { kind: "Field", target: { kind: "Record", fields: [] }, name: "x" }, 空, "错：没有这个字段：x");
-一("元组取长度", { kind: "调用", callee: name("len"), args: [{ kind: "Tuple", items: [int("1"), int("2")] }] }, 空, "2");
+一("空记录取字段被拒绝", { kind: "字段", target: { kind: "记录", fields: [] }, name: "x" }, 空, "错：没有这个字段：x");
+一("元组取长度", { kind: "调用", callee: name("len"), args: [{ kind: "组", items: [int("1"), int("2")] }] }, 空, "2");
 
 console.log("错处要说清，不静音");
 {

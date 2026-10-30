@@ -82,9 +82,9 @@ const 表达式形状 = (n) => {
       if (typeof n.value === "boolean") return { k: "bool" };
       if (n.value === null) return { k: "unit" };
       return { k: "?" };
-    case "Tuple": return { k: "tuple", items: (n.items || []).map(表达式形状) };
+    case "组": return { k: "tuple", items: (n.items || []).map(表达式形状) };
     // 记录字面量：字段名与每个字段的形状。有了它，返回类型写成 {…} 时才能真的核对。
-    case "Record": return { k: "record", fields: (n.fields || []).map((f) => [f.name, 表达式形状(f.value)]) };
+    case "记录": return { k: "record", fields: (n.fields || []).map((f) => [f.name, 表达式形状(f.value)]) };
     case "二元": {
       const op = n.op;
       if (["==", "!=", "<", "<=", ">", ">=", "&&", "||"].includes(op)) return { k: "bool" };
@@ -98,7 +98,7 @@ const 表达式形状 = (n) => {
       if (["-", "*", "/", "%"].includes(op)) return { k: "num" };
       return { k: "?" };
     }
-    case "Unary": return n.op === "!" ? { k: "bool" } : { k: "num" };
+    case "一元": return n.op === "!" ? { k: "bool" } : { k: "num" };
     // 调用：形状由「被调者的声明」回答，而回答它的是外面的 形状带调用。
     // 这里交回「说不清」而不是 null —— null 会在 + 的两边当成值用，然后炸在那个地方，
     // 而一个好的检查器不该因为自己不认识的节点而炸。
@@ -237,7 +237,7 @@ const 编译函数 = (decl) => {
         else 发("LOAD", 有.槽);
         return;
       }
-      case "Unary":
+      case "一元":
         表达(n.operand);
         发(一元运算[n.op] || (() => { throw new 编译错("不认的一元运算：" + n.op); })());
         return;
@@ -259,25 +259,25 @@ const 编译函数 = (decl) => {
         发(二元运算[n.op] || (() => { throw new 编译错("不认的二元运算：" + n.op); })());
         return;
       }
-      case "Tuple": {
+      case "组": {
         for (const 项 of n.items) 表达(项);
         发("TUPLE", n.items.length);
         return;
       }
-      case "Record": {
+      case "记录": {
         for (const f of n.fields) { 表达(f.value); }
         发("RECORD", n.fields.map((f) => f.name));
         return;
       }
-      case "Field": 表达(n.target); 发("FIELD", n.name); return;
-      case "Index": 表达(n.target); 表达(n.index); 发("INDEX"); return;
+      case "字段": 表达(n.target); 发("FIELD", n.name); return;
+      case "索引": 表达(n.target); 表达(n.index); 发("INDEX"); return;
       case "调用": {
         // 方法调用（a.alloc(16)）：先把主压栈，再压参数，最后一条 CALLM。
         // 这是区的入口 —— 到 2026-10-26 为止这一行是「只认按名字调用」，于是
         // 任何 a.alloc(16) 在 --compile 上都是一句拒绝，区也就只有解释那两条路能跑。
         // 「只有区有方法」这条判断不写在语法里：它写在 VM 与 C 那台的分派里，
         // 因为它在两处都一样 —— 而语法不该替语义做决定。
-        if (n.callee.kind === "Field") {
+        if (n.callee.kind === "字段") {
           表达(n.callee.target);
           for (const a of n.args) 表达(a);
           发("CALLM", n.callee.name, n.args.length);

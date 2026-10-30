@@ -9,12 +9,12 @@
 //   {kind: "字", type: "string", text}              字符串
 //   {kind: "名", text}             标识符
 //   {kind: "二元", op, left, right}
-//   {kind: "Unary", op, operand}
+//   {kind: "一元", op, operand}
 //   {kind: "调用", callee, args}
-//   {kind: "Index", target, index}
-//   {kind: "Field", target, name}
-//   {kind: "Tuple", items}
-//   {kind: "Record", fields}
+//   {kind: "索引", target, index}
+//   {kind: "字段", target, name}
+//   {kind: "组", items}
+//   {kind: "记录", fields}
 //   {kind: "Error", text}
 //
 // 环境是键值对的元组（与 json.hmyr 那边同一个表示）：记录的字段名必须是标识符，
@@ -370,7 +370,7 @@ fn 求方法(环境: Int, 主: Int, 名: String, 参: Int) -> Int {
 fn 求调用(节点: Int, 环境: Int) -> Int {
   // 方法调用（a.alloc(16)）：区是这一层唯一有方法的对象。
   // 别的值当主时求方法给的是一句话，不是崩 —— 见那边对 index_has 的说明。
-  if 节点.callee.kind == "Field" {
+  if 节点.callee.kind == "字段" {
     let 主 = 求值(节点.callee.target, 环境)
     if 主.ok == false { return 主 }
     let 参 = 求参数(节点.args, 环境)
@@ -1063,9 +1063,9 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
     }
     return 求二元(节点.op, 求值(节点.left, 环境), 求值(节点.right, 环境))
   }
-  if 种 == "Unary" { return 求一元(节点.op, 求值(节点.operand, 环境)) }
+  if 种 == "一元" { return 求一元(节点.op, 求值(节点.operand, 环境)) }
   if 种 == "调用" { return 求调用(节点, 环境) }
-  if 种 == "Index" {
+  if 种 == "索引" {
     let 标 = 求值(节点.target, 环境)
     if 标.ok == false { return 标 }
     let 位 = 求值(节点.index, 环境)
@@ -1082,7 +1082,7 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
     }
     return 好(标.value[位.value])
   }
-  if 种 == "Field" {
+  if 种 == "字段" {
     // 不能写 标.value[节点.name]：下标只收数字，而这里字段名是个变量。
     // 先问再取：field_get 取不到会抛（有编号），而这里接不住异常，所以先问 field_has。
     let 标 = 求值(节点.target, 环境)
@@ -1094,8 +1094,8 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
     if index_has(标.value, 节点.name) { return 好(index_get(标.value, 节点.name)) }
     return 坏("没有这个字段：" + 节点.name)
   }
-  if 种 == "Tuple" { return 求参数(节点.items, 环境) }
-  if 种 == "Record" { return 求记录(节点, 环境) }
+  if 种 == "组" { return 求参数(节点.items, 环境) }
+  if 种 == "记录" { return 求记录(节点, 环境) }
   if 种 == "Error" { return 坏("语法层报的错：" + 节点.text) }
   return 坏("不认识的节点：" + 种)
 }

@@ -374,7 +374,7 @@ export const 子集解 = (tokens, options = {}) => {
   function 解析一元() {
     if (是标("!") || 是标("-")) {
       const op = 进();
-      return { kind: "Unary", op: op.value, operand: 解析一元(), line: op.line, column: op.column };
+      return { kind: "一元", op: op.value, operand: 解析一元(), line: op.line, column: op.column };
     }
     return 解析后缀();
   }
@@ -400,14 +400,14 @@ export const 子集解 = (tokens, options = {}) => {
         // 位置上的一处怪处，照抄而不是改对：宿主给 Field 记的是字段名之后那个 token 的位子。
         // 照抄的理由是「两棵树一样」这句话要经得起逐节点核，而改对一处就等于把两棵树拆开。
         const 后 = 看();
-        expr = { kind: "Field", target: expr, name: 名 ? 名.value : "<error>", line: 后.line, column: 后.column };
+        expr = { kind: "字段", target: expr, name: 名 ? 名.value : "<error>", line: 后.line, column: 后.column };
         continue;
       }
       if (是标("[")) {
         const 开 = 进();
         const index = 解析表达式();
         要标("]", "关下标");
-        expr = { kind: "Index", target: expr, index, line: 开.line, column: 开.column };
+        expr = { kind: "索引", target: expr, index, line: 开.line, column: 开.column };
         continue;
       }
       break;
@@ -469,7 +469,7 @@ export const 子集解 = (tokens, options = {}) => {
       }
       过空行();
       要标("}", "关记录");
-      return { kind: "Record", fields, line: 开.line, column: 开.column };
+      return { kind: "记录", fields, line: 开.line, column: 开.column };
     }
     if (是标("{")) return 解析块();
 
@@ -483,7 +483,7 @@ export const 子集解 = (tokens, options = {}) => {
       }
       要标(")", "关括号");
       // (x) 是分组，(x,) 是一元组。少了后者，描述里放不进一串元组。
-      return (items.length === 1 && !尾逗号) ? items[0] : { kind: "Tuple", items, line: t.line, column: t.column };
+      return (items.length === 1 && !尾逗号) ? items[0] : { kind: "组", items, line: t.line, column: t.column };
     }
 
     // arena() 在词法里是关键字，所以在表达式里它不会被当成一个名字。

@@ -88,31 +88,31 @@ console.log("\nthe parts, spelled out");
 }
 {
   const tree = mine("t[i + 1]");
-  ok("the subscript keeps an expression, not just a name", tree.kind === "Index" && tree.index.kind === "二元", JSON.stringify(tree));
+  ok("the subscript keeps an expression, not just a name", tree.kind === "索引" && tree.index.kind === "二元", JSON.stringify(tree));
 }
 {
   const tree = mine("f(1)[0]");
-  ok("a call can be subscripted", tree.kind === "Index" && tree.target.kind === "调用", JSON.stringify(tree));
+  ok("a call can be subscripted", tree.kind === "索引" && tree.target.kind === "调用", JSON.stringify(tree));
 }
 {
   const tree = mine("f(t[0]) * 2");
-  ok("they nest inside arithmetic as expected", tree.kind === "二元" && tree.left.kind === "调用" && tree.left.args[0].kind === "Index", JSON.stringify(tree));
+  ok("they nest inside arithmetic as expected", tree.kind === "二元" && tree.left.kind === "调用" && tree.left.args[0].kind === "索引", JSON.stringify(tree));
 }
 {
   const tree = mine("t[0] + t[1]");
-  ok("two subscripts add", tree.kind === "二元" && tree.left.kind === "Index" && tree.right.kind === "Index");
+  ok("two subscripts add", tree.kind === "二元" && tree.left.kind === "索引" && tree.right.kind === "索引");
 }
 
 console.log("\nwhat it still cannot read");
 {
   // 字段访问进来之后，字段上的调用也就跟着通了。
   const tree = attempt(() => mine("obj.field(1)"));
-  ok("a call on a field is read", !tree.error && tree.value.kind === "调用" && tree.value.callee.kind === "Field",
+  ok("a call on a field is read", !tree.error && tree.value.kind === "调用" && tree.value.callee.kind === "字段",
     tree.error || JSON.stringify(tree.value));
 }
 {
   const tree = attempt(() => mine("r.name"));
-  ok("field access is read as a field", !tree.error && tree.value.kind === "Field" && tree.value.name === "name",
+  ok("field access is read as a field", !tree.error && tree.value.kind === "字段" && tree.value.name === "name",
     tree.error || JSON.stringify(tree.value));
 }
 {
