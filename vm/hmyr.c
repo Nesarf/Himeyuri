@@ -5364,22 +5364,27 @@ static int 文件在(const char *path) {
 
 /* 临时字节码放哪儿：系统的临时目录。名字带 pid，两次同时跑也不会撞。
  * 裸机上没有 pid 也没有并发，名字就是固定的那个。 */
-static void 临时路径(char *buf, size_t cap) {
+static void 临时路径(char *buf, size_t cap, const char *号) {
 #ifdef _WIN32
   const char *dir = getenv("TEMP");
   if (!dir || !*dir) dir = getenv("TMP");
   if (!dir || !*dir) dir = ".";
   /* 名字里带线程号：两个线程同时要一份临时文件时，光有 pid 会撞成同一个名字 ——
-   * 一个在写、另一个在读，症状是访问违例而不是「文件读不到」。 */
-  snprintf(buf, cap, "%s\\hmyr-%ld-%lu.hmoks", dir, (long)_getpid(), (unsigned long)GetCurrentThreadId());
+   * 一个在写、另一个在读，症状是访问违例而不是「文件读不到」。
+   *
+   * 号 是调用方给的额外后缀（2026-11-02）：`线程起` 是在主线程里取路径的，
+   * 于是两个线程的 GetCurrentThreadId() 相同、撞成同一个文件名。那一条修法
+   * 是让调用方把线程句柄号当字符串传进来 —— 拼接放在这里一次做完，
+   * 不再拿 1024 字节的路径去套 "%s-%d"（那会触发 -Wformat-truncation）。 */
+  snprintf(buf, cap, "%s\\hmyr-%ld-%lu%s.hmoks", dir, (long)_getpid(), (unsigned long)GetCurrentThreadId(), 号 ? 号 : "");
 #elif defined(__arm__) || defined(__ARM_ARCH) || defined(__aarch64__)
   const char *dir = getenv("TMPDIR");
   if (!dir || !*dir) dir = "/tmp";
-  snprintf(buf, cap, "%s/hmyr.hmoks", dir);
+  snprintf(buf, cap, "%s/hmyr%s.hmoks", dir, 号 ? 号 : "");
 #else
   const char *dir = getenv("TMPDIR");
   if (!dir || !*dir) dir = "/tmp";
-  snprintf(buf, cap, "%s/hmyr-%ld.hmoks", dir, (long)getpid());
+  snprintf(buf, cap, "%s/hmyr-%ld%s.hmoks", dir, (long)getpid(), 号 ? 号 : "");
 #endif
 }
 
@@ -5601,7 +5606,7 @@ static char *解容器(const char *包路) { (void)包路; return NULL; }
 static 线程局部 char g_种子临时[1024];
 
 static int 写种子临时(char *buf, size_t cap) {
-  临时路径(buf, cap);
+  临时路径(buf, cap, NULL);
   size_t n = strlen(buf);
   if (n > 6 && strcmp(buf + n - 6, ".hmoks") == 0) {
     snprintf(buf + n - 6, cap - (n - 6), ".seed.hmtn");
@@ -5884,7 +5889,15 @@ static int 线程起(const char *源码, const char *入口) {
   if (!c) return -1;
   c->号 = g_下一个线程号++;
   snprintf(c->入口, sizeof c->入口, "%s", 入口);
-  临时路径(c->源码路径, sizeof c->源码路径);
+  {
+    /* 再嵌一个线程句柄号（2026-11-02 修的真 bug）：临时路径 的名字里带的是
+     * GetCurrentThreadId()，而这一句是在**主线程**里执行的 —— 两个线程于是拿到
+     * 同一个文件名，一个在写、另一个在读，症状是「the file ends in the middle of
+     * something」而两台机器的输出只差一个 2。c->号 是递增的句柄号，一定不同。 */
+    char 号串[32];
+    snprintf(号串, sizeof 号串, "-%d", c->号);
+    临时路径(c->源码路径, sizeof c->源码路径, 号串);
+  }
   snprintf(c->产物路径, sizeof c->产物路径, "%s.hmoks", c->源码路径);
   f = 开文件(c->源码路径, "wb");
   if (!f) { free(c); return -1; }
@@ -5938,7 +5951,7 @@ static int cli_main(int argc, char **argv) {
     return 2;
   }
   char 临时[1024];
-  临时路径(临时, sizeof 临时);
+  临时路径(临时, sizeof 临时, NULL);
   remove(临时);
 
   {

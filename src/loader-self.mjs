@@ -173,9 +173,11 @@ export function loadUnitSelf(entry, options = {}) {
 
   const 结果 = 取顺序(机器, 码, 目录, 相对, 绝对);
   if (结果.错) {
-    /* 自举层交回的错码是 E0301（环）与 E0302（缺文件），与本仓库宿主那一侧同码。 */
+    /* 码名要与宿主一致：那边报的是 HMYR-E0301 与 HMYR-E0302，而这里原来只写了
+     * E0301 —— 判据按全名找，于是「环被拒了」与「缺文件被拒了」两条都读成没有
+     * （2026-11-02 实测，module 那套在自举档下红四项）。 */
     const 码名 = 结果.错.slice(0, 5);
-    diagnostics.error(码名 === "E0301" ? "E0301" : "E0302", 结果.错);
+    diagnostics.error(码名 === "E0301" ? "HMYR-E0301" : "HMYR-E0302", 结果.错);
     return { ok: false, order: [], modules: new Map(), 别名表: new Map(), diagnostics };
   }
 
@@ -283,7 +285,13 @@ export function loadUnitSelf(entry, options = {}) {
     for (const imp of ast.imports || []) {
       if (!imp || 是路径形式(imp.path)) continue;
       const 目标 = resolveImport(能力, abs, imp.path, diagnostics);
-      if (目标 && !已见.has(目标) && fs.existsSync(目标)) 队列.unshift(目标);
+      if (!目标) {
+        // 不像包名、也不是路径：宿主在这里说一句 W0301（「包管理器将来管它」），
+        // 而不是把它当成缺文件。适配层原来静默跳过了这一条（2026-11-02）。
+        diagnostics.warn("HMYR-W0301", "import of '" + imp.path + "' is not a path; the package manager will own that", 0, 0);
+        continue;
+      }
+      if (!已见.has(目标) && fs.existsSync(目标)) 队列.unshift(目标);
     }
   }
 
