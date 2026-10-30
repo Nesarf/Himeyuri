@@ -223,7 +223,11 @@ walk(path.join(ROOT, "tools"));
 const emitted = new Set();
 for (const file of sources) {
   const text = fs.readFileSync(file, "utf8");
-  for (const m of text.matchAll(/"(HMYR-[EWR]\d{4})"/g)) emitted.add(m[1]);
+  // 码的形状换过（2026-11-02：从 HMYR-E0101 变成 HMYR-詞-001），所以这里不能再限定
+  // [EWR] 加四位数字 —— 那样一个都匹配不到，于是「登记的码一个都没发出」全表飘红。
+  // 而放宽成「引号里任意一串」又太宽：startsWith("HMYR-詞-") 那种前缀片段会被当成码。
+  // 所以认「HMYR- 开头、以三位数字结尾」—— 两种形状都满足，而前缀片段不满足。
+  for (const m of text.matchAll(/"(HMYR-[^\s"]*-\d{3})"/g)) emitted.add(m[1]);
 }
 const registered = new Set(CODES.map((c) => c.code));
 const unregistered = [...emitted].filter((c) => !registered.has(c));
