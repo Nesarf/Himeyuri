@@ -20,7 +20,10 @@ console.log("一、不给参数：列出全部");
   const r = 跑();
   ok("跑得动", r.status === 0, String(r.status));
   ok("说了共多少个编号", /共 \d+ 个编号/.test(r.stdout), r.stdout.slice(0, 40));
-  ok("三组都出现", r.stdout.includes("编译期") && r.stdout.includes("运行期") && r.stdout.includes("警告"));
+  // 分组从「E / R / W 三组」改成「八层」：2026-11-02 换码之后编号说的是层，
+  // 而严重程度不再进码 —— 所以这一条改成「层名都得出现」。
+  ok("八层里该出现的都出现", r.stdout.includes("词法") && r.stdout.includes("语法")
+    && r.stdout.includes("装载") && r.stdout.includes("运行时") && r.stdout.includes("内置"), r.stdout.slice(0, 120));
 }
 
 console.log("二、给一个真编号");
