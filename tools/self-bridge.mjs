@@ -269,13 +269,12 @@ export function loadUnit(entry, options = {}) {
         const 目标 = resolveImport(能力, 键, p, 诊断);
         if (!目标) continue;
         if (imp.alias) {
-          // 别名的值必须与模块表的键同形（order 里是相对形式），否则 模块成员 拿着
-          // 一个绝对路径去模块声明表里查，查不到 —— 症状是「别名点成员调得动」那条
-          // 报 HMYR-R0104「没有这个名字」（2026-11-02 实测）。
-          let 别名键 = String(目标);
-          const 头 = ROOT + path.sep;
-          if (别名键.startsWith(头)) 别名键 = path.relative(ROOT, 别名键);
-          别名表.set(imp.alias, 别名键.split("/").join(path.sep));
+          // 别名的值必须是 order 里那个键**本身**：Runtime.模块声明 的键就是它，
+          // 而 模块成员 拿别名去查那张表。自己拼一个「差不多」的相对路径不行 ——
+          // 临时目录里的文件会拼成 ../.. 形式，与键差一点点就查不到（2026-11-02）。
+          const 真 = path.resolve(目标);
+          const 对应 = order.find((k) => path.resolve(k) === 真);
+          别名表.set(imp.alias, 对应 || 目标);
         }
       }
     }

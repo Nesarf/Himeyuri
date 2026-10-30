@@ -369,7 +369,20 @@ fn 导入节点们(tokens: Int, i: Int, acc: Int) {
     if i + 2 < len(tokens) && tokens[i + 2].kind == "ident" && tokens[i + 2].text == "rev" {
       if i + 3 < len(tokens) && tokens[i + 3].kind == "int" { 版 = to_int(tokens[i + 3].text) } else { 版 = 0 - 1 }
     }
-    let 节 = {kind: "Import", path: s.text, alias: "", rev: 版, line: t.line, column: t.column}
+    // as 别名：`import "x" as 名`。与 rev 可以并存而顺序不固定，所以两个位置都看。
+    //
+    // 原来这里写死 alias: ""（上面那条注释还写着「这一层的语法还不认它们」）——
+    // 于是 Runtime.模块成员 那条路永远查不到别名，「别名点成员调得动」那一条恒红
+    // （2026-11-02 实测：桥交出的 别名表 是空的）。空串与「没有」在这里是同一件事，
+    // 而调用方只问真不真，所以初值用空串没有歧义。
+    var 别 = ""
+    if i + 2 < len(tokens) && tokens[i + 2].kind == "ident" && tokens[i + 2].text == "as" {
+      if i + 3 < len(tokens) && tokens[i + 3].kind == "ident" { 别 = tokens[i + 3].text }
+    }
+    if i + 3 < len(tokens) && tokens[i + 3].kind == "ident" && tokens[i + 3].text == "as" {
+      if i + 4 < len(tokens) && tokens[i + 4].kind == "ident" { 别 = tokens[i + 4].text }
+    }
+    let 节 = {kind: "Import", path: s.text, alias: 别, rev: 版, line: t.line, column: t.column}
     return 导入节点们(tokens, i + 2, acc + (节,))
   }
   return 导入节点们(tokens, i + 1, acc)
