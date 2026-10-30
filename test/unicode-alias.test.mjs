@@ -35,14 +35,14 @@ ok("约等号读作比较", shape(run("a≈b")) === shape(run("a==b")), shape(ru
 
 console.log("括号平衡：归一之后仍然要成对");
 ok("全角括号成对时没有错", run("（a）").errors.length === 0, run("（a）").errors.join(","));
-ok("全角右括号单独出现要报错", run("a）").errors.includes("HMYR-E0004"), run("a）").errors.join(","));
-ok("全角左括号不闭合要报错", run("（a").errors.includes("HMYR-E0004"), run("（a").errors.join(","));
+ok("全角右括号单独出现要报错", run("a）").errors.includes("HMYR-詞-005"), run("a）").errors.join(","));
+ok("全角左括号不闭合要报错", run("（a").errors.includes("HMYR-詞-005"), run("（a").errors.join(","));
 
 console.log("归一不是把错误静音");
-ok("真正的未知字符仍然报 E0006", run("a§b").errors.includes("HMYR-E0006"), run("a§b").errors.join(","));
+ok("真正的未知字符仍然报 E0006", run("a§b").errors.includes("HMYR-詞-007"), run("a§b").errors.join(","));
 ok("而 @ 本来就在标点表里，它不算未知", run("a@b").errors.length === 0, run("a@b").errors.join(","));
-ok("控制字符仍然报 E0006", run("a" + String.fromCharCode(7) + "b").errors.includes("HMYR-E0006"), "控制符那条");
-ok("未映射的全角符号也报错（破折号不在表里）", run("a—b").errors.includes("HMYR-E0006"), run("a—b").errors.join(","));
+ok("控制字符仍然报 E0006", run("a" + String.fromCharCode(7) + "b").errors.includes("HMYR-詞-007"), "控制符那条");
+ok("未映射的全角符号也报错（破折号不在表里）", run("a—b").errors.includes("HMYR-詞-007"), run("a—b").errors.join(","));
 
 console.log("行列号仍然可信");
 {

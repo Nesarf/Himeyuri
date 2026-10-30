@@ -631,7 +631,7 @@ function writeBytes(rt, file, buf) {
 function decodeBytes(rt, buf, enc) {
   if (buf === null || buf === undefined) return "";
   try { return new TextDecoder(enc).decode(buf); }
-  catch (err) { rt.fail("HMYR-E0008", "this runtime does not know the encoding '" + enc + "'"); }
+  catch (err) { rt.fail("HMYR-詞-008", "this runtime does not know the encoding '" + enc + "'"); }
 }
 const trimEnd = (s) => String(s === null || s === undefined ? "" : s).replace(/\s+$/, "");
 

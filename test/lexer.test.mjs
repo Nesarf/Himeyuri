@@ -19,7 +19,7 @@ console.log("identifiers");
 }
 {
   const r = lex("let идent = 1\n");   // Cyrillic и,д followed by Latin e,n,t
-  ok("mixed-script identifier warns (HMYR-W0001)", codes(r).includes("HMYR-W0001"));
+  ok("mixed-script identifier warns (HMYR-詞-002)", codes(r).includes("HMYR-詞-002"));
   ok("but is not an error", r.diagnostics.errors.length === 0);
 }
 {
@@ -42,7 +42,7 @@ console.log("\ncomments");
 }
 {
   const r = lex("/* never closed\nlet x = 1\n");
-  ok("unclosed block comment is HMYR-E0002", codes(r).includes("HMYR-E0002"));
+  ok("unclosed block comment is HMYR-詞-003", codes(r).includes("HMYR-詞-003"));
 }
 
 console.log("\nnewlines end statements, operators continue them");
@@ -69,7 +69,7 @@ console.log("\nnumbers");
 }
 {
   const r = lex("1__0\n");
-  ok("misplaced separator is HMYR-E0003", codes(r).includes("HMYR-E0003"));
+  ok("misplaced separator is HMYR-詞-004", codes(r).includes("HMYR-詞-004"));
 }
 
 console.log("\nstrings");
@@ -83,25 +83,25 @@ console.log("\nstrings");
 }
 {
   const r = lex('"unterminated\n');
-  ok("unterminated string is HMYR-E0001", codes(r).includes("HMYR-E0001"));
+  ok("unterminated string is HMYR-詞-001", codes(r).includes("HMYR-詞-001"));
 }
 {
   const r = lex('"bad \\q escape"\n');
-  ok("unknown escape is HMYR-E0005", codes(r).includes("HMYR-E0005"));
+  ok("unknown escape is HMYR-詞-006", codes(r).includes("HMYR-詞-006"));
 }
 
 console.log("\nbrackets and stray characters");
 {
   const r = lex("let x = (1 + 2\n");
-  ok("unclosed bracket is HMYR-E0004", codes(r).includes("HMYR-E0004"));
+  ok("unclosed bracket is HMYR-詞-005", codes(r).includes("HMYR-詞-005"));
 }
 {
   const r = lex("let x = 1 }\n");
-  ok("stray closer is HMYR-E0004", codes(r).includes("HMYR-E0004"));
+  ok("stray closer is HMYR-詞-005", codes(r).includes("HMYR-詞-005"));
 }
 {
   const r = lex("let x = 1 ~ 2\n");
-  ok("unknown character is HMYR-E0006", codes(r).includes("HMYR-E0006"));
+  ok("unknown character is HMYR-詞-007", codes(r).includes("HMYR-詞-007"));
 }
 
 console.log("\narrows and the spec's own example");

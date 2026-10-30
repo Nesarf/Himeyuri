@@ -40,7 +40,7 @@ console.log("两道门");
 {
   // 字符集的门：一个标识符里混了中文与拉丁
   const codes = 跑("fn main() -> Int {\n  let 名字abc = 1\n  return 名字abc\n}\n");
-  ok("W0001 标识符混用文字", codes.includes("HMYR-W0001"), JSON.stringify(codes));
+  ok("W0001 标识符混用文字", codes.includes("HMYR-詞-002"), JSON.stringify(codes));
 }
 
 console.log("");

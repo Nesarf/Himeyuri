@@ -112,7 +112,7 @@ console.log("二、连不上时出声，而不是把输出丢掉");
   ok("退出码是 2", 果.码 === 2, String(果.码));
   // 看第一行、并且明说不许有堆栈：Node 打异常堆栈时会把那行源码一起打出来，
   // 编号就藏在源码文本里，于是「含有编号」这一条会假通过。
-  ok("stderr 的第一行就是那条消息", 果.错.split("\n")[0].includes("HMYR-E0002"), JSON.stringify(果.错.slice(0, 80)));
+  ok("stderr 的第一行就是那条消息", 果.错.split("\n")[0].includes("HMYR-行-021"), JSON.stringify(果.错.slice(0, 80)));
   ok("消息里带着连不上的原因", /ECONNREFUSED|ENOTFOUND|EHOSTUNREACH|EACCES/.test(果.错), JSON.stringify(果.错.slice(0, 120)));
   ok("而且没有堆栈混在里面", !果.错.includes("    at ") && !果.错.includes("ReferenceError"), JSON.stringify(果.错.slice(0, 200)));
 }
@@ -122,10 +122,10 @@ console.log("三、形状写错时也出声，而不是退回标准流");
   // 没有前缀的 "127.0.0.1:9" 是最容易犯的那种写法：它是 --pipe 的形状，不是 socket 的。
   const 果 = await 跑(["--socket", "127.0.0.1:9"]);
   ok("退出码是 2", 果.码 === 2, String(果.码));
-  ok("stderr 里把三种形状念了一遍", 果.错.includes("HMYR-E0002") && 果.错.includes("tcp:"), JSON.stringify(果.错.slice(0, 120)));
+  ok("stderr 里把三种形状念了一遍", 果.错.includes("HMYR-行-021") && 果.错.includes("tcp:"), JSON.stringify(果.错.slice(0, 120)));
   // 只写开关不给值：这一种最容易被当成「没给选项」而静默退回标准流。
   const 空 = await 跑(["--socket"]);
-  ok("只写开关不给值时也出声", 空.码 === 2 && 空.错.split("\n")[0].includes("HMYR-E0002"), String(空.码) + " " + JSON.stringify(空.错.slice(0, 80)));
+  ok("只写开关不给值时也出声", 空.码 === 2 && 空.错.split("\n")[0].includes("HMYR-行-021"), String(空.码) + " " + JSON.stringify(空.错.slice(0, 80)));
 }
 
 console.log("四、不给 --socket 时，标准流那个出口没被弄坏");

@@ -1561,6 +1561,34 @@ selfloa 的 27/27）。
     这是一份提议，不是已经改完的东西：代码里还是旧码。要动它，先要一张「旧到新」的
     完整对照，再按文件逐份换，最后跑全量确认行为一条没变。
 
+自立：词法层换完了（2026-11-02，新一段第 3 轮）
+
+    从词法层开始（9 个码、54 处引用）。换的时候撞到一件真事：
+
+      一、HMYR-E0002 有两处含义
+
+          lexer.mjs 里是「块注释没闭合」，而 bin/hmyr.mjs 里是「pipe 或 socket
+          打不开」—— 同一个码表达两件事，而 bin/hmyr.mjs 的注释还写着「这两处共用
+          一个码」。所以映射表要按调用点，不是按码。
+
+      二、换法是机械的，但要连测试一起换
+
+          词法层 8 个码在 15 份文件里被引用 54 处：lexer.mjs 12、lexer.test.mjs 16、
+          codes-lex.test.mjs 7、unicode-alias.test.mjs 5、socket.test.mjs 3、
+          codes-value.test.mjs 1、eval.mjs 1、RELAY.txt 3、TOOLING.txt 2。
+
+    做完的：
+
+      src/lexer.mjs 的 8 个码      HMYR-詞-001 到 HMYR-詞-008
+      bin/hmyr.mjs 的 4 处复用码   HMYR-行-021（socket 与 pipe 打不开）
+      上面那 54 处引用             跟着换
+
+    读数：socket、lexer、codes-lex、codes-value、unicode-alias、docs 六套全过。
+    代码里第一次出现了 HMYR 自己的码（HMYR-詞-003 这样的形状），而不是 E0002。
+
+    CODES-MAP.txt 补了一行说明「E0002 有两处含义」—— 那是换码时才发现的，而它正是
+    「按码映射」这个假设的反例。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 E0301；
 另外引的文件不在就报 E0302（宿主也是这个码）。顺序取后序，于是 order 逐项相同。

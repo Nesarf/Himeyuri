@@ -2,13 +2,13 @@
 //
 // It implements the lexical rules written down in SPEC.md section 2.1, and nothing else:
 //   - source is UTF-8; a BOM is accepted and ignored
-//   - identifiers are NFC-normalised, and one that mixes scripts is reported (HMYR-W0001)
+//   - identifiers are NFC-normalised, and one that mixes scripts is reported (HMYR-詞-002)
 //   - // line comments, /// doc comments, and /* */ block comments that NEST
 //   - a newline ends a statement, unless the line ends in an operator or leaves a bracket open
 //   - integer and float literals, with _ as a separator
 //   - "strings" with escapes, and r"raw strings"
 //
-// Diagnostics carry stable identifiers (HMYR-E0001 ...). Section 4.2 of the spec says error text is
+// Diagnostics carry stable identifiers (HMYR-詞-001 ...). Section 4.2 of the spec says error text is
 // part of the specification, so a code is never reused for a different meaning.
 import fs from "node:fs";
 import path from "node:path";
@@ -149,7 +149,7 @@ export function lex(source, options = {}) {
         advance();
       }
       if (depth !== 0) {
-        diagnostics.error("HMYR-E0002", "block comment is never closed", startLine, startColumn);
+        diagnostics.error("HMYR-詞-003", "block comment is never closed", startLine, startColumn);
         break;
       }
       continue;
@@ -166,7 +166,7 @@ export function lex(source, options = {}) {
         const valid = base === "x" ? isHex : base === "b" ? (c) => c === "0" || c === "1" : (c) => c >= "0" && c <= "7";
         while (i < text.length && (valid(text[i]) || text[i] === "_")) { raw += text[i]; advance(); }
         const digits = raw.slice(2).replace(/_/g, "");
-        if (!digits) diagnostics.error("HMYR-E0003", "based literal has no digits: " + raw, startLine, startColumn);
+        if (!digits) diagnostics.error("HMYR-詞-004", "based literal has no digits: " + raw, startLine, startColumn);
         // numeric 这一项曾经漏了。漏掉之后 parser 会退回 t.value，于是 0x10 成了一个字符串，
         // 0x10 + 0 给 "0x100" —— 一个安静算错的数。子集那条路一直是对的，所以这是两条路的分叉，
         // 而分叉只在有人写下进制字面量时才现形（仓库里的 .hmyr 一份都没有）。
@@ -189,7 +189,7 @@ export function lex(source, options = {}) {
             while (i < text.length && isDigit(text[i])) { raw += text[i]; advance(); }
           }
         }
-        if (/__|^_|_$/.test(raw)) diagnostics.error("HMYR-E0003", "misplaced separator in literal: " + raw, startLine, startColumn);
+        if (/__|^_|_$/.test(raw)) diagnostics.error("HMYR-詞-004", "misplaced separator in literal: " + raw, startLine, startColumn);
         push(isFloat ? "float" : "int", raw, startLine, startColumn, { numeric: 解析数(raw) });
       }
       continue;
@@ -208,7 +208,7 @@ export function lex(source, options = {}) {
           const esc = text[i + 1];
           const table = { n: "\n", t: "\t", r: "\r", "0": "\0", "\\": "\\", '"': '"' };
           if (esc in table) { value += table[esc]; advance(2); continue; }
-          diagnostics.error("HMYR-E0005", "unknown escape: \\" + esc, line, column);
+          diagnostics.error("HMYR-詞-006", "unknown escape: \\" + esc, line, column);
           advance(2);
           continue;
         }
@@ -217,7 +217,7 @@ export function lex(source, options = {}) {
         value += text[i];
         advance();
       }
-      if (!closed) diagnostics.error("HMYR-E0001", "string is never closed", startLine, startColumn);
+      if (!closed) diagnostics.error("HMYR-詞-001", "string is never closed", startLine, startColumn);
       push("string", value, startLine, startColumn, { raw: rawString });
       continue;
     }
@@ -230,7 +230,7 @@ export function lex(source, options = {}) {
       const normalized = name.normalize("NFC");
       const scripts = scriptsIn(normalized);
       if (scripts.size > 1) {
-        diagnostics.warn("HMYR-W0001", "identifier mixes scripts (" + [...scripts].join(" + ") + "): " + normalized, startLine, startColumn);
+        diagnostics.warn("HMYR-詞-002", "identifier mixes scripts (" + [...scripts].join(" + ") + "): " + normalized, startLine, startColumn);
       }
       if (KEYWORDS.has(normalized)) push("keyword", normalized, startLine, startColumn);
       else push("ident", normalized, startLine, startColumn, { wasNormalised: normalized !== name });
@@ -245,7 +245,7 @@ export function lex(source, options = {}) {
       if (CLOSERS[punct]) {
         const open = bracketStack.pop();
         if (open !== CLOSERS[punct]) {
-          diagnostics.error("HMYR-E0004", "unbalanced bracket: " + punct + " closes nothing", startLine, startColumn);
+          diagnostics.error("HMYR-詞-005", "unbalanced bracket: " + punct + " closes nothing", startLine, startColumn);
         }
       }
       advance(punct.length);
@@ -263,7 +263,7 @@ export function lex(source, options = {}) {
       if (CLOSERS[alias]) {
         const open = bracketStack.pop();
         if (open !== CLOSERS[alias]) {
-          diagnostics.error("HMYR-E0004", "unbalanced bracket: " + alias + " closes nothing", startLine, startColumn);
+          diagnostics.error("HMYR-詞-005", "unbalanced bracket: " + alias + " closes nothing", startLine, startColumn);
         }
       }
       advance();
@@ -271,12 +271,12 @@ export function lex(source, options = {}) {
       continue;
     }
 
-    diagnostics.error("HMYR-E0006", "character cannot start a token: " + JSON.stringify(ch), line, column);
+    diagnostics.error("HMYR-詞-007", "character cannot start a token: " + JSON.stringify(ch), line, column);
     advance();
   }
 
   for (const open of bracketStack) {
-    diagnostics.error("HMYR-E0004", "bracket is never closed: " + open, line, column);
+    diagnostics.error("HMYR-詞-005", "bracket is never closed: " + open, line, column);
   }
 
   tokens.push({ type: "eof", value: "", line, column });

@@ -293,7 +293,7 @@ if (管道名) {
   const 管道 = net.connect(管道名);
   // 连不上要出声：静静地把 print 丢掉，比报错更难查。
   管道.on("error", (err) => {
-    process.stderr.write("HMYR-E0002 the pipe cannot be opened: " + (在用脱敏() ? "<path>" : String(err && err.message ? err.message : err)) + "\n");
+    process.stderr.write("HMYR-行-021 the pipe cannot be opened: " + (在用脱敏() ? "<path>" : String(err && err.message ? err.message : err)) + "\n");
     process.exit(2);
   });
   出口 = { write: (s) => 管道.write(s), close: () => 管道.end() };
@@ -303,7 +303,7 @@ if (管道名) {
   if (点 === null) {
     // 形状写错时报的是同一个编号：结果一样，输出没有去处。
     // 消息里把三种形状念一遍，因为写错的人此刻最需要的就是这句。
-    process.stderr.write("HMYR-E0002 the socket cannot be opened: expected tcp:host:port, pipe:<name> or unix:<path>\n");
+    process.stderr.write("HMYR-行-021 the socket cannot be opened: expected tcp:host:port, pipe:<name> or unix:<path>\n");
     process.exit(2);
   }
   const 连 = 点.族 === "tcp" ? net.connect(点.端口, 点.主机) : net.connect(点.路径);
@@ -311,7 +311,7 @@ if (管道名) {
     // 原因照实说。开了脱敏、而形状里带着的是一段路径时，那一截换成 <path>：
     // TCP 的 host 与 port 不是路径，删掉它反而让人不知道自己在连什么。
     const 因 = String(err && err.message ? err.message : err);
-    process.stderr.write("HMYR-E0002 the socket cannot be opened: " + (在用脱敏() && 点.族 !== "tcp" ? "<path>" : 因) + "\n");
+    process.stderr.write("HMYR-行-021 the socket cannot be opened: " + (在用脱敏() && 点.族 !== "tcp" ? "<path>" : 因) + "\n");
     process.exit(2);
   });
   出口 = { write: (s) => 连.write(s), close: () => 连.end() };
@@ -319,7 +319,7 @@ if (管道名) {
 } else if (参数.includes("--socket")) {
   // 写了开关却没有值。这一种最容易被当成「没给」而静默退回标准流，
   // 于是要在这里接住：与形状写错是同一件事 —— 用户要的那条出口没有建立起来。
-  process.stderr.write("HMYR-E0002 the socket cannot be opened: --socket needs a value, <shape> follows it in the next argument\n");
+  process.stderr.write("HMYR-行-021 the socket cannot be opened: --socket needs a value, <shape> follows it in the next argument\n");
   process.exit(2);
 } else if (出路径) {
   出口 = 能力.file.stream(出路径);
