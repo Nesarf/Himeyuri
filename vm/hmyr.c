@@ -44,6 +44,7 @@
  * 会把 flash 塞满，那不是「最小机器层」该有的样子。 */
 #if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
 #include "pack_seed.h"
+#include "hmyr-api.h"
 #endif
 
 
@@ -5769,6 +5770,85 @@ static void 回收从档位(const char *目标) {
  *
  * 装载路径与 argv[0] 分开给：装载用临时文件，而程序看到的第一个参数
  * 应该是用户敲的那个源文件 —— 它读 argv() 时不该看见一个临时名字。 */
+/* ---- 嵌入那一页的四个句子（design/EMBED.txt 第四节） ------------------
+ *
+ * 谁在用：宿主 C 程序。谁在实现：这一台。而它们内部用的一直是 Hmyr机器 ——
+ * 那台机器早就存在，线程体那一段也已经演示过「建第二台」的做法，所以这里
+ * 不是新机制，只是把那条路露出一个口。
+ *
+ * g_机 是线程局部的指针，所以「用一个句柄」就是把 g_机 指过去。两个句柄可以在
+ * 同一个进程里同时活着，而各自的那一台互不影响 —— 那正是 design/EMBED.txt
+ * 第二条硬规则要的东西。
+ *
+ * 返回值只做整数那一类（bool 也走 double，0 或 1）。字符串那一类要定所有权，
+ * 留给那一页第三节的下一版。 */
+
+/* 按 ASCII 名字找一个函数。NULL 表示没有 —— 而调用方要说清是哪一种失败。 */
+static Func *找函数(const char *名字) {
+  uint32_t 长 = (uint32_t)strlen(名字);
+  if (!g_机) return NULL;
+  for (uint32_t i = 0; i < g_机->函数数; i++) {
+    Func *f = &g_机->函数们[i];
+    if (f->name_len != 长) continue;
+    uint32_t 同 = 1;
+    for (uint32_t k = 0; k < 长; k++) {
+      if (名码(f->name_off, k) != (uint16_t)(unsigned char)名字[k]) { 同 = 0; break; }
+    }
+    if (同) return f;
+  }
+  return NULL;
+}
+
+hmyr_vm hmyr_vm_new(void) {
+  Hmyr机器 *m = (Hmyr机器 *)calloc(1, sizeof(Hmyr机器));
+  if (!m) return NULL;
+  m->步限 = 200000000;
+  g_机 = m;
+  g_failed = 0;
+  return (hmyr_vm)m;
+}
+
+void hmyr_vm_free(hmyr_vm vm) {
+  if (!vm) return;
+  if (g_机 == (Hmyr机器 *)vm) g_机 = &主机;
+  free(vm);
+}
+
+int hmyr_load(hmyr_vm vm, const char *path) {
+  size_t len = 0;
+  uint8_t *bytes;
+  if (!vm) return 1;
+  g_机 = (Hmyr机器 *)vm;
+  g_failed = 0;
+  bytes = read_file(path, &len);
+  if (!bytes) return 1;
+  load_program(bytes, len);
+  return 0;
+}
+
+int hmyr_call(hmyr_vm vm, const char *名字, double *数出) {
+  Func *f;
+  Value r;
+  if (!vm) return 1;
+  g_机 = (Hmyr机器 *)vm;
+  g_failed = 0;
+  g_全局数 = 0;
+  /* 顶层段：与 run_bytecode 那一段同一件事 —— 模块级 const 在它里面。 */
+  {
+    Func *top = 找函数("__hmyr_top__");
+    if (top) {
+      (void)run_func(top, NULL, 0);
+      if (g_failed) return 1;
+    }
+  }
+  f = 找函数(名字);
+  if (!f) return 2;
+  r = run_func(f, NULL, 0);
+  if (g_failed) return 1;
+  if (数出) *数出 = (r.tag == T_NUM) ? r.num : 0;
+  return 0;
+}
+
 static int run_bytecode(const char *path, const char *argv0, int nrest, char **rest, int 限) {
   size_t len = 0;
   uint8_t *bytes = read_file(path, &len);
@@ -6009,6 +6089,9 @@ static void 清线程(线程上下文 *c) {
  *   .hmyr   旧名    ↔ .hmoca  新名
  *   .hmyrb  旧名    ↔ .hmoks  新名（种子另有 .hmtn）
  * 这一份里认名字的地方只有此处，其余出现 .hmyrb 的地方都是产物名。 */
+/* 这一小段的名字判断只给 main 用。嵌入（HMYR_NO_MAIN）的时候 main 不在，它也跟着走 ——
+ * 否则编出来会报「定义了没用」，而 c-vm 那一套把「一条警告都没有」当判据。2026-11-02。 */
+#if !defined(HMYR_NO_MAIN)
 static int 是源码路径(const char *p) {
   size_t n = strlen(p);
   if (n > 6 && strcmp(p + n - 6, ".hmoca") == 0) return 1;
@@ -6018,6 +6101,7 @@ static int 是源码路径(const char *p) {
   return 0;
 }
 
+/* 这两个也只给 main 用（命令行那一层），所以与上面同一个条件就够。 */
 static int cli_main(int argc, char **argv) {
   char 种子[1024];
   if (!找种子(种子, sizeof 种子, argv[0])) {
@@ -6128,6 +6212,7 @@ static char **切宽命令行(int *argc_out) {
   return 出;
 }
 #endif
+#endif  /* !HMYR_NO_MAIN：cli_main 与 切宽命令行 只给 main 用 */
 
 /* 库入口：给没有 argv、也没有文件系统的地方用 —— 板子、别的语言的 FFI、
  * 以及任何「字节码已经在内存里」的宿主。
@@ -6147,7 +6232,9 @@ int hmyr_运行(const char *路径, int 参数量, char **参数) {
  * 在 hmyr_运行 以下就已经成立，只有「从哪儿拿字节码、往哪儿写出口」是平台的事，
  * 而那两件事本来就在 port/ 里。
  */
-#ifndef HMYR_BOARD
+/* HMYR_NO_MAIN：要嵌入的时候编出来的那份不带 main —— 那正是 design/EMBED.txt
+ * 那一页的用法（宿主自己有 main，它只要那四个句子）。 */
+#if !defined(HMYR_BOARD) && !defined(HMYR_NO_MAIN)
 int main(int argc, char **argv) {
 #ifdef _WIN32
   /* 先换成宽命令行切出来的那一份：main 给的那份已经把中文路径弄坏了。 */
