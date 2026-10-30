@@ -115,15 +115,15 @@ console.log("\nwhat it refuses to guess");
 }
 {
   const node = attempt(() => readStatement(""));
-  ok("an empty line is refused", !node.error && node.value.kind === "Error", node.error || JSON.stringify(node.value));
+  ok("an empty line is refused", !node.error && node.value.kind === "误", node.error || JSON.stringify(node.value));
 }
 {
   const node = readStatement("let x 1");
-  ok("a binding without '=' is refused", node.kind === "Error", JSON.stringify(node));
+  ok("a binding without '=' is refused", node.kind === "误", JSON.stringify(node));
 }
 {
   const node = attempt(() => call("parse_statement", [[]]));
-  ok("an empty token stream is refused", !node.error && node.value.node.kind === "Error", node.error || JSON.stringify(node.value));
+  ok("an empty token stream is refused", !node.error && node.value.node.kind === "误", node.error || JSON.stringify(node.value));
 }
 
 console.log("\n" + passed + " passed, " + failed + " failed");

@@ -337,7 +337,7 @@ export class Runtime {
 
   evalExpr(node, scope, effects) {
     if (++this.steps > this.stepLimit) this.fail("HMYR-行-003", "the program ran for too long without finishing");
-    if (!node || node.kind === "Error") this.fail("HMYR-行-004", "a syntax error reached the evaluator");
+    if (!node || node.kind === "误") this.fail("HMYR-行-004", "a syntax error reached the evaluator");
     if (this.stage0 && !STAGE0_EXPR.has(node.kind)) {
       throw new Error("stage 0 does not need the expression kind '" + node.kind + "'");
     }

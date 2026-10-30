@@ -100,7 +100,7 @@ console.log("\nthe token shape the parser relies on");
 console.log("\nwhat it refuses to guess");
 {
   const empty = attempt(() => call("chain", [[]]));
-  ok("an empty token stream is refused, not guessed", !empty.error && empty.value.node.kind === "Error", empty.error || JSON.stringify(empty.value));
+  ok("an empty token stream is refused, not guessed", !empty.error && empty.value.node.kind === "误", empty.error || JSON.stringify(empty.value));
 }
 {
   const unbalanced = attempt(() => call("chain", [[{ kind: "punct", text: "(", line: 1, column: 1 }, { kind: "int", text: "1", line: 1, column: 2 }]]));

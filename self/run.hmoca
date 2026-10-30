@@ -16,7 +16,7 @@ import "./stmt.hmoca"
 import "./body.hmoca"
 import "./eval.hmoca"
 
-// 跑一段源码，交回结果文字。语法层的错不必在这里单独拦：eval 认识 {kind: "Error"}
+// 跑一段源码，交回结果文字。语法层的错不必在这里单独拦：eval 认识 {kind: "误"}
 // 那一种节点，会把它原样带上来（实测如此，所以这里少一层分支）。
 fn 跑(源码: String) -> String {
   let tokens = scan(源码)

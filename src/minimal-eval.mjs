@@ -777,7 +777,7 @@ export class 最小运行时 {
 
   求值(node, scope, effects) {
     if (++this.steps > this.stepLimit) this.坏("HMYR-行-003", "the program ran for too long without finishing");
-    if (!node || node.kind === "Error") this.坏("HMYR-行-004", "a syntax error reached the evaluator");
+    if (!node || node.kind === "误") this.坏("HMYR-行-004", "a syntax error reached the evaluator");
     switch (node.kind) {
       case "字":
         // 字符串也可以住在码元序列里（选项 字符串用码元序列）。打开之后，

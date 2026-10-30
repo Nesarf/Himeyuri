@@ -130,7 +130,7 @@ console.log("\nthe depth is arranged, not lucky");
 console.log("\nwhat it does not do, said out loud");
 {
   const tree = myShape("-1").node;
-  ok("a unary minus is not understood yet, and is reported as such", tree.kind === "Error", JSON.stringify(tree));
+  ok("a unary minus is not understood yet, and is reported as such", tree.kind === "误", JSON.stringify(tree));
 }
 {
   const mine = myShape("1 + 2");

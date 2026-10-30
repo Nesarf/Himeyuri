@@ -16,7 +16,7 @@ import "./lex.hmoca"
 //
 // 边界写在明处：算术（+ - * / %）、括号、后缀（调用、下标、字段）、比较与逻辑
 // （|| 低于 &&，两者都低于比较 —— 三层在下面，左右结合照语言自己的表）；
-// 出错时给出 {kind: "Error"} 而不猜。
+// 出错时给出 {kind: "误"} 而不猜。
 //
 // 原地那句只写「只认 + - * / % 与括号」，而它在这之后长出了后缀与逻辑两层 ——
 // 2026-11-01 改。一句停在过去的边界说明，比没有说明更容易让人先信后错。
@@ -82,14 +82,14 @@ fn 跳行(tokens: Int, i: Int) -> Int {
 
 fn atom(tokens: Int, i: Int) {
   let j = 跳行(tokens, i)
-  if j >= len(tokens) { return {node: {kind: "Error", text: "", line: 0, column: 0}, next: j} }
+  if j >= len(tokens) { return {node: {kind: "误", text: "", line: 0, column: 0}, next: j} }
   let t = tokens[j]
   if t.kind == "int" { return {node: {kind: "字", type: "int", text: t.text, raw: t.text, line: t.line, column: t.column}, next: j + 1} }
   if t.kind == "string" { return {node: {kind: "字", type: "string", text: t.text, raw: false, line: t.line, column: t.column}, next: j + 1} }
   if t.kind == "ident" { return {node: {kind: "名", name: t.text, text: t.text, line: t.line, column: t.column}, next: j + 1} }
   if is_punct(t, "(") { return paren_or_tuple(tokens, j + 1) }
   if is_punct(t, "{") { return record_of(tokens, j + 1) }
-  return {node: {kind: "Error", text: t.text, line: t.line, column: t.column}, next: j + 1}
+  return {node: {kind: "误", text: t.text, line: t.line, column: t.column}, next: j + 1}
 }
 
 // (x) 是分组，(x, …) 是元组——含尾逗号的一元组也算元组。
@@ -127,10 +127,10 @@ fn record_tail(tokens: Int, i: Int, acc: Int) {
   if i >= len(tokens) { return {node: {kind: "记录", fields: acc}, next: i} }
   let t = tokens[i]
   if is_punct(t, "}") { return {node: {kind: "记录", fields: acc}, next: i + 1} }
-  if t.kind != "ident" { return {node: {kind: "Error", text: t.text, line: t.line, column: t.column}, next: i + 1} }
+  if t.kind != "ident" { return {node: {kind: "误", text: t.text, line: t.line, column: t.column}, next: i + 1} }
   let name = t.text
   if i + 1 >= len(tokens) || !is_punct(tokens[i + 1], ":") {
-    return {node: {kind: "Error", text: name, line: t.line, column: t.column}, next: i + 1}
+    return {node: {kind: "误", text: name, line: t.line, column: t.column}, next: i + 1}
   }
   let value = logic(tokens, i + 2)
   var next = value.next

@@ -49,7 +49,7 @@ console.log("错处如实说");
   ok("不认的语句照实说", r2.ok === false && r2.text.includes("还不认"), String(r2.text));
   const r3 = 跑([{ kind: "定", name: "x", value: name("缺") }]);
   ok("值里有未知名字时整体出错", r3.ok === false && r3.text.includes("没有这个名字"), String(r3.text));
-  const r4 = 跑([{ kind: "Error", text: "语法层说这里坏了" }]);
+  const r4 = 跑([{ kind: "误", text: "语法层说这里坏了" }]);
   ok("语法层的错被原样带上来", r4.ok === false && r4.text.includes("语法层说这里坏了"), String(r4.text));
 }
 

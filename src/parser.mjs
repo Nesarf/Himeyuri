@@ -539,7 +539,7 @@ export function parse(tokens, options = {}) {
     // produces a second complaint from endStatement and then a third, which is exactly the cascade the
     // recovery is meant to prevent.
     while (!at("eof") && !at("newline") && !atPunct("}") && !atPunct(")") && !atPunct(",")) advance();
-    return { kind: "Error", line: t.line, column: t.column };
+    return { kind: "误", line: t.line, column: t.column };
   }
 
   const ast = parseModule();

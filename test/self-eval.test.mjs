@@ -69,7 +69,7 @@ console.log("错处要说清，不静音");
   ok("不认识的运算符", r2.includes("不认识的运算符"), JSON.stringify(r2));
   const r3 = call("求值成文字", [{ kind: "wat" }, 空]);
   ok("不认识的节点", r3.includes("不认识的节点"), JSON.stringify(r3));
-  const r4 = call("求值成文字", [{ kind: "Error", text: "坏括号" }, 空]);
+  const r4 = call("求值成文字", [{ kind: "误", text: "坏括号" }, 空]);
   ok("语法层的错被原样带上来", r4.includes("语法层报的错") && r4.includes("坏括号"), JSON.stringify(r4));
   const r5 = call("求值成文字", [{ kind: "调用", callee: name("nope"), args: [] }, 空]);
   ok("没有的函数据实说", r5.includes("没有这个函数"), JSON.stringify(r5));

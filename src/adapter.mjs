@@ -25,11 +25,11 @@ const 字面量 = (节点) => {
   // 宿主用的类型名是 "string"，而自举认的是 "str" —— 这个译名差一点就让「字符串」
   // 变成一句「转不了」。而它说出了原因，于是那处错立刻可见，而不是静默地算错。
   if (节点.type === "str" || 节点.type === "string") return { kind: "字", type: "string", text: String(节点.value) };
-  return { kind: "Error", text: "这一版只转整数与字符串字面量，而这里是 " + String(节点.type) };
+  return { kind: "误", text: "这一版只转整数与字符串字面量，而这里是 " + String(节点.type) };
 };
 
 const 转 = (节点) => {
-  if (!节点 || typeof 节点 !== "object") return { kind: "Error", text: "空节点" };
+  if (!节点 || typeof 节点 !== "object") return { kind: "误", text: "空节点" };
 
   switch (节点.kind) {
     case "字":
@@ -62,7 +62,7 @@ const 转 = (节点) => {
 
     default:
       // 语句与别的种类：如实说不转，而不是硬塞一个形状进去。
-      return { kind: "Error", text: "这一版不转 " + String(节点.kind) };
+      return { kind: "误", text: "这一版不转 " + String(节点.kind) };
   }
 };
 
@@ -79,7 +79,7 @@ export const expression = (源码) => {
     return null;
   };
   const 目 = 找(语句);
-  if (!目) return { kind: "Error", text: "这份源码里没有可转的 return 表达式" };
+  if (!目) return { kind: "误", text: "这份源码里没有可转的 return 表达式" };
   return 转(目);
 };
 
@@ -106,7 +106,7 @@ const 块 = (节点) => {
 };
 
 const 语句 = (节点) => {
-  if (!节点 || typeof 节点 !== "object") return { kind: "Error", text: "空语句" };
+  if (!节点 || typeof 节点 !== "object") return { kind: "误", text: "空语句" };
 
   switch (节点.kind) {
     case "定":
@@ -142,15 +142,15 @@ const 语句 = (节点) => {
 
     case "块":
       // 裸的块：它的语句就是这一条「语句」，于是上面用 块() 展开它。
-      return { kind: "Error", text: "裸块不该单独出现" };
+      return { kind: "误", text: "裸块不该单独出现" };
 
     case "声明语句":
     case "函数":
       // 函数声明要一张函数表，而那是另一件事。说清，而不是塞一个假形状进去。
-      return { kind: "Error", text: "函数声明不在这一层：那要一张函数表" };
+      return { kind: "误", text: "函数声明不在这一层：那要一张函数表" };
 
     default:
-      return { kind: "Error", text: "这一版不转这种语句：" + String(节点.kind) };
+      return { kind: "误", text: "这一版不转这种语句：" + String(节点.kind) };
   }
 };
 

@@ -133,7 +133,7 @@ console.log("\nwhat it refuses to guess");
 }
 {
   const node = attempt(() => readStatement("if a return 1"));
-  ok("an if without a block is refused, not repaired", !node.error && node.value.kind === "Error", node.error || JSON.stringify(node.value));
+  ok("an if without a block is refused, not repaired", !node.error && node.value.kind === "误", node.error || JSON.stringify(node.value));
 }
 
 console.log("\n" + passed + " passed, " + failed + " failed");

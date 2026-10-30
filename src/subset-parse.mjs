@@ -508,7 +508,7 @@ export const 子集解 = (tokens, options = {}) => {
     // 会引出第二条（收句）、第三条（外层），而那正是恢复要防的连锁。
     进();
     while (!是("eof") && !是("newline") && !是标("}") && !是标(")") && !是标(",")) 进();
-    return { kind: "Error", line: t.line, column: t.column };
+    return { kind: "误", line: t.line, column: t.column };
   }
 
   const ast = 解析模块();

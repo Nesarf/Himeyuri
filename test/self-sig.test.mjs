@@ -30,8 +30,8 @@ const readRaw = (source) => {
 // describe, instead of taking the whole scaffold down and leaving no reason behind.
 const read = (source) => {
   const r = attempt(() => readRaw(source));
-  if (r.error) return { kind: "Error", text: "reader threw: " + r.error };
-  if (!r.value || typeof r.value !== "object") return { kind: "Error", text: "reader returned " + JSON.stringify(r.value) };
+  if (r.error) return { kind: "误", text: "reader threw: " + r.error };
+  if (!r.value || typeof r.value !== "object") return { kind: "误", text: "reader returned " + JSON.stringify(r.value) };
   return r.value;
 };
 
@@ -112,11 +112,11 @@ console.log("\nwhat it does not do, said out loud");
 console.log("\nwhat it refuses to guess");
 {
   const sig = read("let x = 1\n");
-  ok("something that is not a function is refused", sig.kind === "Error", JSON.stringify(sig));
+  ok("something that is not a function is refused", sig.kind === "误", JSON.stringify(sig));
 }
 {
   const sig = read("fn broken\n");
-  ok("a function without a parameter list is refused", sig.kind === "Error", JSON.stringify(sig));
+  ok("a function without a parameter list is refused", sig.kind === "误", JSON.stringify(sig));
 }
 
 console.log("\n" + passed + " passed, " + failed + " failed");

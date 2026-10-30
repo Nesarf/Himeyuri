@@ -15,7 +15,7 @@
 //   {kind: "字段", target, name}
 //   {kind: "组", items}
 //   {kind: "记录", fields}
-//   {kind: "Error", text}
+//   {kind: "误", text}
 //
 // 环境是键值对的元组（与 json.hmyr 那边同一个表示）：记录的字段名必须是标识符，
 // 而环境里的名字来自程序本身，所以用对表。
@@ -1096,7 +1096,7 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
   }
   if 种 == "组" { return 求参数(节点.items, 环境) }
   if 种 == "记录" { return 求记录(节点, 环境) }
-  if 种 == "Error" { return 坏("语法层报的错：" + 节点.text) }
+  if 种 == "误" { return 坏("语法层报的错：" + 节点.text) }
   return 坏("不认识的节点：" + 种)
 }
 
@@ -1218,7 +1218,7 @@ fn 执行(节点: Int, 环境: Int) -> Int {
     return 执行块(节点.otherwise, 环境)
   }
   if 种 == "当" { return 执行反复(节点, 环境, 0) }
-  if 种 == "Error" { return 坏执行("语法层报的错：" + 节点.text) }
+  if 种 == "误" { return 坏执行("语法层报的错：" + 节点.text) }
   return 坏执行("这一版还不认这种语句：" + 种)
 }
 

@@ -10,7 +10,7 @@ import "./chain.hmoca"
 //     用 nil 节点而不是空元组：空元组是一个**值**，而「没有值」不是值。两者混在一起，
 //     求值器就分不清 len 该不该收它。
 //   <表达式>           -> {kind: "表达式语句", value}
-// 认不出来时给 {kind: "Error", text}，不猜。
+// 认不出来时给 {kind: "误", text}，不猜。
 //
 // 依赖是明写的：表达式那一层在 chain.hmyr 里，加载器会顺着它把 lex.hmyr 也带进来。
 // 关键字在词法里都是 ident（这条边界写在 lex.hmyr 的文件头），所以这里用 text 判断。
@@ -29,12 +29,12 @@ fn from_here(tokens: Int, i: Int) -> Int {
 fn binding(tokens: Int, i: Int, keyword: String) {
   let 位 = tokens[i]
   if i + 2 >= len(tokens) {
-    return {node: {kind: "Error", text: keyword, line: 位.line, column: 位.column}, next: i}
+    return {node: {kind: "误", text: keyword, line: 位.line, column: 位.column}, next: i}
   }
   let name = tokens[i + 1]
   let sign = tokens[i + 2]
   if name.kind != "ident" || sign.kind != "punct" || sign.text != "=" {
-    return {node: {kind: "Error", text: keyword + " " + name.text, line: 位.line, column: 位.column}, next: i + 1}
+    return {node: {kind: "误", text: keyword + " " + name.text, line: 位.line, column: 位.column}, next: i + 1}
   }
   let got = from_here(tokens, i + 3)
   if keyword == "let" {
@@ -45,7 +45,7 @@ fn binding(tokens: Int, i: Int, keyword: String) {
 
 fn statement(tokens: Int, i: Int) {
   if i >= len(tokens) {
-    return {node: {kind: "Error", text: "", line: 0, column: 0}, next: i}
+    return {node: {kind: "误", text: "", line: 0, column: 0}, next: i}
   }
   let t = tokens[i]
   if is_word(t, "let") || is_word(t, "var") {
@@ -97,7 +97,7 @@ fn parse_if(tokens: Int, i: Int) {
   let cond = from_here(tokens, i)
   let at = skip_newlines(tokens, cond.next)
   if at >= len(tokens) || !is_punct(tokens[at], "{") {
-    return {node: {kind: "Error", text: "if", line: 位.line, column: 位.column}, next: at}
+    return {node: {kind: "误", text: "if", line: 位.line, column: 位.column}, next: at}
   }
   let then = block(tokens, at + 1)
   var otherwise = ()
@@ -125,7 +125,7 @@ fn parse_while(tokens: Int, i: Int) {
   let cond = from_here(tokens, i)
   let at = skip_newlines(tokens, cond.next)
   if at >= len(tokens) || !is_punct(tokens[at], "{") {
-    return {node: {kind: "Error", text: "while", line: 位.line, column: 位.column}, next: at}
+    return {node: {kind: "误", text: "while", line: 位.line, column: 位.column}, next: at}
   }
   let body = block(tokens, at + 1)
   return {node: {kind: "当", cond: cond.node, body: body.list, line: 位.line, column: 位.column}, next: body.next}

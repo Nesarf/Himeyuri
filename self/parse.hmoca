@@ -60,7 +60,7 @@ fn read_name(s: String, i: Int, acc: String) {
 // 原子：括号、整数、标识符。括号里的解析回到最低优先级那一层。
 fn parse_atom(s: String, i: Int) {
   let j = skip_sp(s, i)
-  if j >= len(s) { return {node: {kind: "Error", text: ""}, next: j} }
+  if j >= len(s) { return {node: {kind: "误", text: ""}, next: j} }
   let c = s[j]
   if c == "(" {
     let inner = parse_add(s, j + 1)
@@ -76,7 +76,7 @@ fn parse_atom(s: String, i: Int) {
     let got = read_name(s, j, "")
     return {node: {kind: "名", text: got.text}, next: got.next}
   }
-  return {node: {kind: "Error", text: c}, next: j + 1}
+  return {node: {kind: "误", text: c}, next: j + 1}
 }
 
 // 乘除一层：左结合，靠尾递归累积，层数不随运算个数增长。

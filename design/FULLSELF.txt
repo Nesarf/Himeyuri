@@ -2082,6 +2082,28 @@ selfloa 的 27/27）。
     住在两个世界」（JS 的 Error 与树上的误）。下一轮只换 kind 语境的那几处，而
     host-deps 与 loader-swap 里的那两个必须留着。
 
+自立：32 种 kind 全部落地（2026-11-02，新一段第 30 轮）
+
+    最后一种 Error → 误：49 处、20 份文件，而 3 处故意保留 ——
+
+      test/host-deps.test.mjs  两处，JS 内置清单里的 Error（TypeError 那一类）
+      tools/loader-swap.mjs    一处，找报错文本用的字符串匹配
+
+    验证：搜 32 个旧名，全仓只剩那 3 处。所以 design/KINDS-MAP.txt 那张表全部落地，
+    而它末尾补了一段落地情况与五条方法。
+
+    读数：eval、codes-eval、minimal-eval、bytecode、vm、parser、adapter、self-parse、
+    self-stmt、self-eval、host-deps、docs 十二套全过；run.hmoks 重编。
+
+    于是自立的两件都收口了：
+
+      错误码    七层 99 个码、两张表 84 条、484 处裸码引用、conform 九项判据全过
+      AST kind  32 种全部落地，全仓只剩 3 处故意的保留
+
+    剩第三件：字节码的指令名（CONST / CALL / RET）。那一样与 kind 不同 —— 它在
+    runtime/run.hmoks 的字节流里，所以改它要同时动编译（bytecode.mjs / compile.hmoca）、
+    两个执行器（vm.mjs / hmyr.c）与已有的 .hmoks 产物。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 HMYR-載-001；
 另外引的文件不在就报 HMYR-載-003（宿主也是这个码）。顺序取后序，于是 order 逐项相同。

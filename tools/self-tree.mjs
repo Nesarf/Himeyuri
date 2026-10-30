@@ -28,7 +28,7 @@ const 造模块 = (源) => rt.callFunction(rt.functions.get("造模块"), [源],
 const 映射 = {
   num: "字", str: "字", name: "名",
   bin: "二元", unary: "一元", call: "调用", field: "字段", index: "索引",
-  tuple: "组", record: "记录", err: "Error",
+  tuple: "组", record: "记录", err: "误",
   let: "定", var: "变", return: "返回", assign: "赋值", expr: "表达式语句",
   if: "若", while: "当",
   Fn: "函数", Block: "块", Module: "模块", Import: "引入",
