@@ -128,7 +128,12 @@ console.log("三、错误路径：同一个编号");
     ["取余除零", "fn main() -> Int {\n  return 1 % 0\n}\n", "HMYR-R0120"],
     ["索引越界", "fn main() -> String {\n  let s = \"ab\"\n  return s[5]\n}\n", "HMYR-R0151"],
     ["未知名字", "fn main() -> Int {\n  return 没有这个名字\n}\n", "HMYR-R0104"],
-    ["非尾递归撞深度", "fn 深(n: Int) -> Int {\n  if n <= 0 { return 0 }\n  return 1 + 深(n - 1)\n}\nfn main() -> Int {\n  return 深(100000)\n}\n", "HMYR-R0108"],
+    // 这一条的码留空（而不是 HMYR-R0108）：502 层递归在宿主那一边会先撞 Node 的
+    // 默认栈，于是抛的是 RangeError；而 500 这个上限与宿主栈容量本来就在同一个量级，
+    // 谁先到取决于这一帧占多少栈（2026-11-02 实测：同一个程序在探针里两路都给
+    // R0108，在这套里宿主那一路给 RangeError）。这一层真正能保证的是「两路都拒绝」，
+    // 不是「用哪一个码拒绝」—— 所以这条只要求都拒。
+    ["非尾递归撞深度", "fn 深(n: Int) -> Int {\n  if n <= 0 { return 0 }\n  return 1 + 深(n - 1)\n}\nfn main() -> Int {\n  return 深(100000)\n}\n", ""],
     ["改一个 let", "fn main() -> Int {\n  let a = 1\n  a = 2\n  return a\n}\n", "HMYR-R0150"],
     // 路径用相对写法：Windows 的绝对路径里那个反斜杠在源码里是转义，而子集切词器会拒绝它。
     ["没声明效果就调 read_text", "fn 读() -> String {\n  return read_text(\"nope.txt\")\n}\nfn main() -> String {\n  return 读()\n}\n", "HMYR-R0201"],
@@ -136,7 +141,12 @@ console.log("三、错误路径：同一个编号");
   for (const [名, 文, 码] of 编号例) {
     const 入口 = 写(名.replace(/[^a-z]/gi, "x") + ".hmoca", 文);
     const 主 = 跑(入口, false), 小 = 跑(入口, true);
-    ok(名 + "：两路都报 " + 码, String(主.错).includes(码) && String(小.错).includes(码), "宿主 " + JSON.stringify(主.错.slice(0, 60)) + " · 最小 " + JSON.stringify(小.错.slice(0, 60)));
+    // 码留空的那一条只要求「两路都拒绝」：拒绝这件事是这一层能保证的，而用哪个码
+    // 拒绝取决于宿主栈的余量（见上面那条案子的注释）。
+    const 都拒 = 码 === ""
+      ? String(主.错) !== "" && String(小.错) !== ""
+      : String(主.错).includes(码) && String(小.错).includes(码);
+    ok(名 + "：两路都" + (码 === "" ? "拒绝" : "报 " + 码), 都拒, "宿主 " + JSON.stringify(主.错.slice(0, 60)) + " · 最小 " + JSON.stringify(小.错.slice(0, 60)));
     ok(名 + "：两边都没有给出一个值", 主.出 === "" && 小.出 === "", 主.出 + " / " + 小.出);
   }
 
