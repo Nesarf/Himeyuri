@@ -61,7 +61,10 @@ try {
   {
     const 模 = path.join(临, "mod");
     fs.mkdirSync(模, { recursive: true });
-    fs.writeFileSync(path.join(模, "lib.hmoca"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
+    // 双 要写 pub：它被另一个模块（imp.hmoca）调用，而可见性检查会拒绝没有 pub 的
+    // 跨模块调用（HMYR-R0250）。在 lib.hmoca 与 imp.hmoca 同属一个临时包的前提下，
+    // pub 就够 —— 这一条以前没报，是因为接受它的人只看扁平表（2026-11-02）。
+    fs.writeFileSync(path.join(模, "lib.hmoca"), "pub fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
     写("hello.hmoca", "fn main() -> Int {\n  return 5\n}\n");
     写("loop.hmoca", "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n");
     写("fn.hmoca", "fn 加(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  let s = \"abc\"\n  return 加(len(s), 2)\n}\n");
