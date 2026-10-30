@@ -127,9 +127,9 @@ export const 写程序 = (程序) => {
   const w = new 写者();
   for (const b of 魔数) w.u8(b);
   w.u16(版本);
-  const 函数们 = [...程序.函数们.values()];
-  w.u16(函数们.length);
-  for (const 函 of 函数们) {
+  const 函数族 = [...程序.函数族.values()];
+  w.u16(函数族.length);
+  for (const 函 of 函数族) {
     w.串(函.名);
     w.u16(函.参数量);
     w.u16(函.槽数);
@@ -172,7 +172,7 @@ export const 读程序 = (字节, 工厂) => {
   const 元组工厂 = (工厂 && 工厂.元组) || ((项) => ({ tag: "tuple", items: 项 }));
   const 记录工厂 = (工厂 && 工厂.记录) || ((字段) => ({ tag: "record", fields: 字段 }));
   const 函数数 = r.u16();
-  const 函数们 = new Map();
+  const 函数族 = new Map();
   for (let i = 0; i < 函数数; i++) {
     const 名 = r.串();
     const 参数量 = r.u16();
@@ -202,10 +202,10 @@ export const 读程序 = (字节, 工厂) => {
       else if (形 === "value") 指令.a = r.值(元组工厂, 记录工厂);
       码列.push(指令);
     }
-    函数们.set(名, { 名, 参数量, 槽数, 效果, 码: 码列 });
+    函数族.set(名, { 名, 参数量, 槽数, 效果, 码: 码列 });
   }
   const 全局数 = r.u16();
   const 全局们 = [];
   for (let i = 0; i < 全局数; i++) 全局们.push({ name: r.串() });
-  return { 函数们, 全局们 };
+  return { 函数族, 全局们 };
 };

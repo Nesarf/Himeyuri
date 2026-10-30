@@ -394,10 +394,10 @@ export const 顶层段名 = "__hmyr_top__";
 
 // 模块 → 一个程序：函数表 + 全局常量表 + 顶层指令（用来登记常量）。
 export const 编译模块 = (ast) => {
-  const 函数们 = new Map();   // 名 -> 编译结果
+  const 函数族 = new Map();   // 名 -> 编译结果
   const 全局们 = [];          // 常量声明（Const）
   for (const decl of ast.decls) {
-    if (decl.kind === "函数") 函数们.set(decl.name, 编译函数(decl));
+    if (decl.kind === "函数") 函数族.set(decl.name, 编译函数(decl));
     // Const 与 VarTop 都进上一级那张表：它们的初值都在顶层段里算。
     // 两者的差别只在「函数里能不能写它」—— 而那一半由 Ident / Assign 两支决定，
     // 不由这里决定。
@@ -407,11 +407,11 @@ export const 编译模块 = (ast) => {
   // 有常量就有一段初始化。它走的是普通函数那条路（编译、装栈、RET 交回 nil），
   // 这样两台机器不必为一个「顶层段」各长一套机制 —— 少一套机制就少一处分叉。
   if (全局们.length) {
-    函数们.set(顶层段名, 编译函数({ name: 顶层段名, params: [], body: null, 顶层常量: 全局们 }));
+    函数族.set(顶层段名, 编译函数({ name: 顶层段名, params: [], body: null, 顶层常量: 全局们 }));
   }
   // 多份模块合成一个程序时，一个名字只能有一段代码——重名在加载器那边已经警告过，
   // 这里不覆盖：先到的那一份赢，与「后到的覆盖」相反，所以要说清。
-  return { 函数们, 全局们 };
+  return { 函数族, 全局们 };
 };
 
 // 把几份模块合起来：函数表并集，全局常量并集。重名保留先到的。
@@ -421,10 +421,10 @@ export const 编译模块 = (ast) => {
 // 于是 self/lex.hmyr 的自测 main 会先到，而「先到者赢」会让入口的 main 输掉。
 // 症状是「跑起来没输出、退出码是某个自测数出来的值」—— 那种错最难猜。
 export const 合并程序 = (几份, 入口) => {
-  const 函数们 = new Map();
+  const 函数族 = new Map();
   const 全局们 = [];
   for (const 一份 of 几份) {
-    for (const [名, 函] of 一份.函数们) if (!函数们.has(名)) 函数们.set(名, 函);
+    for (const [名, 函] of 一份.函数族) if (!函数族.has(名)) 函数族.set(名, 函);
     全局们.push(...一份.全局们);
   }
   if (入口) {
@@ -435,9 +435,9 @@ export const 合并程序 = (几份, 入口) => {
      * 却不生效，而它 import 的 run.hmoca 里那一份（读文件、跑程序）赢了。
      * 症状是「带参数就报 cannot read 一个目录」，而 print 一行都不出现。 */
     for (const 名 of ["main", "命令行入口"]) {
-      const 入口函 = 入口.函数们.get(名);
-      if (入口函) 函数们.set(名, 入口函);
+      const 入口函 = 入口.函数族.get(名);
+      if (入口函) 函数族.set(名, 入口函);
     }
   }
-  return { 函数们, 全局们 };
+  return { 函数族, 全局们 };
 };

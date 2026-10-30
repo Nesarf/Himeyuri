@@ -65,9 +65,9 @@ if (用JS落盘) {
     }
     return v;
   };
-  const 函数们 = new Map();
-  for (const f of r.函数们) {
-    函数们.set(f.名, {
+  const 函数族 = new Map();
+  for (const f of r.函数族) {
+    函数族.set(f.名, {
       名: f.名,
       参数量: f.参数量,
       槽数: f.槽数,
@@ -83,12 +83,12 @@ if (用JS落盘) {
       }),
     });
   }
-  字节 = 写程序({ 函数们, 全局们: [] });
+  字节 = 写程序({ 函数族, 全局们: [] });
 } else {
   // 落盘：把编出来的函数表直接交给自举层的打包者。它交回的是「块们」——
   // 攒够 512 字节封一块，于是那一层不必每一步都复制已累积的全部内容。
   const 装 = runUnit(loadUnit(path.join(根, "self/pack.hmoca")), { stage0: true, stepLimit: 300000000 });
-  const 块们 = 装.callFunction(装.functions.get("打包"), [r.函数们], null);
+  const 块们 = 装.callFunction(装.functions.get("打包"), [r.函数族], null);
   if (!块们) {
     console.error("HMYR 打包者：没有交回字节");
     process.exit(2);
@@ -100,6 +100,6 @@ if (用JS落盘) {
 
 fs.writeFileSync(path.resolve(输出), 字节);
 let 指令数 = 0;
-for (const f of r.函数们) 指令数 += (f.码 || []).length;
-console.log("HMYR 编译器：" + r.函数们.length + " 个函数，" + 指令数 + " 条指令，" +
+for (const f of r.函数族) 指令数 += (f.码 || []).length;
+console.log("HMYR 编译器：" + r.函数族.length + " 个函数，" + 指令数 + " 条指令，" +
   字节.length + " 字节（" + (用JS落盘 ? "code-file 落盘" : "pack 落盘") + "）→ " + 输出);

@@ -44,9 +44,9 @@ const 编 = (() => {
   return (源码) => {
     const r = rt.callFunction(编源码, [源码], null);
     if (!r || r.ok === false) return { 错: r ? r.错 : "没有交回值" };
-    const 函数们 = new Map();
-    for (const f of r.函数们) {
-      函数们.set(f.名, {
+    const 函数族 = new Map();
+    for (const f of r.函数族) {
+      函数族.set(f.名, {
         名: f.名, 参数量: f.参数量, 槽数: f.槽数,
         效果: Array.from(f.效果 || []),
         码: Array.from(f.码 || []).map((i) => {
@@ -59,7 +59,7 @@ const 编 = (() => {
         }),
       });
     }
-    return { 程序: { 函数们, 全局们: [] } };
+    return { 程序: { 函数族, 全局们: [] } };
   };
 })();
 
@@ -168,7 +168,7 @@ console.log("四、自编译：HMYR 编出的编译器，跑起来还能编");
     if (!自编.错) {
       const 码路 = path.join(临, "selfcompiled.hmoks");
       fs.writeFileSync(码路, 写程序(自编.程序));
-      const 函数数 = 自编.程序.函数们.size;
+      const 函数数 = 自编.程序.函数族.size;
       ok("产物里有几十个函数（" + 函数数 + " 个）", 函数数 > 50, String(函数数));
       // JS 那台先跑一遍：与 C 无关，任何机器上都该成立。
       const vm = new 虚拟机(自编.程序, { capabilities: 本机能力(), write: (s) => { 出 = 出 + s; }, stepLimit: 200000000, maxDepth: 4000 });

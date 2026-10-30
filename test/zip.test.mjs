@@ -28,7 +28,7 @@ ok("self/zip.hmoca 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
 const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))), 编译模块(unit.modules.get(unit.order[unit.order.length - 1])));
-ok("它编出了函数表", 程序.函数们.size >= 9, String(程序.函数们.size));
+ok("它编出了函数表", 程序.函数族.size >= 9, String(程序.函数族.size));
 
 const 有编译器 = (() => {
   try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }

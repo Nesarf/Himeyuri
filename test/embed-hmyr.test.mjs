@@ -29,7 +29,7 @@ ok("self/embed.hmoca 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
 const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件))));
-ok("它编出了三个函数", 程序.函数们.size === 3, String(程序.函数们.size));
+ok("它编出了三个函数", 程序.函数族.size === 3, String(程序.函数族.size));
 
 console.log("二、读字节那一格在四处都有");
 {

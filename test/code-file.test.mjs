@@ -89,11 +89,11 @@ console.log("三、逐项比对：没有东西被丢掉");
   const 源码 = 'fn f(x: Int) -> Int effects(process) { return x * 2 }\nfn main() -> Int { return f(21) }\n';
   const 原 = 编(源码);
   const 回 = 读程序(写程序(原), 工厂);
-  ok("函数个数一样", 原.函数们.size === 回.函数们.size, 原.函数们.size + " 对 " + 回.函数们.size);
-  const 名a = [...原.函数们.keys()].sort().join(",");
-  const 名b = [...回.函数们.keys()].sort().join(",");
+  ok("函数个数一样", 原.函数族.size === 回.函数族.size, 原.函数族.size + " 对 " + 回.函数族.size);
+  const 名a = [...原.函数族.keys()].sort().join(",");
+  const 名b = [...回.函数族.keys()].sort().join(",");
   ok("函数名字一样", 名a === 名b, 名a + " 对 " + 名b);
-  const fa = 原.函数们.get("f"), fb = 回.函数们.get("f");
+  const fa = 原.函数族.get("f"), fb = 回.函数族.get("f");
   ok("参数量一样", fa.参数量 === fb.参数量);
   ok("槽数一样", fa.槽数 === fb.槽数, fa.槽数 + " 对 " + fb.槽数);
   ok("效果名一样", fa.效果.join(",") === fb.效果.join(","), fa.效果.join(",") + " 对 " + fb.效果.join(","));
@@ -108,7 +108,7 @@ console.log("三、逐项比对：没有东西被丢掉");
   ok("每条指令都一样", 同, 哪);
   // 这台机器上出现的每一种操作码都要在那张表里 —— 第 253 行那个 default 分支就是为它兜底的。
   const 出现 = new Set();
-  for (const 函 of 原.函数们.values()) for (const 指令 of 函.码) 出现.add(指令.op);
+  for (const 函 of 原.函数族.values()) for (const 指令 of 函.码) 出现.add(指令.op);
   const 缺 = [...出现].filter((op) => !操作码表.includes(op));
   ok("用到的操作码都在表里", 缺.length === 0, 缺.join(","));
 }

@@ -39,12 +39,12 @@ const 份们 = unit.order.map((文件) => 编译模块(unit.modules.get(文件))
 // 入口文件的 main 覆盖别人那一份 —— 这条规矩现在在 合并程序 里，不在这里。
 const 入口名 = unit.order[unit.order.length - 1];
 const 入口份 = 份们[份们.length - 1];
-if (!入口份.函数们.get("main")) {
+if (!入口份.函数族.get("main")) {
   console.error("入口文件里没有 main：" + 入口名);
   process.exit(1);
 }
 const 程序 = 合并程序(份们, 入口份);
 const 字节 = 写程序(程序);
 fs.writeFileSync(path.resolve(输出), 字节);
-const 指令数 = [...程序.函数们.values()].reduce((n, f) => n + f.码.length, 0);
-console.log(程序.函数们.size + " 个函数，" + 指令数 + " 条指令，" + 字节.length + " 字节 → " + 输出);
+const 指令数 = [...程序.函数族.values()].reduce((n, f) => n + f.码.length, 0);
+console.log(程序.函数族.size + " 个函数，" + 指令数 + " 条指令，" + 字节.length + " 字节 → " + 输出);

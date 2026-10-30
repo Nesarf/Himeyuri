@@ -614,18 +614,18 @@ fn 找导入们(源码: String) -> Int {
 }
 
 fn 跑模块们(源码们: Int, 参们: Int) -> String {
-  let 函数们 = 合并从((), 源码们, 0)
-  if len(函数们) == 0 {
+  let 函数族 = 合并从((), 源码们, 0)
+  if len(函数族) == 0 {
     // 一个声明也没有：那它可能是裸语句（老用法）。交回那条路，而不是报「没有 fn」。
     if len(源码们) == 0 { return "错：没有源码" }
     return 跑程序文字(源码们[0])
   }
-  let 选 = 选函数(函数们, "main")
+  let 选 = 选函数(函数族, "main")
   // 选[3] 是 main 自己声明的效果 —— 它决定这个程序能碰什么。
   var 主效 = ()
   if len(选) > 3 { 主效 = 选[3] }
   let 常量们 = 合并常量从((), 源码们, 0)
-  let r = 跑程序带常量与参(选[2], 函数们, 常量们, 参们, 主效)
+  let r = 跑程序带常量与参(选[2], 函数族, 常量们, 参们, 主效)
   if r.ok == false { return "错：" + r.text }
   return str(r.value)
 }
@@ -841,9 +841,9 @@ fn 命令行入口() -> Int effects(process, file) {
 // 这一件只做语法那一半（名字），求值那一半由「跑 main」验。
 // 两半都对，才说得上「它认得自己」。
 
-fn 函数名从(函数们: Int, i: Int, acc: Int) -> Int {
-  if i >= len(函数们) { return acc }
-  return 函数名从(函数们, i + 1, acc + (函数们[i][0],))
+fn 函数名从(函数族: Int, i: Int, acc: Int) -> Int {
+  if i >= len(函数族) { return acc }
+  return 函数名从(函数族, i + 1, acc + (函数族[i][0],))
 }
 
 // 一段源码声明了哪些函数名，按出现的顺序。

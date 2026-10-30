@@ -223,7 +223,7 @@ function 句子里提到的名字(n, 出 = new Set()) {
 // 这一层只看同一模块的调用。跨模块要等模块那一层有名字解析；动态目标
 // （把函数当值传）在这门语言里今天没有，所以那两个缺口不在这里。
 function 查借用承诺(ast, 签名表, 报, 外部) {
-  const 函数们 = ast.decls.filter((d) => d.kind === "函数" && d.body);
+  const 函数族 = ast.decls.filter((d) => d.kind === "函数" && d.body);
 
   // 查脏要同时看本模块与外面那张表 —— 被调者可能在别的模块里先装载过。
   const 查脏 = (名) => {
@@ -235,7 +235,7 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
 
   // 参数名到位置。
   const 位置表 = new Map();      // 函数名 -> Map(参数名, 位置)
-  for (const d of 函数们) {
+  for (const d of 函数族) {
     const m = new Map();
     (d.params || []).forEach((p, i) => { if (p && p.name) m.set(p.name, i); });
     位置表.set(d.name, m);
@@ -243,7 +243,7 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
 
   const 脏 = new Map();          // 函数名 -> Set(位置)
   const 传 = new Map();          // 函数名 -> Map(位置 -> Set("名#位置"))
-  for (const d of 函数们) { 脏.set(d.name, new Set()); 传.set(d.name, new Map()); }
+  for (const d of 函数族) { 脏.set(d.name, new Set()); 传.set(d.name, new Map()); }
 
   const 记脏 = (名, 位) => { const s = 脏.get(名); if (s) s.add(位); };
   const 记传 = (名, 位, 目标, 目标位) => {
@@ -254,7 +254,7 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
   };
 
   // 第一遍：直接改与直接传。
-  for (const d of 函数们) {
+  for (const d of 函数族) {
     const 位们 = 位置表.get(d.name);
     const 走 = (n) => {
       if (!n || typeof n !== "object") return;
@@ -286,9 +286,9 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
   }
 
   // 第二遍：迭代到不动点。上界是函数个数 —— 环不会让它转圈。
-  for (let 轮 = 0; 轮 <= 函数们.length; 轮++) {
+  for (let 轮 = 0; 轮 <= 函数族.length; 轮++) {
     let 变了 = false;
-    for (const d of 函数们) {
+    for (const d of 函数族) {
       const m = 传.get(d.name);
       const 本脏 = 脏.get(d.name);
       for (const [位, 目标们] of m) {
@@ -303,7 +303,7 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
   }
 
   // 第三遍：报在最初那一侧 —— 对象是那个标了 borrow 的参数。
-  for (const d of 函数们) {
+  for (const d of 函数族) {
     const 位们 = 位置表.get(d.name);
     const 借来位 = new Set();
     (d.params || []).forEach((p, i) => { if (p && p.passing === "borrow") 借来位.add(i); });

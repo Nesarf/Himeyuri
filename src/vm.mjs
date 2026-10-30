@@ -50,7 +50,7 @@ export class 虚拟机 {
     // 名字到「第几个」的对照：调用序列要靠它跨机器对齐，因为名字多是中文。
     this.名序 = new Map();
     let 位 = 0;
-    for (const 键 of 程序.函数们.keys()) this.名序.set(键, 位++);
+    for (const 键 of 程序.函数族.keys()) this.名序.set(键, 位++);
     this.全局 = new Map();
     this.write = 选项.write || (() => {});
     this.writeErr = 选项.writeErr || null;
@@ -123,7 +123,7 @@ export class 虚拟机 {
     if (this.停机) return { ok: false, ...this.停机 };
     // 顶层常量那一段：调 main 之前先跑一次。它只在 main 那一次触发，于是「常量先站稳、
     // 函数才跑」这条顺序由这一句兑现，而不是靠每个调用者记得。
-    if (名 === "main" && !this.顶层跑过 && this.程序.函数们.has(顶层段名)) {
+    if (名 === "main" && !this.顶层跑过 && this.程序.函数族.has(顶层段名)) {
       this.顶层跑过 = true;
       const 序 = this.调用(顶层段名, [], 调用者效果);
       if (!序.ok) return 序;
@@ -132,7 +132,7 @@ export class 虚拟机 {
     // 少了这一步，码元序列那台会把一个宿主串塞进值域，被调函数的第一句 len() 就报 HMYR-行-015。
     // 判「是不是宿主串」要走 text.mjs 那一份，不在这里写 typeof —— 与那两个执行器同一条规矩。
     const 参数 = (实参 || []).map((x) => (是宿主串(x) ? 收进来(this.文, x) : x));
-    const 函 = this.程序.函数们.get(名);
+    const 函 = this.程序.函数族.get(名);
     if (!函) { this.坏("HMYR-行-005", "there is no name '" + 名 + "' in scope"); return { ok: false, ...this.停机 }; }
     if (++this.深 > this.深限) {
       this.坏("HMYR-行-009", "call depth exceeded (" + this.深限 + ")");
@@ -347,7 +347,7 @@ export class 虚拟机 {
           //
           // 效果与参数数的检查照做：省掉的是帧，不是规矩。
           if (码[pc + 1] && 码[pc + 1].op === "返回") {
-            const 函 = this.程序.函数们.get(指令.a);
+            const 函 = this.程序.函数族.get(指令.a);
             if (!函) { this.坏("HMYR-行-005", "there is no name '" + 指令.a + "' in scope"); return null; }
             for (const 效 of 函.效果) {
               if (效 === "realtime") continue;

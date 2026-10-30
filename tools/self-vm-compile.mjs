@@ -66,7 +66,7 @@ console.log("二、两位打包者交出同样的字节");
 for (const [标, 源] of 样本) {
   const 编r = 调("编源码", [源]);
   if (编r.err) { ok(标, false, "编源码：" + 编r.err); continue; }
-  const 包r = 调("打包", [取(编r.value, "函数们")]);
+  const 包r = 调("打包", [取(编r.value, "函数族")]);
   if (包r.err) { ok(标, false, "打包：" + 包r.err); continue; }
   const 她 = 拍平(包r.value);
 

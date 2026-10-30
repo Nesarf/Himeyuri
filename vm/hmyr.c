@@ -860,7 +860,7 @@ typedef struct {
   /* 帧链：每一帧一个记录，向上串 */
   帧记录 *帧链;
   /* 函数表：指令里带着常量值 */
-  Func *函数们;
+  Func *函数族;
   uint32_t 函数数;
 
   /* ---- 执行位置：不是根，但同样是「每台一份」 ---- */
@@ -1776,10 +1776,10 @@ static void load_program(const uint8_t *bytes, size_t len) {
   if (ver != 1) { fprintf(stderr, "hmyr: file version %u, this reader knows 1\n", ver); exit(2); }
 
   g_机->函数数 = rd_u16(&r);
-  g_机->函数们 = (Func *)calloc(g_机->函数数 ? g_机->函数数 : 1, sizeof(Func));
+  g_机->函数族 = (Func *)calloc(g_机->函数数 ? g_机->函数数 : 1, sizeof(Func));
   报装载步("函数表");
   for (uint32_t i = 0; i < g_机->函数数; i++) {
-    Func *f = &g_机->函数们[i];
+    Func *f = &g_机->函数族[i];
     f->name_off = rd_str(&r, &f->name_len);
     f->nargs = rd_u16(&r);
     f->nslots = rd_u16(&r);
@@ -1804,7 +1804,7 @@ static void load_program(const uint8_t *bytes, size_t len) {
       读一条(&r, NULL);
     }
   }
-  报装载步("函数们");
+  报装载步("函数族");
   uint16_t nglob = rd_u16(&r);
   for (uint16_t i = 0; i < nglob; i++) { uint32_t n; rd_str(&r, &n); }
   报装载步("全局名");
@@ -2229,7 +2229,7 @@ static void 记深度(Func *f, Func *父) {
       函数名(父, 父名, sizeof 父名);
       char *名 = 名字成文(f);
       fprintf(stderr, "DEPTH %u #%ld %s (from %s) %s\n", (unsigned)g_深度,
-              (long)(f - g_机->函数们), 子名, 父名, 名 ? 名 : "?");
+              (long)(f - g_机->函数族), 子名, 父名, 名 ? 名 : "?");
       free(名);
     }
   }
@@ -2528,7 +2528,7 @@ static uint16_t *gc_串分配(size_t 码元数) {
  *   argv     g_机->argv：程序参数本身是值
  *   键队列   g_机->键们：终端输入推进去的那一串
  *   帧链     g_机->帧链：每一帧的槽数组（标的是块本身，不只是槽里的值）
- *   函数表   g_机->函数们：指令里带着常量值
+ *   函数表   g_机->函数族：指令里带着常量值
  *
  * 判据：这五类全在，且 gc_收集 里不再出现第二处压标。
  * 第二刀（Hmyr根 结构）要改的就是这一份 —— 到那时这里的每一行变成 g_机->xxx，
@@ -2784,10 +2784,10 @@ static int 全局取(const uint16_t *名, uint32_t 名长, Value *出) {
 static int64_t find_func_index(uint32_t 名off) {
   uint32_t 长 = 名长(名off);
   for (uint32_t i = 0; i < g_机->函数数; i++) {
-    if (g_机->函数们[i].name_len != 长) continue;
+    if (g_机->函数族[i].name_len != 长) continue;
     uint32_t same = 1;
     for (uint32_t k = 0; k < 长; k++) {
-      if (名码(g_机->函数们[i].name_off, k) != 名码(名off, k)) { same = 0; break; }
+      if (名码(g_机->函数族[i].name_off, k) != 名码(名off, k)) { same = 0; break; }
     }
     if (same) return (int64_t)i;
   }
@@ -5281,7 +5281,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
       }
       case OP_CALLF: {
         int64_t 位 = find_func_index(in->a);
-        Func *callee = (位 >= 0) ? &g_机->函数们[位] : NULL;
+        Func *callee = (位 >= 0) ? &g_机->函数族[位] : NULL;
         if (!callee) { fail("HMYR-行-005", "there is no such function"); FRAME_RET(v_null()); }
         if (g_calls_on && g_calls_n < 200000) {
           /* 对某一个函数，顺手把实参的种类打出来：调用序列只说明「调了它」，
@@ -5432,7 +5432,7 @@ static uint8_t *read_file(const char *path, size_t *out_len) {
  * 名字池没了（2026-10-31），这里要清的只剩名字缓存 —— 它存的是偏移，
  * 换了程序那些偏移就没有意义了。 */
 static void unload_program(void) {
-  g_机->函数们 = NULL;
+  g_机->函数族 = NULL;
   g_机->函数数 = 0;
   名缓存用 = 0;
   g_机->stack_n = 0;
@@ -5806,7 +5806,7 @@ static Func *找函数(const char *名字) {
   uint32_t 长 = (uint32_t)strlen(名字);
   if (!g_机) return NULL;
   for (uint32_t i = 0; i < g_机->函数数; i++) {
-    Func *f = &g_机->函数们[i];
+    Func *f = &g_机->函数族[i];
     if (f->name_len != 长) continue;
     uint32_t 同 = 1;
     for (uint32_t k = 0; k < 长; k++) {
@@ -5916,7 +5916,7 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
   {
     const uint16_t cli_name[] = { 0x547D, 0x4EE4, 0x884C, 0x5165, 0x53E3 };
     for (uint32_t i = 0; i < g_机->函数数; i++) {
-      Func *f = &g_机->函数们[i];
+      Func *f = &g_机->函数族[i];
       if (f->name_len == 4 && 名码(f->name_off, 0) == 'm' && 名码(f->name_off, 1) == 'a' && 名码(f->name_off, 2) == 'i' && 名码(f->name_off, 3) == 'n') entry = f;
       if (f->name_len == 5) {
         uint32_t same = 1;
@@ -5936,7 +5936,7 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
     const char *字 = "__hmyr_top__";
     uint32_t 字长 = 12;
     for (uint32_t i = 0; i < g_机->函数数; i++) {
-      Func *f = &g_机->函数们[i];
+      Func *f = &g_机->函数族[i];
       if (f->name_len != 字长) continue;
       uint32_t 同 = 1;
       for (uint32_t k = 0; k < 字长; k++) {
@@ -6008,7 +6008,7 @@ static DWORD WINAPI 线程体(LPVOID 参) {
         uint32_t 长16 = 0;
         uint16_t *u = utf8_to_utf16(c->入口, strlen(c->入口), &长16);
         for (uint32_t i = 0; i < g_机->函数数; i++) {
-          Func *f = &g_机->函数们[i];
+          Func *f = &g_机->函数族[i];
           uint32_t same = 1;
           if (f->name_len != 长16) continue;
           for (uint32_t k = 0; k < 长16; k++) if (名码(f->name_off, k) != u[k]) { same = 0; break; }

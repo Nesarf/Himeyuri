@@ -33,7 +33,7 @@ const vm = new 虚拟机(程序, {
 vm.write = (s) => process.stdout.write(s);
 vm.writeErr = (s) => process.stderr.write(s);
 
-const 入口 = 程序.函数们.has("命令行入口") ? "命令行入口" : "main";
+const 入口 = 程序.函数族.has("命令行入口") ? "命令行入口" : "main";
 const r = vm.调用(入口, [], null);
 迹输出();
 if (!r.ok) {

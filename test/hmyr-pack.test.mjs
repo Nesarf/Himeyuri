@@ -58,7 +58,7 @@ console.log("一、两位打包者对同一份源码交出同样的字节");
     const 打包 = rt.functions.get("打包");
     const 编r = rt.callFunction(编源码, [源码], null);
     if (!编r || 编r.ok === false) { ok(标, false, "编译： " + (编r ? 编r.错 : "没有")); continue; }
-    const 包r = rt.callFunction(打包, [编r.函数们], null);
+    const 包r = rt.callFunction(打包, [编r.函数族], null);
     if (!包r || !Array.isArray(包r)) { ok(标, false, "打包没有交回元组"); continue; }
     const 她 = 拍平(包r);
     const 同 = js字节.length === 她.length && Buffer.compare(js字节, 她) === 0;
@@ -73,7 +73,7 @@ console.log("二、编译出来的东西跑得动（字节相同之外，还要�
   const 编r = rt.callFunction(rt.functions.get("编源码"), [源码], null);
   ok("while 那份编得出来", !编r || 编r.ok !== false, 编r ? 编r.错 : "");
   if (编r && 编r.ok !== false) {
-    const 包r = rt.callFunction(rt.functions.get("打包"), [编r.函数们], null);
+    const 包r = rt.callFunction(rt.functions.get("打包"), [编r.函数族], null);
     const 码路 = path.join(临, "run.hmoks");
     fs.writeFileSync(码路, 拍平(包r));
     // 读回来跑：main 返回 4。

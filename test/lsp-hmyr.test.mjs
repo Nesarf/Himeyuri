@@ -30,7 +30,7 @@ ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0
 const 份们 = unit.order.map((文件) => 编译模块(unit.modules.get(文件)));
 // 入口 main 覆盖别人那一份 —— 这条规矩在 合并程序 里，不再由每个调用者各抄一遍。
 const 程序 = 合并程序(份们, 份们[份们.length - 1]);
-ok("它把前端与 JSON 库都带了进来", 程序.函数们.size > 60, String(程序.函数们.size));
+ok("它把前端与 JSON 库都带了进来", 程序.函数族.size > 60, String(程序.函数族.size));
 
 const 有编译器 = (() => {
   try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }

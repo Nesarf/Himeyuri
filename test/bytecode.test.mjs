@@ -29,7 +29,7 @@ console.log("一、六份 self/ 全部编译通过");
   let 错 = "";
   try {
     for (const 文件 of 层.order) {
-      for (const [, 函] of 编译模块(层.modules.get(文件)).函数们) {
+      for (const [, 函] of 编译模块(层.modules.get(文件)).函数族) {
         函数数++; 指令数 += 函.码.length; 槽最大 = Math.max(槽最大, 函.槽数);
       }
     }
