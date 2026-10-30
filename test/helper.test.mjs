@@ -25,7 +25,7 @@ console.log("一、不给参数：列出全部");
 
 console.log("二、给一个真编号");
 {
-  const r = 跑("HMYR-R0110");
+  const r = 跑("HMYR-行-010");
   ok("退出码零", r.status === 0, String(r.status));
   ok("说得出阶段", r.stdout.includes("求值"), r.stdout.slice(0, 60));
   ok("说得出含义", r.stdout.includes("node kind") || r.stdout.includes("含义"), r.stdout.slice(0, 80));
@@ -43,7 +43,7 @@ console.log("三、给一个假编号");
 console.log("四、给一个词");
 {
   const r = 跑("depth");
-  ok("在英文含义里找得到", r.status === 0 && r.stdout.includes("HMYR-R0108"), r.stdout.slice(0, 80));
+  ok("在英文含义里找得到", r.status === 0 && r.stdout.includes("HMYR-行-009"), r.stdout.slice(0, 80));
   const 空 = 跑("完全不存在的词xyz");
   ok("找不到时不空手回去", 空.stdout.includes("全部编号"), 空.stdout.slice(0, 60));
 }
@@ -51,7 +51,7 @@ console.log("四、给一个词");
 console.log("");
 console.log("五、中文人话那一份与编号表对得上");
 {
-  const 取 = (p) => Array.from(new Set(Array.from(fs.readFileSync(path.join(ROOT, p), "utf8").matchAll(/HMYR-[A-Z]\d+/g)).map((m) => m[0]))).sort();
+  const 取 = (p) => Array.from(new Set(Array.from(fs.readFileSync(path.join(ROOT, p), "utf8").matchAll(/HMYR-[^\s"]+/g)).map((m) => m[0]))).sort();
   const 甲 = 取("conformance/codes.mjs");
   const 乙 = 取("conformance/plain.mjs");
   // 这个数跟着编号表走：索引那一组补了 R0218 与 R0219。

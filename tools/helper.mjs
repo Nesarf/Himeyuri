@@ -22,7 +22,9 @@ const 源 = fs.readFileSync(path.join(ROOT, "conformance/codes.mjs"), "utf8");
 // 而这也让这个工具在 codes.mjs 语法还没成形时仍能跑。
 const 条目们 = [];
 for (const 行 of 源.split("\n")) {
-  const m = /\{ code: "([A-Z0-9\-]+)", stage: "([a-z]+)"([^}]*)/.exec(行);
+  // 编号那一栏不能限定成 [A-Z0-9-]：2026-11-02 换码之后它是 HMYR-詞-001 这样的形状，
+  // 层名是汉字。写成「引号里的一串」才对两种都认。
+  const m = /\{ code: "([^"]+)", stage: "([a-z]+)"([^}]*)/.exec(行);
   if (!m) continue;
   const rest = m[3];
   const 含义 = /meaning: "([^"]*)"/.exec(rest);
@@ -44,20 +46,20 @@ const 参 = process.argv.slice(2);
 const 名 = 参[0] || "";
 
 if (名 === "") {
-  console.log("  这一份共 " + 条目们.length + " 个编号。按前缀分三组：");
-  for (const 组 of [["HMYR-E", "编译期的：词法、语法、链接"], ["HMYR-R", "运行期的：求值与宿主"], ["HMYR-W", "警告：说得通但形状可疑"]]) {
-    const 属于 = 条目们.filter((e) => e.code.startsWith(组[0]));
+  console.log("  这一份共 " + 条目们.length + " 个编号。按层分：");
+  for (const 组 of [["HMYR-詞", "词法"], ["HMYR-形", "语法"], ["HMYR-載", "装载"], ["HMYR-機", "机器"], ["HMYR-行", "运行时"], ["HMYR-內", "内置"], ["HMYR-碼", "字节码"]]) {
+    const 属于 = 条目们.filter((e) => e.code.startsWith(组[0] + "-"));
     console.log("    " + 组[1] + "（" + 属于.length + " 个）：" + 属于.map((e) => e.code.replace("HMYR-", "")).join(" "));
   }
   console.log("\n  给一个编号看细节，或给一个词去搜：node tools/helper.mjs <编号|词>");
   process.exit(0);
 }
 
-if (/^HMYR-[A-Z]\d+$/.test(名.toUpperCase())) {
-  const 目 = 条目们.find((e) => e.code === 名.toUpperCase());
+if (/^HMYR-[^\s]+$/.test(名)) {
+  const 目 = 条目们.find((e) => e.code === 名);
   if (!目) {
     console.log("  没有这个编号：" + 名);
-    console.log("  相近的有：" + 条目们.filter((e) => e.code.includes(名.toUpperCase().replace("HMYR-", ""))).map((e) => e.code).slice(0, 6).join(" ") || "无");
+    console.log("  相近的有：" + 条目们.filter((e) => e.code.includes(名.replace("HMYR-", ""))).map((e) => e.code).slice(0, 6).join(" ") || "无");
     process.exit(1);
   }
   const 阶段 = { lex: "词法", parse: "语法", link: "链接", run: "求值", host: "宿主", tool: "工具", check: "检查" }[目.stage] || 目.stage;
