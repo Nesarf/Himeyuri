@@ -7,7 +7,7 @@
 // 节点形状（由 self/chain.hmyr 与 self/stmt.hmyr 定义）：
 //   {kind: "int" | "num", text}      整数（原文）
 //   {kind: "字", type: "string", text}              字符串
-//   {kind: "Ident", text}             标识符
+//   {kind: "名", text}             标识符
 //   {kind: "Binary", op, left, right}
 //   {kind: "Unary", op, operand}
 //   {kind: "Call", callee, args}
@@ -377,7 +377,7 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if 参.ok == false { return 参 }
     return 求方法(环境, 主.value, 节点.callee.name, 参.value)
   }
-  if 节点.callee.kind != "Ident" { return 坏("这一版只认按名字调用") }
+  if 节点.callee.kind != "名" { return 坏("这一版只认按名字调用") }
   let 名 = 节点.callee.text
   let 参 = 求参数(节点.args, 环境)
   if 参.ok == false { return 参 }
@@ -1021,7 +1021,7 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
   // nil：这门语言没有 null，空元组就是它。而求值器要认得出 {kind: "nil"} 这种节点，
   // 因为 stmt.hmyr 用它在「return 不带值」时占位。
   if 种 == "nil" { return 好(()) }
-  if 种 == "Ident" {
+  if 种 == "名" {
     // 布尔字面量：自举那一层的切词器把关键字一律当成标识符（见 lex.hmyr 开头那段），
     // 于是 true 与 false 到这一步是「一个名字」。要在这里把它们认回来，
     // 否则目标程序里写一个 true 就会报「没有这个名字：true」。

@@ -96,8 +96,8 @@ export function 全树检查(modules, order, diagnostics, options = {}) {
         for (const x of n) 走(x, 报);
         return;
       }
-      if (n.kind === "Ident") return;
-      if (n.kind === "Call" && n.callee && n.callee.kind === "Ident") 报(n);
+      if (n.kind === "名") return;
+      if (n.kind === "Call" && n.callee && n.callee.kind === "名") 报(n);
       for (const [k, v] of Object.entries(n)) {
         if (k === "line" || k === "column" || k === "kind") continue;
         走(v, 报);

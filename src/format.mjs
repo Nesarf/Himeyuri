@@ -134,7 +134,7 @@ class Printer {
         if (node.type === "bool") return node.value ? "true" : "false";
         if (node.type === "nil") return "nil";
         return String(node.raw ?? node.value);
-      case "Ident": return node.name;
+      case "名": return node.name;
       case "Unary": return node.op + this.expr(node.operand, level, col + 1);
       case "Binary": return this.binary(node, level, col);
       case "Call": return this.expr(node.callee, level, col) + "(" + node.args.map((a) => this.expr(a, level, col)).join(", ") + ")";

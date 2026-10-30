@@ -41,7 +41,7 @@ const 量 = (目标, options = {}) => {
     return 原expr.call(this, n, s, e);
   };
   Runtime.prototype.evalCall = function (n, s, e) {
-    const 名 = n && n.callee && n.callee.kind === "Ident" ? n.callee.name : null;
+    const 名 = n && n.callee && n.callee.kind === "名" ? n.callee.name : null;
     // 「算不算内置」要问 isBuiltin，不能看「函数表里有没有它」：
     // 内置优先于同名用户函数，而 self/ 里自己定义了 slice——于是它既在函数表里，
     // 又真的按内置执行。按函数表判断会把这种情况记成用户函数，而那正是第一版的错。
@@ -99,7 +99,7 @@ try {
   ok("import 那个给四十二", 引.码 === 0 && 引.出.trim() === "42", 引.码 + " / " + JSON.stringify(引.出.trim()));
 
   console.log("二、表达式：十一种（宿主有十八种，用不到的那几种不在表里）");
-  const 应表达式 = ["Binary", "Call", "Field", "Ident", "If", "Index", "字", "Record", "Tuple", "Unary", "While"];
+  const 应表达式 = ["Binary", "Call", "Field", "名", "If", "Index", "字", "Record", "Tuple", "Unary", "While"];
   const 实表达式 = [...全部表达式].sort();
   ok("正好十一种", 实表达式.length === 11, 实表达式.join(" "));
   ok("而它们是那十一种", JSON.stringify(实表达式) === JSON.stringify(应表达式), 实表达式.join(" "));

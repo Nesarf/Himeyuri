@@ -14,7 +14,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const canon = (v) => {
   if (Array.isArray(v)) return v.map(canon);
   if (v && typeof v === "object") {
-    if (v.kind === "Ident") return { kind: "Ident", name: v.name !== undefined ? v.name : v.text };
+    if (v.kind === "名") return { kind: "名", name: v.name !== undefined ? v.name : v.text };
     if (v.kind === "字") {
       const 原 = v.value !== undefined ? v.value : (v.text !== undefined ? v.text : v.raw);
       return { kind: "字", type: v.type, value: v.type === "int" ? Number(原) : 原 };
@@ -57,7 +57,7 @@ function jsShape(node) {
   if (!node) return [];
   if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
-  if (node.kind === "Ident") return { kind: "Ident", text: node.name };
+  if (node.kind === "名") return { kind: "名", text: node.name };
   return { kind: "other:" + node.kind };
 }
 function jsBody(source) {
@@ -119,7 +119,7 @@ console.log("\nthe parts of a body");
   const body = readBody("fn f() {\n  let x = 1\n  return x\n}\n");
   ok("two statements come out", body.list.length === 2, JSON.stringify(body.list));
   ok("the first is a binding with its name", body.list[0].kind === "Let" && body.list[0].name === "x");
-  ok("the second is a return carrying the name", body.list[1].kind === "Return" && body.list[1].value.kind === "Ident");
+  ok("the second is a return carrying the name", body.list[1].kind === "Return" && body.list[1].value.kind === "名");
   ok("and the body is marked as found", body.found === true);
 }
 {

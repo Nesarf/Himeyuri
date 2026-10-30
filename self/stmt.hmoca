@@ -64,7 +64,7 @@ fn statement(tokens: Int, i: Int) {
   let got = from_here(tokens, i)
   // 赋值是语句而不是表达式：形状是「裸名字 = 表达式」。
   // 词法把 = 与 == 留成不同的 token，所以比较不会被误读成赋值。
-  if got.node.kind == "Ident" && got.next < len(tokens) && is_punct(tokens[got.next], "=") {
+  if got.node.kind == "名" && got.next < len(tokens) && is_punct(tokens[got.next], "=") {
     let value = from_here(tokens, got.next + 1)
     return {node: {kind: "Assign", name: got.node.text, value: value.node, line: got.node.line, column: got.node.column}, next: value.next}
   }

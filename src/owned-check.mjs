@@ -24,7 +24,7 @@ import { 转移, 空, 满, 关, 移 } from "./owned-state.mjs";
 
 const 是方法调用 = (n) =>
   n && n.kind === "Call" && n.callee && n.callee.kind === "Field" &&
-  n.callee.target && n.callee.target.kind === "Ident";
+  n.callee.target && n.callee.target.kind === "名";
 
 /**
  * 一棵模块树里的 owned 单次使用检查。
@@ -126,7 +126,7 @@ function 走块(语句们, 状态, 报, 签名表) {
     // let X = … —— 先看右值里有没有 放 / 取，再决定 X 自己是什么状态。
     if ((句.kind === "Let" || 句.kind === "Var") && 句.value) {
       if (句.value.kind === "Call" && 句.value.callee &&
-          句.value.callee.kind === "Ident" && 句.value.callee.name === "owned") {
+          句.value.callee.kind === "名" && 句.value.callee.name === "owned") {
         状态.set(句.name, 空);
         continue;
       }
@@ -147,13 +147,13 @@ function 走块(语句们, 状态, 报, 签名表) {
     // 静态这一层看不见。实测撞到的正是这个 —— 一个 `造(盒)` 在别处往盒里放了值，
     // 回到调用者这边还以为它是空的，于是把一次合法的取判成了 HMYR-碼-006。
     // borrow 保持：那个词的意思就是「只借不改」，信它。
-    if (调 && 调.kind === "Call" && 调.callee && 调.callee.kind === "Ident" && 签名表.has(调.callee.name)) {
+    if (调 && 调.kind === "Call" && 调.callee && 调.callee.kind === "名" && 签名表.has(调.callee.name)) {
       const 参数们 = 签名表.get(调.callee.name) || [];
       const 实参们 = 调.args || [];
       for (let i = 0; i < 实参们.length; i++) {
         const 形 = 参数们[i];
         const 实 = 实参们[i];
-        if (!实 || 实.kind !== "Ident" || !状态.has(实.name)) continue;
+        if (!实 || 实.kind !== "名" || !状态.has(实.name)) continue;
         const 传法 = 形 ? 形.passing : null;
         if (传法 === "own") 状态.set(实.name, 移);
         else if (传法 !== "borrow") 状态.delete(实.name);
@@ -200,7 +200,7 @@ function 走块(语句们, 状态, 报, 签名表) {
 function 句子里提到的名字(n, 出 = new Set()) {
   if (!n || typeof n !== "object") return 出;
   if (Array.isArray(n)) { for (const x of n) 句子里提到的名字(x, 出); return 出; }
-  if (n.kind === "Ident" && typeof n.name === "string") 出.add(n.name);
+  if (n.kind === "名" && typeof n.name === "string") 出.add(n.name);
   for (const [k, v] of Object.entries(n)) {
     if (k === "line" || k === "column" || k === "kind") continue;
     句子里提到的名字(v, 出);
@@ -261,16 +261,16 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
       if (Array.isArray(n)) { for (const x of n) 走(x); return; }
       if (n.kind === "Call" && n.callee) {
         const 主 = n.callee.kind === "Field" ? n.callee.target : null;
-        if (主 && 主.kind === "Ident" && 位们.has(主.name)) {
+        if (主 && 主.kind === "名" && 位们.has(主.name)) {
           const 方法 = n.callee.name;
           if (方法 === "放" || 方法 === "取" || 方法 === "关") 记脏(d.name, 位们.get(主.name));
         }
-        if (n.callee.kind === "Ident" && 签名表.has(n.callee.name)) {
+        if (n.callee.kind === "名" && 签名表.has(n.callee.name)) {
           const 形们 = 签名表.get(n.callee.name) || [];
           const 实们 = n.args || [];
           for (let i = 0; i < 实们.length; i++) {
             const 实 = 实们[i];
-            if (!实 || 实.kind !== "Ident" || !位们.has(实.name)) continue;
+            if (!实 || 实.kind !== "名" || !位们.has(实.name)) continue;
             const 形 = 形们[i];
             if (形 && 形.passing === "own") 记脏(d.name, 位们.get(实.name));
             else 记传(d.name, 位们.get(实.name), n.callee.name, i);
@@ -319,18 +319,18 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
       if (Array.isArray(n)) { for (const x of n) if (走(x)) return true; return false; }
       if (n.kind === "Call" && n.callee) {
         const 主 = n.callee.kind === "Field" ? n.callee.target : null;
-        if (主 && 主.kind === "Ident" && 位们.has(主.name) && 该报.has(位们.get(主.name))) {
+        if (主 && 主.kind === "名" && 位们.has(主.name) && 该报.has(位们.get(主.name))) {
           const 方法 = n.callee.name;
           if (方法 === "放" || 方法 === "取" || 方法 === "关") {
             报("'" + 主.name + "' is borrowed, and this function calls " + 方法 + " on it: a borrow promises to leave what it borrows alone", n);
             return true;
           }
         }
-        if (n.callee.kind === "Ident" && 签名表.has(n.callee.name)) {
+        if (n.callee.kind === "名" && 签名表.has(n.callee.name)) {
           const 实们 = n.args || [];
           for (let i = 0; i < 实们.length; i++) {
             const 实 = 实们[i];
-            if (!实 || 实.kind !== "Ident" || !位们.has(实.name)) continue;
+            if (!实 || 实.kind !== "名" || !位们.has(实.name)) continue;
             if (!该报.has(位们.get(实.name))) continue;
             报("'" + 实.name + "' is borrowed, and it goes into '" + n.callee.name + "' here, which changes it: a borrow promises to leave it alone all the way down", n);
             return true;

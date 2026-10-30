@@ -110,7 +110,7 @@ console.log("四、一元组与分组是两件事");
 {
   const 组 = 子集解(切("fn f(a: Int) -> Int { return (a) }\n")).ast.decls[0].body.statements[0].value;
   const 元 = 子集解(切("fn f(a: Int) -> Int { return (a,) }\n")).ast.decls[0].body.statements[0].value;
-  ok("(a) 是分组，不是元组", 组.kind === "Ident", 组.kind);
+  ok("(a) 是分组，不是元组", 组.kind === "名", 组.kind);
   ok("(a,) 是一元组", 元.kind === "Tuple" && 元.items.length === 1, 元.kind + " " + (元.items || []).length);
 }
 

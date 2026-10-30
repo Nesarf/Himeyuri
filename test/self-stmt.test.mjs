@@ -14,7 +14,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const canon = (v) => {
   if (Array.isArray(v)) return v.map(canon);
   if (v && typeof v === "object") {
-    if (v.kind === "Ident") return { kind: "Ident", name: v.name !== undefined ? v.name : v.text };
+    if (v.kind === "名") return { kind: "名", name: v.name !== undefined ? v.name : v.text };
     if (v.kind === "字") {
       const 原 = v.value !== undefined ? v.value : (v.text !== undefined ? v.text : v.raw);
       return { kind: "字", type: v.type, value: v.type === "int" ? Number(原) : 原 };
@@ -60,7 +60,7 @@ function jsStatement(source) {
     if (!node) return null;
     if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: shape(node.left), right: shape(node.right) };
     if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
-    if (node.kind === "Ident") return { kind: "Ident", text: node.name };
+    if (node.kind === "名") return { kind: "名", text: node.name };
     return { kind: "other:" + node.kind };
   };
   if (stmt.kind === "Let") return { kind: "Let", name: stmt.name, value: shape(stmt.value) };

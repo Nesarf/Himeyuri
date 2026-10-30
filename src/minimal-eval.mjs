@@ -763,7 +763,7 @@ export class 最小运行时 {
         const v = stmt.value;
         // 尾位置：return f(...) 里那个调用不必保留这一层。只对被调的是这门语言的函数成立——
         // 内置不经过这条环，而 return 一个内置调用的结果本来也不占栈。
-        if (v && v.kind === "Call" && v.callee.kind === "Ident" && this.functions.has(v.callee.name)) {
+        if (v && v.kind === "Call" && v.callee.kind === "名" && this.functions.has(v.callee.name)) {
           const 实参 = v.args.map((a) => this.求值(a, scope, effects));
           throw new 尾调用(this.functions.get(v.callee.name), 实参, effects);
         }
@@ -783,7 +783,7 @@ export class 最小运行时 {
         // 字符串也可以住在码元序列里（选项 字符串用码元序列）。打开之后，
         // 语言的每一个字符串值都是 Uint16Array，而宿主串只在进出这一层时出现。
         return this.码元串 && typeof node.value === "string" ? 码元.由宿主(node.value) : node.value;
-      case "Ident": {
+      case "名": {
         if (scope.has(node.name)) return scope.get(node.name);
         if (this.globals.has(node.name)) return this.globals.get(node.name);
         this.坏("HMYR-行-005", "there is no name '" + node.name + "' in scope");
@@ -854,7 +854,7 @@ export class 最小运行时 {
 
   调用(node, scope, effects) {
     // 内置优先：这条规矩在宿主那里是刻意的（print 这类名字不该被变量遮蔽），这里照办。
-    if (node.callee.kind === "Ident" && Object.prototype.hasOwnProperty.call(内置, node.callee.name)) {
+    if (node.callee.kind === "名" && Object.prototype.hasOwnProperty.call(内置, node.callee.name)) {
       const name = node.callee.name;
       const need = 内置效果[name];
       // 检查效果，但自举那一层例外：它是解释器，替目标程序执行，
@@ -868,7 +868,7 @@ export class 最小运行时 {
       return result === undefined ? null : result;
     }
     const args = node.args.map((a) => this.求值(a, scope, effects));
-    if (node.callee.kind === "Ident") {
+    if (node.callee.kind === "名") {
       const decl = this.functions.get(node.callee.name);
       if (decl) return this.调用函数(decl, args, effects);
     }

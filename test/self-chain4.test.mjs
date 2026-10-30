@@ -32,7 +32,7 @@ const mine = (source) => call("chain", [call("scan", [source])]).node;
 const canon = (v) => {
   if (Array.isArray(v)) return v.map(canon);
   if (v && typeof v === "object") {
-    if (v.kind === "Ident") return { kind: "Ident", name: v.name !== undefined ? v.name : v.text };
+    if (v.kind === "名") return { kind: "名", name: v.name !== undefined ? v.name : v.text };
     if (v.kind === "字") {
       const 原 = v.value !== undefined ? v.value : (v.text !== undefined ? v.text : v.raw);
       return { kind: "字", type: v.type, value: v.type === "int" ? Number(原) : 原 };
@@ -80,7 +80,7 @@ for (const source of CASES) {
 console.log("\nthe parts, spelled out");
 {
   const tree = mine("f(1, 2)");
-  ok("a call keeps its callee and its arguments in order", tree.kind === "Call" && tree.callee.kind === "Ident" && tree.args.length === 2, JSON.stringify(tree));
+  ok("a call keeps its callee and its arguments in order", tree.kind === "Call" && tree.callee.kind === "名" && tree.args.length === 2, JSON.stringify(tree));
 }
 {
   const tree = mine("g()");
@@ -117,7 +117,7 @@ console.log("\nwhat it still cannot read");
 }
 {
   const tree = attempt(() => mine("if a { 1 } else { 2 }"));
-  ok("if is still just a name", !tree.error && tree.value.kind === "Ident" && tree.value.text === "if");
+  ok("if is still just a name", !tree.error && tree.value.kind === "名" && tree.value.text === "if");
 }
 
 console.log("\n" + passed + " passed, " + failed + " failed");

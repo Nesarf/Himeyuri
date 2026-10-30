@@ -26,7 +26,7 @@ const 造模块 = (源) => rt.callFunction(rt.functions.get("造模块"), [源],
 
 // 名字的映射：self 的 kind → 宿主的 kind。
 const 映射 = {
-  num: "字", str: "字", name: "Ident",
+  num: "字", str: "字", name: "名",
   bin: "Binary", unary: "Unary", call: "Call", field: "Field", index: "Index",
   tuple: "Tuple", record: "Record", err: "Error",
   let: "Let", var: "Var", return: "Return", assign: "Assign", expr: "ExprStmt",

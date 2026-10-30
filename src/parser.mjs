@@ -486,7 +486,7 @@ export function parse(tokens, options = {}) {
       advance();
       const args = [];
       if (atPunct("(")) { advance(); while (!atPunct(")") && !at("eof")) { args.push(parseExpr()); if (atPunct(",")) advance(); else break; } expectPunct(")"); }
-      return { kind: "Call", callee: { kind: "Ident", name: "arena", line: t.line, column: t.column }, args, line: t.line, column: t.column };
+      return { kind: "Call", callee: { kind: "名", name: "arena", line: t.line, column: t.column }, args, line: t.line, column: t.column };
     }
 
     // A record literal and a block both start with {. They are told apart by looking ahead: a field
@@ -531,7 +531,7 @@ export function parse(tokens, options = {}) {
       return items.length === 1 && !trailingComma ? items[0] : { kind: "Tuple", items, line: t.line, column: t.column };
     }
 
-    if (t.type === "ident") { advance(); return { kind: "Ident", name: t.value, line: t.line, column: t.column }; }
+    if (t.type === "ident") { advance(); return { kind: "名", name: t.value, line: t.line, column: t.column }; }
 
     error("HMYR-形-004", "expected an expression, found " + describe(t));
     advance();

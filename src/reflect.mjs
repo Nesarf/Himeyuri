@@ -77,8 +77,8 @@ export function typeName(t) {
 export function references(ast, name) {
   const out = [];
   walk(ast, (node) => {
-    if (node.kind === "Ident" && node.name === name) out.push({ line: node.line, use: "name" });
-    if (node.kind === "Call" && node.callee && node.callee.kind === "Ident" && node.callee.name === name) {
+    if (node.kind === "名" && node.name === name) out.push({ line: node.line, use: "name" });
+    if (node.kind === "Call" && node.callee && node.callee.kind === "名" && node.callee.name === name) {
       out.push({ line: node.line, use: "call" });
     }
     if (node.kind === "Field" && node.name === name) out.push({ line: node.line, use: "field" });

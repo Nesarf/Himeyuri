@@ -231,7 +231,7 @@ const 编译函数 = (decl) => {
   const 表达 = (n) => {
     switch (n.kind) {
       case "字": 发("CONST", n.value); return;
-      case "Ident": {
+      case "名": {
         const 有 = 查(n.name);
         if (!有) 发("GLOBAL", n.name);          // 顶层常量之类，交给运行时的全局表
         else 发("LOAD", 有.槽);
@@ -283,7 +283,7 @@ const 编译函数 = (decl) => {
           发("CALLM", n.callee.name, n.args.length);
           return;
         }
-        if (n.callee.kind !== "Ident") throw new 编译错("只认按名字调用：self/ 里没有别的写法");
+        if (n.callee.kind !== "名") throw new 编译错("只认按名字调用：self/ 里没有别的写法");
         for (const a of n.args) 表达(a);
         if (内置名.has(n.callee.name)) 发("CALLB", n.callee.name, n.args.length);
         else 发("CALLF", n.callee.name, n.args.length);

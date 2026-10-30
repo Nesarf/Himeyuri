@@ -50,7 +50,7 @@ fn leaves(tree: Int, acc: Int) -> Int {
   if tree.kind == "Binary" {
     return leaves(tree.right, leaves(tree.left, acc))
   }
-  if tree.kind == "字" || tree.kind == "Ident" {
+  if tree.kind == "字" || tree.kind == "名" {
     return acc + (tree.text,)
   }
   return acc

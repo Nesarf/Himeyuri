@@ -6,7 +6,7 @@
 //
 // 形状与 JS 版解析器对齐，只保留结构：
 //   {kind: "字", type: "int", text}         整数（原文）
-//   {kind: "Ident", text}        标识符
+//   {kind: "名", text}        标识符
 //   {kind: "Binary", op, left, right}
 // 对拍时 JS 侧做同样的映射，行号一类的位置信息两边都不带。
 //
@@ -74,7 +74,7 @@ fn parse_atom(s: String, i: Int) {
   }
   if is_alpha_c(c) {
     let got = read_name(s, j, "")
-    return {node: {kind: "Ident", text: got.text}, next: got.next}
+    return {node: {kind: "名", text: got.text}, next: got.next}
   }
   return {node: {kind: "Error", text: c}, next: j + 1}
 }

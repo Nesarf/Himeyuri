@@ -34,7 +34,7 @@ function 换回(x, 表, 深) {
   if (Array.isArray(x)) return x.map((y) => 换回(y, 表, 深));
   if (!x || typeof x !== "object") return x;
   // 参数：整个节点换掉，连它自己的子节点都不看（实参树已经展开过了）。
-  if (x.kind === "Ident" && 表.has(x.name)) return 表.get(x.name);
+  if (x.kind === "名" && 表.has(x.name)) return 表.get(x.name);
   const 出 = {};
   let 变了 = false;
   for (const k of Object.keys(x)) {
@@ -65,7 +65,7 @@ function 展开式(x, 宏们, 深) {
   }
   const 节点 = 变了 ? { ...出, kind: x.kind } : x;
 
-  if (节点.kind === "Call" && 节点.callee && 节点.callee.kind === "Ident" && 宏们.has(节点.callee.name)) {
+  if (节点.kind === "Call" && 节点.callee && 节点.callee.kind === "名" && 宏们.has(节点.callee.name)) {
     const 宏 = 宏们.get(节点.callee.name);
     if (!Array.isArray(节点.args) || 节点.args.length !== 宏.params.length) {
       throw new Error("HMYR-形-006 macro " + 宏.name + " takes " + 宏.params.length +

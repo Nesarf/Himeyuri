@@ -86,7 +86,7 @@ fn atom(tokens: Int, i: Int) {
   let t = tokens[j]
   if t.kind == "int" { return {node: {kind: "字", type: "int", text: t.text, raw: t.text, line: t.line, column: t.column}, next: j + 1} }
   if t.kind == "string" { return {node: {kind: "字", type: "string", text: t.text, raw: false, line: t.line, column: t.column}, next: j + 1} }
-  if t.kind == "ident" { return {node: {kind: "Ident", name: t.text, text: t.text, line: t.line, column: t.column}, next: j + 1} }
+  if t.kind == "ident" { return {node: {kind: "名", name: t.text, text: t.text, line: t.line, column: t.column}, next: j + 1} }
   if is_punct(t, "(") { return paren_or_tuple(tokens, j + 1) }
   if is_punct(t, "{") { return record_of(tokens, j + 1) }
   return {node: {kind: "Error", text: t.text, line: t.line, column: t.column}, next: j + 1}
@@ -266,7 +266,7 @@ fn leaves(tree: Int, acc: Int) -> Int {
   if tree.kind == "Binary" {
     return leaves(tree.right, leaves(tree.left, acc))
   }
-  if tree.kind == "字" || tree.kind == "Ident" {
+  if tree.kind == "字" || tree.kind == "名" {
     return acc + (tree.text,)
   }
   return acc

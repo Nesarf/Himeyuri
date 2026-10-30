@@ -35,7 +35,7 @@ const 是常量真 = (n) => {
   if (!n) return false;
   if (n.kind === "字") return n.value === true || n.value === 1;
   // 自举那一层把 true 当标识符读（见 self/lex.hmoca 开头），所以两只都要认。
-  if (n.kind === "Ident") return n.text === "true";
+  if (n.kind === "名") return n.text === "true";
   return false;
 };
 
@@ -99,7 +99,7 @@ export function 实时检查(ast, 选项 = {}) {
       return;
     }
 
-    if (n.kind === "Call" && n.callee && n.callee.kind === "Ident") {
+    if (n.kind === "Call" && n.callee && n.callee.kind === "名") {
       const 名 = n.callee.name;
       if (名 === "arena") {
         报("arena() allocates in the managed zone; a realtime function must use an arena built before the callback started", n);

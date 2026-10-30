@@ -24,7 +24,7 @@
 
 const 分配方法 = new Set(["alloc", "alloc_list"]);
 
-const 名字 = (n) => (n && n.kind === "Ident" ? n.name : null);
+const 名字 = (n) => (n && n.kind === "名" ? n.name : null);
 
 const 是arena调用 = (n) => {
   if (!n || n.kind !== "Call") return false;
@@ -98,7 +98,7 @@ export function 区检查(ast, 选项 = {}) {
 
       // 下标、字段、二元运算里如果出现一个已经随区关掉的块，那是同一件事：
       // 4.1 的原例里 return 之后接的是 .size，而「读它的字段」与「返回它」一样是碰了死内存。
-      if (n.kind === "Ident") {
+      if (n.kind === "名") {
         const 关了的 = 块属于谁(n.name).filter(({ s }) => s.关了);
         if (关了的.length) {
           报("error", "HMYR-碼-001",
@@ -187,7 +187,7 @@ export function 区检查(ast, 选项 = {}) {
         // §4.2 的第二个形态，而且它比记录字面量更贴原例（kept = b）：块被写进一条索引。
         // 索引是可变的，所以它能活得比这个函数久 —— 而区不会：close 一到，块就没了，
         // 索引里留下的是一个指向死块的引用。判据只看「第三个参数是不是块」，不要类型系统。
-        if (n.callee && n.callee.kind === "Ident" && n.callee.name === "index_set") {
+        if (n.callee && n.callee.kind === "名" && n.callee.name === "index_set") {
           const 存的名 = 名字((n.args || [])[2]);
           if (存的名) {
             const 命中 = 块属于谁(存的名);
@@ -212,7 +212,7 @@ export function 区检查(ast, 选项 = {}) {
         // 这是 §4.2「不许静默换区」今天能写出来的那个近似：原例要一个模块级的可变变量，
         // 而语言没有那个东西（顶层只有 fn / type / const / effect / macro）。近似是保守的，
         // 所以它是警告而不是错误 —— 一个会误拦的判据会被关掉，而关掉的判据等于没有。
-        if (n.callee && n.callee.kind === "Ident") {
+        if (n.callee && n.callee.kind === "名") {
           for (const a of n.args || []) {
             const 名 = 名字(a);
             if (!名) continue;

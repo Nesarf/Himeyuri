@@ -498,10 +498,10 @@ export const 子集解 = (tokens, options = {}) => {
         while (!是标(")") && !是("eof")) { args.push(解析表达式()); if (是标(",")) 进(); else break; }
         要标(")", "关 arena 的括号");
       }
-      return { kind: "Call", callee: { kind: "Ident", name: "arena", line: t.line, column: t.column }, args, line: t.line, column: t.column };
+      return { kind: "Call", callee: { kind: "名", name: "arena", line: t.line, column: t.column }, args, line: t.line, column: t.column };
     }
 
-    if (t.type === "ident") { 进(); return { kind: "Ident", name: t.value, line: t.line, column: t.column }; }
+    if (t.type === "ident") { 进(); return { kind: "名", name: t.value, line: t.line, column: t.column }; }
 
     报("HMYR-形-004", "期望一个表达式，见到 " + 说明(t), t);
     // 恢复：照宿主——吃掉这个 token，再跳到下一个能开始语句的地方。少这一步，一个缺表达式

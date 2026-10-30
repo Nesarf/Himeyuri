@@ -34,7 +34,7 @@ function jsShape(node) {
   if (node.kind === "Binary") return { kind: "Binary", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", raw: node.raw };
   if (node.kind === "字" && node.type === "string") return { kind: "字", type: "string", raw: false };
-  if (node.kind === "Ident") return { kind: "Ident", name: node.name };
+  if (node.kind === "名") return { kind: "名", name: node.name };
   if (node.kind === "Unary") return { kind: "Unary", op: node.op, operand: jsShape(node.operand) };
   if (node.kind === "Tuple") return { kind: "Tuple", items: node.items.map(jsShape) };
   if (node.kind === "Record") return { kind: "Record", fields: node.fields.map((f) => ({ name: f.name, value: jsShape(f.value) })) };
@@ -116,7 +116,7 @@ console.log("\nwhat used to be out of reach, and is read now");
 }
 {
   const tree = attempt(() => mine("if a { 1 } else { 2 }"));
-  ok("if is still just a name", !tree.error && tree.value.kind === "Ident" && tree.value.name === "if", tree.error || JSON.stringify(tree.value));
+  ok("if is still just a name", !tree.error && tree.value.kind === "名" && tree.value.name === "if", tree.error || JSON.stringify(tree.value));
 }
 
 console.log("\n" + passed + " passed, " + failed + " failed");

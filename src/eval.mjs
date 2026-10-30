@@ -57,7 +57,7 @@ class Return extends Error { constructor(value) { super("return"); this.value = 
 // 只卖一个布尔，不卖整张表：表是实现的细节，而「这个名字算不算内置」是可问的事实。
 export const isBuiltin = (name) => Object.prototype.hasOwnProperty.call(BUILTINS, name);
 
-const STAGE0_EXPR = new Set(["Binary", "Call", "Field", "Ident", "If", "Index", "字", "Record", "Tuple", "Unary", "While"]);
+const STAGE0_EXPR = new Set(["Binary", "Call", "Field", "名", "If", "Index", "字", "Record", "Tuple", "Unary", "While"]);
 const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
 // 跑 self/ 那六份真正需要的内置。stage0 模式下只放这几个过去。
 // field_names 不在这一张里：自举层现在还不用它，而这张表的意思是「已经量过的必须项」，
@@ -170,7 +170,7 @@ export class Runtime {
   模块成员(node) {
     if (!node || node.kind !== "Field") return null;
     const 主 = node.target;
-    if (!主 || 主.kind !== "Ident") return null;
+    if (!主 || 主.kind !== "名") return null;
     const 文件 = this.模块别名.get(主.name);
     if (!文件) return null;
     const 表 = this.模块声明.get(文件);
@@ -317,7 +317,7 @@ export class Runtime {
         // 只对「被调的是这门语言里的函数」成立：内置函数不经过这条环，
         // 而 return 一个内置调用的结果本来也不占栈。
         const v = stmt.value;
-        if (v && v.kind === "Call" && v.callee.kind === "Ident" && this.functions.has(v.callee.name)) {
+        if (v && v.kind === "Call" && v.callee.kind === "名" && this.functions.has(v.callee.name)) {
           const 目标 = this.functions.get(v.callee.name);
           this.查可见性(目标);
           const 实参 = v.args.map((a) => this.evalExpr(a, scope, effects));
@@ -344,7 +344,7 @@ export class Runtime {
 
     switch (node.kind) {
       case "字": return node.value;
-      case "Ident": {
+      case "名": {
         if (scope.has(node.name)) return scope.get(node.name);
         if (this.globals.has(node.name)) return this.globals.get(node.name);
         this.fail("HMYR-行-005", "there is no name '" + node.name + "' in scope");
@@ -386,7 +386,7 @@ export class Runtime {
       case "Match": {
         const subject = this.evalExpr(node.subject, scope, effects);
         for (const arm of node.arms) {
-          const wildcard = arm.pattern.kind === "Ident" && arm.pattern.name === "_";
+          const wildcard = arm.pattern.kind === "名" && arm.pattern.name === "_";
           if (wildcard || this.equal(subject, this.evalExpr(arm.pattern, scope, effects))) {
             return this.evalExpr(arm.body, scope, effects);
           }
@@ -424,7 +424,7 @@ export class Runtime {
 
   evalCall(node, scope, effects) {
     // a builtin first, so that names like print are not shadowed by a variable
-    if (node.callee.kind === "Ident" && BUILTINS[node.callee.name]) {
+    if (node.callee.kind === "名" && BUILTINS[node.callee.name]) {
       const name = node.callee.name;
       if (this.stage0 && !STAGE0_BUILTIN.has(name)) {
         throw new Error("stage 0 does not need the builtin '" + name + "'");
@@ -447,7 +447,7 @@ export class Runtime {
       }
     }
     const args = node.args.map((a) => this.evalExpr(a, scope, effects));
-    if (node.callee.kind === "Ident") {
+    if (node.callee.kind === "名") {
       const decl = this.functions.get(node.callee.name);
       if (decl) {
         // 可见性：跨模块调私有名字是 HMYR-內-023（见 查可见性）。
