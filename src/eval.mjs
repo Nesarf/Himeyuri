@@ -1284,8 +1284,8 @@ const BUILTINS = {
     区活着.add(我);
     const 是块 = (b) => !!b && typeof b === "object" && typeof b.live === "boolean" && typeof b.size === "number";
     const 要活块 = (b, 谁) => {
-      if (!是块(b)) rt.fail("HMYR-R0302", 谁 + " wants an arena block, found " + describe(b));
-      if (!b.live) rt.fail("HMYR-R0302", 谁 + " was given a block whose arena is already closed");
+      if (!是块(b)) rt.fail("HMYR-碼-002", 谁 + " wants an arena block, found " + describe(b));
+      if (!b.live) rt.fail("HMYR-碼-002", 谁 + " was given a block whose arena is already closed");
     };
     return {
       alloc: (n) => {
@@ -1314,7 +1314,7 @@ const BUILTINS = {
       // 交给托管区：从此不随 close 死。同一条记录交回去，正是「不移动」那条规矩的样子。
       freeze: (b) => {
         要活块(b, "arena.freeze");
-        if (区拥有者.get(b) !== 我) rt.fail("HMYR-R0302", "arena.freeze was given a block this arena does not own");
+        if (区拥有者.get(b) !== 我) rt.fail("HMYR-碼-002", "arena.freeze was given a block this arena does not own");
         b.zone = "managed";
         区拥有者.delete(b);
         const i = held.indexOf(b);
@@ -1326,7 +1326,7 @@ const BUILTINS = {
         要活块(b, "arena.adopt");
         const 主人 = 区拥有者.get(b);
         if (主人 !== undefined && 主人 !== 我 && 区活着.has(主人)) {
-          rt.fail("HMYR-R0303", "arena.adopt was given a block owned by another open arena: its lifetime would be owned twice");
+          rt.fail("HMYR-碼-003", "arena.adopt was given a block owned by another open arena: its lifetime would be owned twice");
         }
         b.zone = "arena";
         区拥有者.set(b, 我);
@@ -1352,8 +1352,8 @@ const BUILTINS = {
   owned: (rt) => {
     const 格 = { 装: false, 值: null, 关了: false };
     格.放 = function (v) {
-      if (this.关了) rt.fail("HMYR-R0305", "owned.放: this holder is already closed");
-      if (this.装) rt.fail("HMYR-R0305", "owned.放: this holder already owns a value; take it out first");
+      if (this.关了) rt.fail("HMYR-碼-005", "owned.放: this holder is already closed");
+      if (this.装) rt.fail("HMYR-碼-005", "owned.放: this holder already owns a value; take it out first");
       this.装 = true;
       this.值 = v;
       // 放进去的若是一条持有格，它就从当前帧的登记表里移走 —— 「转移」的第二层意思。
@@ -1367,8 +1367,8 @@ const BUILTINS = {
       return this;
     };
     格.取 = function () {
-      if (this.关了) rt.fail("HMYR-R0305", "owned.取: this holder is already closed");
-      if (!this.装) rt.fail("HMYR-R0306", "owned.取: this holder is empty");
+      if (this.关了) rt.fail("HMYR-碼-005", "owned.取: this holder is already closed");
+      if (!this.装) rt.fail("HMYR-碼-006", "owned.取: this holder is empty");
       const v = this.值;
       this.装 = false;
       this.值 = null;

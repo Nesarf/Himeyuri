@@ -87,7 +87,7 @@ console.log("三、close 带走没交出去的那些 —— 而这件事只在�
   const p = 投(源, "丙.hmoca");
 
   const 严 = 跑([p]);
-  ok("带检查时被拦住", 严.status !== 0 && (严.stderr || "").includes("HMYR-R0301"),
+  ok("带检查时被拦住", 严.status !== 0 && (严.stderr || "").includes("HMYR-碼-001"),
     JSON.stringify({ status: 严.status, err: (严.stderr || "").slice(0, 120) }));
 
   const 松 = 跑(["--no-zone-check", p]);
@@ -109,7 +109,7 @@ console.log("四、走错的两个编号，在自举层也说得出");
     "}",
   ]), "丁.hmoca");
   const r = 跑([关后分]);
-  ok("关掉的区再分配给 R0302", (r.stdout || "").includes("HMYR-R0302"), JSON.stringify((r.stdout || "").slice(0, 140)));
+  ok("关掉的区再分配给 R0302", (r.stdout || "").includes("HMYR-碼-002"), JSON.stringify((r.stdout || "").slice(0, 140)));
 
   const 交两次 = 投(行们([
     "fn main() -> Int {",
@@ -121,7 +121,7 @@ console.log("四、走错的两个编号，在自举层也说得出");
     "}",
   ]), "戊.hmoca");
   const r2 = 跑([交两次]);
-  ok("交出去两次给 R0302", (r2.stdout || "").includes("HMYR-R0302"), JSON.stringify((r2.stdout || "").slice(0, 140)));
+  ok("交出去两次给 R0302", (r2.stdout || "").includes("HMYR-碼-002"), JSON.stringify((r2.stdout || "").slice(0, 140)));
 
   const 收回没交出 = 投(行们([
     "fn main() -> Int {",
@@ -132,7 +132,7 @@ console.log("四、走错的两个编号，在自举层也说得出");
     "}",
   ]), "己.hmoca");
   const r3 = 跑([收回没交出]);
-  ok("收回一块没交出的给 R0303", (r3.stdout || "").includes("HMYR-R0303"), JSON.stringify((r3.stdout || "").slice(0, 140)));
+  ok("收回一块没交出的给 R0303", (r3.stdout || "").includes("HMYR-碼-003"), JSON.stringify((r3.stdout || "").slice(0, 140)));
 }
 
 console.log("五、两台机器（默认与 --host-eval）跑出同一段");

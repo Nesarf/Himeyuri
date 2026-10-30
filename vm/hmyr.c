@@ -3008,7 +3008,7 @@ static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *
       if (!区取键(格.idx, 键, out)) *out = v_null();
       return 1;
     }
-    fail("HMYR-R0302", "there is no such method on a block");
+    fail("HMYR-碼-002", "there is no such method on a block");
     return 0;
   }
   /* 持有格上的四个动作（owned）。取出即转移：取走之后 holds 变回 0。 */
@@ -3018,9 +3018,9 @@ static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *
     if (区取键(主.idx, "closed", &关值) && 关值.tag == T_NUM && 关值.num != 0) 关了 = 1;
     if (是放(名, 名长)) {
       if (nargs != 1) { fail("HMYR-R0101", "放 wants one value"); return 0; }
-      if (关了) { fail("HMYR-R0305", "owned.放: this holder is already closed"); return 0; }
+      if (关了) { fail("HMYR-碼-005", "owned.放: this holder is already closed"); return 0; }
       if (区取键(主.idx, "holds", &装值) && 装值.tag == T_NUM && 装值.num != 0) {
-        fail("HMYR-R0305", "owned.放: this holder already owns a value; take it out first");
+        fail("HMYR-碼-005", "owned.放: this holder already owns a value; take it out first");
         return 0;
       }
       区放键(主.idx, "val", args[0]);
@@ -3033,9 +3033,9 @@ static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *
     }
     if (是取(名, 名长)) {
       if (nargs != 0) { fail("HMYR-R0101", "取 wants no arguments"); return 0; }
-      if (关了) { fail("HMYR-R0305", "owned.取: this holder is already closed"); return 0; }
+      if (关了) { fail("HMYR-碼-005", "owned.取: this holder is already closed"); return 0; }
       if (!区取键(主.idx, "holds", &装值) || 装值.tag != T_NUM || 装值.num == 0) {
-        fail("HMYR-R0306", "owned.取: this holder is empty");
+        fail("HMYR-碼-006", "owned.取: this holder is empty");
         return 0;
       }
       if (!区取键(主.idx, "val", out)) *out = v_null();
@@ -3053,11 +3053,11 @@ static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *
       *out = v_null();
       return 1;
     }
-    fail("HMYR-R0302", "there is no such method on an owned holder");
+    fail("HMYR-碼-002", "there is no such method on an owned holder");
     return 0;
   }
   if (主.tag != T_INDEX || !主.idx || !区取键(主.idx, "kind", &类) || !串是字(类, "zone")) {
-    fail("HMYR-R0302", "this machine only accepts method calls on a zone or a block");
+    fail("HMYR-碼-002", "this machine only accepts method calls on a zone or a block");
     return 0;
   }
   if (名是字(名, 名长, "held")) {
@@ -3070,7 +3070,7 @@ static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *
     Value 关, 下一个, 活;
     if (nargs != 1) { fail("HMYR-R0101", "arena.alloc wants one argument"); return 0; }
     if (!区取键(主.idx, "closed", &关) || 关.tag != T_NUM || 关.num != 0) {
-      fail("HMYR-R0302", "arena.alloc: that arena is already closed");
+      fail("HMYR-碼-002", "arena.alloc: that arena is already closed");
       return 0;
     }
     if (!区取键(主.idx, "next", &下一个)) 下一个 = v_num(1);
@@ -3123,22 +3123,22 @@ static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *
     Value 关, 块, zone, 活;
     if (nargs != 1) { fail("HMYR-R0101", 是交出 ? "arena.freeze wants one argument" : "arena.adopt wants one argument"); return 0; }
     if (!区取键(主.idx, "closed", &关) || 关.tag != T_NUM || 关.num != 0) {
-      fail("HMYR-R0302", 是交出 ? "arena.freeze: that arena is already closed" : "arena.adopt: that arena is already closed");
+      fail("HMYR-碼-002", 是交出 ? "arena.freeze: that arena is already closed" : "arena.adopt: that arena is already closed");
       return 0;
     }
     块 = args[0];
     if (块.tag != T_INDEX || !块.idx || !区取键(块.idx, "zone", &zone)) {
-      fail(是交出 ? "HMYR-R0302" : "HMYR-R0303",
+      fail(是交出 ? "HMYR-碼-002" : "HMYR-碼-003",
            是交出 ? "arena.freeze was given a block this arena does not own"
                   : "arena.adopt: that block was not handed to the managed zone");
       return 0;
     }
     if (是交出 && !串是字(zone, "arena")) {
-      fail("HMYR-R0302", "arena.freeze was given a block this arena does not own");
+      fail("HMYR-碼-002", "arena.freeze was given a block this arena does not own");
       return 0;
     }
     if (!是交出 && !串是字(zone, "managed")) {
-      fail("HMYR-R0303", "arena.adopt: that block was not handed to the managed zone");
+      fail("HMYR-碼-003", "arena.adopt: that block was not handed to the managed zone");
       return 0;
     }
     区放键(块.idx, "zone", ascii_text(是交出 ? "managed" : "arena"));
@@ -3148,7 +3148,7 @@ static int 调区方法(Value 主, const uint16_t *名, uint32_t 名长, Value *
     *out = 块;
     return 1;
   }
-  fail("HMYR-R0302", "there is no such method on a zone");
+  fail("HMYR-碼-002", "there is no such method on a zone");
   return 0;
 }
 

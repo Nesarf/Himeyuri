@@ -263,7 +263,7 @@ if (目标路 && !区检查关) {
     for (const w of 检查.diagnostics.warnings) {
       if (w.code === "HMYR-載-016") process.stderr.write(w.code + " " + w.message + "\n");
     }
-    const 区错 = 检查.diagnostics.errors.filter((e) => e.code === "HMYR-R0301");
+    const 区错 = 检查.diagnostics.errors.filter((e) => e.code === "HMYR-碼-001");
     if (区错.length) {
       for (const e of 区错) process.stderr.write(e.code + " " + e.message + "\n");
       process.exit(1);

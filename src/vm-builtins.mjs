@@ -759,8 +759,8 @@ export function 调区方法(主, 名, 参, vm) {
     const 关 = 主.m.get("关");
     if (名 === "放") {
       if (参.length !== 1) return { 错: "放 要一个参数" };
-      if (关 !== 0) return { 码: "HMYR-R0305", 错: "owned.放: this holder is already closed" };
-      if (主.m.get("装") !== 0) return { 码: "HMYR-R0305", 错: "owned.放: this holder already owns a value; take it out first" };
+      if (关 !== 0) return { 码: "HMYR-碼-005", 错: "owned.放: this holder is already closed" };
+      if (主.m.get("装") !== 0) return { 码: "HMYR-碼-005", 错: "owned.放: this holder already owns a value; take it out first" };
       主.m.set("装", 1);
       主.m.set("值", 参[0]);
       // 放进去的若是一条持有格，它就从当前帧的登记表里移走 —— 「转移」的第二层意思，
@@ -774,8 +774,8 @@ export function 调区方法(主, 名, 参, vm) {
     }
     if (名 === "取") {
       if (参.length !== 0) return { 错: "取 不要参数" };
-      if (关 !== 0) return { 码: "HMYR-R0305", 错: "owned.取: this holder is already closed" };
-      if (主.m.get("装") !== 1) return { 码: "HMYR-R0306", 错: "owned.取: this holder is empty" };
+      if (关 !== 0) return { 码: "HMYR-碼-005", 错: "owned.取: this holder is already closed" };
+      if (主.m.get("装") !== 1) return { 码: "HMYR-碼-006", 错: "owned.取: this holder is empty" };
       const v = 主.m.get("值");
       主.m.set("装", 0);
       主.m.set("值", null);
@@ -838,7 +838,7 @@ export function 调区方法(主, 名, 参, vm) {
     if (m.get("关") !== 0) return { 错: "arena.adopt: that arena is already closed" };
     const 块 = 参[0];
     if (!块 || 块.tag !== "index" || 块.m.get("zone") !== "managed") {
-      return { 码: "HMYR-R0303", 错: "arena.adopt: that block was not handed to the managed zone" };
+      return { 码: "HMYR-碼-003", 错: "arena.adopt: that block was not handed to the managed zone" };
     }
     块.m.set("zone", "arena");
     块.m.set("live", 1);

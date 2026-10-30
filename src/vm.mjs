@@ -383,7 +383,7 @@ export class 虚拟机 {
           参.reverse();
           const 主 = 弹();
           const r = 调区方法(主, 指令.a, 参, this);
-          if (r.错) { this.坏(r.码 || "HMYR-R0302", r.错); return null; }
+          if (r.错) { this.坏(r.码 || "HMYR-碼-002", r.错); return null; }
           压(r.值);
           pc++;
           break;

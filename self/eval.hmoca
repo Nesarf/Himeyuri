@@ -231,7 +231,7 @@ fn 新持有格() -> Int {
 }
 
 fn 分配块(区: Int, 大小: Int) -> Int {
-  if index_get(区, "关") != 0 { return 坏("HMYR-R0302 arena.alloc: that arena is already closed") }
+  if index_get(区, "关") != 0 { return 坏("HMYR-碼-002 arena.alloc: that arena is already closed") }
   let 号 = index_get(区, "下一个")
   let 块 = index_new()
   index_set(块, "种", "块")
@@ -268,8 +268,8 @@ fn 关区(区: Int) -> Int {
 }
 
 fn 交出去(区: Int, 块: Int) -> Int {
-  if index_get(区, "关") != 0 { return 坏("HMYR-R0302 arena.freeze: that arena is already closed") }
-  if index_get(块, "zone") != "arena" { return 坏("HMYR-R0302 arena.freeze was given a block this arena does not own") }
+  if index_get(区, "关") != 0 { return 坏("HMYR-碼-002 arena.freeze: that arena is already closed") }
+  if index_get(块, "zone") != "arena" { return 坏("HMYR-碼-002 arena.freeze was given a block this arena does not own") }
   index_set(块, "zone", "managed")
   index_set(块, "live", 1)
   index_set(区, "活", index_get(区, "活") - 1)
@@ -277,8 +277,8 @@ fn 交出去(区: Int, 块: Int) -> Int {
 }
 
 fn 收回来(区: Int, 块: Int) -> Int {
-  if index_get(区, "关") != 0 { return 坏("HMYR-R0302 arena.adopt: that arena is already closed") }
-  if index_get(块, "zone") != "managed" { return 坏("HMYR-R0303 arena.adopt: that block was not handed to the managed zone") }
+  if index_get(区, "关") != 0 { return 坏("HMYR-碼-002 arena.adopt: that arena is already closed") }
+  if index_get(块, "zone") != "managed" { return 坏("HMYR-碼-003 arena.adopt: that block was not handed to the managed zone") }
   index_set(块, "zone", "arena")
   index_set(块, "live", 1)
   index_set(区, "活", index_get(区, "活") + 1)
@@ -316,8 +316,8 @@ fn 求方法(环境: Int, 主: Int, 名: String, 参: Int) -> Int {
       let 关了 = index_get(主, "关")
       if 名 == "放" {
         if len(参) != 1 { return 坏("放 要一个参数") }
-        if 关了 != 0 { return 坏("HMYR-R0305 owned.放: 这条格已经关了") }
-        if index_get(主, "装") != 0 { return 坏("HMYR-R0305 owned.放: 这一格已经有值了，先取走") }
+        if 关了 != 0 { return 坏("HMYR-碼-005 owned.放: 这条格已经关了") }
+        if index_get(主, "装") != 0 { return 坏("HMYR-碼-005 owned.放: 这一格已经有值了，先取走") }
         index_set(主, "装", 1)
         index_set(主, "值", 参[0])
         // 放进去的若是一条持有格，它就离开本帧的登记表 —— 「转移」的第二层意思：
@@ -331,8 +331,8 @@ fn 求方法(环境: Int, 主: Int, 名: String, 参: Int) -> Int {
       }
       if 名 == "取" {
         if len(参) != 0 { return 坏("取 不要参数") }
-        if 关了 != 0 { return 坏("HMYR-R0305 owned.取: 这条格已经关了") }
-        if index_get(主, "装") != 1 { return 坏("HMYR-R0306 owned.取: 这一格是空的") }
+        if 关了 != 0 { return 坏("HMYR-碼-005 owned.取: 这条格已经关了") }
+        if index_get(主, "装") != 1 { return 坏("HMYR-碼-006 owned.取: 这一格是空的") }
         let v = index_get(主, "值")
         index_set(主, "装", 0)
         index_set(主, "值", ())

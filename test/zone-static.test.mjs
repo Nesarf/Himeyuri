@@ -46,7 +46,7 @@ console.log("一、逃逸报出来，而且说得出怎么办");
   const 出 = 查(源);
   const 错 = 出.filter((d) => d.severity === "error");
   ok("一条错", 错.length === 1, JSON.stringify(出));
-  ok("编号是 R0301（那个码原来登记成 planned）", 错[0] && 错[0].code === "HMYR-R0301", String(错[0] && 错[0].code));
+  ok("编号是 R0301（那个码原来登记成 planned）", 错[0] && 错[0].code === "HMYR-碼-001", String(错[0] && 错[0].code));
   ok("点名了变量与 arena", /'b'/.test(错[0] ? 错[0].message : "") && /'a'/.test(错[0] ? 错[0].message : ""), 错[0] ? 错[0].message : "");
   ok("说了该调 freeze", /freeze/.test(错[0] ? 错[0].message : ""), 错[0] ? 错[0].message : "");
   ok("位置指得回去", 错[0] && 错[0].line > 0, String(错[0] && 错[0].line));
@@ -55,7 +55,7 @@ console.log("一、逃逸报出来，而且说得出怎么办");
 console.log("二、直接返回一块新分配也算逃逸");
 {
   const 出 = 查(行们(["fn make() -> Int {", "  let a = arena()", "  return a.alloc(16)", "}"]));
-  ok("一条错", 出.filter((d) => d.severity === "error" && d.code === "HMYR-R0301").length === 1, JSON.stringify(出));
+  ok("一条错", 出.filter((d) => d.severity === "error" && d.code === "HMYR-碼-001").length === 1, JSON.stringify(出));
 }
 
 console.log("三、来回都合法的写法，一条都不报");
@@ -101,11 +101,11 @@ console.log("五、装载器真的拦：这条路走不过去");
   fs.writeFileSync(逃, 行们(["fn make() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return b", "}"]), "utf8");
   const 单 = loadUnit(逃);
   ok("装载结果是失败", 单.ok === false, JSON.stringify({ ok: 单.ok, errors: 单.diagnostics.errors.map((e) => e.code) }));
-  ok("诊断里有 R0301", 单.diagnostics.errors.some((e) => e.code === "HMYR-R0301"),
+  ok("诊断里有 R0301", 单.diagnostics.errors.some((e) => e.code === "HMYR-碼-001"),
     JSON.stringify(单.diagnostics.errors.map((e) => e.code + " " + e.message).slice(0, 2)));
   // 这里不要求 order 为空：加载器对语法错也不那样做（「有抱怨也收下」是它既有的语义，
   // 见 visit 的 import 循环）。判据落在「拦它的是区那一条」上，不替 loader 重定义。
-  ok("没有别的错混进来", 单.diagnostics.errors.every((e) => e.code === "HMYR-R0301"),
+  ok("没有别的错混进来", 单.diagnostics.errors.every((e) => e.code === "HMYR-碼-001"),
     JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
 
   const 好 = path.join(临, "好.hmoca");
@@ -173,7 +173,7 @@ console.log("九、启动器：默认这条路也拦，而它不挡别人");
   const 逃 = 投(行们(["fn main() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return b", "}"]), "主逃.hmoca");
   const 甲 = 跑([逃]);
   ok("默认路径拒绝它", 甲.status !== 0, JSON.stringify({ status: 甲.status }));
-  ok("说的是 R0301", (甲.stderr || "").includes("HMYR-R0301"), JSON.stringify((甲.stderr || "").slice(0, 100)));
+  ok("说的是 R0301", (甲.stderr || "").includes("HMYR-碼-001"), JSON.stringify((甲.stderr || "").slice(0, 100)));
   // 拒绝要发生在交给解释器之前：解释器对 arena 的回答是「这台机器没有」，而那句话
   // 会让「逃逸」看起来像「还没实现」。
   ok("没走到解释器那句「这台机器没有 arena」", !((甲.stdout || "") + (甲.stderr || "")).includes("R0104"),
@@ -213,7 +213,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
     "  return b.size",
     "}",
   ]);
-  ok("close 之后读字段给 R0301", 查(关后用).some((d) => d.code === "HMYR-R0301" && d.severity === "error"), JSON.stringify(查(关后用)));
+  ok("close 之后读字段给 R0301", 查(关后用).some((d) => d.code === "HMYR-碼-001" && d.severity === "error"), JSON.stringify(查(关后用)));
 
   // 交出去之后那块归托管，close 不带走它 —— 那正是 freeze 的意义，所以不该报。
   const 先交 = 行们([
@@ -238,7 +238,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
     "  return b.size",
     "}",
   ]);
-  ok("分支里的 close 不算数", !查(分支里).some((d) => d.code === "HMYR-R0301"), JSON.stringify(查(分支里)));
+  ok("分支里的 close 不算数", !查(分支里).some((d) => d.code === "HMYR-碼-001"), JSON.stringify(查(分支里)));
 
   // 4.2 的原例要一个模块级的可变变量，而语言里没有那种声明（顶层只有 fn / type / const /
   // effect / macro）。今天写得出来的近似是「把块交给别的函数」：那个函数的函数体不在这份
@@ -280,7 +280,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
     "  return 0",
     "}",
   ]);
-  ok("块存进记录给 R0304", 查(存记录).some((d) => d.code === "HMYR-R0304" && d.severity === "error"), JSON.stringify(查(存记录)));
+  ok("块存进记录给 R0304", 查(存记录).some((d) => d.code === "HMYR-碼-004" && d.severity === "error"), JSON.stringify(查(存记录)));
 
   const 存大小 = 行们([
     "fn f() -> Int {",
@@ -315,7 +315,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
     "  return 0",
     "}",
   ]);
-  ok("块存进索引给 R0304", 查(存索引).some((d) => d.code === "HMYR-R0304"), JSON.stringify(查(存索引)));
+  ok("块存进索引给 R0304", 查(存索引).some((d) => d.code === "HMYR-碼-004"), JSON.stringify(查(存索引)));
 
   const 存索引值 = 行们([
     "fn f(表: Int) -> Int {",

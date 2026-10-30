@@ -101,7 +101,7 @@ export function 区检查(ast, 选项 = {}) {
       if (n.kind === "Ident") {
         const 关了的 = 块属于谁(n.name).filter(({ s }) => s.关了);
         if (关了的.length) {
-          报("error", "HMYR-R0301",
+          报("error", "HMYR-碼-001",
             "'" + n.name + "' belongs to the arena '" + 关了的[0].场名 + "', and that arena was closed above: " +
             "the block went with it. Close after the last use, or hand it over with " + 关了的[0].场名 +
             ".freeze(" + n.name + ") before closing", n);
@@ -119,7 +119,7 @@ export function 区检查(ast, 选项 = {}) {
           if (!名) continue;
           const 命中 = 块属于谁(名);
           if (命中.length) {
-            报("error", "HMYR-R0304",
+            报("error", "HMYR-碼-004",
               "'" + 名 + "' is a block of the arena '" + 命中[0].场名 + "' and this stores it in a record: " +
               "the record can be handed on or returned while the arena stays behind, so the block would " +
               "outlive the zone that owns it. Hand it over with " + 命中[0].场名 + ".freeze(" + 名 +
@@ -155,12 +155,12 @@ export function 区检查(ast, 选项 = {}) {
           const 命中 = 块属于谁(名);
           const 关了的 = 命中.filter(({ s }) => s.关了);
           if (关了的.length) {
-            报("error", "HMYR-R0301",
+            报("error", "HMYR-碼-001",
               "'" + 名 + "' belongs to the arena '" + 关了的[0].场名 + "', and that arena was closed above: " +
               "this returns a block that is already gone. Hand it over with " + 关了的[0].场名 + ".freeze(" +
               名 + ") before closing, or close after the last use", n);
           } else if (命中.length) {
-            报("error", "HMYR-R0301",
+            报("error", "HMYR-碼-001",
               "'" + 名 + "' is a block of the arena '" + 命中[0].场名 + "' and it was never handed over; " +
               "returning it lets it outlive the arena - call " + 命中[0].场名 + ".freeze(" + 名 + ") first, " +
               "or do not return it", n);
@@ -169,7 +169,7 @@ export function 区检查(ast, 选项 = {}) {
         }
         const 调 = 方法调用(n.value);
         if (调 && 场.has(调.目标) && 分配方法.has(调.方法)) {
-          报("error", "HMYR-R0301",
+          报("error", "HMYR-碼-001",
             "this returns a fresh block of the arena '" + 调.目标 + "' straight out of its scope; " +
             "the arena will be closed behind it, so hand it over with " + 调.目标 + ".freeze(...) first", n);
         }
@@ -192,7 +192,7 @@ export function 区检查(ast, 选项 = {}) {
           if (存的名) {
             const 命中 = 块属于谁(存的名);
             if (命中.length) {
-              报("error", "HMYR-R0304",
+              报("error", "HMYR-碼-004",
                 "'" + 存的名 + "' is a block of the arena '" + 命中[0].场名 + "' and this stores it in an index: " +
                 "the index can outlive this function and the arena cannot follow it, so what stays behind is a " +
                 "reference to a dead block. Hand it over with " + 命中[0].场名 + ".freeze(" + 存的名 +
