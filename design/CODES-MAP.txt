@@ -7,7 +7,7 @@ HMYR 的错误码：旧到新（98 个）
 跟语言本身无关。八层：
 
   詞  词法      形  语法      型  类型（还空着）
-  載  装载      機  机器（C 机器与自举层）
+  載  装载      器  器（ittgn 容器与打包，C 机器实现了它）
   行  运行时    內  内置      碼  字节码与区
 
 改的时候按文件逐份换，换完跑一次全量确认行为一条没变。
@@ -23,18 +23,18 @@ HMYR-詞-006  HMYR-E0005 詞
 HMYR-詞-007  HMYR-E0006 詞
 HMYR-詞-008  HMYR-E0008 詞
 HMYR-詞-009  HMYR-E0009 詞
-HMYR-機-001  HMYR-E0410 機
-HMYR-機-002  HMYR-E0411 機
-HMYR-機-003  HMYR-E0413 機
-HMYR-機-004  HMYR-E0414 機
-HMYR-機-005  HMYR-E0415 機
-HMYR-機-006  HMYR-E0416 機
-HMYR-機-007  HMYR-E0417 機
-HMYR-機-008  HMYR-E0418 機
-HMYR-機-009  HMYR-E0419 機
-HMYR-機-010  HMYR-E0420 機
-HMYR-機-011  HMYR-E0421 機
-HMYR-機-012  HMYR-E0422 機
+HMYR-器-001  HMYR-E0410 機
+HMYR-器-002  HMYR-E0411 機
+HMYR-器-003  HMYR-E0413 機
+HMYR-器-004  HMYR-E0414 機
+HMYR-器-005  HMYR-E0415 機
+HMYR-器-006  HMYR-E0416 機
+HMYR-器-007  HMYR-E0417 機
+HMYR-器-008  HMYR-E0418 機
+HMYR-器-009  HMYR-E0419 機
+HMYR-器-010  HMYR-E0420 機
+HMYR-器-011  HMYR-E0421 機
+HMYR-器-012  HMYR-E0422 機
 HMYR-碼-001  HMYR-R0301 碼
 HMYR-碼-002  HMYR-R0302 碼
 HMYR-碼-003  HMYR-R0303 碼

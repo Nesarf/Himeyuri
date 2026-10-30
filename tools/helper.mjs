@@ -47,7 +47,7 @@ const 名 = 参[0] || "";
 
 if (名 === "") {
   console.log("  这一份共 " + 条目们.length + " 个编号。按层分：");
-  for (const 组 of [["HMYR-詞", "词法"], ["HMYR-形", "语法"], ["HMYR-載", "装载"], ["HMYR-機", "机器"], ["HMYR-行", "运行时"], ["HMYR-內", "内置"], ["HMYR-碼", "字节码"]]) {
+  for (const 组 of [["HMYR-詞", "词法"], ["HMYR-形", "语法"], ["HMYR-載", "装载"], ["HMYR-器", "器：ittgn 容器与打包"], ["HMYR-行", "运行时"], ["HMYR-內", "内置"], ["HMYR-碼", "字节码"]]) {
     const 属于 = 条目们.filter((e) => e.code.startsWith(组[0] + "-"));
     console.log("    " + 组[1] + "（" + 属于.length + " 个）：" + 属于.map((e) => e.code.replace("HMYR-", "")).join(" "));
   }

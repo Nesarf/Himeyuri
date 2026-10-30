@@ -5496,14 +5496,14 @@ static void 取基名(const char *名, char *出, size_t cap) {
 static char *解容器(const char *包路) {
   size_t 长 = 0;
   uint8_t *字节 = read_file(包路, &长);
-  if (!字节) { fprintf(stderr, "HMYR-機-003 cannot read that container: %s\n", 包路); return NULL; }
+  if (!字节) { fprintf(stderr, "HMYR-器-003 cannot read that container: %s\n", 包路); return NULL; }
   if (长 < 12 || memcmp(字节, "HMYRITTGN", 9) != 0) {
-    fprintf(stderr, "HMYR-機-003 not a container: %s\n", 包路);
+    fprintf(stderr, "HMYR-器-003 not a container: %s\n", 包路);
     free(字节);
     return NULL;
   }
   if (字节[9] != 1) {
-    fprintf(stderr, "HMYR-機-005 container version %u is not known\n", (unsigned)字节[9]);
+    fprintf(stderr, "HMYR-器-005 container version %u is not known\n", (unsigned)字节[9]);
     free(字节);
     return NULL;
   }
@@ -5516,7 +5516,7 @@ static char *解容器(const char *包路) {
     unsigned 名长 = 容器读16(字节, 位);
     if (位 + 2 + 名长 + 4 > 长) goto 截断;
     if (名长 >= sizeof 们[i].名) {
-      fprintf(stderr, "HMYR-機-007 member name is too long: %u bytes\n", 名长);
+      fprintf(stderr, "HMYR-器-007 member name is too long: %u bytes\n", 名长);
       free(们);
       free(字节);
       return NULL;
@@ -5544,7 +5544,7 @@ static char *解容器(const char *包路) {
       snprintf(全, sizeof 全, "%s/%s", 目录, 们[i].名);
       建父目录(全);
       if (!写整文件(全, 们[i].数据, 们[i].长)) {
-        fprintf(stderr, "HMYR-機-007 cannot write a member: %s\n", 们[i].名);
+        fprintf(stderr, "HMYR-器-007 cannot write a member: %s\n", 们[i].名);
         free(们);
         free(字节);
         return NULL;
@@ -5576,7 +5576,7 @@ static char *解容器(const char *包路) {
       选 = 主 >= 0 ? 主 : 同名 >= 0 ? 同名 : 第一个;
     }
     if (选 < 0) {
-      fprintf(stderr, "HMYR-機-008 the container has no runnable entry (needs a .hmoca or .hmoks member)\n");
+      fprintf(stderr, "HMYR-器-008 the container has no runnable entry (needs a .hmoca or .hmoks member)\n");
       free(们);
       free(字节);
       return NULL;
@@ -5593,7 +5593,7 @@ static char *解容器(const char *包路) {
   }
 
 截断:
-  fprintf(stderr, "HMYR-機-006 the container member table is truncated\n");
+  fprintf(stderr, "HMYR-器-006 the container member table is truncated\n");
   free(们);
   free(字节);
   return NULL;

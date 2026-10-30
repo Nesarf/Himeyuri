@@ -61,7 +61,7 @@ console.log("一、字节原样进出（含 0 与 255 的样本）");
   ok("字节一致（带中文）", Buffer.compare(回2, fs.readFileSync(path.join(临, "text.txt"))) === 0, String(回2).slice(0, 40));
 
   const 无 = 跑(["--取", 包, "没有这个", "回3.bin"]);
-  ok("取一个不存在的成员要报错", (无.stdout || "").includes("E0414"), (无.stdout || "").slice(0, 80));
+  ok("取一个不存在的成员要报错", (无.stdout || "").includes("HMYR-器-004"), (无.stdout || "").slice(0, 80));
 }
 
 console.log("二、深度各自算，上限 12");

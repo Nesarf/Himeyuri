@@ -180,11 +180,11 @@ fn 装(包路: String, 文件们) -> Int effects(file) {
   while i < len(文件们) {
     let 名 = 归一名(文件们[i])
     if 以尾(名, ".hmsnp") || 以尾(名, ".hmhsr") {
-      print("HMYR-機-001 容器里不能放 " + 名 + "：入口是容器的逻辑，不是成员" + chr(10))
+      print("HMYR-器-001 容器里不能放 " + 名 + "：入口是容器的逻辑，不是成员" + chr(10))
       return 4
     }
     if 斜杠数(名) + 1 > 12 {
-      print("HMYR-機-002 层太深：" + 名 + " 是第 " + str(斜杠数(名) + 1) + " 层，上限 12" + chr(10))
+      print("HMYR-器-002 层太深：" + 名 + " 是第 " + str(斜杠数(名) + 1) + " 层，上限 12" + chr(10))
       return 4
     }
     i = i + 1
@@ -207,7 +207,7 @@ fn 装(包路: String, 文件们) -> Int effects(file) {
 fn 列(包路: String) -> Int effects(file) {
   let 字节们 = read_bytes(包路)
   if len(字节们) < 12 || UTF8串(字节们, 0, 9) != "HMYRITTGN" {
-    print("HMYR-機-003 这不是容器：" + 包路 + chr(10))
+    print("HMYR-器-003 这不是容器：" + 包路 + chr(10))
     return 4
   }
   let 成员们 = 扫(字节们)
@@ -223,7 +223,7 @@ fn 列(包路: String) -> Int effects(file) {
 fn 取(包路: String, 名: String, 出: String) -> Int effects(file) {
   let 字节们 = read_bytes(包路)
   if len(字节们) < 12 || UTF8串(字节们, 0, 9) != "HMYRITTGN" {
-    print("HMYR-機-003 这不是容器：" + 包路 + chr(10))
+    print("HMYR-器-003 这不是容器：" + 包路 + chr(10))
     return 4
   }
   let 成员们 = 扫(字节们)
@@ -237,7 +237,7 @@ fn 取(包路: String, 名: String, 出: String) -> Int effects(file) {
     }
     i = i + 1
   }
-  print("HMYR-機-004 没有这个成员：" + 名 + chr(10))
+  print("HMYR-器-004 没有这个成员：" + 名 + chr(10))
   return 4
 }
 
