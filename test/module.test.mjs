@@ -83,6 +83,29 @@ try {
     ok("and it is not an error yet", unit.ok, codes(unit).join(","));
   }
 
+  console.log("\nthe package entry comes before the file that imports it");
+  {
+    // 后序：依赖排在前。包入口也算依赖 —— 而它以前根本不在 order 里（包名被跳过），
+    // 所以这一条从来没被测过（2026-11-02）。两档都要给同一个次序。
+    const 根 = path.join(SCRATCH, "包根");
+    fs.mkdirSync(path.join(根, "工具包"), { recursive: true });
+    fs.writeFileSync(path.join(根, "hmyr.hmkit"), "[]", "utf8");
+    fs.writeFileSync(
+      path.join(根, "工具包", "hmyr.hmkit"),
+      JSON.stringify({ 名字: "工具包", 版本: 1, 许可: "CZGD-PL-1.1", 哈希: "sha256:" + "0".repeat(64) }),
+      "utf8",
+    );
+    fs.writeFileSync(path.join(根, "工具包", "index.hmoca"), "pub fn 加(a: Int, b: Int) -> Int {\n  return a + b\n}\n", "utf8");
+    const 包入口 = path.join(根, "main-pkg.hmoca");
+    fs.writeFileSync(包入口, 'import "工具包"\n\nfn main() -> Int {\n  return 0\n}\n', "utf8");
+    const unit = loadUnit(包入口);
+    const 名们 = unit.order.map((f) => path.basename(f));
+    const 包位 = 名们.indexOf("index.hmoca");
+    const 主位 = 名们.indexOf("main-pkg.hmoca");
+    ok("the package is in the order at all", 包位 >= 0, JSON.stringify(名们));
+    ok("and its entry comes first", 包位 >= 0 && 主位 >= 0 && 包位 < 主位, JSON.stringify(名们));
+  }
+
   console.log("\nthe real thing: the bootstrapping files");
   {
     // self/lex.hmoca and self/chain.hmoca both define slice, is_space and starts_with. The loader should
