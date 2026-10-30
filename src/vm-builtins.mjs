@@ -470,10 +470,15 @@ export const 内置表 = {
     const 每组 = 档.startsWith("zh-CN.") ? 4 : 3;
     const 文 = 数.成文(值);
     const 负 = 文.startsWith("-");
-    const 体 = 负 ? 文.slice(1) : 文;
-    const 点 = 体.indexOf(".");
-    const 整 = 点 >= 0 ? 体.slice(0, 点) : 体;
-    const 尾 = 点 >= 0 ? 体.slice(点) : "";
+    // 切串用索引走一遍，不用宿主 .slice —— 字符串的原语归 src/text.mjs，
+    // 这一份只是执行器（text 那套查的就是这一点）。而层里的 切 不能在这里用：
+    // 码元那一层的 切 期望码元序列，喂它宿主串会算错（locale 那套的 30.5 就是这样坏的）。
+    const 点 = 文.indexOf(".");
+    const 末 = 点 >= 0 ? 点 : 文.length;
+    let 整 = "";
+    for (let i = 负 ? 1 : 0; i < 末; i++) 整 += 文[i];
+    let 尾 = "";
+    for (let i = 末; i < 文.length; i++) 尾 += 文[i];
     let 出 = "";
     for (let i = 0; i < 整.length; i++) {
       if (i > 0 && (整.length - i) % 每组 === 0) 出 += ",";

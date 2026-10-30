@@ -221,7 +221,11 @@ console.log("七、C 那台：分配真的少了（堆账是判据）");
     if (编.status === 0 && 编程序.status === 0) {
       const r = spawnSync(exe, [码], {
         encoding: "utf8", timeout: 600000,
-        env: { ...process.env, HMYR_STEPS: "4000000000", HMYR_GC: "1", HMYR_MEM: "1", HMYR_MEM_LIMIT: "0" },
+        // GC_BYTES 必须给，而且必须小于这份程序的堆（2026-11-02 量出来的）。
+        // 默认阈值是三十二兆，而 bench/realtime-callback.hmoca 的堆不到一兆 ——
+        // 于是回收一次都不会触发，那条判据量到的是「累计分配五十三万」，
+        // 与它注释里说的「约十二万」差了四倍多。给了阈值之后 live 回到十三万。
+        env: { ...process.env, HMYR_STEPS: "4000000000", HMYR_GC: "1", HMYR_GC_BYTES: "200000", HMYR_MEM: "1", HMYR_MEM_LIMIT: "0" },
       });
       const 账 = /(\d+)\s*(?:字节|bytes)/.exec(String(r.stderr || ""));
       const 字节 = 账 ? Number(账[1]) : -1;
