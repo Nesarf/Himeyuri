@@ -121,7 +121,7 @@ fn 统计(列: Int) {
 }
 
 // 建树取码长：频 0 的符号不进树。返回的码长是「到根的边数」。
-fn 码长们(频们: Int) {
+fn 码长簇(频们: Int) {
   var 权 = ()
   var 父 = ()
   var 活 = ()
@@ -176,7 +176,7 @@ fn 码长们(频们: Int) {
     }
     活 = 新活 + (新,)
   }
-  var 长们 = ()
+  var 长簇 = ()
   i = 0
   while i < len(频们) {
     var 深 = 0
@@ -187,19 +187,19 @@ fn 码长们(频们: Int) {
         号 = to_int(父[号])
       }
     }
-    长们 = 长们 + (深,)
+    长簇 = 长簇 + (深,)
     i = i + 1
   }
-  return 长们
+  return 长簇
 }
 
-fn 看一份(名: String, 长们: Int) {
+fn 看一份(名: String, 长簇: Int) {
   var 和 = 0
   var 最 = 0
   var 用 = 0
   var i = 0
-  while i < len(长们) {
-    let l = to_int(长们[i])
+  while i < len(长簇) {
+    let l = to_int(长簇[i])
     if l > 0 {
       用 = 用 + 1
       if l > 最 { 最 = l }
@@ -210,8 +210,8 @@ fn 看一份(名: String, 长们: Int) {
   print(名 + "：符号 " + str(用) + " 个，最大深 " + str(最) + "，Kraft 和 " + str(和) + "（要 32768）" + chr(10))
   var j = 0
   var 前 = ""
-  while j < len(长们) && j < 24 {
-    let l = to_int(长们[j])
+  while j < len(长簇) && j < 24 {
+    let l = to_int(长簇[j])
     if l > 0 { 前 = 前 + " " + str(j) + ":" + str(l) }
     j = j + 1
   }
@@ -245,7 +245,7 @@ fn 看码长表(字长: Int, 距长: Int) {
     频 = 置(频, l, to_int(频[l]) + 1)
     i = i + 1
   }
-  let 码长16 = 码长们(频)
+  let 码长16 = 码长簇(频)
   var 码长19 = ()
   i = 0
   while i < 19 {
@@ -282,7 +282,7 @@ fn 验写层(字长: Int, 距长: Int) {
     频 = 置(频, l, to_int(频[l]) + 1)
     i = i + 1
   }
-  let 码长16 = 码长们(频)
+  let 码长16 = 码长簇(频)
   var 码长19 = ()
   i = 0
   while i < 19 {
@@ -318,8 +318,8 @@ fn main() -> Int effects(file) {
   let 列 = 切块(字节们)
   print("切出 " + str(len(列)) + " 个 token" + chr(10))
   let 频 = 统计(列)
-  let 字长 = 码长们(频.字频)
-  let 距长 = 码长们(频.距频)
+  let 字长 = 码长簇(频.字频)
+  let 距长 = 码长簇(频.距频)
   看一份("字长", 字长)
   看一份("距长", 距长)
   看码长表(字长, 距长)
