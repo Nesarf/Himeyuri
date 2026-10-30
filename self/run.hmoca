@@ -307,11 +307,21 @@ fn 包块(语句们: Int, 行: Int) {
   return {kind: "Block", statements: 转语句们(语句们, 0, ()), line: 行}
 }
 
-// 参数名 → {name}。宿主的参数是记录（还可能带 fallback），这一侧只需要名字那一个字段；
-// 缺的 fallback 读出来是 undefined，在宿主那边就是「没有默认值」—— 不写比写了更准。
+// 参数名 → {name, passing}。宿主的参数是记录（带 type 与 passing），而这一侧
+// 原来只交 {name} —— 于是「跨模块的借用分析」在自举层那条路上什么都看不见：
+// 它判的第一件事就是 params[].passing 是不是 borrow（2026-11-02 实测，
+// ownedcheck 那套的「跨模块的转移被看见」因此拿到空数组）。
+//
+// borrow 与 own 是两个前缀词，收名 那一层把它们也当名字收进来了 —— 所以这里
+// 见到它们就把下一个名字配上去。没有前缀的参数 passing 留空。
 fn 转参数们(名们: Int, i: Int, acc: Int) {
   if i >= len(名们) { return acc }
-  return 转参数们(名们, i + 1, acc + ({name: 名们[i]},))
+  let 名 = 名们[i]
+  if 名 == "borrow" || 名 == "own" {
+    if i + 1 < len(名们) { return 转参数们(名们, i + 2, acc + ({name: 名们[i + 1], passing: 名},)) }
+    return acc
+  }
+  return 转参数们(名们, i + 1, acc + ({name: 名, passing: ()},))
 }
 
 fn 包声明(声明们: Int, i: Int, acc: Int) {
