@@ -75,20 +75,35 @@ console.log("五、字节码产物：在，而且不比它的链旧");
   // 比的是「这条链」，不是整个 self/：产物里含的是 run.hmyr 与它 import 的那些，
   // 而 self/ 下还有 release、package、lsp 之类与它无关的文件。
   // 早先按整个目录比，于是改一份无关的 self 文件就误报一次 —— 那是判定过宽，不是产物旧。
-  const 字节路 = path.join(ROOT, "runtime/run.hmoks");
-  const 在 = fs.existsSync(字节路);
-  ok("runtime/run.hmyrb 在", 在);
-  if (在) {
-    const 层 = 宿主载(path.join(ROOT, "self/run.hmoca"));
-    ok("run.hmyr 的链读得动", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
+  // 四份产物，各按它自己那条链比（2026-11-02 从一份扩到四份）。
+  //
+  // 为什么扩：只钉 run.hmoks 的时候出过一次真事故 —— 改过 self/pack.hmoca 之后
+  // pack.hmoks 一直没重编，而 tools/self-vm-compile.mjs 读的就是它。症状是
+  // 「测试按新字段名去取，取到 undefined」，看上去像改名改坏了，其实是产物旧了。
+  // 四份的读法各不相同（run 是桥，pack 是打包器，fmt 是格式化器，sign 是签名），
+  // 但它们都是「一份 .hmoca 编出来的字节码」，所以该由同一条判据盯着。
+  const 产物们 = [
+    ["self/run.hmoca", "runtime/run.hmoks"],
+    ["self/pack.hmoca", "runtime/pack.hmoks"],
+    ["self/fmt.hmoca", "runtime/fmt.hmoks"],
+    ["self/sign.hmoca", "runtime/sign.hmoks"],
+  ];
+  for (const [源相对, 产物相对] of 产物们) {
+    const 字节路 = path.join(ROOT, 产物相对);
+    const 在 = fs.existsSync(字节路);
+    ok(产物相对 + " 在", 在);
+    if (!在) continue;
+    const 层 = 宿主载(path.join(ROOT, 源相对));
+    ok(源相对 + " 的链读得动", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
+    if (!层.ok) continue;
     let 最新 = 0;
     for (const 份 of 层.order) {
       const t = fs.statSync(份).mtimeMs;
       if (t > 最新) 最新 = t;
     }
     const 新 = fs.statSync(字节路).mtimeMs >= 最新;
-    ok("它不比这条链（" + 层.order.length + " 份）里任何一份旧", 新,
-      "旧了就重新生成：node tools/emit-code.mjs self/run.hmyr runtime/run.hmoks");
+    ok(产物相对 + " 不比它那条链（" + 层.order.length + " 份）里任何一份旧", 新,
+      "旧了就重新生成：node tools/emit-code.mjs " + 源相对 + " " + 产物相对);
   }
 }
 
