@@ -2,7 +2,7 @@
 //
 // 这一套的判据是「没有外部种子也跑得动」—— 所以它不藏仓库里的 bootstrap/（那会
 // 影响并行跑的别的套件），而是把可执行文件编译到一个**没有 bootstrap/ 的临时目录**里，
-// 从那里跑一份源码。种子若没编进去，这一步会报 HMYR-E0009。
+// 从那里跑一份源码。种子若没编进去，这一步会报 HMYR-詞-009。
 //
 // 与 node bin/hmyr.mjs 的关系要说清：那一份是「解释执行」，它把 main 的返回值也打出来
 // （run.hmoca 的显示选择）；这一份是「编译执行」，跑的是用户程序本身，不打印返回值。
@@ -55,7 +55,7 @@ if (!有编译器) {
     });
     ok("没有外部种子也跑完了", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 200));
     ok("输出就是程序该有的样子", String(r.stdout || "") === "hi 42 琥珀音", JSON.stringify(String(r.stdout || "")));
-    ok("没有抱怨找不到种子", !String(r.stderr || "").includes("HMYR-E0009"), String(r.stderr).slice(0, 200));
+    ok("没有抱怨找不到种子", !String(r.stderr || "").includes("HMYR-詞-009"), String(r.stderr).slice(0, 200));
 
     console.log("三、它跑的就是它自己编出来的那一段");
     {

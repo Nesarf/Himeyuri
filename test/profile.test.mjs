@@ -133,7 +133,7 @@ console.log("六、线程池那一项在 C 那台上真的拦");
     const 宽 = 跑C("t.hmhsr");
     ok("steady 第一个线程起得来", (紧.stdout || "").includes("甲=1"), JSON.stringify((紧.stdout || "").slice(0, 60)));
     ok("steady 第二个线程起不来", (紧.stdout || "").includes("乙=-1"), JSON.stringify((紧.stdout || "").slice(0, 60)));
-    ok("而且它说的是「池满」", (紧.stderr || "").includes("HMYR-R0223"), JSON.stringify((紧.stderr || "").slice(-120)));
+    ok("而且它说的是「池满」", (紧.stderr || "").includes("HMYR-內-022"), JSON.stringify((紧.stderr || "").slice(-120)));
     ok("elastic 两个线程都起得来", !(宽.stdout || "").includes("乙=-1") && (宽.stdout || "").includes("甲=1"), JSON.stringify((宽.stdout || "").slice(0, 60)));
   }
 }
@@ -169,7 +169,7 @@ console.log("七、JS 侧也真的会起线程（最小求值器）");
   ].join("\n") + "\n";
   fs.writeFileSync(path.join(临, "两线.hmsnp"), 两线, "utf8");
   const 紧 = 跑文件(["两线.hmsnp"], 临, { ...process.env });
-  ok("steady 第二个线程撞池", (紧.stderr || "").includes("HMYR-R0223"), JSON.stringify((紧.stdout || "").slice(0, 60)) + JSON.stringify((紧.stderr || "").slice(-120)));
+  ok("steady 第二个线程撞池", (紧.stderr || "").includes("HMYR-內-022"), JSON.stringify((紧.stdout || "").slice(0, 60)) + JSON.stringify((紧.stderr || "").slice(-120)));
 }
 
 console.log("八、GC 那一项在 C 那台上也按档位");

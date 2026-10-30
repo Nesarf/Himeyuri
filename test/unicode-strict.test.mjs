@@ -35,7 +35,7 @@ console.log("what it refuses: control characters and emoji");
   for (const [label, source] of cases) {
     const out = attempt(() => lexed(source));
     const errs = out.error ? [out.error] : out.value.diagnostics.errors.map((e) => e.code);
-    ok(label + " 被拒绝", errs.length > 0 && errs.join(",").includes("HMYR-E0006"), out.error || errs.join(",") || "没有报错");
+    ok(label + " 被拒绝", errs.length > 0 && errs.join(",").includes("HMYR-詞-007"), out.error || errs.join(",") || "没有报错");
   }
 }
 {

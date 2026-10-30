@@ -43,7 +43,7 @@ console.log("三、整棵 import 树：顺序与宿主一致（临时两文件�
 {
   const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-bridge-"));
   // double 要写 pub：它被另一个模块调用，而归属表活起来之后，跨模块调一个没 pub 的
-  // 名字会被正当地拒成 HMYR-R0250（2026-11-02：桥补上「声明属于哪个文件」之后这条
+  // 名字会被正当地拒成 HMYR-內-023（2026-11-02：桥补上「声明属于哪个文件」之后这条
   // 判据就红了 —— 而那恰好说明归属表第一次真的在工作）。
   fs.writeFileSync(path.join(临, "lib.hmoca"), "pub fn double(x: Int) -> Int {\n  return x * 2\n}\n", "utf8");
   fs.writeFileSync(path.join(临, "main.hmoca"), 'import "./lib.hmoca"\nfn main() -> Int {\n  return double(21)\n}\n', "utf8");

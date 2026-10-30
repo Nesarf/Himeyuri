@@ -53,7 +53,7 @@ console.log("二、效果那一层：要 file 才有写");
     const rt = 最小运行(层, { write: () => {}, capabilities: 本机能力() });
     码 = rt.callFunction(rt.functions.get("main"), [], null);
   } catch (e) { 错 = (e.code || "") + " " + e.message; }
-  ok("没声明效果时被拒绝（R0201）", String(错).includes("HMYR-R0201"), String(错).slice(0, 80));
+  ok("没声明效果时被拒绝（R0201）", String(错).includes("HMYR-內-001"), String(错).slice(0, 80));
   ok("而被拒绝时也没有写出文件", !fs.existsSync(path.join(临, "x.txt")));
   fs.rmSync(临, { recursive: true, force: true });
 }

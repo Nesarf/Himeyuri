@@ -33,7 +33,7 @@ export function runEmbedded(source, granted = []) {
   const asked = main.effects || [];
   const excess = asked.filter((e) => !grantedSet.has(e));
   if (excess.length) {
-    diagnostics.error("HMYR-R0202", "the script declares effect(s) the host did not grant: " + excess.join(", ") + " (granted: " + (granted.join(", ") || "none") + ")", main.line, 0);
+    diagnostics.error("HMYR-內-002", "the script declares effect(s) the host did not grant: " + excess.join(", ") + " (granted: " + (granted.join(", ") || "none") + ")", main.line, 0);
     return { ok: false, stage: "grant", output: [], value: null, diagnostics };
   }
 

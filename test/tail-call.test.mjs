@@ -52,7 +52,7 @@ console.log("四、尾调用不能绕过效果检查");
   // print 要 process 效果。这一条是尾位置上的调用，而它必须仍然被检查。
   const 尾要效果 = "fn shout() -> Int effects(process) {\n  print(\"hi\")\n  return 0\n}\nfn main() -> Int {\n  return shout()\n}\n";
   const r = 跑(尾要效果);
-  ok("没声明效果时仍然拒绝（R0201）", r.err === "HMYR-R0201", JSON.stringify(r));
+  ok("没声明效果时仍然拒绝（R0201）", r.err === "HMYR-內-001", JSON.stringify(r));
   const 声明了 = "fn shout() -> Int effects(process) {\n  print(\"hi\")\n  return 0\n}\nfn main() -> Int effects(process) {\n  return shout()\n}\n";
   ok("声明了效果时跑得动", typeof 跑(声明了).value === "number", JSON.stringify(跑(声明了)));
 }

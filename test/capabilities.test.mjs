@@ -31,13 +31,13 @@ const 跑 = (src) => {
 console.log("读不到：给出编号 R0211");
 {
   const r = 跑('fn main() -> Int effects(file) { print(read_text("E:/definitely-missing-9f3a.txt")) return 0 }\n');
-  ok("缺文件时是 R0211", r.error && r.error.includes("HMYR-R0211"), String(r.error).slice(0, 90));
+  ok("缺文件时是 R0211", r.error && r.error.includes("HMYR-內-011"), String(r.error).slice(0, 90));
   ok("而且带着宿主的说法（不吞掉原因）", r.error && r.error.includes("cannot read"), String(r.error).slice(0, 90));
 }
 console.log("写不进：给出编号 R0212");
 {
   const r = 跑('fn main() -> Int effects(file) { write_text("E:/no-such-dir-9f3a/x.txt", "hello") return 0 }\n');
-  ok("目录不存在时是 R0212", r.error && r.error.includes("HMYR-R0212"), String(r.error).slice(0, 90));
+  ok("目录不存在时是 R0212", r.error && r.error.includes("HMYR-內-012"), String(r.error).slice(0, 90));
 }
 console.log("正常路径不受影响");
 {
@@ -48,7 +48,7 @@ console.log("正常路径不受影响");
   ok("内容真的落盘了", fs.existsSync(tmp) && fs.readFileSync(tmp, "utf8") === "hello");
   fs.rmSync(tmp, { force: true });
   const r2 = 跑('fn main() -> Int effects(file) { print(read_text("' + tmp + '")) return 0 }\n');
-  ok("读一个刚删掉的文件也给编号（不静默）", r2.error && r2.error.includes("HMYR-R0211"), String(r2.error).slice(0, 60));
+  ok("读一个刚删掉的文件也给编号（不静默）", r2.error && r2.error.includes("HMYR-內-011"), String(r2.error).slice(0, 60));
 }
 
 console.log("进程组：返回形状是记录，跑不起来时带宿主的错误码");
@@ -57,7 +57,7 @@ console.log("进程组：返回形状是记录，跑不起来时带宿主的错�
   ok("跑不起来的程序交回记录，不是抛", !r.error, String(r.error).slice(0, 70));
   ok("code 是 -1、error 带宿主的错误码", r.out && r.out.split("|")[0] === "-1" && r.out.includes("ENOENT"), JSON.stringify(r.out));
   const r2 = 跑('fn main() -> Int effects(process) {\n  let x = run_program("", ())\n  return 0\n}\n');
-  ok("空程序名给编号 R0213", r2.error && r2.error.includes("HMYR-R0213"), String(r2.error).slice(0, 70));
+  ok("空程序名给编号 R0213", r2.error && r2.error.includes("HMYR-內-013"), String(r2.error).slice(0, 70));
 }
 
 console.log("");

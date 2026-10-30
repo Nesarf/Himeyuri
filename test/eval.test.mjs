@@ -71,7 +71,7 @@ console.log("\neffects narrow, never widen (SPEC 2.4)");
 {
   const source = 'fn read(p: Path) -> String effects(file) { return "data" }\nfn main() { print(read("x")) }\n';
   const result = run(source);
-  ok("an undeclared caller is refused", result.diagnostics.errors.map((e) => e.code).includes("HMYR-R0201"),
+  ok("an undeclared caller is refused", result.diagnostics.errors.map((e) => e.code).includes("HMYR-內-001"),
     result.diagnostics.errors.map((e) => e.code).join(",") || "no error reported");
 }
 {

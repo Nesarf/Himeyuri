@@ -17,7 +17,7 @@ const codesOf = (r) => r.diagnostics.items.map((d) => d.code);
 console.log("running a program needs the process effect");
 {
   const r = runEmbedded('fn main() {\n  print(run_program("x")["code"])\n}\n', ["file"]);
-  ok("without the grant it is refused", !r.ok && codesOf(r).includes("HMYR-R0201"), codesOf(r).join(","));
+  ok("without the grant it is refused", !r.ok && codesOf(r).includes("HMYR-內-001"), codesOf(r).join(","));
 }
 {
   const r = runEmbedded('fn main() {\n  print(1)\n}\n', ["process"]);

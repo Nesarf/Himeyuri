@@ -130,7 +130,7 @@ export const 内置表 = {
     // 0 表示不设限：普通 .hmoca 的跑法不该因为多了两档而变。
     const 上限 = vm.cap.thread.上限 || 0;
     if (上限 > 0 && 线程们.size >= 上限) {
-      return vm.坏("HMYR-R0223", "thread pool is full: " + 线程们.size + " alive, limit " + 上限 + "（steady 那一档只给一个；要更多就用 hmhsr 那一档）");
+      return vm.坏("HMYR-內-022", "thread pool is full: " + 线程们.size + " alive, limit " + 上限 + "（steady 那一档只给一个；要更多就用 hmhsr 那一档）");
     }
     const source = String(vm.成串(a[0]));
     const entry = String(vm.成串(a[1]));
@@ -157,12 +157,12 @@ export const 内置表 = {
   thr_join: { 做: (vm, a) => {
     const id = 数.下整(vm.成数(a[0]));
     const h = 线程们.get(id);
-    if (!h) return vm.坏("HMYR-R0221", "no such thread handle: " + id);
+    if (!h) return vm.坏("HMYR-內-020", "no such thread handle: " + id);
     const 限 = a[1] === undefined || a[1] === null ? 30000 : 数.下整(vm.成数(a[1]));
     const 到 = Date.now() + 限;
     while (vm.cap.thread.load(h.flag) === 0) {
       const 剩 = 到 - Date.now();
-      if (剩 <= 0) return vm.坏("HMYR-R0222", "thread " + id + " did not finish within " + 限 + "ms");
+      if (剩 <= 0) return vm.坏("HMYR-內-021", "thread " + id + " did not finish within " + 限 + "ms");
       vm.cap.thread.wait(h.flag, 剩 < 50 ? 剩 : 50);
     }
     let 结果 = null;
@@ -176,7 +176,7 @@ export const 内置表 = {
   thr_cancel: { 效果: "thread", 做: (vm, a) => {
     const id = 数.下整(vm.成数(a[0]));
     const h = 线程们.get(id);
-    if (!h) return vm.坏("HMYR-R0221", "no such thread handle: " + id);
+    if (!h) return vm.坏("HMYR-內-020", "no such thread handle: " + id);
     try { if (h.worker) h.worker.terminate(); } catch (err) { /* 已经没了就算停住 */ }
     try { vm.cap.file.remove(h.outPath); } catch (err) { /* 同上 */ }
     线程们.delete(id);
@@ -246,7 +246,7 @@ export const 内置表 = {
     try {
       const buf = vm.cap.file.read(路径);
       return new 类元组(Array.from(buf).map((b) => 数.造(b)));
-    } catch { return vm.坏("HMYR-R0211", "cannot read '" + 路径 + "'"); }
+    } catch { return vm.坏("HMYR-內-011", "cannot read '" + 路径 + "'"); }
   } },
   // ---- 进程：改工作目录 ----
   // 成功交回新的目录（与宿主那一份同一条约定）；进不去报 R0209。
@@ -255,12 +255,12 @@ export const 内置表 = {
     try {
       vm.cap.process.chdir(目标);
       return vm.文.由宿主(vm.cap.process.cwd());
-    } catch { return vm.坏("HMYR-R0209", "cannot enter '" + 目标 + "'"); }
+    } catch { return vm.坏("HMYR-內-009", "cannot enter '" + 目标 + "'"); }
   } },
   // 跑一个程序：结果是一份记录，五个字段。跑不起来也照实报告，不抛。
   run_program: { 效果: "process", 做: (vm, a) => {
     const 命令 = vm.成串(a[0]);
-    if (命令 === "") return vm.坏("HMYR-R0213", "run_program needs a program name: an empty string names nothing");
+    if (命令 === "") return vm.坏("HMYR-內-013", "run_program needs a program name: an empty string names nothing");
     const 参们 = a[1] && a[1].tag === "tuple" ? a[1].items.map((x) => vm.成串(x)) : [];
     const 超时 = a[2] === undefined || a[2] === null ? 10000 : vm.成数(a[2]);
     const 编码 = a[3] === undefined || a[3] === null ? "utf8" : vm.成串(a[3]);
@@ -295,7 +295,7 @@ export const 内置表 = {
   locale_set: { 做: (vm, a) => {
     const 名 = vm.成串(a[0]);
     if (!locale名字们.includes(名)) {
-      return vm.坏("HMYR-R0205", "no such locale profile: '" + 名 + "' (have: " + locale名字们.join(", ") + ")");
+      return vm.坏("HMYR-內-005", "no such locale profile: '" + 名 + "' (have: " + locale名字们.join(", ") + ")");
     }
     当前locale = 名;
     return vm.文.由宿主(当前locale);
@@ -357,7 +357,7 @@ export const 内置表 = {
   // 取第一个码元的码点。空串拒绝（R0206），理由与最小求值器那一份相同。
   ord: { 做: (vm, a) => {
     const s = vm.成串(a[0]);
-    if (s.length === 0) return vm.坏("HMYR-R0206", "ord of an empty string: there is no first character to read");
+    if (s.length === 0) return vm.坏("HMYR-內-006", "ord of an empty string: there is no first character to read");
     return s.codePointAt(0);
   } },
   // 大小写：与最小求值器那一份同一个安排 —— 表在能力层，这里只转发。
@@ -365,12 +365,12 @@ export const 内置表 = {
   to_lower: { 做: (vm, a) => vm.文.由宿主(vm.cap.unicode.lower(vm.成串(a[0]))) },
   chr: { 做: (vm, a) => {
     const cp = 数.下整(vm.成数(a[0]));
-    if (数.比(cp, 0) < 0 || 数.比(cp, 0x10ffff) > 0) return vm.坏("HMYR-R0207", "not a code point: " + 数.成文(cp));
+    if (数.比(cp, 0) < 0 || 数.比(cp, 0x10ffff) > 0) return vm.坏("HMYR-內-007", "not a code point: " + 数.成文(cp));
     return vm.文.码点(cp);
   } },
   to_int: { 做: (vm, a) => {
     const s = vm.成串(a[0]).trim();
-    if (!/^-?[0-9]+$/.test(s)) return vm.坏("HMYR-R0208", "not an integer literal: '" + s + "'");
+    if (!/^-?[0-9]+$/.test(s)) return vm.坏("HMYR-內-008", "not an integer literal: '" + s + "'");
     return 数.解析(s);
   } },
   // 算术那一组：纯函数，不碰世界。字节码那条路上一直缺它们 ——
@@ -399,7 +399,7 @@ export const 内置表 = {
   index_new: { 做: () => ({ tag: "index", m: new Map() }) },
   index_set: { 做: (vm, a) => {
     const 表 = a[0];
-    if (!表 || 表.tag !== "index") return vm.坏("HMYR-R0219", "index_set wants an index, found " + 述(表, vm.文));
+    if (!表 || 表.tag !== "index") return vm.坏("HMYR-內-019", "index_set wants an index, found " + 述(表, vm.文));
     表.m.set(vm.成串(a[1]), a[2]);
     return 表;
   } },
@@ -488,9 +488,9 @@ export const 内置表 = {
   } },
   index_get: { 做: (vm, a) => {
     const 表 = a[0];
-    if (!表 || 表.tag !== "index") return vm.坏("HMYR-R0219", "index_get wants an index, found " + 述(表, vm.文));
+    if (!表 || 表.tag !== "index") return vm.坏("HMYR-內-019", "index_get wants an index, found " + 述(表, vm.文));
     const k = vm.成串(a[1]);
-    if (!表.m.has(k)) return vm.坏("HMYR-R0218", "no key " + JSON.stringify(k) + " in that index");
+    if (!表.m.has(k)) return vm.坏("HMYR-內-018", "no key " + JSON.stringify(k) + " in that index");
     return 表.m.get(k);
   } },
   index_has: { 做: (vm, a) => {
@@ -500,30 +500,30 @@ export const 内置表 = {
   } },
   index_len: { 做: (vm, a) => {
     const 表 = a[0];
-    if (!表 || 表.tag !== "index") return vm.坏("HMYR-R0219", "index_len wants an index, found " + 述(表, vm.文));
+    if (!表 || 表.tag !== "index") return vm.坏("HMYR-內-019", "index_len wants an index, found " + 述(表, vm.文));
     return 表.m.size;
   } },
   index_keys: { 做: (vm, a) => {
     const 表 = a[0];
-    if (!表 || 表.tag !== "index") return vm.坏("HMYR-R0219", "index_keys wants an index, found " + 述(表, vm.文));
+    if (!表 || 表.tag !== "index") return vm.坏("HMYR-內-019", "index_keys wants an index, found " + 述(表, vm.文));
     return new 类元组([...表.m.keys()]);
   } },
   record_new: { 做: (vm, a) => {
     const pairs = a[0];
-    if (!pairs || pairs.tag !== "tuple") return vm.坏("HMYR-R0214", "record_of wants a tuple of (name, value) pairs");
+    if (!pairs || pairs.tag !== "tuple") return vm.坏("HMYR-內-014", "record_of wants a tuple of (name, value) pairs");
     const 字段 = new Map();
     for (const p of pairs.items) {
-      if (!p || p.tag !== "tuple" || p.items.length !== 2) return vm.坏("HMYR-R0214", "every item must be a (name, value) pair");
+      if (!p || p.tag !== "tuple" || p.items.length !== 2) return vm.坏("HMYR-內-014", "every item must be a (name, value) pair");
       const k = vm.成串(p.items[0]);
-      if (!/^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u.test(k)) return vm.坏("HMYR-R0214", "not a name a record could hold: " + JSON.stringify(k));
+      if (!/^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u.test(k)) return vm.坏("HMYR-內-014", "not a name a record could hold: " + JSON.stringify(k));
       字段.set(k, p.items[1]);
     }
     return new 类记录(字段);
   } },
   field_get: { 做: (vm, a) => {
     const rec = a[0], name = vm.成串(a[1]);
-    if (!rec || rec.tag !== "record") return vm.坏("HMYR-R0215", "field_get wants a record, found " + 述(rec, vm.文));
-    if (!rec.fields.has(name)) return vm.坏("HMYR-R0216", "no field '" + name + "' on that record");
+    if (!rec || rec.tag !== "record") return vm.坏("HMYR-內-015", "field_get wants a record, found " + 述(rec, vm.文));
+    if (!rec.fields.has(name)) return vm.坏("HMYR-內-016", "no field '" + name + "' on that record");
     return rec.fields.get(name);
   } },
   field_has: { 做: (vm, a) => {
@@ -535,7 +535,7 @@ export const 内置表 = {
   // 两个求值器之间是同一套值，这一条与 argv 那一处同一个理由。
   field_names: { 做: (vm, a) => {
     const rec = a[0];
-    if (!rec || rec.tag !== "record") return vm.坏("HMYR-R0217", "field_names wants a record, found " + 述(rec, vm.文));
+    if (!rec || rec.tag !== "record") return vm.坏("HMYR-內-017", "field_names wants a record, found " + 述(rec, vm.文));
     return new 类元组([...rec.fields.keys()]);
   } },
   // 写一份文本。与最小求值器那一份同一个边界：只认 utf8。
@@ -545,7 +545,7 @@ export const 内置表 = {
     try { vm.cap.file.writeText(路径, 文); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      return vm.坏("HMYR-R0212", "cannot write '" + 藏路径(路径) + "'" + 原因);
+      return vm.坏("HMYR-內-012", "cannot write '" + 藏路径(路径) + "'" + 原因);
     }
     return 文.length;
   } },
@@ -565,7 +565,7 @@ export const 内置表 = {
     try { vm.cap.file.writeBytes(路径, 字节); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      return vm.坏("HMYR-R0212", "cannot write '" + 藏路径(路径) + "'" + 原因);
+      return vm.坏("HMYR-內-012", "cannot write '" + 藏路径(路径) + "'" + 原因);
     }
     return 字节.length;
   } },
@@ -579,7 +579,7 @@ export const 内置表 = {
   // 因为语言里没有 typeof，也没有 try —— 判不出类型的编码器只会猜错。
   pack_value: { 做: (vm, a) => {
     try { return new 类元组(vm.cap.file.packValue(a[0])); }
-    catch (err) { vm.坏("HMYR-R0214", "cannot encode this value: " + String(err && err.message ? err.message : err)); return null; }
+    catch (err) { vm.坏("HMYR-內-014", "cannot encode this value: " + String(err && err.message ? err.message : err)); return null; }
   } },
   // 按行读：从偏移读一行，交回 {行, 下一起点}；读完交回 下一起点 = -1。
   // 语言里没有文件句柄，所以每次调用自己开、自己关 —— 语义封闭，能一段一段读。
@@ -591,7 +591,7 @@ export const 内置表 = {
       return new 类记录(new Map([["行", r.行], ["下一起点", r.下一起点]]));
     } catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      return vm.坏("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+      return vm.坏("HMYR-內-011", "cannot read '" + 藏路径(路径) + "'" + 原因);
     }
   } },
   // 整份按行切好。
@@ -600,7 +600,7 @@ export const 内置表 = {
     try { return new 类元组(vm.cap.file.readLines(路径)); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      return vm.坏("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+      return vm.坏("HMYR-內-011", "cannot read '" + 藏路径(路径) + "'" + 原因);
     }
   } },
   print: { 做: (vm, a) => { vm.write(a.map((x) => vm.成串(x)).join("")); return null; } },
@@ -618,7 +618,7 @@ export const 内置表 = {
     try { buf = vm.cap.file.read(路径); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      return vm.坏("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+      return vm.坏("HMYR-內-011", "cannot read '" + 藏路径(路径) + "'" + 原因);
     }
     // 解出来的东西是语言里的字符串值，所以最后一跳要落到选定的那种底上。
     const 出 = (文) => vm.文.由宿主(文);
@@ -628,7 +628,7 @@ export const 内置表 = {
       if (名 === "utf8" || 名 === "utf-8") return 出(buf.toString("utf8"));
       if (名 === "utf16le" || 名 === "utf-16le") return 出(new TextDecoder("utf-16le").decode(buf));
       if (名 === "latin1") return 出(buf.toString("latin1"));
-      return vm.坏("HMYR-R0212", "this runtime cannot decode '" + enc + "'");
+      return vm.坏("HMYR-內-012", "this runtime cannot decode '" + enc + "'");
     }
     if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) return 出(buf.subarray(3).toString("utf8"));
     if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) return 出(new TextDecoder("utf-16le").decode(buf.subarray(2)));
@@ -646,7 +646,7 @@ export const 内置表 = {
     try { 名们 = vm.cap.file.listDir(路径); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      return vm.坏("HMYR-R0211", "cannot list '" + 藏路径(路径) + "'" + 原因);
+      return vm.坏("HMYR-內-011", "cannot list '" + 藏路径(路径) + "'" + 原因);
     }
     return new 类元组(名们.map((x) => vm.文.由宿主(String(x))));
   } },

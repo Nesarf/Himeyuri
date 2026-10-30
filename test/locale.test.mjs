@@ -53,7 +53,7 @@ console.log("切换：能覆盖，也要能拒绝");
   ok("当前档案跟着变", call("当前档案", []) === "ja-JP.shift_jis");
   let raised = null;
   try { call("切换档案", ["xx-XX.utf8"]); } catch (e) { raised = (e.code || "") + " " + e.message; }
-  ok("不存在的档案被拒绝并点名 HMYR-R0205", !!raised && raised.includes("HMYR-R0205"), String(raised));
+  ok("不存在的档案被拒绝并点名 HMYR-內-005", !!raised && raised.includes("HMYR-內-005"), String(raised));
   ok("拒绝之后当前档案没变", call("当前档案", []) === "ja-JP.shift_jis", call("当前档案", []));
 }
 console.log("环境说该是哪一套（可能是空，表示没档案）");

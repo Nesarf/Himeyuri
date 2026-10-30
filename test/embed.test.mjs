@@ -23,7 +23,7 @@ console.log("the envelope");
 }
 {
   const r = runEmbedded('fn main() effects(file, net) {\n  print("nope")\n}\n', ["file"]);
-  ok("a script asking for more than the host grants is refused", !r.ok && codesOf(r).includes("HMYR-R0202"), codesOf(r).join(","));
+  ok("a script asking for more than the host grants is refused", !r.ok && codesOf(r).includes("HMYR-內-002"), codesOf(r).join(","));
   ok("and it is refused before running", r.output.length === 0 && r.stage === "grant", r.stage);
 }
 {
@@ -47,11 +47,11 @@ fs.writeFileSync(scratch, "content from disk\n", "utf8");
 {
   const source = 'fn main() {\n  print(read_text(' + JSON.stringify(scratch) + '))\n}\n';
   const r = runEmbedded(source, ["file"]);
-  ok("an undeclared read is refused", !r.ok && codesOf(r).includes("HMYR-R0201"), codesOf(r).join(","));
+  ok("an undeclared read is refused", !r.ok && codesOf(r).includes("HMYR-內-001"), codesOf(r).join(","));
 }
 {
   const r = runEmbedded('fn main() {\n  print(write_text("x", "y"))\n}\n', []);
-  ok("writing now exists, and needs the file effect just like reading", !r.ok && codesOf(r).includes("HMYR-R0201"), codesOf(r).join(","));
+  ok("writing now exists, and needs the file effect just like reading", !r.ok && codesOf(r).includes("HMYR-內-001"), codesOf(r).join(","));
 }
 fs.rmSync(scratch, { force: true });
 
@@ -86,7 +86,7 @@ function talk(requests) {
   ok("five frames, five answers", replies.length === 5, String(replies.length));
   ok("describe answers with the host's terms", replies[0].result && replies[0].result.granted.includes("file"));
   ok("a granted run answers ok with its output", replies[1].result.ok && replies[1].result.output.join("") === "hi");
-  ok("a run outside the grant answers not-ok with the code", replies[2].result.ok === false && replies[2].result.diagnostics[0].code === "HMYR-R0202");
+  ok("a run outside the grant answers not-ok with the code", replies[2].result.ok === false && replies[2].result.diagnostics[0].code === "HMYR-內-002");
   ok("an unknown method is a JSON-RPC error", replies[3].error && replies[3].error.code === -32601);
   ok("a run with no grant falls back to the host's own", replies[4].result.ok && replies[4].result.output.join("") === "2");
 }

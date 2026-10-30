@@ -45,7 +45,7 @@ console.log("三、目标不存在时：编号在 stderr，stdout 是空的");
 {
   const r = 启动([path.join(临, "不存在.hmoca")]);
   ok("退出码 1", r.status === 1, String(r.status));
-  ok("编号在 stderr", String(r.stderr).includes("HMYR-R0211"), JSON.stringify(String(r.stderr).slice(0, 60)));
+  ok("编号在 stderr", String(r.stderr).includes("HMYR-內-011"), JSON.stringify(String(r.stderr).slice(0, 60)));
   ok("stdout 干干净净", String(r.stdout) === "", JSON.stringify(String(r.stdout).slice(0, 40)));
 }
 

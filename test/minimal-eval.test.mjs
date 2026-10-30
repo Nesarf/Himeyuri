@@ -75,7 +75,7 @@ try {
     const 模 = path.join(临, "mod");
     fs.mkdirSync(模, { recursive: true });
     // 双 要写 pub：它被另一个模块（imp.hmoca）调用，而可见性检查会拒绝没有 pub 的
-    // 跨模块调用（HMYR-R0250）。在 lib.hmoca 与 imp.hmoca 同属一个临时包的前提下，
+    // 跨模块调用（HMYR-內-023）。在 lib.hmoca 与 imp.hmoca 同属一个临时包的前提下，
     // pub 就够 —— 这一条以前没报，是因为接受它的人只看扁平表（2026-11-02）。
     fs.writeFileSync(path.join(模, "lib.hmoca"), "pub fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
     写("hello.hmoca", "fn main() -> Int {\n  return 5\n}\n");
@@ -136,7 +136,7 @@ console.log("三、错误路径：同一个编号");
     ["非尾递归撞深度", "fn 深(n: Int) -> Int {\n  if n <= 0 { return 0 }\n  return 1 + 深(n - 1)\n}\nfn main() -> Int {\n  return 深(100000)\n}\n", ""],
     ["改一个 let", "fn main() -> Int {\n  let a = 1\n  a = 2\n  return a\n}\n", "HMYR-行-017"],
     // 路径用相对写法：Windows 的绝对路径里那个反斜杠在源码里是转义，而子集切词器会拒绝它。
-    ["没声明效果就调 read_text", "fn 读() -> String {\n  return read_text(\"nope.txt\")\n}\nfn main() -> String {\n  return 读()\n}\n", "HMYR-R0201"],
+    ["没声明效果就调 read_text", "fn 读() -> String {\n  return read_text(\"nope.txt\")\n}\nfn main() -> String {\n  return 读()\n}\n", "HMYR-內-001"],
   ];
   for (const [名, 文, 码] of 编号例) {
     const 入口 = 写(名.replace(/[^a-z]/gi, "x") + ".hmoca", 文);

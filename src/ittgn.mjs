@@ -22,24 +22,24 @@ export const 是容器 = (名) => String(名 || "").toLowerCase().endsWith(容�
 export const 读容器 = (路) => {
   let 字节;
   try { 字节 = fs.readFileSync(路); }
-  catch { return { ok: false, 错: "HMYR-E0413 读不到：" + 路 }; }
+  catch { return { ok: false, 错: "HMYR-機-003 读不到：" + 路 }; }
   if (字节.length < 12 || 字节.subarray(0, 9).toString("latin1") !== 魔数) {
-    return { ok: false, 错: "HMYR-E0413 这不是容器：" + 路 };
+    return { ok: false, 错: "HMYR-機-003 这不是容器：" + 路 };
   }
-  if (字节[9] !== 版) return { ok: false, 错: "HMYR-E0415 版本不认识：" + 字节[9] };
+  if (字节[9] !== 版) return { ok: false, 错: "HMYR-機-005 版本不认识：" + 字节[9] };
   const 数 = 字节.readUInt16LE(10);
   let 位 = 12;
   const 成员们 = [];
   for (let i = 0; i < 数; i++) {
-    if (位 + 2 > 字节.length) return { ok: false, 错: "HMYR-E0416 成员表截断" };
+    if (位 + 2 > 字节.length) return { ok: false, 错: "HMYR-機-006 成员表截断" };
     const 名长 = 字节.readUInt16LE(位);
     const 名起 = 位 + 2;
     const 长位 = 名起 + 名长;
-    if (长位 + 4 > 字节.length) return { ok: false, 错: "HMYR-E0416 成员表截断" };
+    if (长位 + 4 > 字节.length) return { ok: false, 错: "HMYR-機-006 成员表截断" };
     const 名 = 字节.subarray(名起, 长位).toString("utf8");
     const 数据长 = 字节.readUInt32LE(长位);
     const 起 = 长位 + 4;
-    if (起 + 数据长 > 字节.length) return { ok: false, 错: "HMYR-E0416 成员数据截断" };
+    if (起 + 数据长 > 字节.length) return { ok: false, 错: "HMYR-機-006 成员数据截断" };
     成员们.push({ 名, 数据: 字节.subarray(起, 起 + 数据长) });
     位 = 起 + 数据长;
   }
@@ -82,11 +82,11 @@ export const 摊开 = (成员们, 目录) => {
     const 名 = 归一成员名(m.名);
     const 段们 = 名.split("/").filter((x) => x.length > 0);
     if (段们.length === 0 || 段们.includes("..")) {
-      return { ok: false, 错: "HMYR-E0417 成员路径不合法：" + m.名 };
+      return { ok: false, 错: "HMYR-機-007 成员路径不合法：" + m.名 };
     }
     const 归 = path.resolve(目录, 名);
     if (归 !== 根 && !归.startsWith(根 + path.sep)) {
-      return { ok: false, 错: "HMYR-E0417 成员路径跳出容器：" + m.名 };
+      return { ok: false, 错: "HMYR-機-007 成员路径跳出容器：" + m.名 };
     }
     fs.mkdirSync(path.dirname(归), { recursive: true });
     fs.writeFileSync(归, m.数据);
@@ -123,6 +123,6 @@ export const 解容器 = (包路) => {
   const 开 = 摊开(r.成员们, 目录);
   if (!开.ok) return 开;
   const 入口 = 找入口(目录, 包路);
-  if (!入口) return { ok: false, 错: "HMYR-E0418 容器里没有可跑的入口（要先有 hmoca 或 hmoks 成员）" };
+  if (!入口) return { ok: false, 错: "HMYR-機-008 容器里没有可跑的入口（要先有 hmoca 或 hmoks 成员）" };
   return { ok: true, 目录, 入口, 成员们: r.成员们 };
 };

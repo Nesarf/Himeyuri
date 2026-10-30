@@ -78,7 +78,7 @@ try {
 
     let 拒绝了吗 = false;
 
-    try { call("读字节", [过程目录.replace(/\\\\/g, "/") + "/nope.mod"]); } catch (e) { 拒绝了吗 = (e.code || "").indexOf("HMYR-R0211") >= 0; }
+    try { call("读字节", [过程目录.replace(/\\\\/g, "/") + "/nope.mod"]); } catch (e) { 拒绝了吗 = (e.code || "").indexOf("HMYR-內-011") >= 0; }
 
     ok("不存在的文件给 R0211（拒绝比静默好）", 拒绝了吗);
     const p = 造("e.mod", "", "M.K.", 0, [0], 0);

@@ -5,7 +5,7 @@
 // 每个编号都有阶段、含义与「谁在验它」。助手该建在那上面，而不是另起一套说法；
 // 两套说法会漂移，而漂移之后两边都不对。
 //
-//   node tools/helper.mjs HMYR-R0110     这个编号是什么、该怎么办
+//   node tools/helper.mjs HMYR-行-010     这个编号是什么、该怎么办
 //   node tools/helper.mjs 深度           哪些编号的含义里有「深度」
 //   node tools/helper.mjs               列出全部编号
 import fs from "node:fs";

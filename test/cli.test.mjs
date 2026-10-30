@@ -98,7 +98,7 @@ console.log("四、源码编不过时，明说，而且不跑半成品");
   fs.writeFileSync(源, "fn main() -> Int {\n  return (1 +\n}\n", "utf8");
   const r = 跑([源], { env: { HMYR_SEED: 种子 } });
   ok("退出码非零", r.码 !== 0, String(r.码));
-  ok("说起的是启动器那一层的编号", r.错.includes("HMYR-E0009"), JSON.stringify(r.错.slice(0, 200)));
+  ok("说起的是启动器那一层的编号", r.错.includes("HMYR-詞-009"), JSON.stringify(r.错.slice(0, 200)));
   ok("标准输出里没有编到一半的东西", r.出.trim() === "", JSON.stringify(r.出.slice(0, 120)));
 }
 

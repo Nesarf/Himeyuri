@@ -57,7 +57,7 @@ try {
   {
     let raised = null;
     try { 执行("cd E:/definitely-no-such-dir-9f3a"); } catch (err) { raised = (err.code || "") + " " + err.message; }
-    ok("进不去的目录被拒绝，编号 HMYR-R0209", !!raised && raised.includes("HMYR-R0209"), String(raised));
+    ok("进不去的目录被拒绝，编号 HMYR-內-009", !!raised && raised.includes("HMYR-內-009"), String(raised));
     恢复();
   }
   {

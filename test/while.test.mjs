@@ -43,7 +43,7 @@ console.log("嵌套与非平凡条件");
 console.log("上限保护：不会挂死在那里");
 {
   const r = 跑("fn main() -> Int {\n  while true { }\n  return 0\n}\n");
-  ok("跑过一百万次就停下并报 HMYR-R0210", r.error && r.error.includes("HMYR-R0210"), String(r.error));
+  ok("跑过一百万次就停下并报 HMYR-內-010", r.error && r.error.includes("HMYR-內-010"), String(r.error));
 }
 
 console.log("");

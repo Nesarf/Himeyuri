@@ -66,7 +66,7 @@ console.log("三、一个真工程：入口 import 另一件，两条路算同�
 {
   const 目录 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-subset-load-"));
   try {
-    // pub 是必须的：入口在另一个文件里调它，而跨模块调私有名字现在是 HMYR-R0250。
+    // pub 是必须的：入口在另一个文件里调它，而跨模块调私有名字现在是 HMYR-內-023。
     fs.writeFileSync(path.join(目录, "lib.hmoca"), "pub fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
     const 入口 = path.join(目录, "main.hmoca");
     fs.writeFileSync(入口, "import \"./lib.hmoca\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");

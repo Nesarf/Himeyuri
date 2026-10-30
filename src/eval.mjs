@@ -68,7 +68,7 @@ const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
 // index_len 与 index_keys 自举层没有用，所以不进这张表）。
 const STAGE0_BUILTIN = new Set(["argv", "chr", "field_get", "field_has", "file_exists", "floor", "f64_bytes", "index_get", "index_has", "index_new", "index_set", "is_dir", "is_letter", "is_mark", "len", "nfc", "ord", "pack_value", "print", "print_err", "read_dir", "read_line", "read_lines", "read_text", "record_new", "slice", "str", "to_int", "write_bytes"]);
 // floor 是 2026-11-02 加进来的：自举层的词法器改成分块累积，二分合并那一步要取一半，
-// 而 to_int 对 1.5 是拒绝而不是取整（HMYR-R0208），所以那里只能用 floor。
+// 而 to_int 对 1.5 是拒绝而不是取整（HMYR-內-008），所以那里只能用 floor。
 // 这张表的意思是「已经量过的必须项」，于是它加了；stage0-eval 那一套的十七也就变十八。
 
 export class Runtime {
@@ -127,7 +127,7 @@ export class Runtime {
   查可见性(decl) {
     const 被调者 = this.归属.get(decl.name);
     if (被调者 && this.当前模块 && 被调者 !== this.当前模块 && decl.pub !== true) {
-      this.fail("HMYR-R0250",
+      this.fail("HMYR-內-023",
         "'" + decl.name + "' is declared in " + 被调者 + " without pub, and it is called from " +
         this.当前模块 + "; a private name stays inside its own module");
     }
@@ -252,7 +252,7 @@ export class Runtime {
         // 传下去的话，每个调用它的函数都得声明自己也在实时档位上，而那不是真的。
         if (effect === "realtime") continue;
         if (!fromEffects.has(effect)) {
-          this.fail("HMYR-R0201", "function '" + decl.name + "' uses effect '" + effect + "', which the caller did not declare");
+          this.fail("HMYR-內-001", "function '" + decl.name + "' uses effect '" + effect + "', which the caller did not declare");
         }
       }
     }
@@ -369,7 +369,7 @@ export class Runtime {
 
           guard += 1;
 
-          if (guard > 1000000) this.fail("HMYR-R0210", "a while loop ran past a million iterations without ending");
+          if (guard > 1000000) this.fail("HMYR-內-010", "a while loop ran past a million iterations without ending");
 
         }
 
@@ -431,7 +431,7 @@ export class Runtime {
       }
       const need = BUILTIN_EFFECTS[name];
       if (need && !(effects instanceof Set && effects.has(need))) {
-        this.fail("HMYR-R0201", "builtin '" + name + "' needs effect '" + need + "', which the caller did not declare");
+        this.fail("HMYR-內-001", "builtin '" + name + "' needs effect '" + need + "', which the caller did not declare");
       }
       const args = node.args.map((a) => this.evalExpr(a, scope, effects));
       const result = BUILTINS[node.callee.name](this, args);
@@ -450,7 +450,7 @@ export class Runtime {
     if (node.callee.kind === "Ident") {
       const decl = this.functions.get(node.callee.name);
       if (decl) {
-        // 可见性：跨模块调私有名字是 HMYR-R0250（见 查可见性）。
+        // 可见性：跨模块调私有名字是 HMYR-內-023（见 查可见性）。
         this.查可见性(decl);
         return this.callFunction(decl, args, effects);
       }
@@ -622,7 +622,7 @@ function writeBytes(rt, file, buf) {
 
   try { rt.cap.file.write(file, buf); return true; }
 
-  catch (err) { rt.fail("HMYR-R0212", "cannot write '" + file + "': " + String(err && err.message ? err.message : err)); }
+  catch (err) { rt.fail("HMYR-內-012", "cannot write '" + file + "': " + String(err && err.message ? err.message : err)); }
 
 }
 
@@ -702,19 +702,19 @@ const BUILTINS = {
   },
   ord: (rt, args) => {
     const s = rt.asString(args[0]);
-    if (s.length === 0) rt.fail("HMYR-R0206", "ord of an empty string: there is no first character to read");
+    if (s.length === 0) rt.fail("HMYR-內-006", "ord of an empty string: there is no first character to read");
     return s.codePointAt(0);
   },
   chr: (rt, args) => {
     const cp = Math.floor(rt.asNumber(args[0]));
-    if (cp < 0 || cp > 0x10ffff) rt.fail("HMYR-R0207", "not a code point: " + cp);
+    if (cp < 0 || cp > 0x10ffff) rt.fail("HMYR-內-007", "not a code point: " + cp);
     return String.fromCodePoint(cp);
   },
   to_upper: (rt, args) => rt.asString(args[0]).toUpperCase(),
   to_lower: (rt, args) => rt.asString(args[0]).toLowerCase(),
   to_int: (rt, args) => {
     const s = rt.asString(args[0]).trim();
-    if (!/^-?[0-9]+$/.test(s)) rt.fail("HMYR-R0208", "not an integer literal: '" + s + "'");
+    if (!/^-?[0-9]+$/.test(s)) rt.fail("HMYR-內-008", "not an integer literal: '" + s + "'");
     return Number(s);
   },
   // 目录：cwd 只读，chdir 会改变进程状态——所以后者要 process 效果（见 BUILTIN_EFFECTS）。
@@ -763,12 +763,12 @@ const BUILTINS = {
   // 而记录不是哈希表：字段名必须是标识符能写的形状，否则拒绝（R0214）。
   record_new: (rt, args) => {
     const pairs = args[0];
-    if (!Array.isArray(pairs)) rt.fail("HMYR-R0214", "record_of wants a tuple of (name, value) pairs");
+    if (!Array.isArray(pairs)) rt.fail("HMYR-內-014", "record_of wants a tuple of (name, value) pairs");
     const out = {};
     for (const p of pairs) {
-      if (!Array.isArray(p) || p.length !== 2) rt.fail("HMYR-R0214", "every item must be a (name, value) pair");
+      if (!Array.isArray(p) || p.length !== 2) rt.fail("HMYR-內-014", "every item must be a (name, value) pair");
       const k = rt.asString(p[0]);
-      if (!/^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u.test(k)) rt.fail("HMYR-R0214", "not a name a record could hold: " + JSON.stringify(k));
+      if (!/^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u.test(k)) rt.fail("HMYR-內-014", "not a name a record could hold: " + JSON.stringify(k));
       out[k] = p[1];
     }
     return out;
@@ -779,10 +779,10 @@ const BUILTINS = {
     const rec = args[0];
     const name = rt.asString(args[1]);
     if (rec === null || typeof rec !== "object" || Array.isArray(rec)) {
-      rt.fail("HMYR-R0215", "field_get wants a record, found " + describe(rec));
+      rt.fail("HMYR-內-015", "field_get wants a record, found " + describe(rec));
     }
     if (!Object.prototype.hasOwnProperty.call(rec, name)) {
-      rt.fail("HMYR-R0216", "no field '" + name + "' on that record");
+      rt.fail("HMYR-內-016", "no field '" + name + "' on that record");
     }
     return rec[name];
   },
@@ -805,7 +805,7 @@ const BUILTINS = {
   field_names: (rt, args) => {
     const rec = args[0];
     if (rec === null || typeof rec !== "object" || Array.isArray(rec)) {
-      rt.fail("HMYR-R0217", "field_names wants a record, found " + describe(rec));
+      rt.fail("HMYR-內-017", "field_names wants a record, found " + describe(rec));
     }
     return Object.keys(rec);
   },
@@ -819,7 +819,7 @@ const BUILTINS = {
   index_new: () => new Map(),
   index_set: (rt, args) => {
     const m = args[0];
-    if (!(m instanceof Map)) rt.fail("HMYR-R0219", "index_set wants an index, found " + describe(m));
+    if (!(m instanceof Map)) rt.fail("HMYR-內-019", "index_set wants an index, found " + describe(m));
     m.set(rt.asString(args[1]), args[2]);
     return m;
   },
@@ -880,9 +880,9 @@ const BUILTINS = {
   },
   index_get: (rt, args) => {
     const m = args[0];
-    if (!(m instanceof Map)) rt.fail("HMYR-R0219", "index_get wants an index, found " + describe(m));
+    if (!(m instanceof Map)) rt.fail("HMYR-內-019", "index_get wants an index, found " + describe(m));
     const k = rt.asString(args[1]);
-    if (!m.has(k)) rt.fail("HMYR-R0218", "no key " + JSON.stringify(k) + " in that index");
+    if (!m.has(k)) rt.fail("HMYR-內-018", "no key " + JSON.stringify(k) + " in that index");
     return m.get(k);
   },
   index_has: (rt, args) => {
@@ -892,12 +892,12 @@ const BUILTINS = {
   },
   index_len: (rt, args) => {
     const m = args[0];
-    if (!(m instanceof Map)) rt.fail("HMYR-R0219", "index_len wants an index, found " + describe(m));
+    if (!(m instanceof Map)) rt.fail("HMYR-內-019", "index_len wants an index, found " + describe(m));
     return m.size;
   },
   index_keys: (rt, args) => {
     const m = args[0];
-    if (!(m instanceof Map)) rt.fail("HMYR-R0219", "index_keys wants an index, found " + describe(m));
+    if (!(m instanceof Map)) rt.fail("HMYR-內-019", "index_keys wants an index, found " + describe(m));
     return [...m.keys()];
   },
   // ---- 十、线程 ----
@@ -927,12 +927,12 @@ const BUILTINS = {
   thr_join: (rt, args) => {
     const id = Math.floor(rt.asNumber(args[0]));
     const h = THREADS.get(id);
-    if (!h) rt.fail("HMYR-R0221", "no such thread handle: " + id);
+    if (!h) rt.fail("HMYR-內-020", "no such thread handle: " + id);
     const timeout = args[1] === undefined || args[1] === null ? 30000 : Math.floor(rt.asNumber(args[1]));
     const 到 = Date.now() + timeout;
     while (rt.cap.thread.load(h.flag) === 0) {
       const 剩 = 到 - Date.now();
-      if (剩 <= 0) rt.fail("HMYR-R0222", "thread " + id + " did not finish within " + timeout + "ms");
+      if (剩 <= 0) rt.fail("HMYR-內-021", "thread " + id + " did not finish within " + timeout + "ms");
       rt.cap.thread.wait(h.flag, Math.min(剩, 50));
     }
     let 结果 = null;
@@ -945,7 +945,7 @@ const BUILTINS = {
   thr_cancel: (rt, args) => {
     const id = Math.floor(rt.asNumber(args[0]));
     const h = THREADS.get(id);
-    if (!h) rt.fail("HMYR-R0221", "no such thread handle: " + id);
+    if (!h) rt.fail("HMYR-內-020", "no such thread handle: " + id);
     try { if (h.worker) h.worker.terminate(); } catch (err) { /* 已经没了就算停住 */ }
     rt.cap.file.remove(h.outPath);
     THREADS.delete(id);
@@ -995,7 +995,7 @@ const BUILTINS = {
     // 宿主那份原因也一并省掉：它通常就是「系统找不到路径」，带着同一条路径。
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      rt.fail("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+      rt.fail("HMYR-內-011", "cannot read '" + 藏路径(路径) + "'" + 原因);
     }
     const enc = args[1] === undefined || args[1] === null ? null : rt.asString(args[1]);
     if (enc) return decodeBytes(rt, buf, enc);
@@ -1021,7 +1021,7 @@ const BUILTINS = {
     try { 名们 = rt.cap.file.listDir(路径); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      rt.fail("HMYR-R0211", "cannot list '" + 藏路径(路径) + "'" + 原因);
+      rt.fail("HMYR-內-011", "cannot list '" + 藏路径(路径) + "'" + 原因);
     }
     return 名们;
   },
@@ -1104,7 +1104,7 @@ const BUILTINS = {
     // 其余编码走表。表不存在就明确拒绝——猜一个编码是这一路最不想要的行为。
     const table = loadEncodingTable(rt, enc);
     if (!table) {
-      rt.fail("HMYR-R0203", "writing '" + raw + "' is not supported: no table under deps/encodings for it");
+      rt.fail("HMYR-內-003", "writing '" + raw + "' is not supported: no table under deps/encodings for it");
     }
     const bytes = [];
     const missing = [];
@@ -1114,7 +1114,7 @@ const BUILTINS = {
       else if (missing.indexOf(ch) < 0) missing.push(ch);
     }
     if (missing.length) {
-      rt.fail("HMYR-R0204", "these characters do not exist in " + raw + ": " + missing.slice(0, 8).join("") +
+      rt.fail("HMYR-內-004", "these characters do not exist in " + raw + ": " + missing.slice(0, 8).join("") +
         (missing.length > 8 ? " (and " + (missing.length - 8) + " more)" : ""));
     }
     writeBytes(rt, file, Buffer.from(bytes));
@@ -1127,7 +1127,7 @@ const BUILTINS = {
 
     // 空名字什么也不指。此前这里会抛宿主的 ERR_INVALID_ARG_VALUE，那是裸的——契约要求有编号。
 
-    if (command === "") rt.fail("HMYR-R0213", "run_program needs a program name: an empty string names nothing");
+    if (command === "") rt.fail("HMYR-內-013", "run_program needs a program name: an empty string names nothing");
     const rest = Array.isArray(args[1]) ? args[1].map((a) => rt.asString(a)) : [];
     const timeout = args[2] === undefined || args[2] === null ? 10000 : rt.asNumber(args[2]);
     // 第四位是输出的编码：中文 Windows 的控制台多半是 GBK，写死 UTF-8 会让每个汉字变成替换字符。
@@ -1149,7 +1149,7 @@ const BUILTINS = {
   chdir: (rt, args) => {
     const target = rt.asString(args[0]);
     try { rt.cap.process.chdir(target); return rt.cap.process.cwd(); }
-    catch (err) { rt.fail("HMYR-R0209", "cannot enter '" + target + "': " + String(err && err.message ? err.message : err)); }
+    catch (err) { rt.fail("HMYR-內-009", "cannot enter '" + target + "': " + String(err && err.message ? err.message : err)); }
   },
   // ---- 五、环境（只读，不需要效果） ----
   cwd: (rt) => rt.cap.process.cwd(),
@@ -1170,7 +1170,7 @@ const BUILTINS = {
   locale_set: (rt, args) => {
     const name = rt.asString(args[0]);
     if (!LOCALE_NAMES.includes(name)) {
-      rt.fail("HMYR-R0205", "no such locale profile: '" + name + "' (have: " + LOCALE_NAMES.join(", ") + ")");
+      rt.fail("HMYR-內-005", "no such locale profile: '" + name + "' (have: " + LOCALE_NAMES.join(", ") + ")");
     }
     currentLocale = name;
     return name;
@@ -1230,7 +1230,7 @@ const BUILTINS = {
     try { buf = rt.cap.file.read(路径); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      rt.fail("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+      rt.fail("HMYR-內-011", "cannot read '" + 藏路径(路径) + "'" + 原因);
     }
     return Array.from(buf);
   },

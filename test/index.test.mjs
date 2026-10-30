@@ -68,12 +68,12 @@ console.log("四、取不到与给错东西，各有一条编号");
   const r1 = 跑(`
   var t = index_new()
   print(str(index_get(t, "没有")))`);
-  ok("index_get 取不到 → HMYR-R0218", String(r1.error || "").includes("HMYR-R0218"), r1.error || ("没有抛，输出 " + r1.out));
+  ok("index_get 取不到 → HMYR-內-018", String(r1.error || "").includes("HMYR-內-018"), r1.error || ("没有抛，输出 " + r1.out));
 
   const r2 = 跑(`
   var t = index_new()
   print(str(index_len("不是索引")))`);
-  ok("index_len 给错东西 → HMYR-R0219", String(r2.error || "").includes("HMYR-R0219"), r2.error || ("没有抛，输出 " + r2.out));
+  ok("index_len 给错东西 → HMYR-內-019", String(r2.error || "").includes("HMYR-內-019"), r2.error || ("没有抛，输出 " + r2.out));
 }
 
 console.log("五、index_has 是纯函数：给错东西也交回 false，不抛");

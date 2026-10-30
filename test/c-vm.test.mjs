@@ -257,7 +257,7 @@ console.log("九、效果声明在 C 上也管用");
   ok("这个程序编得出来", emit.status === 0, String(emit.stderr).slice(0, 120));
   if (fs.existsSync(码路)) {
     const r = spawnSync(exe, [码路], { encoding: "utf8", timeout: 60000 });
-    ok("没声明 file 的 main 调要 file 的函数被拒（R0201）", r.status !== 0 && String(r.stderr).includes("HMYR-R0201"),
+    ok("没声明 file 的 main 调要 file 的函数被拒（R0201）", r.status !== 0 && String(r.stderr).includes("HMYR-內-001"),
       String(r.status) + " " + String(r.stderr).slice(0, 100));
     ok("而被拒的时候文件没有写出来", !fs.existsSync(路));
   }
@@ -776,7 +776,7 @@ console.log("十九、不认识的 locale 要说出来");
   fs.writeFileSync(码路, 写程序(程序));
   const r = spawnSync(exe, [码路], { encoding: "utf8" });
   ok("R0205 说的是没有这套档案",
-     r.status !== 0 && String(r.stderr).includes("HMYR-R0205"),
+     r.status !== 0 && String(r.stderr).includes("HMYR-內-005"),
      String(r.status) + " " + JSON.stringify(String(r.stderr).slice(0, 140)));
 }
 

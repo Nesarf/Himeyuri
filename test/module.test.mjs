@@ -21,7 +21,7 @@ const write = (name, text) => { const f = path.join(SCRATCH, name); fs.writeFile
 try {
   console.log("a module and what it imports");
   // beta 要写 pub：它被另一个模块调用，而可见性检查会拒绝没有 pub 的跨模块调用
-  // （HMYR-R0250）。这与 minimal-eval 那条是同一件事（2026-11-02）。
+  // （HMYR-內-023）。这与 minimal-eval 那条是同一件事（2026-11-02）。
   const beta = write("beta.hmoca", "pub fn beta() -> Int { return 2 }\nfn shared() -> Int { return 1 }\n");
   const alpha = write("alpha.hmoca", 'import "./beta.hmoca"\n\nfn alpha() -> Int { return beta() }\nfn shared() -> Int { return 9 }\n');
   {

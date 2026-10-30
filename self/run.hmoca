@@ -773,14 +773,14 @@ fn 跑文件入口(目录: String, 目标: String, 参们: Int) effects(file, pr
   var 全 = 路
   if 是绝对(路) == false { 全 = 拼路径(cwd(), 路) }
   if file_exists(全) == false {
-    return {ok: false, 文字: "HMYR-R0211 cannot read '" + 全 + "': no such file"}
+    return {ok: false, 文字: "HMYR-內-011 cannot read '" + 全 + "': no such file"}
   }
   // 这里传 全（拼好的绝对路径），不是 目标。
   // 理由：解析路 会把「不像路径的名字」当包名，而入口文件的名字常常正是那样
   // （main.hmoca）。传绝对路径就绕过了那一条判断。
   let 读 = 读一棵(目录, 全, (), ())
   if len(读.源码们) == 0 {
-    return {ok: false, 文字: "HMYR-R0211 nothing read from '" + 全 + "'"}
+    return {ok: false, 文字: "HMYR-內-011 nothing read from '" + 全 + "'"}
   }
   return {ok: true, 文字: 跑模块们(读.源码们, 参们)}
 }

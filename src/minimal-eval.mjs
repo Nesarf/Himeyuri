@@ -228,7 +228,7 @@ const 内置 = {
   read_bytes: (rt, a) => {
     const 路径 = rt.成串(a[0]);
     try { return Array.from(rt.cap.file.read(路径)); }
-    catch (err) { rt.坏("HMYR-R0211", "cannot read '" + 路径 + "'"); }
+    catch (err) { rt.坏("HMYR-內-011", "cannot read '" + 路径 + "'"); }
   },
   // 切开一个字符串。切法照宿主那一份：空分隔按码元切（空串给空元组），
   // 其余按不重叠的子串切，连续或末尾的分隔留下空段。
@@ -250,7 +250,7 @@ const 内置 = {
   locale_set: (rt, a) => {
     const 名 = rt.成串(a[0]);
     if (!locale名字们.includes(名)) {
-      rt.坏("HMYR-R0205", "no such locale profile: '" + 名 + "' (have: " + locale名字们.join(", ") + ")");
+      rt.坏("HMYR-內-005", "no such locale profile: '" + 名 + "' (have: " + locale名字们.join(", ") + ")");
     }
     当前locale = 名;
     return 当前locale;
@@ -268,7 +268,7 @@ const 内置 = {
     // 档位的线程池那一项：0 表示不设限，也就是普通 .hmoca 的情形。
     const 上限 = rt.cap.thread.上限 || 0;
     if (上限 > 0 && THREADS.size >= 上限) {
-      rt.坏("HMYR-R0223", "thread pool is full: " + THREADS.size + " alive, limit " + 上限 + "（steady 那一档只给一个线程槽；要更多就用 hmhsr 那一档）");
+      rt.坏("HMYR-內-022", "thread pool is full: " + THREADS.size + " alive, limit " + 上限 + "（steady 那一档只给一个线程槽；要更多就用 hmhsr 那一档）");
     }
     const id = nextThreadId++;
     const 出 = rt.cap.path.join(rt.cap.env.temp(), "hmyr-minthread-" + Date.now().toString(36) + "-" + id + ".json");
@@ -287,12 +287,12 @@ const 内置 = {
   thr_join: (rt, a) => {
     const id = Math.floor(rt.成数(a[0]));
     const h = THREADS.get(id);
-    if (!h) rt.坏("HMYR-R0221", "no such thread handle: " + id);
+    if (!h) rt.坏("HMYR-內-020", "no such thread handle: " + id);
     const 超时 = a[1] === undefined || a[1] === null ? 30000 : Math.floor(rt.成数(a[1]));
     const 到 = Date.now() + 超时;
     while (rt.cap.thread.load(h.flag) === 0) {
       const 剩 = 到 - Date.now();
-      if (剩 <= 0) rt.坏("HMYR-R0222", "thread " + id + " did not finish within " + 超时 + "ms");
+      if (剩 <= 0) rt.坏("HMYR-內-021", "thread " + id + " did not finish within " + 超时 + "ms");
       rt.cap.thread.wait(h.flag, 剩 < 50 ? 剩 : 50);
     }
     let 结果 = null;
@@ -305,7 +305,7 @@ const 内置 = {
   thr_cancel: (rt, a) => {
     const id = Math.floor(rt.成数(a[0]));
     const h = THREADS.get(id);
-    if (!h) rt.坏("HMYR-R0221", "no such thread handle: " + id);
+    if (!h) rt.坏("HMYR-內-020", "no such thread handle: " + id);
     try { if (h.worker) h.worker.terminate(); } catch (err) { /* 已经没了就算停住 */ }
     rt.cap.file.remove(h.outPath);
     THREADS.delete(id);
@@ -327,7 +327,7 @@ const 内置 = {
   // 跑一个程序：一份记录，五个字段。跑不起来也照实报告，不抛。
   run_program: (rt, a) => {
     const 命令 = rt.成串(a[0]);
-    if (命令 === "") rt.坏("HMYR-R0213", "run_program needs a program name: an empty string names nothing");
+    if (命令 === "") rt.坏("HMYR-內-013", "run_program needs a program name: an empty string names nothing");
     const 参们 = Array.isArray(a[1]) ? a[1].map((x) => rt.成串(x)) : [];
     const 超时 = a[2] === undefined || a[2] === null ? 10000 : rt.成数(a[2]);
     const 编码 = a[3] === undefined || a[3] === null ? "utf8" : rt.成串(a[3]);
@@ -349,7 +349,7 @@ const 内置 = {
   chdir: (rt, a) => {
     const 目标 = rt.成串(a[0]);
     try { rt.cap.process.chdir(目标); return rt.cap.process.cwd(); }
-    catch (err) { rt.坏("HMYR-R0209", "cannot enter '" + 目标 + "'"); }
+    catch (err) { rt.坏("HMYR-內-009", "cannot enter '" + 目标 + "'"); }
   },
   // ---- 输入：一条键队列 ----
   key_push: (rt, a) => { 键队列.push(rt.成串(a[0])); return 键队列.length; },
@@ -391,7 +391,7 @@ const 内置 = {
   // 才撞上这件事（没有它，大小写只能写成五十二行字符比较）。
   ord: (rt, a) => {
     const s = rt.成串(a[0]);
-    if (s.length === 0) rt.坏("HMYR-R0206", "ord of an empty string: there is no first character to read");
+    if (s.length === 0) rt.坏("HMYR-內-006", "ord of an empty string: there is no first character to read");
     return s.codePointAt(0);
   },
   // 大小写：规格第一圈里有它们，而这一份一直没转发。
@@ -400,12 +400,12 @@ const 内置 = {
   to_lower: (rt, a) => rt.cap.unicode.lower(rt.成串(a[0])),
   chr: (rt, a) => {
     const cp = Math.floor(rt.成数(a[0]));
-    if (cp < 0 || cp > 0x10ffff) rt.坏("HMYR-R0207", "not a code point: " + cp);
+    if (cp < 0 || cp > 0x10ffff) rt.坏("HMYR-內-007", "not a code point: " + cp);
     return rt.码元串 ? 码元.码点(cp) : String.fromCodePoint(cp);
   },
   to_int: (rt, a) => {
     const s = rt.成串(a[0]).trim();
-    if (!/^-?[0-9]+$/.test(s)) rt.坏("HMYR-R0208", "not an integer literal: '" + s + "'");
+    if (!/^-?[0-9]+$/.test(s)) rt.坏("HMYR-內-008", "not an integer literal: '" + s + "'");
     return Number(s);
   },
   // 算术那一组：纯函数，不碰世界。这一层一直没有转发它们，于是自举层解释程序时
@@ -433,12 +433,12 @@ const 内置 = {
   is_mark: (rt, a) => rt.cap.unicode.isMark(rt.成串(a[0])),
   record_new: (rt, a) => {
     const pairs = a[0];
-    if (!Array.isArray(pairs)) rt.坏("HMYR-R0214", "record_of wants a tuple of (name, value) pairs");
+    if (!Array.isArray(pairs)) rt.坏("HMYR-內-014", "record_of wants a tuple of (name, value) pairs");
     const out = {};
     for (const p of pairs) {
-      if (!Array.isArray(p) || p.length !== 2) rt.坏("HMYR-R0214", "every item must be a (name, value) pair");
+      if (!Array.isArray(p) || p.length !== 2) rt.坏("HMYR-內-014", "every item must be a (name, value) pair");
       const k = rt.成串(p[0]);
-      if (!/^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u.test(k)) rt.坏("HMYR-R0214", "not a name a record could hold: " + JSON.stringify(k));
+      if (!/^[\p{L}_][\p{L}\p{N}\p{M}_]*$/u.test(k)) rt.坏("HMYR-內-014", "not a name a record could hold: " + JSON.stringify(k));
       out[k] = p[1];
     }
     return out;
@@ -446,8 +446,8 @@ const 内置 = {
   field_get: (rt, a) => {
     const rec = a[0];
     const name = rt.成串(a[1]);
-    if (rec === null || typeof rec !== "object" || Array.isArray(rec)) rt.坏("HMYR-R0215", "field_get wants a record, found " + 述(rec));
-    if (!Object.prototype.hasOwnProperty.call(rec, name)) rt.坏("HMYR-R0216", "no field '" + name + "' on that record");
+    if (rec === null || typeof rec !== "object" || Array.isArray(rec)) rt.坏("HMYR-內-015", "field_get wants a record, found " + 述(rec));
+    if (!Object.prototype.hasOwnProperty.call(rec, name)) rt.坏("HMYR-內-016", "no field '" + name + "' on that record");
     return rec[name];
   },
   // 问「有没有」不是失败，于是它不给编号。
@@ -463,7 +463,7 @@ const 内置 = {
   field_names: (rt, a) => {
     const rec = a[0];
     if (rec === null || typeof rec !== "object" || Array.isArray(rec)) {
-      return rt.坏("HMYR-R0217", "field_names wants a record, found " + 述(rec));
+      return rt.坏("HMYR-內-017", "field_names wants a record, found " + 述(rec));
     }
     return Object.keys(rec);
   },
@@ -473,15 +473,15 @@ const 内置 = {
   index_new: () => new Map(),
   index_set: (rt, a) => {
     const m = a[0];
-    if (!(m instanceof Map)) rt.坏("HMYR-R0219", "index_set wants an index, found " + 述(m));
+    if (!(m instanceof Map)) rt.坏("HMYR-內-019", "index_set wants an index, found " + 述(m));
     m.set(rt.成串(a[1]), a[2]);
     return m;
   },
   index_get: (rt, a) => {
     const m = a[0];
-    if (!(m instanceof Map)) rt.坏("HMYR-R0219", "index_get wants an index, found " + 述(m));
+    if (!(m instanceof Map)) rt.坏("HMYR-內-019", "index_get wants an index, found " + 述(m));
     const k = rt.成串(a[1]);
-    if (!m.has(k)) rt.坏("HMYR-R0218", "no key " + JSON.stringify(k) + " in that index");
+    if (!m.has(k)) rt.坏("HMYR-內-018", "no key " + JSON.stringify(k) + " in that index");
     return m.get(k);
   },
   index_has: (rt, a) => {
@@ -491,12 +491,12 @@ const 内置 = {
   },
   index_len: (rt, a) => {
     const m = a[0];
-    if (!(m instanceof Map)) rt.坏("HMYR-R0219", "index_len wants an index, found " + 述(m));
+    if (!(m instanceof Map)) rt.坏("HMYR-內-019", "index_len wants an index, found " + 述(m));
     return m.size;
   },
   index_keys: (rt, a) => {
     const m = a[0];
-    if (!(m instanceof Map)) rt.坏("HMYR-R0219", "index_keys wants an index, found " + 述(m));
+    if (!(m instanceof Map)) rt.坏("HMYR-內-019", "index_keys wants an index, found " + 述(m));
     return [...m.keys()];
   },
   // 写一份文本。规格里有它，而这一层一直没转发 —— 库只有读的那一侧。  // 只认 utf8：别的编码要一张表，而表在 deps/encodings 下（宿主那一份用着）。
@@ -507,7 +507,7 @@ const 内置 = {
     try { rt.cap.file.writeText(路径, 文); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      return rt.坏("HMYR-R0212", "cannot write '" + 藏路径(路径) + "'" + 原因);
+      return rt.坏("HMYR-內-012", "cannot write '" + 藏路径(路径) + "'" + 原因);
     }
     return 文.length;
   },
@@ -533,7 +533,7 @@ const 内置 = {
     try { rt.cap.file.writeBytes(路径, 字节); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      return rt.坏("HMYR-R0212", "cannot write '" + 藏路径(路径) + "'" + 原因);
+      return rt.坏("HMYR-內-012", "cannot write '" + 藏路径(路径) + "'" + 原因);
     }
     return 字节.length;
   },
@@ -543,7 +543,7 @@ const 内置 = {
     try {
       return rt.cap.file.packValue(a[0]);
     } catch (err) {
-      rt.坏("HMYR-R0214", "cannot encode this value: " + String(err && err.message ? err.message : err));
+      rt.坏("HMYR-內-014", "cannot encode this value: " + String(err && err.message ? err.message : err));
       return null;
     }
   },
@@ -556,7 +556,7 @@ const 内置 = {
       return { 行: r.行, 下一起点: r.下一起点 };
     } catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      return rt.坏("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+      return rt.坏("HMYR-內-011", "cannot read '" + 藏路径(路径) + "'" + 原因);
     }
   },
   // 整份按行切好。
@@ -565,7 +565,7 @@ const 内置 = {
     try { return rt.cap.file.readLines(路径); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      return rt.坏("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+      return rt.坏("HMYR-內-011", "cannot read '" + 藏路径(路径) + "'" + 原因);
     }
   },
   print: (rt, a) => { rt.write(a.map((x) => rt.成串(x)).join("")); return null; },
@@ -583,7 +583,7 @@ const 内置 = {
     try { buf = rt.cap.file.read(路径); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      rt.坏("HMYR-R0211", "cannot read '" + 藏路径(路径) + "'" + 原因);
+      rt.坏("HMYR-內-011", "cannot read '" + 藏路径(路径) + "'" + 原因);
     }
     const enc = a[1] === undefined || a[1] === null ? null : rt.成串(a[1]);
     // 解出来的东西是宿主串，而它是语言里的字符串值 —— 所以最后要落到那种底上。
@@ -593,7 +593,7 @@ const 内置 = {
       if (名 === "utf8" || 名 === "utf-8") return 出(buf.toString("utf8"));
       if (名 === "utf16le" || 名 === "utf-16le") return 出(new TextDecoder("utf-16le").decode(buf));
       if (名 === "latin1") return 出(buf.toString("latin1"));
-      rt.坏("HMYR-R0212", "this runtime cannot decode '" + enc + "'");
+      rt.坏("HMYR-內-012", "this runtime cannot decode '" + enc + "'");
     }
     if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) return 出(buf.subarray(3).toString("utf8"));
     if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) return 出(new TextDecoder("utf-16le").decode(buf.subarray(2)));
@@ -615,7 +615,7 @@ const 内置 = {
     try { 名们 = rt.cap.file.listDir(路径); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
-      rt.坏("HMYR-R0211", "cannot list '" + 藏路径(路径) + "'" + 原因);
+      rt.坏("HMYR-內-011", "cannot list '" + 藏路径(路径) + "'" + 原因);
     }
     return 名们.map((x) => (rt.码元串 ? 码元.由宿主(String(x)) : String(x)));
   },
@@ -713,7 +713,7 @@ export class 最小运行时 {
         // 与宿主求值器同一条：realtime 是档位，不沿调用链传。
         if (effect === "realtime") continue;
         if (!fromEffects.has(effect)) {
-          this.坏("HMYR-R0201", "function '" + decl.name + "' uses effect '" + effect + "', which the caller did not declare");
+          this.坏("HMYR-內-001", "function '" + decl.name + "' uses effect '" + effect + "', which the caller did not declare");
         }
       }
     }
@@ -799,7 +799,7 @@ export class 最小运行时 {
         let guard = 0;
         while (this.真(this.求值(node.condition, scope, effects))) {
           if (node.body) this.执行块(node.body, scope, effects);
-          if (++guard > 循环闸) this.坏("HMYR-R0210", "a while loop ran past a million iterations without ending");
+          if (++guard > 循环闸) this.坏("HMYR-內-010", "a while loop ran past a million iterations without ending");
         }
         return null;
       }
@@ -861,7 +861,7 @@ export class 最小运行时 {
       // 于是它自己必然碰得到全部效果 —— 真正该被查的是目标程序的函数，
       // 而那一层的检查在 self/eval.hmyr 里（它读 functions 表里的效果项）。
       if (this.检查效果 !== false && need && !(effects instanceof Set && effects.has(need))) {
-        this.坏("HMYR-R0201", "builtin '" + name + "' needs effect '" + need + "', which the caller did not declare");
+        this.坏("HMYR-內-001", "builtin '" + name + "' needs effect '" + need + "', which the caller did not declare");
       }
       const args = node.args.map((a) => this.求值(a, scope, effects));
       const result = 内置[name](this, args);

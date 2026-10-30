@@ -3243,7 +3243,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     int ok = 0; double cp = as_num(args[0], &ok);
     if (!ok) { fail("HMYR-行-013", "chr wants a number"); return 1; }
     long long 码 = (long long)floor(cp);
-    if (码 < 0 || 码 > 0x10FFFF) { fail("HMYR-R0207", "not a code point"); return 1; }
+    if (码 < 0 || 码 > 0x10FFFF) { fail("HMYR-內-007", "not a code point"); return 1; }
     /* 基本平面之外的码点在串里占两个单元。以前这里一刀截成一个单元，
      * 于是同一段 chr(cp) 在 C 上得到的是那个码点的高位代理 ——
      * 一个看起来只是「字不对」的结果，其实整串都错了一格。 */
@@ -3264,7 +3264,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
   }
   if (name_is(名off, "ord")) {
     if (nargs != 1) { fail("HMYR-行-002", "ord wants one argument"); return 1; }
-    if (args[0].tag != T_STR || args[0].slen == 0) { fail("HMYR-R0206", "ord of an empty string"); return 1; }
+    if (args[0].tag != T_STR || args[0].slen == 0) { fail("HMYR-內-006", "ord of an empty string"); return 1; }
     /* 一个「字符」是一个码点，不是一个单元：基本平面之外的字符要连着它后面
      * 那个低位代理一起读。JS 那三台用的都是 codePointAt(0)，这里跟上它。 */
     uint32_t cp = 0;
@@ -3417,7 +3417,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
   }
   if (name_is(名off, "index_set")) {
     if (nargs != 3) { fail("HMYR-行-002", "index_set wants (index, key, value)"); return 1; }
-    if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-R0219", "index_set wants an index"); return 1; }
+    if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-內-019", "index_set wants an index"); return 1; }
     if (args[1].tag != T_STR) { fail("HMYR-行-013", "index_set wants a string key, found "); return 1; }
     索引放(args[0].idx, args[1].s, args[1].slen, args[2]);
     /* 交回同一个索引：INDEX.txt 第一条约定，于是可以链着写。 */
@@ -3427,10 +3427,10 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
   if (name_is(名off, "index_get")) {
     int 处;
     if (nargs != 2) { fail("HMYR-行-002", "index_get wants (index, key)"); return 1; }
-    if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-R0219", "index_get wants an index"); return 1; }
+    if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-內-019", "index_get wants an index"); return 1; }
     if (args[1].tag != T_STR) { fail("HMYR-行-013", "index_get wants a string key"); return 1; }
     处 = 索引找(args[0].idx, args[1].s, args[1].slen);
-    if (处 < 0) { fail("HMYR-R0218", "no such key in that index"); return 1; }
+    if (处 < 0) { fail("HMYR-內-018", "no such key in that index"); return 1; }
     *out = args[0].idx->项[处].值;
     return 1;
   }
@@ -3443,7 +3443,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
   }
   if (name_is(名off, "index_len")) {
     if (nargs != 1) { fail("HMYR-行-002", "index_len wants one argument"); return 1; }
-    if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-R0219", "index_len wants an index"); return 1; }
+    if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-內-019", "index_len wants an index"); return 1; }
     *out = v_num((double)args[0].idx->n);
     return 1;
   }
@@ -3452,7 +3452,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     Value v;
     uint32_t *序;
     if (nargs != 1) { fail("HMYR-行-002", "index_keys wants one argument"); return 1; }
-    if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-R0219", "index_keys wants an index"); return 1; }
+    if (args[0].tag != T_INDEX || !args[0].idx) { fail("HMYR-內-019", "index_keys wants an index"); return 1; }
     t = args[0].idx;
     v = v_null();
     v.tag = T_TUPLE;
@@ -3479,7 +3479,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
   /* ---- records ---- */
   if (name_is(名off, "record_new")) {
     if (nargs != 1) { fail("HMYR-行-002", "record_new wants one argument"); return 1; }
-    if (args[0].tag != T_TUPLE) { fail("HMYR-R0214", "record_new wants a tuple of (name, value) pairs"); return 1; }
+    if (args[0].tag != T_TUPLE) { fail("HMYR-內-014", "record_new wants a tuple of (name, value) pairs"); return 1; }
     uint32_t n = args[0].ilen;
     Value v = v_null();
     v.tag = T_RECORD;
@@ -3493,7 +3493,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     for (uint32_t i = 0; i < n; i++) {
       Value pair = args[0].items[i];
       if (pair.tag != T_TUPLE || pair.ilen != 2 || pair.items[0].tag != T_STR) {
-        fail("HMYR-R0214", "every item must be a (name, value) pair with a string name");
+        fail("HMYR-內-014", "every item must be a (name, value) pair with a string name");
         return 1;
       }
       const uint16_t *名 = pair.items[0].s;
@@ -3522,7 +3522,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     if (nargs != 2) { fail("HMYR-行-002", "that builtin wants two arguments"); return 1; }
     if (args[0].tag != T_RECORD) {
       if (name_is(名off, "field_has")) { *out = v_bool(0); return 1; }
-      fail("HMYR-R0215", "field_get wants a record");
+      fail("HMYR-內-015", "field_get wants a record");
       return 1;
     }
     if (args[1].tag != T_STR) { fail("HMYR-行-013", "a field name must be a string"); return 1; }
@@ -3539,12 +3539,12 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
       }
     }
     if (name_is(名off, "field_has")) { *out = v_bool(0); return 1; }
-    fail("HMYR-R0216", "no field with that name on that record");
+    fail("HMYR-內-016", "no field with that name on that record");
     return 1;
   }
   if (name_is(名off, "field_names")) {
     if (nargs != 1) { fail("HMYR-行-002", "field_names wants one argument"); return 1; }
-    if (args[0].tag != T_RECORD) { fail("HMYR-R0217", "field_names wants a record"); return 1; }
+    if (args[0].tag != T_RECORD) { fail("HMYR-內-017", "field_names wants a record"); return 1; }
     uint32_t n = args[0].rec.n;
     Value v = v_null();
     v.tag = T_TUPLE;
@@ -3574,7 +3574,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     uint32_t n = 0;
     char **名们 = 列目录(p, &n);
     free(p);
-    if (!名们) { fail("HMYR-R0211", "cannot list that directory"); return 1; }
+    if (!名们) { fail("HMYR-內-011", "cannot list that directory"); return 1; }
     Value v = v_null();
     v.tag = T_TUPLE;
     v.ilen = n;
@@ -3663,7 +3663,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     if (args[0].tag != T_STR) { fail("HMYR-行-013", "read_text wants a path string"); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
     FILE *f = 开文件(p, "rb");
-    if (!f) { free(p); fail("HMYR-R0211", "cannot read that file"); return 1; }
+    if (!f) { free(p); fail("HMYR-內-011", "cannot read that file"); return 1; }
     fseek(f, 0, SEEK_END);
     long n = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -3686,7 +3686,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     if (args[0].tag != T_STR) { fail("HMYR-行-013", "read_bytes wants a path string"); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
     FILE *f = 开文件(p, "rb");
-    if (!f) { free(p); fail("HMYR-R0211", "cannot read that file"); return 1; }
+    if (!f) { free(p); fail("HMYR-內-011", "cannot read that file"); return 1; }
     fseek(f, 0, SEEK_END);
     long n = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -3709,7 +3709,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
     char *t = utf16_to_utf8(args[1].s, args[1].slen);
     FILE *f = 开文件(p, "wb");
-    if (!f) { free(p); free(t); fail("HMYR-R0212", "cannot write that file"); return 1; }
+    if (!f) { free(p); free(t); fail("HMYR-內-012", "cannot write that file"); return 1; }
     size_t tl = strlen(t);
     size_t wrote = fwrite(t, 1, tl, f);
     fclose(f);
@@ -3727,7 +3727,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
     FILE *f = 开文件(p, "wb");
     free(p);
-    if (!f) { fail("HMYR-R0212", "cannot write that file"); return 1; }
+    if (!f) { fail("HMYR-內-012", "cannot write that file"); return 1; }
     /* 元素可以是字节，也可以是一块字节（语言那边按块累积，省掉平方复制）。 */
     double 写 = 0;
     for (uint32_t i = 0; i < args[1].ilen; i++) {
@@ -3763,7 +3763,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     uint8_t *段 = NULL;
     size_t 长 = 0, 容 = 0;
     int 好 = pack_value(args[0], &段, &长, &容);
-    if (!好) { free(段); fail("HMYR-R0214", "cannot encode this value"); return 1; }
+    if (!好) { free(段); fail("HMYR-內-014", "cannot encode this value"); return 1; }
     Value v = v_null();
     v.tag = T_TUPLE;
     v.ilen = (uint32_t)长;
@@ -3799,8 +3799,8 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     char *路 = utf16_to_utf8(args[0].s, args[0].slen);
     FILE *f = 开文件(路, "rb");
     free(路);
-    if (!f) { fail("HMYR-R0211", "cannot read that file"); return 1; }
-    if (fseek(f, (long)起, SEEK_SET) != 0) { fclose(f); fail("HMYR-R0211", "cannot seek in that file"); return 1; }
+    if (!f) { fail("HMYR-內-011", "cannot read that file"); return 1; }
+    if (fseek(f, (long)起, SEEK_SET) != 0) { fclose(f); fail("HMYR-內-011", "cannot seek in that file"); return 1; }
     /* 一行：读到换行为止（不含换行）。 */
     char 缓[4096];
     size_t 得 = 0;
@@ -3958,13 +3958,13 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     char *路 = utf16_to_utf8(args[0].s, args[0].slen);
     FILE *f = 开文件(路, "rb");
     free(路);
-    if (!f) { fail("HMYR-R0211", "cannot read that file"); return 1; }
+    if (!f) { fail("HMYR-內-011", "cannot read that file"); return 1; }
     fseek(f, 0, SEEK_END);
     long 大小 = ftell(f);
     fseek(f, 0, SEEK_SET);
-    if (大小 < 0) { fclose(f); fail("HMYR-R0211", "cannot read that file"); return 1; }
+    if (大小 < 0) { fclose(f); fail("HMYR-內-011", "cannot read that file"); return 1; }
     char *文 = (char *)malloc((size_t)大小 + 1);
-    if (!文) { fclose(f); fail("HMYR-R0211", "cannot read that file"); return 1; }
+    if (!文) { fclose(f); fail("HMYR-內-011", "cannot read that file"); return 1; }
     size_t 得 = fread(文, 1, (size_t)大小, f);
     fclose(f);
     文[得] = 0;
@@ -4180,7 +4180,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
                "no such locale profile: '%s' (have: zh-CN.gbk, zh-CN.utf8, ja-JP.shift_jis, en-US.utf8)",
                文 ? 文 : "");
       free(文);
-      fail("HMYR-R0205", m);
+      fail("HMYR-內-005", m);
       return 1;
     }
     snprintf(g_locale, sizeof g_locale, "%s", 文);
@@ -4327,7 +4327,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
       char *m = g_诊m;
       snprintf(m, sizeof g_诊m, "cannot enter '%s'", 目标);
       free(p);
-      fail("HMYR-R0209", m);
+      fail("HMYR-內-009", m);
       return 1;
     }
     free(p);
@@ -4349,7 +4349,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     char *命令 = utf16_to_utf8(命令值.s, 命令值.slen);
     if (!命令 || !*命令) {
       free(命令);
-      fail("HMYR-R0213", "run_program needs a program name: an empty string names nothing");
+      fail("HMYR-內-013", "run_program needs a program name: an empty string names nothing");
       return 1;
     }
     char **参们 = NULL;
@@ -4531,10 +4531,10 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     if (nargs < 1) { fail("HMYR-行-002", "thr_join wants (handle [, timeout_ms])"); return 1; }
     号 = (int)args[0].num;
     c = 找线程(号);
-    if (!c) { fail("HMYR-R0221", "no such thread handle"); return 1; }
+    if (!c) { fail("HMYR-內-020", "no such thread handle"); return 1; }
     到 = (nargs >= 2 && args[1].tag == T_NUM && args[1].num > 0) ? (DWORD)args[1].num : 30000;
     if (WaitForSingleObject(c->手, 到) != WAIT_OBJECT_0) {
-      fail("HMYR-R0222", "the thread did not finish within that time");
+      fail("HMYR-內-021", "the thread did not finish within that time");
       return 1;
     }
     if (c->码 == 0) {
@@ -4556,7 +4556,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     if (nargs != 1) { fail("HMYR-行-002", "thr_cancel wants one argument"); return 1; }
     号 = (int)args[0].num;
     c = 找线程(号);
-    if (!c) { fail("HMYR-R0221", "no such thread handle"); return 1; }
+    if (!c) { fail("HMYR-內-020", "no such thread handle"); return 1; }
     TerminateThread(c->手, 1);
     清线程(c);
     *out = v_num((double)号);
@@ -4574,7 +4574,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     return 1;
   }
   if (name_is(名off, "thr_join") || name_is(名off, "thr_cancel")) {
-    fail("HMYR-R0221", "no thread handle on this machine: this machine has no thread capability");
+    fail("HMYR-內-020", "no thread handle on this machine: this machine has no thread capability");
     return 1;
   }
   if (name_is(名off, "thr_count")) {
@@ -5248,7 +5248,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
             名[fl2] = 0;
             char *m = g_诊m;
             snprintf(m, sizeof g_诊m, "%s uses effect '%s', which the caller did not declare", 名, 效);
-            fail("HMYR-R0201", m);
+            fail("HMYR-內-001", m);
             FRAME_RET(v_null());
           }
         }
@@ -5496,14 +5496,14 @@ static void 取基名(const char *名, char *出, size_t cap) {
 static char *解容器(const char *包路) {
   size_t 长 = 0;
   uint8_t *字节 = read_file(包路, &长);
-  if (!字节) { fprintf(stderr, "HMYR-E0413 cannot read that container: %s\n", 包路); return NULL; }
+  if (!字节) { fprintf(stderr, "HMYR-機-003 cannot read that container: %s\n", 包路); return NULL; }
   if (长 < 12 || memcmp(字节, "HMYRITTGN", 9) != 0) {
-    fprintf(stderr, "HMYR-E0413 not a container: %s\n", 包路);
+    fprintf(stderr, "HMYR-機-003 not a container: %s\n", 包路);
     free(字节);
     return NULL;
   }
   if (字节[9] != 1) {
-    fprintf(stderr, "HMYR-E0415 container version %u is not known\n", (unsigned)字节[9]);
+    fprintf(stderr, "HMYR-機-005 container version %u is not known\n", (unsigned)字节[9]);
     free(字节);
     return NULL;
   }
@@ -5516,7 +5516,7 @@ static char *解容器(const char *包路) {
     unsigned 名长 = 容器读16(字节, 位);
     if (位 + 2 + 名长 + 4 > 长) goto 截断;
     if (名长 >= sizeof 们[i].名) {
-      fprintf(stderr, "HMYR-E0417 member name is too long: %u bytes\n", 名长);
+      fprintf(stderr, "HMYR-機-007 member name is too long: %u bytes\n", 名长);
       free(们);
       free(字节);
       return NULL;
@@ -5544,7 +5544,7 @@ static char *解容器(const char *包路) {
       snprintf(全, sizeof 全, "%s/%s", 目录, 们[i].名);
       建父目录(全);
       if (!写整文件(全, 们[i].数据, 们[i].长)) {
-        fprintf(stderr, "HMYR-E0417 cannot write a member: %s\n", 们[i].名);
+        fprintf(stderr, "HMYR-機-007 cannot write a member: %s\n", 们[i].名);
         free(们);
         free(字节);
         return NULL;
@@ -5576,7 +5576,7 @@ static char *解容器(const char *包路) {
       选 = 主 >= 0 ? 主 : 同名 >= 0 ? 同名 : 第一个;
     }
     if (选 < 0) {
-      fprintf(stderr, "HMYR-E0418 the container has no runnable entry (needs a .hmoca or .hmoks member)\n");
+      fprintf(stderr, "HMYR-機-008 the container has no runnable entry (needs a .hmoca or .hmoks member)\n");
       free(们);
       free(字节);
       return NULL;
@@ -5593,7 +5593,7 @@ static char *解容器(const char *包路) {
   }
 
 截断:
-  fprintf(stderr, "HMYR-E0416 the container member table is truncated\n");
+  fprintf(stderr, "HMYR-機-006 the container member table is truncated\n");
   free(们);
   free(字节);
   return NULL;
@@ -5709,7 +5709,7 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
   size_t len = 0;
   uint8_t *bytes = read_file(path, &len);
   if (!bytes) {
-    fprintf(stderr, "HMYR-E0009 cannot read that bytecode file: %s\n", path);
+    fprintf(stderr, "HMYR-詞-009 cannot read that bytecode file: %s\n", path);
     return 1;
   }
   load_program(bytes, len);
@@ -5764,7 +5764,7 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
     }
   }
   if (cli && nrest > 0) entry = cli;
-  if (!entry) { fprintf(stderr, "HMYR-E0009 no main in %s\n", path); return 1; }
+  if (!entry) { fprintf(stderr, "HMYR-詞-009 no main in %s\n", path); return 1; }
 
   /* 顶层段：调 main 之前先跑一次。名字与 src/bytecode.mjs 的 顶层段名 是同一串 ——
    * 改一处要两处一起改。它由编译器生成，只在有模块级 const 的模块里存在。 */
@@ -5890,7 +5890,7 @@ static int 线程起(const char *源码, const char *入口) {
     /* 池满与「这台机器起不了线程」都是 -1，但那不是一件事：一个该等，一个该换机器。
      * 所以池满在这里说一句 —— steady 那一档只给一个槽，撞上去是设计，不是意外。 */
     if (活 >= 限) {
-      fprintf(stderr, "HMYR-R0223 thread pool is full: %d alive, limit %d\n", 活, 限);
+      fprintf(stderr, "HMYR-內-022 thread pool is full: %d alive, limit %d\n", 活, 限);
       return -1;
     }
   }
@@ -5957,7 +5957,7 @@ static int 是源码路径(const char *p) {
 static int cli_main(int argc, char **argv) {
   char 种子[1024];
   if (!找种子(种子, sizeof 种子, argv[0])) {
-    fprintf(stderr, "HMYR-E0009 no seed: put bootstrap/pack.hmyrb beside this program, "
+    fprintf(stderr, "HMYR-詞-009 no seed: put bootstrap/pack.hmyrb beside this program, "
                     "or say where it is with HMYR_SEED\n");
     return 2;
   }
@@ -5976,13 +5976,13 @@ static int cli_main(int argc, char **argv) {
     g_compile_quiet = 0;
     if (码 != 0) {
       remove(临时);
-      fprintf(stderr, "HMYR-E0009 the seed could not compile %s\n", argv[1]);
+      fprintf(stderr, "HMYR-詞-009 the seed could not compile %s\n", argv[1]);
       return 码 == 0 ? 1 : 码;
     }
   }
   if (!文件在(临时)) {
     remove(临时);
-    fprintf(stderr, "HMYR-E0009 the seed said it wrote %s, and it is not there\n", 临时);
+    fprintf(stderr, "HMYR-詞-009 the seed said it wrote %s, and it is not there\n", 临时);
     return 1;
   }
 

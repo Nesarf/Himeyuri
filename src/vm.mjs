@@ -145,7 +145,7 @@ export class 虚拟机 {
           // realtime 是档位，不是权限 —— 它不沿调用链传（见 design/MEMORY.txt 第 3 节）。
           if (效 === "realtime") continue;
           if (!调用者效果.has(效)) {
-            this.坏("HMYR-R0201", "function '" + 名 + "' uses effect '" + 效 + "', which the caller did not declare");
+            this.坏("HMYR-內-001", "function '" + 名 + "' uses effect '" + 效 + "', which the caller did not declare");
             return { ok: false, ...this.停机 };
           }
         }
@@ -311,7 +311,7 @@ export class 虚拟机 {
           const 内置项 = 内置表[指令.a];
           if (!内置项) { this.坏("HMYR-行-005", "there is no builtin '" + 指令.a + "'"); return null; }
           if (内置项.效果 && !(帧.效果 instanceof Set && 帧.效果.has(内置项.效果))) {
-            this.坏("HMYR-R0201", "builtin '" + 指令.a + "' needs effect '" + 内置项.效果 + "', which the caller did not declare");
+            this.坏("HMYR-內-001", "builtin '" + 指令.a + "' needs effect '" + 内置项.效果 + "', which the caller did not declare");
             return null;
           }
           const 结果 = 内置项.做(this, 实参);
@@ -352,7 +352,7 @@ export class 虚拟机 {
             for (const 效 of 函.效果) {
               if (效 === "realtime") continue;
               if (!帧.效果.has(效)) {
-                this.坏("HMYR-R0201", "function '" + 指令.a + "' uses effect '" + 效 + "', which the caller did not declare");
+                this.坏("HMYR-內-001", "function '" + 指令.a + "' uses effect '" + 效 + "', which the caller did not declare");
                 return null;
               }
             }

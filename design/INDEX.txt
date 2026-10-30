@@ -27,7 +27,7 @@
 
     index_new()                     建一个空索引
     index_set(索引, 键, 值) -> 索引  放一个；交回同一个索引
-    index_get(索引, 键)              取；取不到报 HMYR-R0218
+    index_get(索引, 键)              取；取不到报 HMYR-內-018
     index_has(索引, 键) -> Bool      有没有
     index_len(索引) -> Int           几项
     index_keys(索引) -> 元组         键的列表，按第一次放进去的顺序

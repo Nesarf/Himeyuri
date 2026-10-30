@@ -56,13 +56,13 @@ ok("正数", 值('str(to_int("7"))') === "7");
 console.log("三条拒绝：登记的编号要被真正触发");
 {
   const r1 = 跑('str(ord(""))');
-  ok("空串取码位被拒绝（HMYR-R0206）", r1.error && r1.error.includes("HMYR-R0206"), String(r1.error));
+  ok("空串取码位被拒绝（HMYR-內-006）", r1.error && r1.error.includes("HMYR-內-006"), String(r1.error));
   const r2 = 跑("chr(-1)");
-  ok("超出范围的码位被拒绝（HMYR-R0207）", r2.error && r2.error.includes("HMYR-R0207"), String(r2.error));
+  ok("超出范围的码位被拒绝（HMYR-內-007）", r2.error && r2.error.includes("HMYR-內-007"), String(r2.error));
   const r3 = 跑('str(to_int("4.2"))');
-  ok("不是整数写法被拒绝（HMYR-R0208）", r3.error && r3.error.includes("HMYR-R0208"), String(r3.error));
+  ok("不是整数写法被拒绝（HMYR-內-008）", r3.error && r3.error.includes("HMYR-內-008"), String(r3.error));
   const r4 = 跑('str(to_int("abc"))');
-  ok("乱写也被拒绝，不猜成零", r4.error && r4.error.includes("HMYR-R0208"), String(r4.error));
+  ok("乱写也被拒绝，不猜成零", r4.error && r4.error.includes("HMYR-內-008"), String(r4.error));
 }
 
 console.log("");

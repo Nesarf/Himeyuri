@@ -35,7 +35,7 @@ console.log("两道门");
   // 效果的门：main 没有声明 effects，而 chdir 要 process。
   // print 不算——它写到一个可替换的出口，不是动世界（这一条契约里也写着）。
   const codes = 跑('fn main() -> Int {\n  chdir("/")\n  return 0\n}\n');
-  ok("R0201 调用了调用者没声明的效果", codes.includes("HMYR-R0201"), JSON.stringify(codes));
+  ok("R0201 调用了调用者没声明的效果", codes.includes("HMYR-內-001"), JSON.stringify(codes));
 }
 {
   // 字符集的门：一个标识符里混了中文与拉丁

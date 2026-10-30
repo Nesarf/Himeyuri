@@ -167,7 +167,7 @@
 
   证据：conformance/write-text.hmoca 声明 effects(process, file)，由启动器跑通并写出文件；
   而一个没声明 file 的 main 去调要 file 的函数，会被拒成
-  「HMYR-R0201 调 写 要 file 效果，而调用它的函数没有声明」，文件也不会被写出来。
+  「HMYR-內-001 调 写 要 file 效果，而调用它的函数没有声明」，文件也不会被写出来。
 
   同一格还补了 read_text 的转发 —— 写通了之后才轮到读，两边都要 file 效果。
 

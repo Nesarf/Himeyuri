@@ -231,7 +231,7 @@ export function loadUnit(entry, options = {}) {
     modules.set(键, 模);
     // 自举层交回的 pub 是 1 / 0（它那一侧没有 JS 的 true / false），而宿主的可见性检查
     // 是严格比较 true（src/eval.mjs 第 129 行）—— 不折的话，一个写了 pub 的跨模块调用
-    // 照样被拒成 HMYR-R0250（2026-11-02 实测）。折一次，量与树同大，不随程序走。
+    // 照样被拒成 HMYR-內-023（2026-11-02 实测）。折一次，量与树同大，不随程序走。
     for (const decl of m.decls || []) {
       if (typeof decl.pub === "number") decl.pub = decl.pub !== 0;
     }

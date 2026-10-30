@@ -36,12 +36,12 @@ if (开.status !== 0) {
 
 const 表路 = path.join(目录, 成员表名);
 if (!fs.existsSync(表路)) {
-  console.error("HMYR-E0419 这份 zip 里没有成员表（" + 成员表名 + "）—— 它可能不是从容器转来的");
+  console.error("HMYR-機-009 这份 zip 里没有成员表（" + 成员表名 + "）—— 它可能不是从容器转来的");
   process.exit(1);
 }
 const 行们 = fs.readFileSync(表路, "utf8").split("\n").map((x) => x.replace(/\r$/, "")).filter((x) => x.length > 0);
 if (行们[0] !== "1") {
-  console.error("HMYR-E0420 成员表的版本不认识：" + 行们[0]);
+  console.error("HMYR-機-010 成员表的版本不认识：" + 行们[0]);
   process.exit(1);
 }
 const 容器基名 = 行们[1];
@@ -59,7 +59,7 @@ const 入口内容 = () => {
 };
 const 入字节 = 入口内容();
 if (入字节 === null) {
-  console.error("HMYR-E0421 根目录既没有 " + 容器基名 + ".hmsnp 也没有 " + 容器基名 + ".hmhsr —— 这份 zip 不是容器摊开的");
+  console.error("HMYR-機-011 根目录既没有 " + 容器基名 + ".hmsnp 也没有 " + 容器基名 + ".hmhsr —— 这份 zip 不是容器摊开的");
   process.exit(1);
 }
 
@@ -74,7 +74,7 @@ for (const 名 of 成员名们) {
     continue;
   }
   if (!fs.existsSync(全)) {
-    console.error("HMYR-E0422 成员表里有这个成员，而 zip 里没有：" + 名);
+    console.error("HMYR-機-012 成员表里有这个成员，而 zip 里没有：" + 名);
     process.exit(1);
   }
   成员们.push({ 名, 数据: fs.readFileSync(全) });

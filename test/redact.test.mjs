@@ -29,7 +29,7 @@ console.log("一、开关本身");
   ok("打开之后路径变成占位符", 藏路径("C:\\a\\b.txt") === "<path>");
   ok("一条消息里的路径被换掉", 脱线("cannot read 'C:\\a\\b.txt': no such file") === "cannot read '<path>': no such file");
   // 编号不在引号里，所以它不动 —— 这一条是这功能能成立的前提。
-  ok("编号不受影响", 脱线("HMYR-R0211 cannot read 'C:\\a\\b.txt'") === "HMYR-R0211 cannot read '<path>'");
+  ok("编号不受影响", 脱线("HMYR-內-011 cannot read 'C:\\a\\b.txt'") === "HMYR-內-011 cannot read '<path>'");
   // 没有分隔符的引号内容不动：那是普通词，不是路径。
   ok("普通引号内容不动", 脱线("no field 'a' on that record") === "no field 'a' on that record");
   设脱敏(false);
@@ -45,12 +45,12 @@ console.log("二、启动器两条路都生效");
   try {
     const 甲 = 启动([缺]);
     ok("默认时消息里带着那个路径", String(甲.stderr).includes("没有这个.hmoca"), JSON.stringify(String(甲.stderr).slice(0, 80)));
-    ok("默认时编号照旧", String(甲.stderr).includes("HMYR-R0211"));
+    ok("默认时编号照旧", String(甲.stderr).includes("HMYR-內-011"));
 
     const 乙 = 启动(["--redact", 缺]);
     ok("--redact 之后路径不见了", !String(乙.stderr).includes("没有这个.hmoca"), JSON.stringify(String(乙.stderr).slice(0, 80)));
     ok("--redact 之后占位符在", String(乙.stderr).includes("<path>"));
-    ok("--redact 之后编号还在", String(乙.stderr).includes("HMYR-R0211"));
+    ok("--redact 之后编号还在", String(乙.stderr).includes("HMYR-內-011"));
 
     const 丙 = 启动([缺], { HMYR_REDACT: "1" });
     ok("环境变量也能开", String(丙.stderr).includes("<path>") && !String(丙.stderr).includes("没有这个.hmoca"));

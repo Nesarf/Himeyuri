@@ -39,7 +39,7 @@ if (!开.ok) { console.error(开.错); process.exit(1); }
 
 const 入口 = 找入口(目录, 包路);
 if (!入口) {
-  console.error("HMYR-E0418 容器里没有可跑的入口（要先有 hmoca 或 hmoks 成员）");
+  console.error("HMYR-機-008 容器里没有可跑的入口（要先有 hmoca 或 hmoks 成员）");
   process.exit(1);
 }
 const 入口名 = path.relative(目录, 入口).split(path.sep).join("/");

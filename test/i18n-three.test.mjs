@@ -106,7 +106,7 @@ fn main() -> Int effects(file, process) {
 }
 `);
     } catch (e) { raised = (e.code || "") + " " + e.message; }
-    ok("表里没有的字符被拒绝，编号 HMYR-R0204", !!raised && raised.includes("HMYR-R0204"), String(raised));
+    ok("表里没有的字符被拒绝，编号 HMYR-內-004", !!raised && raised.includes("HMYR-內-004"), String(raised));
     ok("而且没有留下半截文件", !fs.existsSync(outside));
   }
   {
@@ -120,7 +120,7 @@ fn main() -> Int effects(file, process) {
 }
 `);
     } catch (e) { raised = (e.code || "") + " " + e.message; }
-    ok("没有表的编码（iso2022_jp）被拒绝，编号 HMYR-R0203", !!raised && raised.includes("HMYR-R0203"), String(raised));
+    ok("没有表的编码（iso2022_jp）被拒绝，编号 HMYR-內-003", !!raised && raised.includes("HMYR-內-003"), String(raised));
   }
 
   console.log("\n有了表的编码就能写：日本语与繁体中文");
@@ -152,7 +152,7 @@ console.log("\n不认识的编码名：拒绝，并点名编号");
 }
 `);
     } catch (e) { raised = (e.code || "") + " " + e.message; }
-    ok("被拒绝，编号是 HMYR-E0008", !!raised && raised.includes("HMYR-E0008"), String(raised));
+    ok("被拒绝，编号是 HMYR-詞-008", !!raised && raised.includes("HMYR-詞-008"), String(raised));
   }
 
   console.log("\n切行与代码页");

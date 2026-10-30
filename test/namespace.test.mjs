@@ -140,7 +140,7 @@ console.log("五、真拦：非 pub 的名字跨模块调用被拒（R0250）");
   let 错 = null;
   try { runUnit(单偷).run(单偷.modules.get(偷)); } catch (e) { 错 = e; }
   // 尾调用那条路（return f()）正是最容易漏的一条，所以这个用例刻意用它。
-  ok("非 pub 被拒（R0250）", !!错 && String(错.code) === "HMYR-R0250",
+  ok("非 pub 被拒（R0250）", !!错 && String(错.code) === "HMYR-內-023",
     String(错 && (错.code + " " + 错.message)).slice(0, 120));
 
   const 正 = 投(行们([
@@ -232,7 +232,7 @@ console.log("七、as 别名：`名.成员` 真的能用");
   const 单越 = loadUnit(越界);
   let 果越 = null;
   try { 果越 = runUnit(单越).run(单越.modules.get(越界)); } catch (e) { 果越 = e; }
-  ok("别名点私有的也被拒（R0250）", !!果越 && String(果越.code) === "HMYR-R0250",
+  ok("别名点私有的也被拒（R0250）", !!果越 && String(果越.code) === "HMYR-內-023",
     String(果越 && (果越.code || 果越)).slice(0, 100));
 
   const 没有 = 投(行们([

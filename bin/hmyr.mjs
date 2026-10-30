@@ -86,12 +86,12 @@ try {
 } catch (e) {
   // 子集那一层是抛而不是记诊断，于是这里接住它，把它写成与「读不进来」同一种输出。
   // 一个会露出栈的启动器，对读它的人没有用处。
-  process.stderr.write("HMYR-R0211 cannot load self/run.hmyr\n  " + e.message + "\n");
+  process.stderr.write("HMYR-內-011 cannot load self/run.hmyr\n  " + e.message + "\n");
   process.exit(1);
 }
 if (!层.ok) {
   // 自举那一层自己都读不进来，就没有语言可用来说这件事。宿主只好开口。
-  process.stderr.write("HMYR-R0211 cannot load self/run.hmyr\n");
+  process.stderr.write("HMYR-內-011 cannot load self/run.hmyr\n");
   for (const e of 层.diagnostics.errors) process.stderr.write("  " + e.code + " " + e.message + "\n");
   process.exit(1);
 }
@@ -144,7 +144,7 @@ if (!层.ok) {
 // design/RELAY.txt 的「第四个出口」那一段：一个默认就能往外连的解释器，等于把
 // 「这台机器能不能上网」变成「这个程序能不能上网」。
 //
-// 连不上要出声，报 HMYR-E0002 并以 2 退出。形状写错也报同一个编号，
+// 连不上要出声，报 HMYR-詞-003 并以 2 退出。形状写错也报同一个编号，
 // 因为这两种的结果一样：输出没有去处。退回标准流是更坏的选择 —— 那是静默丢输出。
 import { 档位, 档预设, 档步限 } from "../tools/file-kind.mjs";
 

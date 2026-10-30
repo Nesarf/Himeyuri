@@ -63,7 +63,7 @@ try {
   console.log("边界");
   {
     const r = 跑('fn main() -> Int effects(thread) {\n  print(str(thr_join(999, 100)))\n  return 0\n}\n');
-    ok("不存在的句柄给 R0221", r.error && r.error.includes("HMYR-R0221"), String(r.error).slice(0, 70));
+    ok("不存在的句柄给 R0221", r.error && r.error.includes("HMYR-內-020"), String(r.error).slice(0, 70));
   }
   {
     const r = 跑('fn main() -> Int effects(thread) {\n  print(str(thr_count()))\n  return 0\n}\n');
@@ -80,7 +80,7 @@ console.log("超时：等不到就报编号，而不是一直挂着");
   fs.writeFileSync(慢路径, "fn work() -> Int {\n  var i = 0\n  var s = 0\n  while i < 200000 {\n    s = s + i\n    i = i + 1\n  }\n  return s\n}\n", "utf8");
   const 慢 = 慢路径;
   const r = 跑('fn main() -> Int effects(thread, file) {\n  let 源码 = read_text("' + 慢 + '", "utf8")\n  let 手 = thr_spawn(源码, "work")\n  print(str(thr_join(手, 1)))\n  return 0\n}\n');
-  ok("等不到就报 R0222（不挂死）", r.error && r.error.includes("HMYR-R0222"), String(r.error).slice(0, 80));
+  ok("等不到就报 R0222（不挂死）", r.error && r.error.includes("HMYR-內-021"), String(r.error).slice(0, 80));
   fs.rmSync(慢路径, { force: true });
 }
 
@@ -91,11 +91,11 @@ console.log("派生处：没声明 thread 就不许派生");
   // 更细的那一层（任务能碰的东西不许超出派生者）今天做不到 —— 任务是一段源码
   // 字符串，它的 effects 在字符串里，派生时看不见。理由写在 CONCURRENCY.txt 的 2.1.6。
   const r = 跑('fn main() -> Int {\n  let 手 = thr_spawn("(fn work() -> Int { 1 })", "work")\n  return 0\n}\n');
-  ok("没声明 thread 的派生被拒（R0201）", r.error && r.error.includes("HMYR-R0201"), String(r.error).slice(0, 100));
+  ok("没声明 thread 的派生被拒（R0201）", r.error && r.error.includes("HMYR-內-001"), String(r.error).slice(0, 100));
 
   // 声明了就过得去 —— 这一句是上一条的对照，少了它判据会往「一律拒」偏。
   const 好 = 跑('fn main() -> Int effects(thread) {\n  let 手 = thr_spawn("(fn work() -> Int { 1 })", "work")\n  return 0\n}\n');
-  ok("声明了 thread 就不报 R0201", !好.error || !好.error.includes("HMYR-R0201"), String(好.error).slice(0, 100));
+  ok("声明了 thread 就不报 R0201", !好.error || !好.error.includes("HMYR-內-001"), String(好.error).slice(0, 100));
 }
 
 console.log("");
