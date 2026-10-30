@@ -108,7 +108,12 @@ const 描述 = (v) => {
   if (v === undefined) return "未定义";
   // 码元序列也是字符串值：默认的底现在是它（src/text-impl.mjs）。
   // 少了这一行，三条路的对照会把「同一个字符串」判成一处聚合 —— 那不是分叉，是判据没跟上。
-  if (v instanceof Uint16Array) return "str:" + JSON.stringify(单位.成宿主(v));
+  //
+  // 判据要用 units.mjs 的「是不是码元序列」，而不是 instanceof Uint16Array：
+  // 2026-11-02 实测，字节码那台交回的 str(nil) 是 {0:91,1:93}（[] 的两个码元），
+  // 它不是 Uint16Array 的实例，于是被当成「聚合」、显示成空串，看起来像三台分叉 ——
+  // 而三台其实给的是同一个字符串，只是其中一台用码元序列表示。
+  if (单位.是码元序列(v)) return "str:" + JSON.stringify(单位.成宿主(v));
   return "聚合:" + (v && v.tag ? v.tag : String(v));
 };
 // 错误只看编号：消息的措辞是三条路各自的，编号才是契约。
