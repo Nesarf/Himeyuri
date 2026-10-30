@@ -229,7 +229,11 @@ console.log("六、call_c 的三条失败");
   if (!有gcc二) {
     console.log("  跳过  这台机器上没有 gcc —— call_c 的失败路径不验");
   } else {
-    const exe = path.join(临, "hmyr-call.exe");
+    // 用一个自己的子目录：同一个临时目录里编第二个 exe 会撞上「输出文件打不开」
+    // （第一个刚跑过还没放手），2026-11-02 实测 —— 而换一个目录就好了。
+    const 子 = path.join(临, "call");
+    try { fs.mkdirSync(子, { recursive: true }); } catch { /* 已经有了就用 */ }
+    const exe = path.join(子, "hmyr-call.exe");
     const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-Wl,--stack,67108864", "-o", exe,
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     if (编.status !== 0) console.log("  跳过  call_c 那台这一次没编出来：" + String(编.stderr || "").slice(0, 100));
