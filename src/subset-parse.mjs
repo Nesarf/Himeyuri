@@ -219,7 +219,7 @@ export const 子集解 = (tokens, options = {}) => {
     要标("=", "模板");
     const body = 解析表达式();
     收句();
-    return { kind: "Macro", name: 名 ? 名.value : "<error>", params, body, line: kw.line, column: kw.column };
+    return { kind: "宏", name: 名 ? 名.value : "<error>", params, body, line: kw.line, column: kw.column };
   }
 
   function 解析函数() {

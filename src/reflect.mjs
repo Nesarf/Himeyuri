@@ -46,18 +46,18 @@ export function symbols(ast) {
       // a function declared inside another is a symbol too, and says whose it is
       if (decl.body) {
         walk(decl.body, (node) => {
-          if (node.kind === "DeclStmt" && node.decl.kind === "Fn") {
+          if (node.kind === "声明语句" && node.decl.kind === "Fn") {
             out.push({ name: node.decl.name, kind: "fn", line: node.decl.line, pub: false, nestedIn: decl.name,
               params: node.decl.params.map(param), returns: node.decl.returns ? typeName(node.decl.returns) : null,
               effects: node.decl.effects || [], contracts: { requires: 0, ensures: 0 }, body: !!node.decl.body });
           }
         });
       }
-    } else if (decl.kind === "TypeAlias") {
+    } else if (decl.kind === "类型别名") {
       out.push({ name: decl.name, kind: "type", line: decl.line, pub: !!decl.pub, params: (decl.params || []).map((p) => ({ name: p })), aliases: typeName(decl.value) });
     } else if (decl.kind === "Const") {
       out.push({ name: decl.name, kind: "const", line: decl.line, pub: !!decl.pub });
-    } else if (decl.kind === "EffectDecl") {
+    } else if (decl.kind === "效果") {
       out.push({ name: decl.name, kind: "effect", line: decl.line, pub: !!decl.pub });
     }
   }

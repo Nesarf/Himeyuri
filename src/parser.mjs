@@ -266,7 +266,7 @@ export function parse(tokens, options = {}) {
     expectPunct("=", "before the aliased type");
     const value = parseType();
     endStatement();
-    return { kind: "TypeAlias", name: name ? name.value : "<error>", params, value, line: kw.line, column: kw.column };
+    return { kind: "类型别名", name: name ? name.value : "<error>", params, value, line: kw.line, column: kw.column };
   }
 
   function parseConst() {
@@ -311,14 +311,14 @@ export function parse(tokens, options = {}) {
     expectPunct("=", "before the template");
     const body = parseExpr();
     endStatement();
-    return { kind: "Macro", name: 名 ? 名.value : "<error>", params, body, line: kw.line, column: kw.column };
+    return { kind: "宏", name: 名 ? 名.value : "<error>", params, body, line: kw.line, column: kw.column };
   }
 
   function parseEffectDecl() {
     const kw = advance();
     const name = expect("ident", "an effect name");
     endStatement();
-    return { kind: "EffectDecl", name: name ? name.value : "<error>", line: kw.line, column: kw.column };
+    return { kind: "效果", name: name ? name.value : "<error>", line: kw.line, column: kw.column };
   }
 
   function parseBlock() {
@@ -366,7 +366,7 @@ export function parse(tokens, options = {}) {
     // A nested declaration inside a block is allowed (a local function, say).
     if (at("keyword", "fn") || at("keyword", "pub") || at("keyword", "type") || at("keyword", "const")) {
       const decl = parseDecl();
-      return decl ? { kind: "DeclStmt", decl, line: t.line, column: t.column } : null;
+      return decl ? { kind: "声明语句", decl, line: t.line, column: t.column } : null;
     }
     const expr = parseExpr();
     endStatement();

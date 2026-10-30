@@ -82,11 +82,11 @@ function 展开式(x, 宏们, 深) {
 export function 展开模块(模块) {
   if (!模块 || !Array.isArray(模块.decls)) return 模块;
   const 宏们 = new Map();
-  for (const d of 模块.decls) if (d && d.kind === "Macro") 宏们.set(d.name, d);
+  for (const d of 模块.decls) if (d && d.kind === "宏") 宏们.set(d.name, d);
   if (宏们.size === 0) return 模块;
   const decls = [];
   for (const d of 模块.decls) {
-    if (d && d.kind === "Macro") continue;
+    if (d && d.kind === "宏") continue;
     decls.push(展开式(d, 宏们, 0));
   }
   return { ...模块, decls };

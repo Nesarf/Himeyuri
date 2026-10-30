@@ -338,7 +338,7 @@ export function loadUnitSelf(entry, options = {}) {
     const ast = modules.get(abs);
     if (!ast) continue;
     for (const decl of ast.decls || []) {
-      if (decl.kind !== "Fn" && decl.kind !== "Const" && decl.kind !== "TypeAlias") continue;
+      if (decl.kind !== "Fn" && decl.kind !== "Const" && decl.kind !== "类型别名") continue;
       if (已声明.has(decl.name)) {
         diagnostics.warn(
           "HMYR-載-004",
@@ -364,7 +364,7 @@ export function loadUnitSelf(entry, options = {}) {
       const ast = modules.get(abs);
       if (!ast) continue;
       for (const decl of ast.decls || []) {
-        if (decl.kind !== "Fn" && decl.kind !== "Const" && decl.kind !== "TypeAlias") continue;
+        if (decl.kind !== "Fn" && decl.kind !== "Const" && decl.kind !== "类型别名") continue;
         if (decl.pub) continue;
         非公开.set(decl.name, abs);
       }

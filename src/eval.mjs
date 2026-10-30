@@ -326,7 +326,7 @@ export class Runtime {
         throw new Return(v ? this.evalExpr(v, scope, effects) : null);
       }
       case "表达式语句": return this.evalExpr(stmt.expr, scope, effects);
-      case "DeclStmt":
+      case "声明语句":
         if (stmt.decl.kind === "Fn") { this.functions.set(stmt.decl.name, stmt.decl); return null; }
         if (stmt.decl.kind === "Const") { const v = this.evalExpr(stmt.decl.value, scope, effects); scope.set(stmt.decl.name, v, false); return v; }
         return null;

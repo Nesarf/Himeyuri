@@ -68,13 +68,13 @@ class Printer {
         if (!node.body) return head;
         return head + " " + this.block(node.body, 0);
       }
-      case "TypeAlias": {
+      case "类型别名": {
         let head = pub + "type " + node.name;
         if (node.params && node.params.length) head += "<" + node.params.join(", ") + ">";
         return head + " = " + this.type(node.value);
       }
       case "Const": return pub + "const " + node.name + " = " + this.expr(node.value, 0, 0);
-      case "EffectDecl": return pub + "effect " + node.name;
+      case "效果": return pub + "effect " + node.name;
       default: return "// (unprintable declaration: " + node.kind + ")";
     }
   }
@@ -114,7 +114,7 @@ class Printer {
       case "赋值": return node.name + " = " + this.expr(node.value, level, 0);
       case "返回": return "return" + (node.value ? " " + this.expr(node.value, level, 0) : "");
       case "表达式语句": return this.expr(node.expr, level, 0);
-      case "DeclStmt": return this.decl(node.decl);
+      case "声明语句": return this.decl(node.decl);
       default: return "// (unprintable statement: " + node.kind + ")";
     }
   }
