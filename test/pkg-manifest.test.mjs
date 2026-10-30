@@ -50,7 +50,7 @@ console.log("一、四项齐的清单：装得进去");
   const 入口 = 造("甲包", 行们(["fn 甲() -> Int {", "  return 1", "}"]),
     { 名字: "甲包", 版本: 1, 许可: "CZGD-PL-1.1", 哈希: 好哈希 });
   const 单 = loadUnit(入口);
-  ok("没有 E0304", !单.diagnostics.errors.some((e) => e.code === "HMYR-E0304"),
+  ok("没有 E0304", !单.diagnostics.errors.some((e) => e.code === "HMYR-載-007"),
     JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
   ok("装得进去", 单.ok === true, JSON.stringify(单.ok));
 }
@@ -59,7 +59,7 @@ console.log("二、没有清单");
 {
   const 入口 = 造("乙包", 行们(["fn 乙() -> Int {", "  return 2", "}"]), null);
   const 单 = loadUnit(入口);
-  ok("缺清单给 E0304", 单.diagnostics.errors.some((e) => e.code === "HMYR-E0304"),
+  ok("缺清单给 E0304", 单.diagnostics.errors.some((e) => e.code === "HMYR-載-007"),
     JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
 }
 
@@ -68,7 +68,7 @@ console.log("三、名字与目录不一致");
   const 入口 = 造("丙包", 行们(["fn 丙() -> Int {", "  return 3", "}"]),
     { 名字: "不是丙包", 版本: 1, 许可: "CZGD-PL-1.1", 哈希: 好哈希 });
   const 单 = loadUnit(入口);
-  const 那句 = 单.diagnostics.errors.find((e) => e.code === "HMYR-E0304");
+  const 那句 = 单.diagnostics.errors.find((e) => e.code === "HMYR-載-007");
   ok("名字不一致给 E0304", !!那句, JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
 }
 
@@ -77,7 +77,7 @@ console.log("四、版本不是整数");
   const 入口 = 造("丁包", 行们(["fn 丁() -> Int {", "  return 4", "}"]),
     { 名字: "丁包", 版本: "一", 许可: "CZGD-PL-1.1", 哈希: 好哈希 });
   const 单 = loadUnit(入口);
-  ok("版本不是整数给 E0304", 单.diagnostics.errors.some((e) => e.code === "HMYR-E0304"),
+  ok("版本不是整数给 E0304", 单.diagnostics.errors.some((e) => e.code === "HMYR-載-007"),
     JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
 }
 
@@ -87,14 +87,14 @@ console.log("五、清单的版本与入口的 rev 不一致");
   const 入口 = 造("戊包", 行们(["rev 2", "", "fn 戊() -> Int {", "  return 5", "}"]),
     { 名字: "戊包", 版本: 3, 许可: "CZGD-PL-1.1", 哈希: 好哈希 });
   const 单 = loadUnit(入口);
-  const 那句 = 单.diagnostics.errors.find((e) => e.code === "HMYR-E0304" && /rev/.test(e.message));
+  const 那句 = 单.diagnostics.errors.find((e) => e.code === "HMYR-載-007" && /rev/.test(e.message));
   ok("两处不一致给 E0304", !!那句, JSON.stringify(单.diagnostics.errors.map((e) => e.message.slice(0, 50))));
 
   // 一致的：不该报。
   const 平 = 造("己包", 行们(["rev 3", "", "fn 己() -> Int {", "  return 6", "}"]),
     { 名字: "己包", 版本: 3, 许可: "CZGD-PL-1.1", 哈希: 好哈希 });
   const 单平 = loadUnit(平);
-  ok("一致就不报", !单平.diagnostics.errors.some((e) => e.code === "HMYR-E0304"),
+  ok("一致就不报", !单平.diagnostics.errors.some((e) => e.code === "HMYR-載-007"),
     JSON.stringify(单平.diagnostics.errors.map((e) => e.code)));
 }
 
@@ -144,19 +144,19 @@ console.log("七、依赖：缺包与版本不够各有一个编号");
   // 一、依赖满足：不报。
   造包("小库", 2, null);
   造包("用家", 1, { 小库: 2 });
-  ok("依赖满足就不报", !loadUnit(入口("用家")).diagnostics.errors.some((e) => e.code === "HMYR-E0305" || e.code === "HMYR-E0306"),
+  ok("依赖满足就不报", !loadUnit(入口("用家")).diagnostics.errors.some((e) => e.code === "HMYR-載-009" || e.code === "HMYR-載-011"),
     JSON.stringify(loadUnit(入口("用家")).diagnostics.errors.map((e) => e.code)));
 
   // 二、缺包：E0305。
   造包("缺家", 1, { 不存在的包: 1 });
   const 缺 = loadUnit(入口("缺家"));
-  ok("缺包给 E0305", 缺.diagnostics.errors.some((e) => e.code === "HMYR-E0305"),
+  ok("缺包给 E0305", 缺.diagnostics.errors.some((e) => e.code === "HMYR-載-009"),
     JSON.stringify(缺.diagnostics.errors.map((e) => e.code)));
 
   // 三、版本不够：E0306。
   造包("高家", 1, { 小库: 9 });
   const 高 = loadUnit(入口("高家"));
-  ok("版本不够给 E0306", 高.diagnostics.errors.some((e) => e.code === "HMYR-E0306"),
+  ok("版本不够给 E0306", 高.diagnostics.errors.some((e) => e.code === "HMYR-載-011"),
     JSON.stringify(高.diagnostics.errors.map((e) => e.code)));
 
   // 四、只写依赖不写依赖哈希：一声提示，不是错（哈希链那一半归工具）。
@@ -165,7 +165,7 @@ console.log("七、依赖：缺包与版本不够各有一个编号");
   fs.writeFileSync(path.join(根, "裸家", "index.hmoca"), "pub fn 裸家() -> Int {\n  return 1\n}\n", "utf8");
   fs.writeFileSync(path.join(根, "裸家", "hmyr.hmkit"), JSON.stringify(只依), "utf8");
   const 裸 = loadUnit(入口("裸家"));
-  ok("写了依赖没写依赖哈希：提示 W0305", 裸.diagnostics.warnings.some((w) => w.code === "HMYR-W0305"),
+  ok("写了依赖没写依赖哈希：提示 W0305", 裸.diagnostics.warnings.some((w) => w.code === "HMYR-載-010"),
     JSON.stringify(裸.diagnostics.warnings.map((w) => w.code)));
 }
 
@@ -251,7 +251,7 @@ console.log("九、签名：谁担保它是");
     fs.writeFileSync(清单路, JSON.stringify(清单), "utf8");
     const 单 = loadUnit(path.join(根, "用签.hmoca"));
     const 形 = spawnSync(process.execPath, [工具, "--all", 根], { encoding: "utf8" });
-    ok("清单形状过", !单.diagnostics.errors.some((e) => e.code === "HMYR-E0304" || e.code === "HMYR-E0307"),
+    ok("清单形状过", !单.diagnostics.errors.some((e) => e.code === "HMYR-載-007" || e.code === "HMYR-載-012"),
       JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
     ok("签名验过", 形.status === 0, String(形.stdout || "").slice(0, 200));
   }
@@ -276,7 +276,7 @@ console.log("九、签名：谁担保它是");
     清单.签名 = { 包: "签包", 算法: "ed25519", 值 };
     fs.writeFileSync(清单路, JSON.stringify(清单), "utf8");
     const 单 = loadUnit(path.join(根, "用签.hmoca"));
-    ok("公钥不在可信表：E0307", 单.diagnostics.errors.some((e) => e.code === "HMYR-E0307"),
+    ok("公钥不在可信表：E0307", 单.diagnostics.errors.some((e) => e.code === "HMYR-載-012"),
       JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
   }
 }

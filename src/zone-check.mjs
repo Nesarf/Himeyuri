@@ -179,7 +179,7 @@ export function 区检查(ast, 选项 = {}) {
 
       if (n.kind === "Call") {
         if (是arena调用(n) && 在循环里) {
-          报("warning", "HMYR-W0310",
+          报("warning", "HMYR-載-016",
             "an arena is built inside a loop: every round allocates a new one, so the total grows with " +
             "the number of rounds. Build it once outside the loop if the blocks do not need to be separate",
             n);
@@ -218,7 +218,7 @@ export function 区检查(ast, 选项 = {}) {
             if (!名) continue;
             const 命中 = 块属于谁(名);
             if (命中.length) {
-              报("warning", "HMYR-W0311",
+              报("warning", "HMYR-載-018",
                 "'" + 名 + "' is a block of the arena '" + 命中[0].场名 + "' and it is passed to '" +
                 n.callee.name + "', whose body is not in this source; nothing here promises it will not keep it",
                 a);

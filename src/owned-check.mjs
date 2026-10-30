@@ -18,7 +18,7 @@
 //   ・分支里的动作不追，只把状态降级
 //   ・循环体一次也不追 —— 零次与多次都可能，两种都说不出结论
 
-export const 检查码 = "HMYR-E0321";
+export const 检查码 = "HMYR-載-021";
 
 import { 转移, 空, 满, 关, 移 } from "./owned-state.mjs";
 

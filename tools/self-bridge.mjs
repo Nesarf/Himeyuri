@@ -290,7 +290,7 @@ export function loadUnit(entry, options = {}) {
       const 要 = imp.rev;
       if (有 !== null && 有 !== undefined && 要 !== null && 要 !== undefined && 要 > 有) {
         const 条 = {
-          code: "HMYR-E0303",
+          code: "HMYR-載-005",
           message: "module '" + p + "' offers revision " + 有 + ", but the import asks for " + 要 +
             "; there is no version both sides support",
           file: 键,
@@ -310,7 +310,7 @@ export function loadUnit(entry, options = {}) {
       const 算路径 = p.startsWith("./") || p.startsWith("../") || /^[A-Za-z]:[\\/]/.test(p) || path.isAbsolute(p);
       if (!算路径) {
         诊断.items.push({
-          code: "HMYR-W0301",
+          code: "HMYR-載-002",
           message: "import of '" + p + "' is not a path; the package manager will own that",
         });
         const 解 = resolveImport(本机能力(), 键, p, null);
@@ -372,7 +372,7 @@ export function loadUnit(entry, options = {}) {
       const ast = modules.get(键);
       if (清单 && Number.isInteger(清单.版本) && ast && ast.rev !== null && ast.rev !== undefined && ast.rev !== 清单.版本) {
         诊断.error(
-          "HMYR-E0304",
+          "HMYR-載-007",
           "package '" + path.basename(包目录) + "' declares 版本 " + 清单.版本 + " but its index.hmoca says rev " + ast.rev +
             "; the two places that name a revision have to agree",
           0,

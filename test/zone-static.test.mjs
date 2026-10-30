@@ -88,7 +88,7 @@ console.log("四、循环里新建 arena：警告，不是错（§4.4）");
   ]);
   const 出 = 查(源);
   ok("一条警告", 出.length === 1 && 出[0].severity === "warning", JSON.stringify(出));
-  ok("编号是 W0310", 出[0] && 出[0].code === "HMYR-W0310", String(出[0] && 出[0].code));
+  ok("编号是 W0310", 出[0] && 出[0].code === "HMYR-載-016", String(出[0] && 出[0].code));
   ok("说的是「每轮新建一个」", /loop/.test(出[0] ? 出[0].message : ""), 出[0] ? 出[0].message : "");
 
   const 外 = 查(行们(["fn f() -> Int {", "  let a = arena()", "  a.close()", "  return 0", "}"]));
@@ -253,7 +253,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
     "  return keep(b)",
     "}",
   ]);
-  ok("块交给别的函数给 W0311", 查(交块).some((d) => d.code === "HMYR-W0311" && d.severity === "warning"), JSON.stringify(查(交块)));
+  ok("块交给别的函数给 W0311", 查(交块).some((d) => d.code === "HMYR-載-018" && d.severity === "warning"), JSON.stringify(查(交块)));
 
   const 传字段 = 行们([
     "fn keep(x: Int) -> Int {",

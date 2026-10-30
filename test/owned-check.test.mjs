@@ -27,7 +27,7 @@ const ok = (label, condition, detail = "") => {
 const 查 = (源码) => 持有格检查(子集解(切(源码)).ast);
 const 行们 = (v) => v.join("\n") + "\n";
 const 投 = (内容, 名) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
-const 有 = (出, 词) => 出.some((d) => d.code === "HMYR-E0321" && d.message.includes(词));
+const 有 = (出, 词) => 出.some((d) => d.code === "HMYR-載-021" && d.message.includes(词));
 
 console.log("一、两条反例被拒");
 {
@@ -128,7 +128,7 @@ console.log("四、装载器真的拦，开关能关");
   ]), "坏.hmoca");
   const 单 = loadUnit(坏);
   ok("装载结果是失败", 单.ok === false, JSON.stringify({ ok: 单.ok }));
-  ok("诊断里有 E0321", 单.diagnostics.errors.some((e) => e.code === "HMYR-E0321"),
+  ok("诊断里有 E0321", 单.diagnostics.errors.some((e) => e.code === "HMYR-載-021"),
     JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
 
   const 关 = loadUnit(坏, { ownedCheck: false });
@@ -469,7 +469,7 @@ console.log("十一、跨模块（按装载顺序累积）");
 
   const 单 = loadUnit(甲);
   ok("跨模块的转移被看见",
-   单.diagnostics.errors.some((e) => e.code === "HMYR-E0321" && /all the way down|changes it/.test(e.message)),
+   单.diagnostics.errors.some((e) => e.code === "HMYR-載-021" && /all the way down|changes it/.test(e.message)),
    JSON.stringify(单.diagnostics.errors.map((e) => e.code + " " + e.message.slice(0, 60))));
 
   // 干净的被调者：同样跨模块，但那边什么都不动 —— 不该报。
@@ -488,7 +488,7 @@ console.log("十一、跨模块（按装载顺序累积）");
   ]), "甲净.hmoca");
   const 单净 = loadUnit(甲净);
   ok("跨模块的干净调用不报",
-   单净.diagnostics.errors.filter((e) => e.code === "HMYR-E0321").length === 0,
+   单净.diagnostics.errors.filter((e) => e.code === "HMYR-載-021").length === 0,
    JSON.stringify(单净.diagnostics.errors.map((e) => e.code)));
 }
 
@@ -522,11 +522,11 @@ console.log("十二、被调者在调用者之后装载（两趟补齐的那一�
 
   const 单 = loadUnit(戊);
   ok("被调者后装载也报",
-   单.diagnostics.errors.some((e) => e.code === "HMYR-E0321" && /all the way down|changes it/.test(e.message)),
+   单.diagnostics.errors.some((e) => e.code === "HMYR-載-021" && /all the way down|changes it/.test(e.message)),
    JSON.stringify(单.diagnostics.errors.map((e) => e.code + " " + e.message.slice(0, 70))));
 
   // 而且报的只有那一处 —— 两趟不该把同一个错报两次。
-  const 那条 = 单.diagnostics.errors.filter((e) => e.code === "HMYR-E0321");
+  const 那条 = 单.diagnostics.errors.filter((e) => e.code === "HMYR-載-021");
   ok("同一个错只报一次", 那条.length === 1, String(那条.length));
 }
 
@@ -571,10 +571,10 @@ console.log("十三、跨包（包名解析 + 同一张表）");
 
   const 单 = loadUnit(入口);
   ok("包名解析到了实际文件（不报缺文件）",
-   !单.diagnostics.errors.some((e) => e.code === "HMYR-E0302"),
+   !单.diagnostics.errors.some((e) => e.code === "HMYR-載-003"),
    JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
   ok("跨包的转移被看见",
-   单.diagnostics.errors.some((e) => e.code === "HMYR-E0321" && /changes it|all the way down/.test(e.message)),
+   单.diagnostics.errors.some((e) => e.code === "HMYR-載-021" && /changes it|all the way down/.test(e.message)),
    JSON.stringify(单.diagnostics.errors.map((e) => e.code + " " + e.message.slice(0, 70))));
 
   // 干净的那一对：同样跨包，但乙包的函数什么都不动 —— 不该报。
@@ -593,7 +593,7 @@ console.log("十三、跨包（包名解析 + 同一张表）");
   ]), "utf8");
   const 净 = loadUnit(入口);
   ok("跨包的干净调用不报",
-   净.diagnostics.errors.filter((e) => e.code === "HMYR-E0321").length === 0,
+   净.diagnostics.errors.filter((e) => e.code === "HMYR-載-021").length === 0,
    JSON.stringify(净.diagnostics.errors.map((e) => e.code)));
 
   // 版本：import "甲包" rev N 与路径形式走同一套检查 —— 因为包名解析成路径之后，
@@ -616,7 +616,7 @@ console.log("十三、跨包（包名解析 + 同一张表）");
   ]), "utf8");
   const 高三 = loadUnit(要三);
   ok("包名上要的版本高于模块提供的 → E0303",
-   高三.diagnostics.errors.some((e) => e.code === "HMYR-E0303"),
+   高三.diagnostics.errors.some((e) => e.code === "HMYR-載-005"),
    JSON.stringify(高三.diagnostics.errors.map((e) => e.code)));
 
   const 要二 = path.join(根, "要二.hmoca");
@@ -629,7 +629,7 @@ console.log("十三、跨包（包名解析 + 同一张表）");
   ]), "utf8");
   const 平 = loadUnit(要二);
   ok("要的版本与提供的一样 → 不报 E0303",
-   平.diagnostics.errors.filter((e) => e.code === "HMYR-E0303").length === 0,
+   平.diagnostics.errors.filter((e) => e.code === "HMYR-載-005").length === 0,
    JSON.stringify(平.diagnostics.errors.map((e) => e.code)));
 }
 

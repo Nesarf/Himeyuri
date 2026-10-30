@@ -65,7 +65,7 @@ console.log("二、三条走错各有编号");
   const r1 = 跑([两次]);
   const 出1 = (r1.stdout || "") + (r1.stderr || "");
   ok("放两次被拦住（装载时 E0321 或运行期 R0305）",
-    (出1.includes("HMYR-R0305") || 出1.includes("HMYR-E0321")) && !出1.includes("没有拦住"),
+    (出1.includes("HMYR-R0305") || 出1.includes("HMYR-載-021")) && !出1.includes("没有拦住"),
     JSON.stringify(出1.slice(0, 160)));
 
   const 取空 = 投(行们([
@@ -79,7 +79,7 @@ console.log("二、三条走错各有编号");
   const r2 = 跑([取空]);
   const 出2 = (r2.stdout || "") + (r2.stderr || "");
   ok("取空的被拦住（装载时 E0321 或运行期 R0306）",
-    (出2.includes("HMYR-R0306") || 出2.includes("HMYR-E0321")) && !出2.includes("没有拦住"),
+    (出2.includes("HMYR-R0306") || 出2.includes("HMYR-載-021")) && !出2.includes("没有拦住"),
     JSON.stringify(出2.slice(0, 160)));
 
   const 关后放 = 投(行们([
@@ -94,7 +94,7 @@ console.log("二、三条走错各有编号");
   const r3 = 跑([关后放]);
   const 出3 = (r3.stdout || "") + (r3.stderr || "");
   ok("关之后再放被拦住（装载时 E0321 或运行期 R0305）",
-    (出3.includes("HMYR-R0305") || 出3.includes("HMYR-E0321")) && !出3.includes("没有拦住"),
+    (出3.includes("HMYR-R0305") || 出3.includes("HMYR-載-021")) && !出3.includes("没有拦住"),
     JSON.stringify(出3.slice(0, 160)));
 }
 

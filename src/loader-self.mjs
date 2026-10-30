@@ -173,11 +173,11 @@ export function loadUnitSelf(entry, options = {}) {
 
   const 结果 = 取顺序(机器, 码, 目录, 相对, 绝对);
   if (结果.错) {
-    /* 码名要与宿主一致：那边报的是 HMYR-E0301 与 HMYR-E0302，而这里原来只写了
+    /* 码名要与宿主一致：那边报的是 HMYR-載-001 与 HMYR-載-003，而这里原来只写了
      * E0301 —— 判据按全名找，于是「环被拒了」与「缺文件被拒了」两条都读成没有
      * （2026-11-02 实测，module 那套在自举档下红四项）。 */
     const 码名 = 结果.错.slice(0, 5);
-    diagnostics.error(码名 === "E0301" ? "HMYR-E0301" : "HMYR-E0302", 结果.错);
+    diagnostics.error(码名 === "E0301" ? "HMYR-載-001" : "HMYR-載-003", 结果.错);
     return { ok: false, order: [], modules: new Map(), 别名表: new Map(), diagnostics };
   }
 
@@ -271,7 +271,7 @@ export function loadUnitSelf(entry, options = {}) {
         const 清单 = 读包清单(能力, 包根, path.basename(包目录), diagnostics);
         if (清单 && Number.isInteger(清单.版本) && ast.rev !== null && ast.rev !== undefined && ast.rev !== 清单.版本) {
           diagnostics.error(
-            "HMYR-E0304",
+            "HMYR-載-007",
             "package '" + path.basename(包目录) + "' declares 版本 " + 清单.版本 + " but its index.hmoca says rev " + ast.rev +
               "; the two places that name a revision have to agree",
             0,
@@ -290,7 +290,7 @@ export function loadUnitSelf(entry, options = {}) {
       if (!目标) {
         // 不像包名、也不是路径：宿主在这里说一句 W0301（「包管理器将来管它」），
         // 而不是把它当成缺文件。
-        diagnostics.warn("HMYR-W0301", "import of '" + imp.path + "' is not a path; the package manager will own that", 0, 0);
+        diagnostics.warn("HMYR-載-002", "import of '" + imp.path + "' is not a path; the package manager will own that", 0, 0);
       }
     }
   }
@@ -300,7 +300,7 @@ export function loadUnitSelf(entry, options = {}) {
   //
   // 症状（2026-11-01 实测）：namespace 那五条判据全部报 HMYR-R0104「没有这个名字」——
   // 因为 命名空间::名字 这种写法要靠别名表才认得出，而交回的是一个空 Map；
-  // 而 self-chain2 要的 HMYR-W0302（两个模块声明同一个名字）从来没出现过。
+  // 而 self-chain2 要的 HMYR-載-004（两个模块声明同一个名字）从来没出现过。
   const 别名表 = new Map();
   for (const abs of order) {
     const ast = modules.get(abs);
@@ -323,7 +323,7 @@ export function loadUnitSelf(entry, options = {}) {
         imp.rev !== null && imp.rev !== undefined && imp.rev > 被引.rev
       ) {
         diagnostics.error(
-          "HMYR-E0303",
+          "HMYR-載-005",
           "module '" + imp.path + "' offers revision " + 被引.rev + ", but the import asks for " + imp.rev +
             "; there is no version both sides support",
           imp.line || 0,
@@ -341,7 +341,7 @@ export function loadUnitSelf(entry, options = {}) {
       if (decl.kind !== "Fn" && decl.kind !== "Const" && decl.kind !== "TypeAlias") continue;
       if (已声明.has(decl.name)) {
         diagnostics.warn(
-          "HMYR-W0302",
+          "HMYR-載-004",
           "two modules declare '" + decl.name + "' (" + path.basename(已声明.get(decl.name)) + " and " + path.basename(abs) +
             "); the later one wins until namespaces exist",
           0,
@@ -389,7 +389,7 @@ export function loadUnitSelf(entry, options = {}) {
         const 家 = 非公开.get(n.callee.name);
         if (家 && 家 !== abs) {
           diagnostics.warn(
-            "HMYR-W0303",
+            "HMYR-載-006",
             "'" + n.callee.name + "' is declared in " + path.basename(家) + " without pub, and it is called in " +
               path.basename(abs) + "; the flat table still lets it through, so this is a notice rather than a refusal",
             n.line || 0,

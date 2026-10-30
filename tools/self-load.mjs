@@ -1,7 +1,7 @@
 // 模块加载的语义对齐：宿主 loader 与 self/ 那条链，对同一棵 import 树给出同一份答案。
 //
 // 宿主 loader 的文件头写着三条承诺：真的加载 import、同一个文件只加载一次、循环引用被拒
-// （HMYR-E0301），另有一条「引的文件不在就报 HMYR-E0302」。self/run.hmyr 的 加载走 照做，
+// （HMYR-載-001），另有一条「引的文件不在就报 HMYR-載-003」。self/run.hmyr 的 加载走 照做，
 // 顺序也取后序（与宿主 visit 里 push 的位置一致）。
 //
 // 这一套比三样：
@@ -60,7 +60,7 @@ console.log("二、缺失的 import：两边都要说 E0302");
   const 宿主 = loadUnit(甲);
   const 宿主码 = (宿主.diagnostics.errors || []).map((e) => e.code);
   const 自己 = 调("只加载", [归一(path.relative(ROOT, 甲))]).trim();
-  ok("宿主报 E0302", 宿主码.includes("HMYR-E0302"), JSON.stringify(宿主码));
+  ok("宿主报 E0302", 宿主码.includes("HMYR-載-003"), JSON.stringify(宿主码));
   ok("self 也报 E0302", 自己.indexOf("E0302") >= 0, 自己);
   fs.rmSync(临, { recursive: true, force: true });
 }
@@ -77,7 +77,7 @@ console.log("三、循环引用：两边都要说 E0301");
   const 宿主 = loadUnit(甲);
   const 宿主码 = (宿主.diagnostics.errors || []).map((e) => e.code);
   const 自己 = 调("只加载", [归一(path.relative(ROOT, 甲))]).trim();
-  ok("宿主报 E0301", 宿主码.includes("HMYR-E0301"), JSON.stringify(宿主码));
+  ok("宿主报 E0301", 宿主码.includes("HMYR-載-001"), JSON.stringify(宿主码));
   ok("self 也报 E0301", 自己.indexOf("E0301") >= 0, 自己);
   fs.rmSync(临, { recursive: true, force: true });
 }

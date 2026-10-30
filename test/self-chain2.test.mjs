@@ -42,7 +42,7 @@ ok("it loads", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.mess
 ok("the dependency was followed", unit.order.length === 2 && unit.order.some((f) => f.endsWith("lex.hmoca")),
   unit.order.map((f) => path.basename(f)).join(", "));
 {
-  const conflicts = unit.diagnostics.items.filter((d) => d.code === "HMYR-W0302");
+  const conflicts = unit.diagnostics.items.filter((d) => d.code === "HMYR-載-004");
   ok("shared helper names are reported rather than hidden", conflicts.length > 0, String(conflicts.length) + " warning(s)");
   ok("and each warning names both files", conflicts.every((d) => /lex\.hmoca/.test(d.message) && /chain\.hmoca/.test(d.message)));
 }

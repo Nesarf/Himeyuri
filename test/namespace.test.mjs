@@ -1,4 +1,4 @@
-// 可见性的第一步：非 pub 的声明被别的模块用到时，说一声（HMYR-W0303）。
+// 可见性的第一步：非 pub 的声明被别的模块用到时，说一声（HMYR-載-006）。
 //
 // 它是提示而不是拒绝 —— 求值器的函数表还是扁平的，那个名字照样能调到。
 // 说一声的价值：等命名空间真的做了，这份清单就是「要改哪些地方」的名单。
@@ -43,11 +43,11 @@ console.log("一、非 pub 跨模块用：说一声");
   ]), "堂.hmoca");
 
   const 单 = loadUnit(入口);
-  ok("报 W0303", 有警告(单, "HMYR-W0303"),
+  ok("报 W0303", 有警告(单, "HMYR-載-006"),
     JSON.stringify(单.diagnostics.warnings.map((w) => w.code)));
   // 而它不拦：装载结果是成功的，因为求值器还是扁平表。
   ok("但它不拦装载", 单.ok === true, JSON.stringify(单.ok));
-  const 那句 = 单.diagnostics.warnings.find((w) => w.code === "HMYR-W0303");
+  const 那句 = 单.diagnostics.warnings.find((w) => w.code === "HMYR-載-006");
   ok("那句话点出两个文件", !!那句 && 那句.message.includes("厨房.hmoca") && 那句.message.includes("堂.hmoca"),
     (那句 && 那句.message) || "");
 }
@@ -69,7 +69,7 @@ console.log("二、pub 的跨模块用：不报");
   ]), "堂.hmoca");
 
   const 单 = loadUnit(入口);
-  ok("写 pub 就不报", !有警告(单, "HMYR-W0303"),
+  ok("写 pub 就不报", !有警告(单, "HMYR-載-006"),
     JSON.stringify(单.diagnostics.warnings.map((w) => w.code)));
 }
 
@@ -85,7 +85,7 @@ console.log("三、同一个模块里用非 pub：不报");
     "}",
   ]), "独门.hmoca");
   const 单 = loadUnit(入口);
-  ok("自家用自己的不报", !有警告(单, "HMYR-W0303"),
+  ok("自家用自己的不报", !有警告(单, "HMYR-載-006"),
     JSON.stringify(单.diagnostics.warnings.map((w) => w.code)));
 }
 
@@ -187,7 +187,7 @@ console.log("六、整仓：没有一个跨模块的私有调用");
   const 脏 = [];
   for (const 相 of 入口们) {
     const 单 = loadUnit(path.join(ROOT, 相));
-    const 数 = 单.diagnostics.warnings.filter((w) => w.code === "HMYR-W0303").length;
+    const 数 = 单.diagnostics.warnings.filter((w) => w.code === "HMYR-載-006").length;
     if (数 > 0) 脏.push(相 + " 有 " + 数 + " 条");
   }
   ok("十九个入口都是零", 脏.length === 0, 脏.join("；"));

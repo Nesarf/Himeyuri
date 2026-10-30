@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// pub 迁移的盘点：一个入口下面，有多少跨模块的私有引用（HMYR-W0303）。
+// pub 迁移的盘点：一个入口下面，有多少跨模块的私有引用（HMYR-載-006）。
 //
 //   node tools/pub-census.mjs <入口文件> [...]
 //
@@ -20,7 +20,7 @@ let 总 = 0;
 for (const 入口 of 入口们) {
   const 单 = loadUnit(path.resolve(入口));
   for (const w of 单.diagnostics.warnings) {
-    if (w.code !== "HMYR-W0303") continue;
+    if (w.code !== "HMYR-載-006") continue;
     总++;
     // 那句话里带着「声明在 X，用在这里 Y」；拿它当键，重复的引用只数一次。
     const 键 = w.message;

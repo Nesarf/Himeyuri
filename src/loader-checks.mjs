@@ -64,7 +64,7 @@ export function 全树检查(modules, order, diagnostics, options = {}) {
       if (decl.kind !== "Fn" && decl.kind !== "Const" && decl.kind !== "TypeAlias") continue;
       if (已声明.has(decl.name)) {
         diagnostics.warn(
-          "HMYR-W0302",
+          "HMYR-載-004",
           "two modules declare '" + decl.name + "' (" + 短名(已声明.get(decl.name)) + " and " + 短名(abs) +
             "); the later one wins until namespaces exist",
           0,
@@ -110,7 +110,7 @@ export function 全树检查(modules, order, diagnostics, options = {}) {
         const 家 = 非公开.get(n.callee.name);
         if (家 && 家 !== abs) {
           diagnostics.warn(
-            "HMYR-W0303",
+            "HMYR-載-006",
             "'" + n.callee.name + "' is declared in " + 短名(家) + " without pub, and it is called in " +
               短名(abs) + "; the flat table still lets it through, so this is a notice rather than a refusal",
             n.line || 0,

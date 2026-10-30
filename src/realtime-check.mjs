@@ -51,7 +51,7 @@ export function 实时检查(ast, 选项 = {}) {
   const 前缀 = 文件 ? 文件 + ": " : "";
   const 报 = (message, 节点) => {
     出.push({
-      severity: "error", code: "HMYR-E0320",
+      severity: "error", code: "HMYR-載-020",
       message: 前缀 + message,
       line: (节点 && 节点.line) || 0, column: (节点 && 节点.column) || 0,
     });

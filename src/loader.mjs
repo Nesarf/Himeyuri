@@ -6,10 +6,10 @@
 //   ・import 真的加载本地文件（路径形式；包名留给包管理器那一步）
 import { loadUnitSelf } from "./loader-self.mjs";
 //   ・**只加载一次**：同一个文件被两处 import，只跑一遍
-//   ・**循环引用被拒**：HMYR-E0301
+//   ・**循环引用被拒**：HMYR-載-001
 //
 // 它**不做**的事情写在明处：没有命名空间。所以扁平函数表下，两个模块声明同名函数时会互相覆盖——
-// 这一步的处理是**把这件事说出来**（HMYR-W0302），而不是让它静默发生。可见性与命名空间是第二步。
+// 这一步的处理是**把这件事说出来**（HMYR-載-004），而不是让它静默发生。可见性与命名空间是第二步。
 import { Diagnostics } from "./diagnostics.mjs";
 import { Runtime } from "./eval.mjs";
 import { 本机能力 } from "./capabilities.mjs";
@@ -52,31 +52,31 @@ export function 找包根(cap, fromFile) {
 export function 读包清单(cap, 包根, 名, diagnostics) {
   const 路 = cap.path.join(包根, 名, "hmyr.hmkit");
   if (!cap.file.exists(路)) {
-    diagnostics.error("HMYR-E0304", "package '" + 名 + "' has no hmyr.hmkit beside its index.hmoca", 0, 0);
+    diagnostics.error("HMYR-載-007", "package '" + 名 + "' has no hmyr.hmkit beside its index.hmoca", 0, 0);
     return null;
   }
   let 清单;
   try { 清单 = JSON.parse(String(cap.file.read(路))); }
   catch {
-    diagnostics.error("HMYR-E0304", "package '" + 名 + "' has a manifest that is not JSON", 0, 0);
+    diagnostics.error("HMYR-載-007", "package '" + 名 + "' has a manifest that is not JSON", 0, 0);
     return null;
   }
   if (!清单 || typeof 清单 !== "object" || Array.isArray(清单)) {
-    diagnostics.error("HMYR-E0304", "package '" + 名 + "' has a manifest that is not an object", 0, 0);
+    diagnostics.error("HMYR-載-007", "package '" + 名 + "' has a manifest that is not an object", 0, 0);
     return null;
   }
   if (清单.名字 !== 名) {
-    diagnostics.error("HMYR-E0304",
+    diagnostics.error("HMYR-載-007",
       "package '" + 名 + "' declares its name as '" + String(清单.名字) + "'; the directory and the manifest must agree, or 'which package did I import' becomes a guess", 0, 0);
   }
   if (!Number.isInteger(清单.版本)) {
-    diagnostics.error("HMYR-E0304", "package '" + 名 + "' has no integer 版本 in its manifest", 0, 0);
+    diagnostics.error("HMYR-載-007", "package '" + 名 + "' has no integer 版本 in its manifest", 0, 0);
   }
   if (typeof 清单.许可 !== "string" || 清单.许可.length === 0) {
-    diagnostics.error("HMYR-E0304", "package '" + 名 + "' has no 许可 in its manifest", 0, 0);
+    diagnostics.error("HMYR-載-007", "package '" + 名 + "' has no 许可 in its manifest", 0, 0);
   }
   if (typeof 清单.哈希 !== "string" || !/^sha256:[0-9a-f]{64}$/.test(清单.哈希)) {
-    diagnostics.error("HMYR-E0304", "package '" + 名 + "' has no sha256:<64 lowercase hex> 哈希 in its manifest", 0, 0);
+    diagnostics.error("HMYR-載-007", "package '" + 名 + "' has no sha256:<64 lowercase hex> 哈希 in its manifest", 0, 0);
   }
   // 依赖（design/PKGMAN.txt 第二、三节）：名字 → 最低版本。
   //
@@ -85,16 +85,16 @@ export function 读包清单(cap, 包根, 名, diagnostics) {
   // 而一个区间要第二套版本语言。理由写在设计稿的第三节。
   if (清单.依赖 !== undefined) {
     if (typeof 清单.依赖 !== "object" || 清单.依赖 === null || Array.isArray(清单.依赖)) {
-      diagnostics.error("HMYR-E0304", "package '" + 名 + "' has a 依赖 that is not an object of name->minimum version", 0, 0);
+      diagnostics.error("HMYR-載-007", "package '" + 名 + "' has a 依赖 that is not an object of name->minimum version", 0, 0);
     } else {
       for (const [依赖名, 最低] of Object.entries(清单.依赖)) {
         if (!Number.isInteger(最低)) {
-          diagnostics.error("HMYR-E0304", "package '" + 名 + "' asks for '" + 依赖名 + "' at a version that is not an integer", 0, 0);
+          diagnostics.error("HMYR-載-007", "package '" + 名 + "' asks for '" + 依赖名 + "' at a version that is not an integer", 0, 0);
           continue;
         }
         const 依赖清单路 = cap.path.join(包根, 依赖名, "hmyr.hmkit");
         if (!cap.file.exists(依赖清单路)) {
-          diagnostics.error("HMYR-E0305",
+          diagnostics.error("HMYR-載-009",
             "package '" + 名 + "' depends on '" + 依赖名 + "', which is not in " + 包根 +
             "; a dependency is a package beside this one, and a missing one is not a warning", 0, 0);
           continue;
@@ -103,7 +103,7 @@ export function 读包清单(cap, 包根, 名, diagnostics) {
         try { 依赖清单 = JSON.parse(String(cap.file.read(依赖清单路))); } catch { 依赖清单 = null; }
         if (!依赖清单 || !Number.isInteger(依赖清单.版本)) continue;   // 它自己的形状由它自己的装载去报
         if (依赖清单.版本 < 最低) {
-          diagnostics.error("HMYR-E0306",
+          diagnostics.error("HMYR-載-011",
             "package '" + 名 + "' needs '" + 依赖名 + "' at version at least " + 最低 + ", but it offers " +
             依赖清单.版本 + "; revisions only move forward, so a lower one cannot satisfy a higher request", 0, 0);
         }
@@ -112,11 +112,11 @@ export function 读包清单(cap, 包根, 名, diagnostics) {
   }
   if (清单.依赖哈希 !== undefined) {
     if (typeof 清单.依赖哈希 !== "object" || 清单.依赖哈希 === null || Array.isArray(清单.依赖哈希)) {
-      diagnostics.error("HMYR-E0304", "package '" + 名 + "' has a 依赖哈希 that is not an object of name->hash", 0, 0);
+      diagnostics.error("HMYR-載-007", "package '" + 名 + "' has a 依赖哈希 that is not an object of name->hash", 0, 0);
     } else {
       for (const [依赖名, 哈希] of Object.entries(清单.依赖哈希)) {
         if (typeof 哈希 !== "string" || !/^sha256:[0-9a-f]{64}$/.test(哈希)) {
-          diagnostics.error("HMYR-E0304", "package '" + 名 + "' records a 依赖哈希 for '" + 依赖名 + "' that is not sha256:<64 lowercase hex>", 0, 0);
+          diagnostics.error("HMYR-載-007", "package '" + 名 + "' records a 依赖哈希 for '" + 依赖名 + "' that is not sha256:<64 lowercase hex>", 0, 0);
         }
       }
     }
@@ -128,7 +128,7 @@ export function 读包清单(cap, 包根, 名, diagnostics) {
     const 哈希表 = 清单.依赖哈希 && typeof 清单.依赖哈希 === "object" && !Array.isArray(清单.依赖哈希) ? 清单.依赖哈希 : {};
     for (const 依赖名 of Object.keys(清单.依赖)) {
       if (!(依赖名 in 哈希表)) {
-        diagnostics.warn("HMYR-W0305",
+        diagnostics.warn("HMYR-載-010",
           "package '" + 名 + "' depends on '" + 依赖名 + "' without recording its hash; the hash is what tells you the package you use has not been swapped", 0, 0);
       }
     }
@@ -142,29 +142,29 @@ export function 读包清单(cap, 包根, 名, diagnostics) {
   if (清单.签名 !== undefined) {
     const 签名 = 清单.签名;
     if (!签名 || typeof 签名 !== "object" || Array.isArray(签名)) {
-      diagnostics.error("HMYR-E0304", "package '" + 名 + "' has a 签名 that is not an object", 0, 0);
+      diagnostics.error("HMYR-載-007", "package '" + 名 + "' has a 签名 that is not an object", 0, 0);
     } else {
       if (签名.包 !== 名) {
-        diagnostics.error("HMYR-E0304",
+        diagnostics.error("HMYR-載-007",
           "package '" + 名 + "' has a 签名 for '" + String(签名.包) + "'; the package name is signed too, or one signature could be moved onto another manifest", 0, 0);
       }
       if (签名.算法 !== "ed25519") {
-        diagnostics.error("HMYR-E0304", "package '" + 名 + "' signs with '" + String(签名.算法) + "', and ed25519 is the only algorithm this layer knows", 0, 0);
+        diagnostics.error("HMYR-載-007", "package '" + 名 + "' signs with '" + String(签名.算法) + "', and ed25519 is the only algorithm this layer knows", 0, 0);
       }
       if (typeof 签名.值 !== "string" || !/^[0-9a-f]{128}$/.test(签名.值)) {
-        diagnostics.error("HMYR-E0304", "package '" + 名 + "' has a 签名 值 that is not 128 lowercase hex digits", 0, 0);
+        diagnostics.error("HMYR-載-007", "package '" + 名 + "' has a 签名 值 that is not 128 lowercase hex digits", 0, 0);
       }
       // 可信表：包根下的 hmyr.hmtrust。它不在包里 —— 不然换包的人顺手换掉锚。
       const 表路 = cap.path.join(包根, "hmyr.hmtrust");
       if (!cap.file.exists(表路)) {
-        diagnostics.error("HMYR-E0307",
+        diagnostics.error("HMYR-載-012",
           "package '" + 名 + "' is signed, but there is no hmyr.hmtrust beside it; a signature with no table to check it against proves nothing", 0, 0);
       } else {
         let 表 = null;
         try { 表 = JSON.parse(String(cap.file.read(表路))); } catch { 表 = null; }
         const 钥 = 表 && typeof 表 === "object" && !Array.isArray(表) ? 表[名] : undefined;
         if (typeof 钥 !== "string" || !/^[0-9a-f]{64}$/.test(钥)) {
-          diagnostics.error("HMYR-E0307",
+          diagnostics.error("HMYR-載-012",
             "package '" + 名 + "' is signed, but hmyr.hmtrust has no 64 lowercase hex public key for it", 0, 0);
         }
       }
@@ -261,11 +261,11 @@ export function loadUnit(entry, options = {}) {
     const abs = cap.path.resolve(file);
     if (modules.has(abs)) return;                       // loaded once, and that is the only time
     if (loading.has(abs)) {
-      diagnostics.error("HMYR-E0301", "circular import: " + short(abs) + " is already being loaded", 0, 0);
+      diagnostics.error("HMYR-載-001", "circular import: " + short(abs) + " is already being loaded", 0, 0);
       return;
     }
     if (!cap.file.exists(abs)) {
-      diagnostics.error("HMYR-E0302", "imported file does not exist: " + abs, 0, 0);
+      diagnostics.error("HMYR-載-003", "imported file does not exist: " + abs, 0, 0);
       return;
     }
     loading.add(abs);
@@ -296,7 +296,7 @@ export function loadUnit(entry, options = {}) {
     for (const imp of ast.imports) {
       const target = resolveImport(cap, abs, imp.path, diagnostics);
       if (!target) {
-        diagnostics.warn("HMYR-W0301", "import of '" + imp.path + "' is not a path; the package manager will own that", 0, 0);
+        diagnostics.warn("HMYR-載-002", "import of '" + imp.path + "' is not a path; the package manager will own that", 0, 0);
         continue;
       }
       visit(target);
@@ -312,7 +312,7 @@ export function loadUnit(entry, options = {}) {
       const 目标 = modules.get(target);
       if (目标 && 目标.rev !== null && 目标.rev !== undefined &&
           imp.rev !== null && imp.rev !== undefined && imp.rev > 目标.rev) {
-        diagnostics.error("HMYR-E0303",
+        diagnostics.error("HMYR-載-005",
           "module '" + imp.path + "' offers revision " + 目标.rev + ", but the import asks for " + imp.rev +
           "; there is no version both sides support", imp.line || 0, imp.column || 0);
       }
@@ -332,7 +332,7 @@ export function loadUnit(entry, options = {}) {
         let 清单 = null;
         try { 清单 = JSON.parse(String(cap.file.read(清单路))); } catch { 清单 = null; }
         if (清单 && Number.isInteger(清单.版本) && ast.rev !== null && ast.rev !== undefined && ast.rev !== 清单.版本) {
-          diagnostics.error("HMYR-E0304",
+          diagnostics.error("HMYR-載-007",
             "package '" + short(目录) + "' declares 版本 " + 清单.版本 + " but its index.hmoca says rev " + ast.rev +
             "; the two readers must not disagree", 0, 0);
         }
@@ -368,7 +368,7 @@ export function loadUnit(entry, options = {}) {
     for (const decl of modules.get(file).decls) {
       if (decl.kind !== "Fn" && decl.kind !== "Const" && decl.kind !== "TypeAlias") continue;
       if (declared.has(decl.name)) {
-        diagnostics.warn("HMYR-W0302",
+        diagnostics.warn("HMYR-載-004",
           "two modules declare '" + decl.name + "' (" + short(declared.get(decl.name)) + " and " + short(file) +
           "); the later one wins until namespaces exist", 0, 0);
       } else {
@@ -398,7 +398,7 @@ export function loadUnit(entry, options = {}) {
       const 报引用 = (n) => {
         const 家 = 非公开.get(n.callee.name);
         if (家 && 家 !== file) {
-          diagnostics.warn("HMYR-W0303",
+          diagnostics.warn("HMYR-載-006",
             "'" + n.callee.name + "' is declared in " + short(家) + " without pub, and it is called in " + short(file) +
             "; the flat table still lets it through, so this is a notice rather than a refusal", n.line || 0, n.column || 0);
         }

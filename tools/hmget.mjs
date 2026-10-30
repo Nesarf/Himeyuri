@@ -52,7 +52,7 @@ if (要删) {
   const 根 = path.resolve(包根);
   const 目标 = path.join(根, 名);
   if (!fs.existsSync(目标) || !fs.statSync(目标).isDirectory()) {
-    错("HMYR-E0311", "包根里没有这个包：'" + 名 + "'（找的是 " + 目标 + "）");
+    错("HMYR-載-017", "包根里没有这个包：'" + 名 + "'（找的是 " + 目标 + "）");
   }
 
   // 谁依赖它：扫包根下每一个包的清单。这一步不递归 —— 直接依赖就够拒绝，
@@ -68,7 +68,7 @@ if (要删) {
     if (名 in 依赖) 靠它活.push(项.name);
   }
   if (靠它活.length > 0 && !强制) {
-    错("HMYR-E0312", "还有包依赖它：" + 靠它活.join("、") +
+    错("HMYR-載-019", "还有包依赖它：" + 靠它活.join("、") +
       "（卸载它们，或者加 --force 明知道会留下缺口也要删）");
   }
 
@@ -115,7 +115,7 @@ const 造来源 = (说明) => {
   }
   const 目录 = 说明.startsWith("file://") ? (() => {
     try { return fileURLToPath(说明); }
-    catch { 错("HMYR-E0308", "来源不是合法的 file URL：" + 说明); }
+    catch { 错("HMYR-載-013", "来源不是合法的 file URL：" + 说明); }
   })() : path.resolve(说明);
   return {
     类: "文件",
@@ -137,21 +137,21 @@ const 主 = async () => {
   const 源清单字节 = await 源.读(名, "hmyr.hmkit");
   const 源入口字节 = await 源.读(名, "index.hmoca");
   if (!源清单字节 && !源入口字节) {
-    错("HMYR-E0308", "来源里没有这个包：'" + 名 + "'（来源是 " + 源.说 + "）");
+    错("HMYR-載-013", "来源里没有这个包：'" + 名 + "'（来源是 " + 源.说 + "）");
   }
-  if (!源清单字节) 错("HMYR-E0308", "这个包没有 hmyr.hmkit：" + 源.说 + "/" + 名);
-  if (!源入口字节) 错("HMYR-E0308", "这个包没有 index.hmoca：" + 源.说 + "/" + 名);
+  if (!源清单字节) 错("HMYR-載-013", "这个包没有 hmyr.hmkit：" + 源.说 + "/" + 名);
+  if (!源入口字节) 错("HMYR-載-013", "这个包没有 index.hmoca：" + 源.说 + "/" + 名);
 
   let 清单;
   try { 清单 = JSON.parse(源清单字节.toString("utf8")); }
-  catch { 错("HMYR-E0304", "清单不是 JSON：" + 源.说 + "/" + 名 + "/hmyr.hmkit"); }
-  if (!清单 || typeof 清单 !== "object" || Array.isArray(清单)) 错("HMYR-E0304", "清单不是一个对象");
-  if (清单.名字 !== 名) 错("HMYR-E0304", "清单说它是 '" + String(清单.名字) + "'，而目录叫 '" + 名 + "'");
+  catch { 错("HMYR-載-007", "清单不是 JSON：" + 源.说 + "/" + 名 + "/hmyr.hmkit"); }
+  if (!清单 || typeof 清单 !== "object" || Array.isArray(清单)) 错("HMYR-載-007", "清单不是一个对象");
+  if (清单.名字 !== 名) 错("HMYR-載-007", "清单说它是 '" + String(清单.名字) + "'，而目录叫 '" + 名 + "'");
 
   // 二、入口文件的哈希要对得上清单说的那个。
   const 真 = 算(源入口字节);
   if (清单.哈希 !== 真) {
-    错("HMYR-E0309", "入口文件的哈希与清单不符：清单说 " + String(清单.哈希).slice(0, 20) +
+    错("HMYR-載-014", "入口文件的哈希与清单不符：清单说 " + String(清单.哈希).slice(0, 20) +
       "…，文件是 " + 真.slice(0, 20) + "…（来源被人动过？）");
   }
 
@@ -169,7 +169,7 @@ const 主 = async () => {
       return;
     }
     if (!强制) {
-      错("HMYR-E0310", "目标已经存在且内容不同：" + 目标 + "（要覆盖就加 --force）");
+      错("HMYR-載-015", "目标已经存在且内容不同：" + 目标 + "（要覆盖就加 --force）");
     }
     fs.rmSync(目标, { recursive: true, force: true });
   }
@@ -197,7 +197,7 @@ const 主 = async () => {
     }
   }
   if (缺.length > 0) {
-    错("HMYR-E0305", "这个包装好了，但它要的依赖还缺：" + 缺.join("、") +
+    错("HMYR-載-009", "这个包装好了，但它要的依赖还缺：" + 缺.join("、") +
       "（这一步不递归取，逐个再跑一次 hmget）");
   }
 
@@ -209,4 +209,4 @@ const 主 = async () => {
   console.log("验收：node tools/hmkit-check.mjs --all " + 根);
 };
 
-主().catch((e) => { console.error("HMYR-E0399 意外：" + (e && e.message ? e.message : String(e))); process.exit(1); });
+主().catch((e) => { console.error("HMYR-載-022 意外：" + (e && e.message ? e.message : String(e))); process.exit(1); });

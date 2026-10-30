@@ -40,7 +40,7 @@ try {
   console.log("\na shared name is reported, not silently overwritten");
   {
     const unit = loadUnit(alpha);
-    const conflicts = unit.diagnostics.items.filter((d) => d.code === "HMYR-W0302");
+    const conflicts = unit.diagnostics.items.filter((d) => d.code === "HMYR-載-004");
     ok("two modules declaring 'shared' is a warning", conflicts.length === 1, conflicts.map((d) => d.message).join(" | "));
     ok("and the message names both files", /beta\.hmoca/.test(conflicts[0]?.message || "") && /alpha\.hmoca/.test(conflicts[0]?.message || ""), conflicts[0]?.message);
   }
@@ -55,8 +55,8 @@ try {
     ok("and appears after both of its importers' needs are known", unit.order.indexOf(beta) < unit.order.indexOf(gamma), describeUnit(unit));
     // beta and alpha really do both declare shared, so one warning is right; what must not happen is the
     // same pair being reported again because beta was reached twice.
-    ok("a conflict reached twice is still reported once", unit.diagnostics.items.filter((d) => d.code === "HMYR-W0302").length === 1,
-      unit.diagnostics.items.filter((d) => d.code === "HMYR-W0302").map((d) => d.message).join(" | "));
+    ok("a conflict reached twice is still reported once", unit.diagnostics.items.filter((d) => d.code === "HMYR-載-004").length === 1,
+      unit.diagnostics.items.filter((d) => d.code === "HMYR-載-004").map((d) => d.message).join(" | "));
   }
 
   console.log("\ncircular imports are refused");
@@ -64,9 +64,9 @@ try {
   const right = write("right.hmoca", 'import "./left.hmoca"\n\nfn right() -> Int { return 2 }\n');
   {
     const unit = loadUnit(left);
-    ok("a cycle is an error", codes(unit).includes("HMYR-E0301"), codes(unit).join(","));
-    ok("and it says which file was already being loaded", /left\.hmoca|right\.hmoca/.test(unit.diagnostics.items.find((d) => d.code === "HMYR-E0301")?.message || ""),
-      unit.diagnostics.items.find((d) => d.code === "HMYR-E0301")?.message);
+    ok("a cycle is an error", codes(unit).includes("HMYR-載-001"), codes(unit).join(","));
+    ok("and it says which file was already being loaded", /left\.hmoca|right\.hmoca/.test(unit.diagnostics.items.find((d) => d.code === "HMYR-載-001")?.message || ""),
+      unit.diagnostics.items.find((d) => d.code === "HMYR-載-001")?.message);
     ok("it does not load forever", unit.order.length <= 2, describeUnit(unit));
   }
 
@@ -74,12 +74,12 @@ try {
   {
     const missing = write("missing.hmoca", 'import "./nowhere.hmoca"\n\nfn missing() -> Int { return 0 }\n');
     const unit = loadUnit(missing);
-    ok("a missing file is an error", codes(unit).includes("HMYR-E0302"), codes(unit).join(","));
+    ok("a missing file is an error", codes(unit).includes("HMYR-載-003"), codes(unit).join(","));
   }
   {
     const pkg = write("pkg.hmoca", 'import "std/io"\n\nfn pkg() -> Int { return 0 }\n');
     const unit = loadUnit(pkg);
-    ok("a package import is noted, not guessed at", codes(unit).includes("HMYR-W0301"), codes(unit).join(","));
+    ok("a package import is noted, not guessed at", codes(unit).includes("HMYR-載-002"), codes(unit).join(","));
     ok("and it is not an error yet", unit.ok, codes(unit).join(","));
   }
 

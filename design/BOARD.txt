@@ -362,7 +362,7 @@
     连上调试器看 PC，它停在 arm-port.c 的 exit 里 —— 那是 hm_malloc 失败之后
     走的死循环。也就是说：内存耗尽了。
 
-    而装载器早就说过这件事：HMYR-W0310，「an arena is built inside a loop:
+    而装载器早就说过这件事：HMYR-載-016，「an arena is built inside a loop:
     every round allocates a new one, so the total grows with the number of rounds」。
     第一条判据是它，而我没听 —— 那份示例正是它的反例。
     桌面上看不出来，因为关掉的区会被回收器收走；板子上关掉只是标成关，
@@ -384,7 +384,7 @@
       一、arena 在板上是能用的，但它的容量就是板上能拿到的那么多（这一份 20 块、
          总长 111 字节、堆峰值 58084）—— 它不是无限的，而超了之后的表现是
          「串口什么也没有」，而不是一条说得清的错。
-      二、别在循环里建区。HMYR-W0310 说的就是这条，而它在板上比在桌面上严重得多：
+      二、别在循环里建区。HMYR-載-016 说的就是这条，而它在板上比在桌面上严重得多：
          桌面上那是浪费，板子上那是跑到一半就没了。
 
     示例在 examples/arena-on-board.hmoca。

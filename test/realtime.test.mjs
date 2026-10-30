@@ -29,7 +29,7 @@ const ok = (label, condition, detail = "") => {
 const 查 = (源码) => 实时检查(子集解(切(源码)).ast);
 const 行们 = (v) => v.join("\n") + "\n";
 const 投 = (内容, 名) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
-const 有 = (出, 词) => 出.some((d) => d.code === "HMYR-E0320" && d.message.includes(词));
+const 有 = (出, 词) => 出.some((d) => d.code === "HMYR-載-020" && d.message.includes(词));
 
 console.log("一、四条反例各自被拒");
 {
@@ -115,7 +115,7 @@ console.log("三、装载器真的拦");
   ]), "坏.hmoca");
   const 单 = loadUnit(坏);
   ok("装载结果是失败", 单.ok === false, JSON.stringify({ ok: 单.ok }));
-  ok("诊断里有 E0320", 单.diagnostics.errors.some((e) => e.code === "HMYR-E0320"),
+  ok("诊断里有 E0320", 单.diagnostics.errors.some((e) => e.code === "HMYR-載-020"),
     JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
 
   const 好 = 投(行们([
