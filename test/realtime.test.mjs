@@ -115,7 +115,7 @@ console.log("三、装载器真的拦");
   ]), "坏.hmoca");
   const 单 = loadUnit(坏);
   ok("装载结果是失败", 单.ok === false, JSON.stringify({ ok: 单.ok }));
-  ok("诊断里有 E0320", 单.diagnostics.errors.some((e) => e.code === "HMYR-載-020"),
+  ok("诊断里有 HMYR-載-020", 单.diagnostics.errors.some((e) => e.code === "HMYR-載-020"),
     JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
 
   const 好 = 投(行们([

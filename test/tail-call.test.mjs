@@ -44,7 +44,7 @@ console.log("三、普通调用与参数检查照旧");
   const 加 = "fn add(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  return add(20, 22)\n}\n";
   ok("两个参数的调用给 42", 跑(加).value === 42, JSON.stringify(跑(加)));
   const 少 = "fn f(a: Int, b: Int) -> Int {\n  return a\n}\nfn main() -> Int {\n  return f(1)\n}\n";
-  ok("参数少了仍报 R0101", 跑(少).err === "HMYR-行-002", JSON.stringify(跑(少)));
+  ok("参数少了仍报 HMYR-行-002", 跑(少).err === "HMYR-行-002", JSON.stringify(跑(少)));
 }
 
 console.log("四、尾调用不能绕过效果检查");
@@ -52,7 +52,7 @@ console.log("四、尾调用不能绕过效果检查");
   // print 要 process 效果。这一条是尾位置上的调用，而它必须仍然被检查。
   const 尾要效果 = "fn shout() -> Int effects(process) {\n  print(\"hi\")\n  return 0\n}\nfn main() -> Int {\n  return shout()\n}\n";
   const r = 跑(尾要效果);
-  ok("没声明效果时仍然拒绝（R0201）", r.err === "HMYR-內-001", JSON.stringify(r));
+  ok("没声明效果时仍然拒绝（HMYR-內-001）", r.err === "HMYR-內-001", JSON.stringify(r));
   const 声明了 = "fn shout() -> Int effects(process) {\n  print(\"hi\")\n  return 0\n}\nfn main() -> Int effects(process) {\n  return shout()\n}\n";
   ok("声明了效果时跑得动", typeof 跑(声明了).value === "number", JSON.stringify(跑(声明了)));
 }

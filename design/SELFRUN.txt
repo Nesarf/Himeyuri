@@ -126,11 +126,11 @@ HMYR 全面自举：运行时、宿主依赖与启动
 
        线程四条（thr_spawn thr_join thr_cancel thr_count）要一个独立的机器实例，
        而这台的执行状态还是文件级全局 —— 于是 spawn 交回 -1（无效句柄）、
-       join 与 cancel 报 R0221、count 交回 0，与 JS 那侧「起不来」是同一条路。
+       join 与 cancel 报 HMYR-內-020、count 交回 0，与 JS 那侧「起不来」是同一条路。
        验收在 test/c-vm.test.mjs 第二十三节：两台机器给出 -1 0。
 
-       arena 在语言里是关键字，自举那条 parser 不认它（写出来是 E0104），
-       于是字节码路径上它编译就过不去；C 那台仍留一条 R0104 的分支，
+       arena 在语言里是关键字，自举那条 parser 不认它（写出来是 HMYR-形-005），
+       于是字节码路径上它编译就过不去；C 那台仍留一条 HMYR-行-005 的分支，
        防的是宿主 parser 把 AST 直接交给字节码那一层。它的三个字段是函数值，
        而这门语言没有一等函数，所以那条分支的答案只能是「没有」。
 
@@ -156,7 +156,7 @@ HMYR 全面自举：运行时、宿主依赖与启动
        locale_env locale_set console_codepage）里有两个是「如实说没有」的：
        repo_path 只认设了的 HMYR_REPO（没设就把相对路径原样交回），
        python_path 只认 HMYR_PYTHON（否则交回 python 这个名字）。
-       locale 只认那四套档案的名字，别的报 R0205。
+       locale 只认那四套档案的名字，别的报 HMYR-內-005。
        验收在 test/c-vm.test.mjs 第十八与第十九节：程序只输出形状与 locale 名字，
        不输出路径本身 —— 两台机器给出不同的串本来就是对的。
 
@@ -230,7 +230,7 @@ HMYR 全面自举：运行时、宿主依赖与启动
 
              写它的时候量到一条之前没写下来的事：JS 的字节码机也没有线程。
              src/vm-builtins.mjs 里那四条（thr_spawn thr_join thr_cancel thr_count）
-             就是「如实说没有」——spawn 交回 -1、join 报 R0221、count 交回 0。
+             就是「如实说没有」——spawn 交回 -1、join 报 HMYR-內-020、count 交回 0。
              所以第三刀不是「给 C 那台补线程」，是「两台字节码机都要有」，
              而两台的理由不同：C 那台的执行状态是文件级全局（这一份前面记过），
              JS 那台是根本没写。范围比原先写的大，写在这里而不是留着让人自己发现。
@@ -393,7 +393,7 @@ HMYR 全面自举：运行时、宿主依赖与启动
         已搬，整文件排版：self/fmt.hmoca 的 整文件 现在排的是整个文件，而不只是表达式。
         验收是 test/fmt-whole-hmyr.test.mjs（八项），三件事分开验：
           没有注释的文件（examples 里的 arith、over、twice）与 src/format.mjs 逐字节相同；
-          有注释的文件里自举那一份把注释留下，而宿主那一份按设计丢弃并报 W0100 ——
+          有注释的文件里自举那一份把注释留下，而宿主那一份按设计丢弃并报 HMYR-形-001 ——
           去掉注释行之后两边一致，所以这不是缺陷，是自举那一份多做了一件事；
           行尾的 carriage return 不会漏进输出（那一份语料本身是 CRLF）。
         为此去首尾 补了 chr(9) 与 chr(13) —— 它原来只认空格，连 tab 都写成了两个字面字符。

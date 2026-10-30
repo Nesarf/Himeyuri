@@ -76,7 +76,7 @@ console.log("四、HMYR_STEPS 仍然压过档位预设");
   const r = spawnSync(process.execPath, [具, path.join(临, "控.hmhsr")], {
     encoding: "utf8", cwd: 临, timeout: 180000, env: { ...process.env, HMYR_STEPS: "1000" },
   });
-  ok("压到一千步就撞上限", /跑得太久|ran for too long|R0102/i.test(String(r.stdout) + String(r.stderr)), JSON.stringify((String(r.stdout) + String(r.stderr)).slice(0, 120)));
+  ok("压到一千步就撞上限", /跑得太久|ran for too long|HMYR-行-003/i.test(String(r.stdout) + String(r.stderr)), JSON.stringify((String(r.stdout) + String(r.stderr)).slice(0, 120)));
 }
 
 console.log("五、C 那台也按档位：同一份内容，两个名字，两种资源上限");

@@ -80,7 +80,7 @@ try {
 
     try { call("读字节", [过程目录.replace(/\\\\/g, "/") + "/nope.mod"]); } catch (e) { 拒绝了吗 = (e.code || "").indexOf("HMYR-內-011") >= 0; }
 
-    ok("不存在的文件给 R0211（拒绝比静默好）", 拒绝了吗);
+    ok("不存在的文件给 HMYR-內-011（拒绝比静默好）", 拒绝了吗);
     const p = 造("e.mod", "", "M.K.", 0, [0], 0);
     const b = call("读字节", [p]);
     ok("歌长为零时格子数是零", call("格子数", [b]) === 0, String(call("格子数", [b])));

@@ -9,7 +9,7 @@
 // 「close 之后块就死了」是一件要变的事。所以这里不去看内部（那是实现的自由），
 // 只看读数与判词。
 //
-// 一条要紧的互相印证：close 之后读一块没交出去的块，静态检查会拦（R0301）。
+// 一条要紧的互相印证：close 之后读一块没交出去的块，静态检查会拦（HMYR-碼-001）。
 // 用 --no-zone-check 放过去，就能看见运行期真的把那块标成死的 —— 于是「拦的不是
 // 想象出来的错」这句话有了证据，而不是靠相信。
 import fs from "node:fs";
@@ -109,7 +109,7 @@ console.log("四、走错的两个编号，在自举层也说得出");
     "}",
   ]), "丁.hmoca");
   const r = 跑([关后分]);
-  ok("关掉的区再分配给 R0302", (r.stdout || "").includes("HMYR-碼-002"), JSON.stringify((r.stdout || "").slice(0, 140)));
+  ok("关掉的区再分配给 HMYR-碼-002", (r.stdout || "").includes("HMYR-碼-002"), JSON.stringify((r.stdout || "").slice(0, 140)));
 
   const 交两次 = 投(行们([
     "fn main() -> Int {",
@@ -121,7 +121,7 @@ console.log("四、走错的两个编号，在自举层也说得出");
     "}",
   ]), "戊.hmoca");
   const r2 = 跑([交两次]);
-  ok("交出去两次给 R0302", (r2.stdout || "").includes("HMYR-碼-002"), JSON.stringify((r2.stdout || "").slice(0, 140)));
+  ok("交出去两次给 HMYR-碼-002", (r2.stdout || "").includes("HMYR-碼-002"), JSON.stringify((r2.stdout || "").slice(0, 140)));
 
   const 收回没交出 = 投(行们([
     "fn main() -> Int {",
@@ -132,7 +132,7 @@ console.log("四、走错的两个编号，在自举层也说得出");
     "}",
   ]), "己.hmoca");
   const r3 = 跑([收回没交出]);
-  ok("收回一块没交出的给 R0303", (r3.stdout || "").includes("HMYR-碼-003"), JSON.stringify((r3.stdout || "").slice(0, 140)));
+  ok("收回一块没交出的给 HMYR-碼-003", (r3.stdout || "").includes("HMYR-碼-003"), JSON.stringify((r3.stdout || "").slice(0, 140)));
 }
 
 console.log("五、两台机器（默认与 --host-eval）跑出同一段");
@@ -274,7 +274,7 @@ console.log("九、模块级 const 持有索引：四台同一段（§4.2 的原
 {
   // design/MEMORY.txt §4.2 的原例是「把块存到一个模块级变量里」。这一门语言没有顶层 var，
   // 但它有 const 持有索引 —— 索引可变，而 const 只约束名字不重新绑定。于是那个容器有了，
-  // 而 R0304 已经会管「块被存进索引」这一种写法（见 zone-static）。
+  // 而 HMYR-碼-004 已经会管「块被存进索引」这一种写法（见 zone-static）。
   //
   // 这一节验的是「写法在四台上都成立」：默认、--host-eval、--compile、C 那台。
   const 源 = [
@@ -375,7 +375,7 @@ console.log("十、块能存内容（区不只会记账）");
   ]), "丑.hmoca");
   const 丙 = 跑([越界]);
   const 全出 = (丙.stdout || "") + (丙.stderr || "");
-  ok("越界给 R0151", 全出.includes("R0151") && !全出.includes("没有拦住"), JSON.stringify(全出.slice(0, 160)));
+  ok("越界给 HMYR-行-018", 全出.includes("HMYR-行-018") && !全出.includes("没有拦住"), JSON.stringify(全出.slice(0, 160)));
 }
 
 console.log("十一、nil 在四台是同一个说法");

@@ -216,7 +216,7 @@ const walk = (dir) => {
 // 扫 src 与 tools：两边都会 emit 编号。
 //
 // 只扫 src 曾经是对的 —— 那时候只有求值器与装载器会报错。现在 tools/hmget.mjs
-// 也报（E0308 / E0309 / E0310：来源里没有这个包、哈希不符、目标已存在），
+// 也报（HMYR-載-013 / HMYR-載-014 / HMYR-載-015：来源里没有这个包、哈希不符、目标已存在），
 // 而一个「登记了却没人 emit」的误报，正是这一条规则该避免的那种噪声。
 walk(path.join(ROOT, "src"));
 walk(path.join(ROOT, "tools"));

@@ -13,7 +13,7 @@
 //   node tools/starting-count.mjs --timeout=180   每场给三分钟
 //
 // 环境：HMYR_C_VM 要给（自举侧的适配层需要一台 C 机器）。没有它时每一场都会
-// 立刻报 E0303 —— 那也是一种读数：它说明这台机器上量不了，而不是套件坏了。
+// 立刻报 HMYR-載-005 —— 那也是一种读数：它说明这台机器上量不了，而不是套件坏了。
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -78,7 +78,7 @@ const 要跑 = 上限 > 0 ? 名单.slice(0, 上限) : 名单;
 
 console.log("起点数：直接依赖 src/loader.mjs 的套件 " + 名单.length + " 个，这一次跑 " + 要跑.length + " 个");
 console.log("档位：" + (用替身 ? "自举（HMYR_LOADER=self）" : "宿主（基准，不打开关）"));
-console.log("机器：" + (机器 || "(未给 HMYR_C_VM —— 每一场都会报 E0303)"));
+console.log("机器：" + (机器 || "(未给 HMYR_C_VM —— 每一场都会报 HMYR-載-005)"));
 console.log("");
 
 // 基准环境：先把自己继承到的开关删掉，再按档位加回去。

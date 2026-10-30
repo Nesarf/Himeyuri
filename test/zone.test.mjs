@@ -51,25 +51,25 @@ ok("这回 close 带走了它", 跑('let a = arena()\n  let b = a.alloc(8)\n  a.
 // 收回来只是把一块死内存记在账上 —— 记账错的地方比不记账更坏。
 {
   const r = 跑('let a = arena()\n  let b = arena()\n  let x = b.alloc(4)\n  b.close()\n  a.adopt(x)');
-  ok("收养一个已关闭区的块给 R0302", r.error && r.error.includes("HMYR-碼-002"), String(r.error).slice(0, 80));
+  ok("收养一个已关闭区的块给 HMYR-碼-002", r.error && r.error.includes("HMYR-碼-002"), String(r.error).slice(0, 80));
 }
 
 console.log("四、走错的两个编号");
 {
   const r = 跑('let a = arena()\n  a.freeze(1)');
-  ok("freeze 拿到不是块的东西给 R0302", r.error && r.error.includes("HMYR-碼-002"), String(r.error).slice(0, 80));
+  ok("freeze 拿到不是块的东西给 HMYR-碼-002", r.error && r.error.includes("HMYR-碼-002"), String(r.error).slice(0, 80));
 }
 {
   const r = 跑('let a = arena()\n  let b = a.alloc(4)\n  a.close()\n  a.freeze(b)');
-  ok("freeze 拿到已关闭区的块给 R0302", r.error && r.error.includes("HMYR-碼-002"), String(r.error).slice(0, 80));
+  ok("freeze 拿到已关闭区的块给 HMYR-碼-002", r.error && r.error.includes("HMYR-碼-002"), String(r.error).slice(0, 80));
 }
 {
   const r = 跑('let a = arena()\n  let b = arena()\n  let x = b.alloc(4)\n  a.freeze(x)');
-  ok("freeze 拿到别人家的块给 R0302", r.error && r.error.includes("HMYR-碼-002"), String(r.error).slice(0, 80));
+  ok("freeze 拿到别人家的块给 HMYR-碼-002", r.error && r.error.includes("HMYR-碼-002"), String(r.error).slice(0, 80));
 }
 {
   const r = 跑('let a = arena()\n  let b = arena()\n  let x = b.alloc(4)\n  a.adopt(x)');
-  ok("adopt 一块两处拥有的块给 R0303", r.error && r.error.includes("HMYR-碼-003"), String(r.error).slice(0, 80));
+  ok("adopt 一块两处拥有的块给 HMYR-碼-003", r.error && r.error.includes("HMYR-碼-003"), String(r.error).slice(0, 80));
 }
 
 console.log("");

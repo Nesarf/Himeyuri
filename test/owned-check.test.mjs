@@ -128,7 +128,7 @@ console.log("四、装载器真的拦，开关能关");
   ]), "坏.hmoca");
   const 单 = loadUnit(坏);
   ok("装载结果是失败", 单.ok === false, JSON.stringify({ ok: 单.ok }));
-  ok("诊断里有 E0321", 单.diagnostics.errors.some((e) => e.code === "HMYR-載-021"),
+  ok("诊断里有 HMYR-載-021", 单.diagnostics.errors.some((e) => e.code === "HMYR-載-021"),
     JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
 
   const 关 = loadUnit(坏, { ownedCheck: false });
@@ -171,7 +171,7 @@ console.log("五、整仓现有 .hmoca 零误报");
 
 console.log("六、分支合并（数据流那一层）");
 {
-  // 两侧都放进去了，所以汇合之后是「满」—— 再放一次就是 R0305，看得见。
+  // 两侧都放进去了，所以汇合之后是「满」—— 再放一次就是 HMYR-碼-005，看得见。
   const 两侧都放 = 行们([
     "fn f(n: Int) -> Int {",
     "  let 格 = owned()",
@@ -200,7 +200,7 @@ console.log("六、分支合并（数据流那一层）");
   ]);
   ok("一侧放一侧不放：汇合后不报", 查(一侧放).length === 0, JSON.stringify(查(一侧放)));
 
-  // 先装满，再在两侧都取空 —— 汇合之后是「空」，再取一次就是 R0306。
+  // 先装满，再在两侧都取空 —— 汇合之后是「空」，再取一次就是 HMYR-碼-006。
   const 两侧都取 = 行们([
     "fn f(n: Int) -> Int {",
     "  let 格 = owned()",
@@ -615,7 +615,7 @@ console.log("十三、跨包（包名解析 + 同一张表）");
     "}",
   ]), "utf8");
   const 高三 = loadUnit(要三);
-  ok("包名上要的版本高于模块提供的 → E0303",
+  ok("包名上要的版本高于模块提供的 → HMYR-載-005",
    高三.diagnostics.errors.some((e) => e.code === "HMYR-載-005"),
    JSON.stringify(高三.diagnostics.errors.map((e) => e.code)));
 
@@ -628,7 +628,7 @@ console.log("十三、跨包（包名解析 + 同一张表）");
     "}",
   ]), "utf8");
   const 平 = loadUnit(要二);
-  ok("要的版本与提供的一样 → 不报 E0303",
+  ok("要的版本与提供的一样 → 不报 HMYR-載-005",
    平.diagnostics.errors.filter((e) => e.code === "HMYR-載-005").length === 0,
    JSON.stringify(平.diagnostics.errors.map((e) => e.code)));
 }

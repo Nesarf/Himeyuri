@@ -90,7 +90,7 @@ console.log("四、打不开的目录要报错，而且报的是文件这一类�
   try { rt2.callFunction(rt2.functions.get("main"), [], null); }
   catch (e) { 报 = String((e && e.message) || e); 码 = String((e && e.code) || ""); }
   // 错误码在外层对象上（与其它内置同一套），消息里只有那句白话。
-  ok("解释器报 R0211", 码 === "HMYR-內-011", 码 + " / " + 报.slice(0, 80));
+  ok("解释器报 HMYR-內-011", 码 === "HMYR-內-011", 码 + " / " + 报.slice(0, 80));
   ok("消息里说的是列目录，不是读文件", 报.includes("cannot list"), 报.slice(0, 100));
 }
 

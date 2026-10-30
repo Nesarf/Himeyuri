@@ -94,7 +94,7 @@ export const 内置表 = {
     return vm.坏("HMYR-行-015", "len() wants a string or a tuple");
   } },
   // 交回的必须是「语言的字符串值」，不是宿主串 —— 在当前那个底上要用当前底的表示。
-  // 少了 由宿主 这一步，str() 在码元序列底上会把一个宿主串塞进值域，下一次 len 就报 R0140。
+  // 少了 由宿主 这一步，str() 在码元序列底上会把一个宿主串塞进值域，下一次 len 就报 HMYR-行-015。
   str: { 做: (vm, a) => vm.文.由宿主(vm.成串(a[0])) },
   slice: { 做: (vm, a) => {
     // 码元序列与宿主串各切一遍。夹界的规矩两边一致，所以结果也一致。
@@ -143,7 +143,7 @@ export const 内置表 = {
     const handle = { id, flag, outPath, worker: null };
     handle.worker = vm.cap.thread.spawn(new URL("./thr-worker-vm.mjs", import.meta.url), { source, entry, outPath, flag });
     // 起不来就交回 -1（一个无效句柄）。那不是「拒绝」，是这个线程压根没出生，
-    // 而调用方拿到 -1 之后 join 会得到 R0221 —— 一条路，不是两条。
+    // 而调用方拿到 -1 之后 join 会得到 HMYR-內-020 —— 一条路，不是两条。
     if (!handle.worker) return 数.造(-1);
     handle.worker.on("error", () => vm.cap.thread.store(handle.flag, 9));
     // 不让一个还活着的线程拖住整个进程：宿主该退就退。
@@ -249,7 +249,7 @@ export const 内置表 = {
     } catch { return vm.坏("HMYR-內-011", "cannot read '" + 路径 + "'"); }
   } },
   // ---- 进程：改工作目录 ----
-  // 成功交回新的目录（与宿主那一份同一条约定）；进不去报 R0209。
+  // 成功交回新的目录（与宿主那一份同一条约定）；进不去报 HMYR-內-009。
   chdir: { 效果: "process", 做: (vm, a) => {
     const 目标 = vm.成串(a[0]);
     try {
@@ -354,7 +354,7 @@ export const 内置表 = {
       ? "\u001b[38;5;" + 数.成文(fg) + "m"
       : "\u001b[38;5;" + 数.成文(fg) + ";48;5;" + 数.成文(bg) + "m");
   } },
-  // 取第一个码元的码点。空串拒绝（R0206），理由与最小求值器那一份相同。
+  // 取第一个码元的码点。空串拒绝（HMYR-內-006），理由与最小求值器那一份相同。
   ord: { 做: (vm, a) => {
     const s = vm.成串(a[0]);
     if (s.length === 0) return vm.坏("HMYR-內-006", "ord of an empty string: there is no first character to read");
@@ -405,7 +405,7 @@ export const 内置表 = {
   } },
   // ---- FFI 的最小形状（design/FFI.txt 第四节）：窗口，零拷贝 ----
   // 这一台用索引表示窗口：kind = "view"，三个字段 源 / 起 / 长。
-  // 与宿主求值器那一台同一套判词，于是「越界给 R0151」在两台上是同一个答案。
+  // 与宿主求值器那一台同一套判词，于是「越界给 HMYR-行-018」在两台上是同一个答案。
   bytes_view: { 做: (vm, a) => {
     const 源 = a[0];
     const 起 = vm.成数(a[1]);
@@ -727,7 +727,7 @@ export function 新持有格() {
   return { tag: "index", m };
 }
 
-// 交回 {值} 或 {码, 错}。码缺省是 R0302 —— 「拿到的不是那个区里活着的块」那一条。
+// 交回 {值} 或 {码, 错}。码缺省是 HMYR-碼-002 —— 「拿到的不是那个区里活着的块」那一条。
 export function 调区方法(主, 名, 参, vm) {
   // 块上的方法：存与取。块的上下文只有它自己，所以这两支必须挂在块上 ——
   // 而「块」在表示上是索引（kind = block），与区同一层。

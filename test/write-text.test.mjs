@@ -2,7 +2,7 @@
 // 也钉住「写进去的与读回来的同一个」。
 //
 // 它用最小求值器直接跑 conformance/write-text.hmoca，而不经启动器 ——
-// 因为自举层现在还不认目标程序的效果声明，凡是声明 effects(file) 的程序在那一层会撞 R0201。
+// 因为自举层现在还不认目标程序的效果声明，凡是声明 effects(file) 的程序在那一层会撞 HMYR-內-001。
 // 那是加载/求值那一侧的缺口，记在 design/LIB.txt 的「还缺什么」里。
 import fs from "node:fs";
 import path from "node:path";
@@ -43,7 +43,7 @@ console.log("一、写得出来，而且读回来是同一份");
 
 console.log("二、效果那一层：要 file 才有写");
 {
-  // 不声明 effects(file) 的 main 调 write_text，应当被拒绝（R0201），而不是悄悄写出去。
+  // 不声明 effects(file) 的 main 调 write_text，应当被拒绝（HMYR-內-001），而不是悄悄写出去。
   const 临 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-wt-");
   const p = path.join(临, "noeffect.hmoca");
   fs.writeFileSync(p, 'fn main() -> Int {\n  write_text("' + 临.replace(/\\\\/g, "/") + '/x.txt", "a")\n  return 0\n}\n', "utf8");
@@ -53,7 +53,7 @@ console.log("二、效果那一层：要 file 才有写");
     const rt = 最小运行(层, { write: () => {}, capabilities: 本机能力() });
     码 = rt.callFunction(rt.functions.get("main"), [], null);
   } catch (e) { 错 = (e.code || "") + " " + e.message; }
-  ok("没声明效果时被拒绝（R0201）", String(错).includes("HMYR-內-001"), String(错).slice(0, 80));
+  ok("没声明效果时被拒绝（HMYR-內-001）", String(错).includes("HMYR-內-001"), String(错).slice(0, 80));
   ok("而被拒绝时也没有写出文件", !fs.existsSync(path.join(临, "x.txt")));
   fs.rmSync(临, { recursive: true, force: true });
 }

@@ -133,7 +133,7 @@ console.log("三、聚合值不再靠宿主怎么看它们");
 
 console.log("四、错误编号也照旧");
 {
-  // 一个函数里除零：两条路都报 R0120，且都不给出一个值。
+  // 一个函数里除零：两条路都报 HMYR-行-012，且都不给出一个值。
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-vm-err-"));
   try {
     const p = path.join(临, "z.hmoca");
@@ -148,7 +148,7 @@ console.log("四、错误编号也照旧");
       return 错;
     };
     const 小 = 跑(false), 大 = 跑(true);
-    ok("两边都报 R0120", 小.includes("HMYR-行-012") && 大.includes("HMYR-行-012"), "最小 " + 小 + " · 字节码 " + 大);
+    ok("两边都报 HMYR-行-012", 小.includes("HMYR-行-012") && 大.includes("HMYR-行-012"), "最小 " + 小 + " · 字节码 " + 大);
   } finally {
     fs.rmSync(临, { recursive: true, force: true });
   }

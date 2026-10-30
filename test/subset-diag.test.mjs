@@ -77,7 +77,7 @@ console.log("三、strict 模式：语法错也抛，而且抛出的消息里有
   let 错 = "";
   try { 子集解(切("fn f() {\n  let a = 1 2\n}\n"), { strict: true }); } catch (e) { 错 = e.message; }
   ok("抛了", 错 !== "", 错);
-  ok("消息里有 E0102", 错.includes("HMYR-形-002"), 错);
+  ok("消息里有 HMYR-形-003", 错.includes("HMYR-形-002"), 错);
 }
 
 console.log("四、边界照旧：子集不认的构造仍然抛，而不是记成语法错");

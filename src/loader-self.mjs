@@ -159,7 +159,7 @@ export function loadUnitSelf(entry, options = {}) {
   const 机器 = options.机器 || process.env.HMYR_C_VM || "";
   const 绝对 = path.resolve(entry);
   if (!fs.existsSync(绝对)) {
-    diagnostics.error("E0302", "cannot read " + 绝对);
+    diagnostics.error("HMYR-載-003", "cannot read " + 绝对);
     return { ok: false, order: [], modules: new Map(), 别名表: new Map(), diagnostics };
   }
 
@@ -167,17 +167,17 @@ export function loadUnitSelf(entry, options = {}) {
   const 相对 = "./" + path.basename(绝对);
   const 码 = 机器 ? 编适配层() : null;
   if (!机器 || !码) {
-    diagnostics.error("E0303", "自举侧的适配层需要一台 C 机器（HMYR_C_VM 未给出）");
+    diagnostics.error("HMYR-載-005", "自举侧的适配层需要一台 C 机器（HMYR_C_VM 未给出）");
     return { ok: false, order: [], modules: new Map(), 别名表: new Map(), diagnostics };
   }
 
   const 结果 = 取顺序(机器, 码, 目录, 相对, 绝对);
   if (结果.错) {
     /* 码名要与宿主一致：那边报的是 HMYR-載-001 与 HMYR-載-003，而这里原来只写了
-     * E0301 —— 判据按全名找，于是「环被拒了」与「缺文件被拒了」两条都读成没有
+     * HMYR-載-001 —— 判据按全名找，于是「环被拒了」与「缺文件被拒了」两条都读成没有
      * （2026-11-02 实测，module 那套在自举档下红四项）。 */
     const 码名 = 结果.错.slice(0, 5);
-    diagnostics.error(码名 === "E0301" ? "HMYR-載-001" : "HMYR-載-003", 结果.错);
+    diagnostics.error(码名 === "HMYR-載-001" ? "HMYR-載-001" : "HMYR-載-003", 结果.错);
     return { ok: false, order: [], modules: new Map(), 别名表: new Map(), diagnostics };
   }
 
@@ -209,11 +209,11 @@ export function loadUnitSelf(entry, options = {}) {
   const 是路径形式 = (s) =>
     typeof s === "string" && (s.startsWith("./") || s.startsWith("../") || s.startsWith("/") || /^[A-Za-z]:[\\/]/.test(s));
   // 包名补件（2026-11-02）：自举层的 加载走 把非路径形式的 import 当成「不是文件」
-  // 跳过（那段注释写着「报 E0302 会把包当成缺文件」），于是 order 里从来没有包名那一支。
+  // 跳过（那段注释写着「报 HMYR-載-003 会把包当成缺文件」），于是 order 里从来没有包名那一支。
   // 而 pkg-manifest 与 owned-check 剩下的判据全在那一支上。
   //
   // 这里补：用宿主那份 resolveImport 解析成 包根/名/index.hmoca，读清单时那些
-  // E0304 到 E0307 的诊断由同一份实现给出。
+  // HMYR-載-007 到 HMYR-載-012 的诊断由同一份实现给出。
   //
   // 这一补是过渡，不是终点：包名解析本该住在 self/run.hmoca 的 加载走 里 ——
   // 「关于 HMYR 的知识归 HMYR」。眼下先在适配层，理由是自举层要重写一遍得连
@@ -239,7 +239,7 @@ export function loadUnitSelf(entry, options = {}) {
     // 而这一层原来没做 —— 于是换掉 loader 之后那些诊断就没人报了。
     //
     // 症状（2026-11-01 实测）：zone-static 两条判据要的是「装载应当失败，诊断里应当有
-    // R0301」，拿到的却是 ok:true 与一个空数组。而 zone-static 在宿主档下四十三项全过、
+    // HMYR-碼-001」，拿到的却是 ok:true 与一个空数组。而 zone-static 在宿主档下四十三项全过、
     // 在自举档下四十一项 —— 差的正是这两条。
     //
     // 持有格检查（owned-check）不在这里：它要两张跨模块的表，是装载的第二趟，
@@ -265,7 +265,7 @@ export function loadUnitSelf(entry, options = {}) {
       const 包根 = 找包根(能力, abs);
       // 先问一句「这真的是某个包的入口吗」：判据是它旁边有没有 hmyr.hmkit。
       // 为什么（2026-11-02 实测）：套件写的临时文件往往就叫 index.hmoca，而没有清单 ——
-      // 少了这一句，检查会对着一个临时文件报 E0304，c-vm 那套当场变红（它不检查 ok）。
+      // 少了这一句，检查会对着一个临时文件报 HMYR-載-007，c-vm 那套当场变红（它不检查 ok）。
       const 清单路 = path.join(包根, path.basename(包目录), "hmyr.hmkit");
       if (fs.existsSync(清单路)) {
         const 清单 = 读包清单(能力, 包根, path.basename(包目录), diagnostics);
@@ -282,13 +282,13 @@ export function loadUnitSelf(entry, options = {}) {
     }
     // 包名那一支（2026-11-02 后半段改）：order 现在由自举层给出 —— 它的 加载走 认得包名
     // （解析路 与 是包名字 都在 self/run.hmoca 里），所以这里不再自己入队。
-    // 这一层只做两件自举层还没有的事：清单那八项校验（E0304 到 E0307，由 resolveImport
-    // 里那一趟给出），以及不成形状时的 W0301。
+    // 这一层只做两件自举层还没有的事：清单那八项校验（HMYR-載-007 到 HMYR-載-012，由 resolveImport
+    // 里那一趟给出），以及不成形状时的 HMYR-載-002。
     for (const imp of ast.imports || []) {
       if (!imp || 是路径形式(imp.path)) continue;
       const 目标 = resolveImport(能力, abs, imp.path, diagnostics);
       if (!目标) {
-        // 不像包名、也不是路径：宿主在这里说一句 W0301（「包管理器将来管它」），
+        // 不像包名、也不是路径：宿主在这里说一句 HMYR-載-002（「包管理器将来管它」），
         // 而不是把它当成缺文件。
         diagnostics.warn("HMYR-載-002", "import of '" + imp.path + "' is not a path; the package manager will own that", 0, 0);
       }
@@ -355,7 +355,7 @@ export function loadUnitSelf(entry, options = {}) {
   // 可见性的第一步（SPEC 6.4 第二步，宿主第 380 到 423 行）：非 pub 的声明被别的
   // 模块用到时说一声。它是提示不是拒绝 —— 函数表还是扁平的，那个名字照样调得到。
   //
-  // 这一条在适配层原来完全没有，而 namespace 那两条判据要的正是它（报 W0303，
+  // 这一条在适配层原来完全没有，而 namespace 那两条判据要的正是它（报 HMYR-載-006，
   // 并且那句话里要出现两个文件名）。只把「调用」算作引用：局部变量与参数不是
   // 对全局声明的引用，把它们算进去会盘出一半误报（宿主那一版踩过这个坑）。
   {

@@ -82,7 +82,7 @@ fn 说明书(标: String, 包名: String, 清单名: String) effects(file) {
 }
 
 fn 发布(标: String, 出目录: String) effects(file, process) {
-  // 目录不存在时，write_text 会抛 R0212 —— 那句话对写程序的人是够用的，对跑发布的人
+  // 目录不存在时，write_text 会抛 HMYR-內-012 —— 那句话对写程序的人是够用的，对跑发布的人
   // 不够。所以这里先挡一下，把「先建目录」说清楚。
   if !is_dir(出目录) {
     print("  输出目录 " + 出目录 + " 不在。先建它，再跑这一条。" + chr(10))

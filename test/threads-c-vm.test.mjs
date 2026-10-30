@@ -10,7 +10,7 @@
 //   二、隔离是硬的：worker 里那个 x 与主线程那个 x 互不相干
 //   三、都在 join 之前活着（thr_count 是 2，不是 1，也不是 0）
 //
-// C 那台现在交回的是「这一台没有线程」：spawn 给 -1、join 报 R0221。
+// C 那台现在交回的是「这一台没有线程」：spawn 给 -1、join 报 HMYR-內-020。
 // 那不是缺陷，是它如实说了；这一套要的是它不再这么说。
 import fs from "node:fs";
 import os from "node:os";

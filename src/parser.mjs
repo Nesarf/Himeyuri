@@ -6,7 +6,7 @@
 //   - error recovery: a syntax error is reported once and the parser resynchronises at the next
 //     newline or closing brace, so one mistake does not produce a cascade of invented errors
 //
-// Diagnostic codes in the E0100 range are syntax. The lexer owns E0001-E0006 and W0001; codes are
+// Diagnostic codes in the E0100 range are syntax. The lexer owns HMYR-詞-001-E0006 and HMYR-詞-002; codes are
 // never reused for a different meaning.
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";

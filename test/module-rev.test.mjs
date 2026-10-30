@@ -47,7 +47,7 @@ console.log("二、要的版本比模块给的高，就拒绝，并且说清楚"
   const a = 造("rev 1\n", 'import "./lib.hmoca" rev 2');
   ok("模块给 1、要 2 → 加载失败", !a.ok, JSON.stringify(a.diagnostics.errors.map((e) => e.code)));
   const 错 = a.diagnostics.errors.find((e) => e.code === "HMYR-載-005");
-  ok("用的是 E0303 这个编号", Boolean(错), JSON.stringify(a.diagnostics.errors.map((e) => e.code)));
+  ok("用的是 HMYR-載-005 这个编号", Boolean(错), JSON.stringify(a.diagnostics.errors.map((e) => e.code)));
   ok("消息里说了模块给的是第几版", Boolean(错) && 错.message.includes("revision 1"), JSON.stringify(错 ? 错.message : ""));
   ok("消息里说了 import 要的是第几版", Boolean(错) && 错.message.includes("asks for 2"), JSON.stringify(错 ? 错.message : ""));
 }

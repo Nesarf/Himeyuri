@@ -14,25 +14,25 @@ const 跑 = (src) => {
   return r.diagnostics.items.map((x) => x.code);
 };
 
-console.log("R0100 · R0101 · R0104");
-ok("R0100 没有 main", 跑("fn helper() -> Int {\n  return 1\n}\n").includes("HMYR-行-001"), JSON.stringify(跑("fn helper() -> Int {\n  return 1\n}\n")));
-// 用自定函数的参数个数来触发：len() 无参会先撞上 R0140（给了没有长度的东西）。
-ok("R0101 参数个数不对", 跑("fn f(a: Int) -> Int {\n  return a\n}\nfn main() -> Int {\n  return f()\n}\n").includes("HMYR-行-002"), JSON.stringify(跑("fn f(a: Int) -> Int {\n  return a\n}\nfn main() -> Int {\n  return f()\n}\n")));
-ok("R0104 名字不在作用域", 跑("fn main() -> Int {\n  return nope\n}\n").includes("HMYR-行-005"), JSON.stringify(跑("fn main() -> Int {\n  return nope\n}\n")));
+console.log("HMYR-行-001 · HMYR-行-002 · HMYR-行-005");
+ok("HMYR-行-001 没有 main", 跑("fn helper() -> Int {\n  return 1\n}\n").includes("HMYR-行-001"), JSON.stringify(跑("fn helper() -> Int {\n  return 1\n}\n")));
+// 用自定函数的参数个数来触发：len() 无参会先撞上 HMYR-行-015（给了没有长度的东西）。
+ok("HMYR-行-002 参数个数不对", 跑("fn f(a: Int) -> Int {\n  return a\n}\nfn main() -> Int {\n  return f()\n}\n").includes("HMYR-行-002"), JSON.stringify(跑("fn f(a: Int) -> Int {\n  return a\n}\nfn main() -> Int {\n  return f()\n}\n")));
+ok("HMYR-行-005 名字不在作用域", 跑("fn main() -> Int {\n  return nope\n}\n").includes("HMYR-行-005"), JSON.stringify(跑("fn main() -> Int {\n  return nope\n}\n")));
 
-console.log("R0105 · R0106 · R0107");
-ok("R0105 match 没有分支接住", 跑('fn main() -> Int {\n  return match 9 { 1 => 1 }\n}\n').includes("HMYR-行-006"), JSON.stringify(跑('fn main() -> Int {\n  return match 9 { 1 => 1 }\n}\n')));
-ok("R0106 字段不存在", 跑("fn main() -> Int {\n  let r = {a: 1}\n  return r.b\n}\n").includes("HMYR-行-007"), JSON.stringify(跑("fn main() -> Int {\n  let r = {a: 1}\n  return r.b\n}\n")));
-ok("R0107 被调的不是可调用", 跑("fn main() -> Int {\n  let x = 1\n  return x()\n}\n").includes("HMYR-行-008"), JSON.stringify(跑("fn main() -> Int {\n  let x = 1\n  return x()\n}\n")));
+console.log("HMYR-行-006 · HMYR-行-007 · HMYR-行-008");
+ok("HMYR-行-006 match 没有分支接住", 跑('fn main() -> Int {\n  return match 9 { 1 => 1 }\n}\n').includes("HMYR-行-006"), JSON.stringify(跑('fn main() -> Int {\n  return match 9 { 1 => 1 }\n}\n')));
+ok("HMYR-行-007 字段不存在", 跑("fn main() -> Int {\n  let r = {a: 1}\n  return r.b\n}\n").includes("HMYR-行-007"), JSON.stringify(跑("fn main() -> Int {\n  let r = {a: 1}\n  return r.b\n}\n")));
+ok("HMYR-行-008 被调的不是可调用", 跑("fn main() -> Int {\n  let x = 1\n  return x()\n}\n").includes("HMYR-行-008"), JSON.stringify(跑("fn main() -> Int {\n  let x = 1\n  return x()\n}\n")));
 
-console.log("R0108 调用深度超限");
+console.log("HMYR-行-009 调用深度超限");
 {
   // 尾调用之后，「纯尾递归」不再撞深度：它撞的是步数。
   // 两条都在这里钉住，因为它们是两种不同的 runaway：
-  //   非尾递归（要保留这一层）  → 撞深度 R0108
-  //   尾递归（不必保留这一层）  → 撞步数 R0102
+  //   非尾递归（要保留这一层）  → 撞深度 HMYR-行-009
+  //   尾递归（不必保留这一层）  → 撞步数 HMYR-行-003
   const 非尾 = "fn f(n: Int) -> Int {\n  return 1 + f(n + 1)\n}\nfn main() -> Int {\n  return f(0)\n}\n";
-  ok("R0108 非尾递归撞上深度上限", 跑(非尾).includes("HMYR-行-009"), JSON.stringify(跑(非尾)));
+  ok("HMYR-行-009 非尾递归撞上深度上限", 跑(非尾).includes("HMYR-行-009"), JSON.stringify(跑(非尾)));
   const 尾 = "fn f() -> Int {\n  return f()\n}\nfn main() -> Int {\n  return f()\n}\n";
   ok("而纯尾递归撞的是步数（它不再占栈）", 跑(尾).includes("HMYR-行-003"), JSON.stringify(跑(尾)));
 }

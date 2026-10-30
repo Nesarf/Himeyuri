@@ -116,7 +116,7 @@ try {
   {
     const r = 启动([path.join(临, "nope.hmoca")]);
     ok("缺文件时退出码 1", r.status === 1, String(r.status));
-    ok("并给出编号 R0211", String(r.stderr).includes("HMYR-內-011"), JSON.stringify(String(r.stderr).slice(0, 60)));
+    ok("并给出编号 HMYR-內-011", String(r.stderr).includes("HMYR-內-011"), JSON.stringify(String(r.stderr).slice(0, 60)));
   }
   {
     const r = 启动([]);
@@ -190,7 +190,7 @@ console.log("默认那份最小求值器，与 --host-eval 那条做同一件事
     ok("退出码一样", 默认.status === 宿主.status, 默认.status + " 对 " + 宿主.status);
     const 缺 = 用([path.join(目录, "nope.hmoca")]);
     ok("缺文件时默认那条也给退出码 1", 缺.status === 1, String(缺.status));
-    ok("并给出编号 R0211", String(缺.stderr).includes("HMYR-內-011"), JSON.stringify(String(缺.stderr).slice(0, 50)));
+    ok("并给出编号 HMYR-內-011", String(缺.stderr).includes("HMYR-內-011"), JSON.stringify(String(缺.stderr).slice(0, 50)));
     // 开关自己不该被当成目标文件：它被剔掉了，于是 argv[1] 仍是目标。
     ok("开关没有被当成目标文件", !String(缺.stderr).includes("--host-eval"), String(缺.stderr).slice(0, 60));
     // 带 while 的也算一件：最小那份不是只认得 hello。

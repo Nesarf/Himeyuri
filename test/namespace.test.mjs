@@ -4,7 +4,7 @@
 // 说一声的价值：等命名空间真的做了，这份清单就是「要改哪些地方」的名单。
 //
 // 这一套验三件：
-//   一、非 pub 跨模块用 → 报 W0303（而且带上两个文件名）
+//   一、非 pub 跨模块用 → 报 HMYR-載-006（而且带上两个文件名）
 //   二、pub 的跨模块用 → 不报
 //   三、同一个模块里用非 pub → 不报
 //
@@ -43,7 +43,7 @@ console.log("一、非 pub 跨模块用：说一声");
   ]), "堂.hmoca");
 
   const 单 = loadUnit(入口);
-  ok("报 W0303", 有警告(单, "HMYR-載-006"),
+  ok("报 HMYR-載-006", 有警告(单, "HMYR-載-006"),
     JSON.stringify(单.diagnostics.warnings.map((w) => w.code)));
   // 而它不拦：装载结果是成功的，因为求值器还是扁平表。
   ok("但它不拦装载", 单.ok === true, JSON.stringify(单.ok));
@@ -114,9 +114,9 @@ console.log("四、归属表：名字来自哪个模块");
   ok("没有的名字交回 null", 机.归属者("不存在") === null, String(机.归属者("不存在")));
 }
 
-console.log("五、真拦：非 pub 的名字跨模块调用被拒（R0250）");
+console.log("五、真拦：非 pub 的名字跨模块调用被拒（HMYR-內-023）");
 {
-  // 这一节验的是「拦得住」。它曾经只是「记一条」（W0304），因为库里一个 pub 都没写，
+  // 这一节验的是「拦得住」。它曾经只是「记一条」（HMYR-載-008），因为库里一个 pub 都没写，
   // 一开就把整个仓库打红。2026-10-27 做完 pub 迁移（tools/pub-census.mjs 盘出
   // 14 + 62 个名字、19 个入口全仓归零），它才升成拒绝。
   投(行们([
@@ -140,7 +140,7 @@ console.log("五、真拦：非 pub 的名字跨模块调用被拒（R0250）");
   let 错 = null;
   try { runUnit(单偷).run(单偷.modules.get(偷)); } catch (e) { 错 = e; }
   // 尾调用那条路（return f()）正是最容易漏的一条，所以这个用例刻意用它。
-  ok("非 pub 被拒（R0250）", !!错 && String(错.code) === "HMYR-內-023",
+  ok("非 pub 被拒（HMYR-內-023）", !!错 && String(错.code) === "HMYR-內-023",
     String(错 && (错.code + " " + 错.message)).slice(0, 120));
 
   const 正 = 投(行们([
@@ -173,7 +173,7 @@ console.log("五、真拦：非 pub 的名字跨模块调用被拒（R0250）");
 
 console.log("六、整仓：没有一个跨模块的私有调用");
 {
-  // 迁移做完了，所以这一条能立起来：仓库里每一个多模块入口，装载完都是零条 W0303。
+  // 迁移做完了，所以这一条能立起来：仓库里每一个多模块入口，装载完都是零条 HMYR-載-006。
   // 少了这一条，下一次「随手把 pub 删掉」不会有人发现。
   const 入口们 = [
     "self/run.hmoca", "self/compile.hmoca", "self/fmt.hmoca", "self/lsp.hmoca",
@@ -232,7 +232,7 @@ console.log("七、as 别名：`名.成员` 真的能用");
   const 单越 = loadUnit(越界);
   let 果越 = null;
   try { 果越 = runUnit(单越).run(单越.modules.get(越界)); } catch (e) { 果越 = e; }
-  ok("别名点私有的也被拒（R0250）", !!果越 && String(果越.code) === "HMYR-內-023",
+  ok("别名点私有的也被拒（HMYR-內-023）", !!果越 && String(果越.code) === "HMYR-內-023",
     String(果越 && (果越.code || 果越)).slice(0, 100));
 
   const 没有 = 投(行们([
@@ -245,7 +245,7 @@ console.log("七、as 别名：`名.成员` 真的能用");
   const 单没 = loadUnit(没有);
   let 果没 = null;
   try { 果没 = runUnit(单没).run(单没.modules.get(没有)); } catch (e) { 果没 = e; }
-  ok("别名点不存在的给 R0106", !!果没 && String(果没.code) === "HMYR-行-007",
+  ok("别名点不存在的给 HMYR-行-007", !!果没 && String(果没.code) === "HMYR-行-007",
     String(果没 && (果没.code || 果没)).slice(0, 100));
 }
 

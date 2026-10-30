@@ -55,7 +55,7 @@ console.log("二、字符串：按 UTF-16 码元数，不按字符数");
   const f = 值("\"abc\"[1.5]");
   ok("小数下标往下取整（一点五取到的是一那一位）", f.值 === "b", JSON.stringify(f.值 || f.错));
   const g = 值("\"abc\"[-0.5]");
-  ok("负的小数下标取整之后越界，报 R0151", String(g.错 || "").includes("HMYR-行-018"), g.错 || "（没有报）");
+  ok("负的小数下标取整之后越界，报 HMYR-行-018", String(g.错 || "").includes("HMYR-行-018"), g.错 || "（没有报）");
 }
 
 console.log("三、布尔与 null：它们在运算里怎么变");
@@ -73,9 +73,9 @@ console.log("三、布尔与 null：它们在运算里怎么变");
 console.log("四、拒绝的那几条：编号是语义的一部分");
 {
   const a = 值("1 / 0");
-  ok("除零报 R0120", String(a.错 || "").includes("HMYR-行-012"), a.错 || "（没有报）");
+  ok("除零报 HMYR-行-012", String(a.错 || "").includes("HMYR-行-012"), a.错 || "（没有报）");
   const b = 值("1 % 0");
-  ok("取余除零也报 R0120", String(b.错 || "").includes("HMYR-行-012"), b.错 || "（没有报）");
+  ok("取余除零也报 HMYR-行-012", String(b.错 || "").includes("HMYR-行-012"), b.错 || "（没有报）");
   const c = 值("\"abc\" + 1");
   ok("字符串加数字给字符串（一加一不是数字）", c.值 === "abc1", JSON.stringify(c.值));
 }

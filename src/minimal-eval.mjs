@@ -8,15 +8,15 @@
 //                    len · nfc · print · print_err · read_dir · read_text · record_new · slice · str · to_int
 //
 // 表外的节点与内置在这里不是「碰巧没实现」，而是抛并说清是哪一种。
-// 那与宿主求值器的态度相反：宿主认得十八种节点，遇到不认的才报 R0110；
+// 那与宿主求值器的态度相反：宿主认得十八种节点，遇到不认的才报 HMYR-行-010；
 // 而这一份的立场是「我只需要这些，多的一概不认」——于是它自己就是那张表的执行体。
 //
 // 三条语义是照宿主抄的，因为它们在 self/ 那六份里是活的：
 //
 //   尾调用     return f(...) 不新压一帧，于是尾递归的深度不吃宿主栈。
 //              没有这一条，self/run.hmyr 的递归在默认栈下就撞深度（那是当年真的踩过的事）。
-//   效果      被调者做的不能比调用者声明的多（R0201）。内置也算：读文件属 file 组。
-//   闸        深度（R0108）与步数（R0102）都是语言的，不该让宿主栈先崩。
+//   效果      被调者做的不能比调用者声明的多（HMYR-內-001）。内置也算：读文件属 file 组。
+//   闸        深度（HMYR-行-009）与步数（HMYR-行-003）都是语言的，不该让宿主栈先崩。
 //              步数还兼管「换函数」：纯尾递归每层不做一次求值，只换函数，不记步就会变成死循环。
 //
 // 值与类型用宿主的同一套（字符串、数字、布尔、null、数组当元组、对象当记录），
@@ -276,7 +276,7 @@ const 内置 = {
     const handle = { id, flag, outPath: 出, worker: null };
     handle.worker = rt.cap.thread.spawn(new URL("./thr-worker-min.mjs", import.meta.url), { source: 源码, entry: 入口, outPath: 出, flag });
     // 起不来就交回 -1：那不是「拒绝」，是这个线程压根没出生，
-    // 而调用方拿到 -1 之后 join 会得到 R0221 —— 一条路，不是两条。
+    // 而调用方拿到 -1 之后 join 会得到 HMYR-內-020 —— 一条路，不是两条。
     if (!handle.worker) return -1;
     handle.worker.on("error", () => rt.cap.thread.store(handle.flag, 9));
     if (typeof handle.worker.unref === "function") handle.worker.unref();
@@ -386,7 +386,7 @@ const 内置 = {
     const bg = a[1] === undefined || a[1] === null ? -1 : Math.floor(rt.成数(a[1]));
     return bg < 0 ? "\u001b[38;5;" + fg + "m" : "\u001b[38;5;" + fg + ";48;5;" + bg + "m";
   },
-  // 取第一个码元的码点。空串拒绝，而不是交回一个编出来的零 —— 那正是 R0206 的意思。
+  // 取第一个码元的码点。空串拒绝，而不是交回一个编出来的零 —— 那正是 HMYR-內-006 的意思。
   // 宿主那一份（src/eval.mjs）早就有它，最小求值器一直没转发：标准库写大小写时
   // 才撞上这件事（没有它，大小写只能写成五十二行字符比较）。
   ord: (rt, a) => {
@@ -459,7 +459,7 @@ const 内置 = {
   },
   // 字段名的列表，按造记录时的顺序。
   // 没有它，「把一条记录摊开」这一类东西写不出来 —— 标准库的表那一份卡在这里。
-  // 非记录给 R0217：交回空表会把「这不是记录」说成「这是一条空记录」。
+  // 非记录给 HMYR-內-017：交回空表会把「这不是记录」说成「这是一条空记录」。
   field_names: (rt, a) => {
     const rec = a[0];
     if (rec === null || typeof rec !== "object" || Array.isArray(rec)) {
@@ -469,7 +469,7 @@ const 内置 = {
   },
   // ---- 索引 ----
   // 一个按键查的东西。记录凑不了（键要像名字，也不能增量置入），元组拼接是 O(n²)。
-  // 约定见 design/INDEX.txt：键是任意字符串，set 交回同一个索引，取不到报 R0218。
+  // 约定见 design/INDEX.txt：键是任意字符串，set 交回同一个索引，取不到报 HMYR-內-018。
   index_new: () => new Map(),
   index_set: (rt, a) => {
     const m = a[0];

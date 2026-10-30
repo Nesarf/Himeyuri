@@ -73,19 +73,19 @@ console.log("二、file:// 来源：同一条路");
     String(r.stderr || "").slice(0, 160));
 }
 
-console.log("三、来源里没有这个包：E0308");
+console.log("三、来源里没有这个包：HMYR-載-013");
 {
   const r = 跑(["--from", 源, "--into", 根, "不存在的包"]);
-  ok("报 E0308", String(r.stderr || "").includes("HMYR-載-013"), String(r.stderr || "").slice(0, 120));
+  ok("报 HMYR-載-013", String(r.stderr || "").includes("HMYR-載-013"), String(r.stderr || "").slice(0, 120));
 }
 
-console.log("四、入口文件的哈希与清单不符：E0309");
+console.log("四、入口文件的哈希与清单不符：HMYR-載-014");
 {
   const { 入口 } = 造包("丙包", "pub fn 丙() -> Int {\n  return 3\n}\n");
   // 清单造好之后再改文件 —— 那正是「来源被人动过」的样子。
   fs.writeFileSync(入口, "pub fn 丙() -> Int {\n  return 999\n}\n", "utf8");
   const r = 跑(["--from", 源, "--into", 根, "丙包"]);
-  ok("报 E0309", String(r.stderr || "").includes("HMYR-載-014"), String(r.stderr || "").slice(0, 160));
+  ok("报 HMYR-載-014", String(r.stderr || "").includes("HMYR-載-014"), String(r.stderr || "").slice(0, 160));
 }
 
 console.log("五、目标已存在且内容不同：拒绝；--force 才覆盖");
@@ -95,7 +95,7 @@ console.log("五、目标已存在且内容不同：拒绝；--force 才覆盖")
   // 改来源，再取一次。
   造包("丁包", "pub fn 丁() -> Int {\n  return 44\n}\n");
   const r1 = 跑(["--from", 源, "--into", 根, "丁包"]);
-  ok("不加 --force 被拒（E0310）", String(r1.stderr || "").includes("HMYR-載-015"), String(r1.stderr || "").slice(0, 160));
+  ok("不加 --force 被拒（HMYR-載-015）", String(r1.stderr || "").includes("HMYR-載-015"), String(r1.stderr || "").slice(0, 160));
   const r2 = 跑(["--from", 源, "--into", 根, "--force", "丁包"]);
   ok("加 --force 就覆盖", r2.status === 0, String(r2.stderr || "").slice(0, 160));
   ok("覆盖之后是新内容",
@@ -106,7 +106,7 @@ console.log("六、依赖：缺哪个报哪个，不递归取");
 {
   造包("戊包", "pub fn 戊() -> Int {\n  return 5\n}\n", (清单) => { 清单.依赖 = { 缺的包: 1 }; });
   const r = 跑(["--from", 源, "--into", 根, "戊包"]);
-  ok("报 E0305 并点名缺的那个", String(r.stderr || "").includes("HMYR-載-009") && String(r.stderr || "").includes("缺的包"),
+  ok("报 HMYR-載-009 并点名缺的那个", String(r.stderr || "").includes("HMYR-載-009") && String(r.stderr || "").includes("缺的包"),
     String(r.stderr || "").slice(0, 200));
 }
 
@@ -143,18 +143,18 @@ console.log("八、http 来源：从一台本机服务器取，仍然不联网")
   服务器.close();
   ok("退出码 0", r.status === 0, String(r.stderr || "").slice(0, 200));
   ok("包装到位", fs.existsSync(path.join(根2, "庚包", "index.hmoca")), "");
-  ok("哈希也验过（错的话会报 E0309）", !String(r.stderr || "").includes("HMYR-載-014"), String(r.stderr || "").slice(0, 120));
+  ok("哈希也验过（错的话会报 HMYR-載-014）", !String(r.stderr || "").includes("HMYR-載-014"), String(r.stderr || "").slice(0, 120));
   ok("它说了来源是 http", String(r.stdout || "").includes("http"), String(r.stdout || "").slice(0, 160));
 }
 
-console.log("八半、http 来源上取一个不存在的包：E0308");
+console.log("八半、http 来源上取一个不存在的包：HMYR-載-013");
 {
   const 服务器 = http.createServer((请, 应) => { 应.writeHead(404); 应.end("no"); });
   await new Promise((解) => 服务器.listen(0, "127.0.0.1", 解));
   const 端口 = 服务器.address().port;
   const r = await 跑异步(["--from", "http://127.0.0.1:" + 端口, "--into", 根, "没有的包"]);
   服务器.close();
-  ok("报 E0308", String(r.stderr || "").includes("HMYR-載-013"), String(r.stderr || "").slice(0, 160));
+  ok("报 HMYR-載-013", String(r.stderr || "").includes("HMYR-載-013"), String(r.stderr || "").slice(0, 160));
 }
 
 console.log("九、卸载：包没了，包根还在");
@@ -168,10 +168,10 @@ console.log("九、卸载：包没了，包根还在");
   ok("别的包没受影响", fs.existsSync(path.join(根, "甲包", "index.hmoca")), "");
 }
 
-console.log("十、卸载一个不存在的包：E0311");
+console.log("十、卸载一个不存在的包：HMYR-載-017");
 {
   const r = 跑(["--remove", "--into", 根, "从来没有的包"]);
-  ok("报 E0311", String(r.stderr || "").includes("HMYR-載-017"), String(r.stderr || "").slice(0, 140));
+  ok("报 HMYR-載-017", String(r.stderr || "").includes("HMYR-載-017"), String(r.stderr || "").slice(0, 140));
 }
 
 console.log("十一、有包依赖它：拒绝，--force 才照删");
@@ -182,7 +182,7 @@ console.log("十一、有包依赖它：拒绝，--force 才照删");
   跑(["--from", 源, "--into", 根, "癸包"]);
 
   const r1 = 跑(["--remove", "--into", 根, "壬包"]);
-  ok("不加 --force 被拒（E0312）", String(r1.stderr || "").includes("HMYR-載-019"), String(r1.stderr || "").slice(0, 160));
+  ok("不加 --force 被拒（HMYR-載-019）", String(r1.stderr || "").includes("HMYR-載-019"), String(r1.stderr || "").slice(0, 160));
   ok("被拒时它还在", fs.existsSync(path.join(根, "壬包")), "");
 
   const r2 = 跑(["--remove", "--into", 根, "--force", "壬包"]);

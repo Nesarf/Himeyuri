@@ -7,8 +7,8 @@
 //
 // 这一套验四件事：
 //   一、长度与读值都对
-//   二、越界给 R0151（两端都试：负数与大过头）
-//   三、类型不对给 R0152（拿非字节去建窗口）
+//   二、越界给 HMYR-行-018（两端都试：负数与大过头）
+//   三、类型不对给 HMYR-行-019（拿非字节去建窗口）
 //   四、三台一致（默认、--host-eval、--compile）
 //
 // 一条判据做不到，写在这里而不是让它空着：元组是不可变的，所以「改原处、
@@ -53,7 +53,7 @@ console.log("一、长度与读值");
   ok("第三个是源的第 3 个（13）", 出.includes("取2=13"), JSON.stringify(出));
 }
 
-console.log("二、越界给 R0151（两端）");
+console.log("二、越界给 HMYR-行-018（两端）");
 {
   const 过头 = 投(行们([
     "fn main() -> Int effects(process) {",
@@ -65,7 +65,7 @@ console.log("二、越界给 R0151（两端）");
   ]), "乙.hmoca");
   const r1 = 跑([过头]);
   const 出1 = (r1.stdout || "") + (r1.stderr || "");
-  ok("建立时越界给 R0151", 出1.includes("HMYR-行-018") && !出1.includes("没有拦住"), JSON.stringify(出1.slice(0, 160)));
+  ok("建立时越界给 HMYR-行-018", 出1.includes("HMYR-行-018") && !出1.includes("没有拦住"), JSON.stringify(出1.slice(0, 160)));
 
   const 读过头 = 投(行们([
     "fn main() -> Int effects(process) {",
@@ -77,7 +77,7 @@ console.log("二、越界给 R0151（两端）");
   ]), "丙.hmoca");
   const r2 = 跑([读过头]);
   const 出2 = (r2.stdout || "") + (r2.stderr || "");
-  ok("读取时越界给 R0151", 出2.includes("HMYR-行-018"), JSON.stringify(出2.slice(0, 160)));
+  ok("读取时越界给 HMYR-行-018", 出2.includes("HMYR-行-018"), JSON.stringify(出2.slice(0, 160)));
 
   const 负 = 投(行们([
     "fn main() -> Int effects(process) {",
@@ -89,7 +89,7 @@ console.log("二、越界给 R0151（两端）");
   ]), "丁.hmoca");
   const r3 = 跑([负]);
   const 出3 = (r3.stdout || "") + (r3.stderr || "");
-  ok("负的起点也给 R0151", 出3.includes("HMYR-行-018") && !出3.includes("没有拦住"), JSON.stringify(出3.slice(0, 160)));
+  ok("负的起点也给 HMYR-行-018", 出3.includes("HMYR-行-018") && !出3.includes("没有拦住"), JSON.stringify(出3.slice(0, 160)));
 }
 
 console.log("三、三台一致");
@@ -190,7 +190,7 @@ console.log("五、可写窗口：写进窗口，源也跟着变");
 
 console.log("六、不可写的源：元组上写要拒");
 {
-  // 元组是不可变值，对它写会改到一个共享的值上。与 设() 同一套码：R0151。
+  // 元组是不可变值，对它写会改到一个共享的值上。与 设() 同一套码：HMYR-行-018。
   const p = 投(行们([
     "fn main() -> Int effects(process) {",
     "  let 源 = (10, 11, 12)",
@@ -202,7 +202,7 @@ console.log("六、不可写的源：元组上写要拒");
   ]), "不.hmoca");
   const 甲 = 跑([p]);
   const 甲出 = (甲.stdout || "") + (甲.stderr || "");
-  ok("默认路径：元组上写被拒（R0151）", 甲出.includes("HMYR-行-018") && !甲出.includes("没有拦住"),
+  ok("默认路径：元组上写被拒（HMYR-行-018）", 甲出.includes("HMYR-行-018") && !甲出.includes("没有拦住"),
     JSON.stringify(甲出.slice(0, 160)));
   const 乙 = 跑(["--compile", p]);
   const 乙出 = (乙.stdout || "") + (乙.stderr || "");
@@ -215,7 +215,7 @@ console.log("六、不可写的源：元组上写要拒");
 
 // 一条判据这里做不到，写出来而不是让它空着：
 // 类型不对（拿数字去建窗口）那一侧，三台不一致 —— 自举层的 len() 对数字先报底层的
-// 「len() wants a string or a tuple」，走不到 R0152。要统一，得给自举层一个
+// 「len() wants a string or a tuple」，走不到 HMYR-行-019。要统一，得给自举层一个
 // 「这个值能不能取长」的判定，而那是一件单独的事。
 
 fs.rmSync(临, { recursive: true, force: true });

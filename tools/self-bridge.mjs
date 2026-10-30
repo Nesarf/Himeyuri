@@ -156,7 +156,7 @@ export function loadUnit(entry, options = {}) {
   // reader 是「换解析器」的钩子，而桥的解析固定在自举层那一份 —— 它认不得的语法
   // （比如 match）会直接变成「没有这个名字」。这种场景下让给宿主 loader：
   // 桥要换的是「装载与求值由谁做」，不是「解析器能不能被换掉」（2026-11-02：
-  // stage0eval 那套就是用 reader 喂一份含 match 的源码，而桥这边报 R0104）。
+  // stage0eval 那套就是用 reader 喂一份含 match 的源码，而桥这边报 HMYR-行-005）。
   if (options && typeof options.reader === "function") return 宿主载(entry, options);
   const 诊断 = 新诊断();
   // 仓库下的文件用相对路径（与 order 的说法一致）；仓库外的用绝对路径 ——
@@ -172,7 +172,7 @@ export function loadUnit(entry, options = {}) {
     return { ok: false, order: [], modules: new Map(), diagnostics: 诊断 };
   }
   if (!树 || !树.ok) {
-    // 加载器已经说清是哪一种错（E0301 环、E0302 缺文件），桥不该把它折成自己的名字 ——
+    // 加载器已经说清是哪一种错（HMYR-載-001 环、HMYR-載-003 缺文件），桥不该把它折成自己的名字 ——
     // 那样一来「环」与「桥坏了」就分不出来，而调用方正是靠这个码决定怎么办。
     const 错 = String(树 && 树.错 ? 树.错 : "");
     const m = /^(E\d{4})\s+(.*)$/.exec(错);
@@ -245,7 +245,7 @@ export function loadUnit(entry, options = {}) {
     if (绝对键 !== 键) 别名.set(绝对键, m);
     order.push(键);
   });
-  // 重名声明（W0302）与可见性（W0303）、持有格的两趟，都搬到 src/loader-checks.mjs 了：
+  // 重名声明（HMYR-載-004）与可见性（HMYR-載-006）、持有格的两趟，都搬到 src/loader-checks.mjs 了：
   // 这里原来还有一份自己的版本，于是同一个文件被报两次「两个模块声明了同一个名字」。
   // 两条 loader 要做的第二趟一模一样，抄第二份就是让两份知识分叉。
   // 「写了 rev 但没有数字」是一条语法错，不是「不提要求」。
@@ -300,7 +300,7 @@ export function loadUnit(entry, options = {}) {
       }
     }
   }
-  // 非路径的 import：加载器跳过它（那是包管理器的事），但那句话要说出来 —— 宿主用的是 W0301。
+  // 非路径的 import：加载器跳过它（那是包管理器的事），但那句话要说出来 —— 宿主用的是 HMYR-載-002。
   // 顺便记下「哪些文件是靠包名进来的」：清单检查只该对它们做（见下面那段）。
   const 包名目标 = new Set();
   for (const 键 of order) {
@@ -358,12 +358,12 @@ export function loadUnit(entry, options = {}) {
       if (path.basename(键) !== "index.hmoca") continue;
       // 只查「靠包名 import 进来的入口」—— 宿主那一路也是这样：清单校验挂在
       // resolveImport 的包名分支里。原来对每个 index.hmoca 都查，于是
-      // ownedcheck 那条「包名版本 → E0303」拿到的是清单的 E0304（2026-11-02）。
+      // ownedcheck 那条「包名版本 → HMYR-載-005」拿到的是清单的 HMYR-載-007（2026-11-02）。
       if (!包名目标.has(path.resolve(键))) continue;
       const 包目录 = path.dirname(键);
       // 用绝对路径找包根：order 的键是相对仓库的，而 找包根 要一层层往上问
       // hmyr.hmkit 在不在 —— 从相对路径出发会问错地方，从而把一个合规的包
-      // 判成「没有清单」（E0304）。这是桥报 E0304 而判据要 E0303 的原因
+      // 判成「没有清单」（HMYR-載-007）。这是桥报 HMYR-載-007 而判据要 HMYR-載-005 的原因
       // （2026-11-02）。
       const 包根 = 找包根(能力, path.resolve(键));
       const 清单路 = path.join(包根, path.basename(包目录), "hmyr.hmkit");

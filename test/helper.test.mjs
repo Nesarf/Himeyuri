@@ -57,7 +57,7 @@ console.log("五、中文人话那一份与编号表对得上");
   const 取 = (p) => Array.from(new Set(Array.from(fs.readFileSync(path.join(ROOT, p), "utf8").matchAll(/HMYR-[^\s"]+/g)).map((m) => m[0]))).sort();
   const 甲 = 取("conformance/codes.mjs");
   const 乙 = 取("conformance/plain.mjs");
-  // 这个数跟着编号表走：索引那一组补了 R0218 与 R0219。
+  // 这个数跟着编号表走：索引那一组补了 HMYR-內-018 与 HMYR-內-019。
   ok("两个文件的编号一样多（至少六十）", 甲.length === 乙.length && 甲.length >= 60, 甲.length + " 对 " + 乙.length);
   const 缺 = 甲.filter((c) => !乙.includes(c));
   const 多 = 乙.filter((c) => !甲.includes(c));

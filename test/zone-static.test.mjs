@@ -1,7 +1,7 @@
 // 三区模型的编译期那一半：design/MEMORY.txt 第一条硬规则的第二个半句。
 //
 // 那条规则写着「没有转换就是编译错误，不是未定义行为」。运行期那一半有编号
-// （R0302 / R0303，见 test/zone.test.mjs 十六项），而这一套验的是装载时那一半：
+// （HMYR-碼-002 / HMYR-碼-003，见 test/zone.test.mjs 十六项），而这一套验的是装载时那一半：
 //
 //   一、逃逸报出来，而且说得出是哪个变量、哪个 arena、该调什么（§4.1）
 //   二、来回都合法的那几种写法一条都不报 —— 检查器的价值在于不误报
@@ -46,7 +46,7 @@ console.log("一、逃逸报出来，而且说得出怎么办");
   const 出 = 查(源);
   const 错 = 出.filter((d) => d.severity === "error");
   ok("一条错", 错.length === 1, JSON.stringify(出));
-  ok("编号是 R0301（那个码原来登记成 planned）", 错[0] && 错[0].code === "HMYR-碼-001", String(错[0] && 错[0].code));
+  ok("编号是 HMYR-碼-001（那个码原来登记成 planned）", 错[0] && 错[0].code === "HMYR-碼-001", String(错[0] && 错[0].code));
   ok("点名了变量与 arena", /'b'/.test(错[0] ? 错[0].message : "") && /'a'/.test(错[0] ? 错[0].message : ""), 错[0] ? 错[0].message : "");
   ok("说了该调 freeze", /freeze/.test(错[0] ? 错[0].message : ""), 错[0] ? 错[0].message : "");
   ok("位置指得回去", 错[0] && 错[0].line > 0, String(错[0] && 错[0].line));
@@ -88,7 +88,7 @@ console.log("四、循环里新建 arena：警告，不是错（§4.4）");
   ]);
   const 出 = 查(源);
   ok("一条警告", 出.length === 1 && 出[0].severity === "warning", JSON.stringify(出));
-  ok("编号是 W0310", 出[0] && 出[0].code === "HMYR-載-016", String(出[0] && 出[0].code));
+  ok("编号是 HMYR-載-016", 出[0] && 出[0].code === "HMYR-載-016", String(出[0] && 出[0].code));
   ok("说的是「每轮新建一个」", /loop/.test(出[0] ? 出[0].message : ""), 出[0] ? 出[0].message : "");
 
   const 外 = 查(行们(["fn f() -> Int {", "  let a = arena()", "  a.close()", "  return 0", "}"]));
@@ -101,7 +101,7 @@ console.log("五、装载器真的拦：这条路走不过去");
   fs.writeFileSync(逃, 行们(["fn make() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return b", "}"]), "utf8");
   const 单 = loadUnit(逃);
   ok("装载结果是失败", 单.ok === false, JSON.stringify({ ok: 单.ok, errors: 单.diagnostics.errors.map((e) => e.code) }));
-  ok("诊断里有 R0301", 单.diagnostics.errors.some((e) => e.code === "HMYR-碼-001"),
+  ok("诊断里有 HMYR-碼-001", 单.diagnostics.errors.some((e) => e.code === "HMYR-碼-001"),
     JSON.stringify(单.diagnostics.errors.map((e) => e.code + " " + e.message).slice(0, 2)));
   // 这里不要求 order 为空：加载器对语法错也不那样做（「有抱怨也收下」是它既有的语义，
   // 见 visit 的 import 循环）。判据落在「拦它的是区那一条」上，不替 loader 重定义。
@@ -148,7 +148,7 @@ console.log("七、整仓源码零诊断");
   }
   ok(份们.length + " 份 .hmoca 零错误", 错误数 === 0, JSON.stringify(首个.slice(0, 3)));
   // 警告单列，口径写在这里：bench/realtime-callback.hmoca 把一个块交给实时回调，
-  // 于是 W0311 会响 —— 而那正是那个基准要的形状（回调必须拿到事先分好的内存）。
+  // 于是 HMYR-載-018 会响 —— 而那正是那个基准要的形状（回调必须拿到事先分好的内存）。
   // 「零错误」是底线，「零警告」不是：一条为了形状而存在的警告不该被当成误报。
   ok("警告数在预期之内（1 条：基准里的实时回调收一个块）", 警告数 <= 1, String(警告数));
   // 「读不动」不算误报（子集那一层认的窄），但它也不该被当成「检查过了」。
@@ -173,17 +173,17 @@ console.log("九、启动器：默认这条路也拦，而它不挡别人");
   const 逃 = 投(行们(["fn main() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return b", "}"]), "主逃.hmoca");
   const 甲 = 跑([逃]);
   ok("默认路径拒绝它", 甲.status !== 0, JSON.stringify({ status: 甲.status }));
-  ok("说的是 R0301", (甲.stderr || "").includes("HMYR-碼-001"), JSON.stringify((甲.stderr || "").slice(0, 100)));
+  ok("说的是 HMYR-碼-001", (甲.stderr || "").includes("HMYR-碼-001"), JSON.stringify((甲.stderr || "").slice(0, 100)));
   // 拒绝要发生在交给解释器之前：解释器对 arena 的回答是「这台机器没有」，而那句话
   // 会让「逃逸」看起来像「还没实现」。
-  ok("没走到解释器那句「这台机器没有 arena」", !((甲.stdout || "") + (甲.stderr || "")).includes("R0104"),
+  ok("没走到解释器那句「这台机器没有 arena」", !((甲.stdout || "") + (甲.stderr || "")).includes("HMYR-行-005"),
     JSON.stringify(((甲.stdout || "") + (甲.stderr || "")).slice(0, 100)));
 
-  // 开关的意义是「这一次不检查」，不是「产出某一段输出」。所以判据是「不再被 R0301 拦」，
+  // 开关的意义是「这一次不检查」，不是「产出某一段输出」。所以判据是「不再被 HMYR-碼-001 拦」，
   // 而不是某个具体读数 —— 2026-10-27 之前这里等的是解释器那句「这台机器没有 arena」，
   // 而区在自举层有了之后，那句话不再出现，判断也就不能再押在它身上。
   const 乙 = 跑(["--no-zone-check", 逃]);
-  ok("开关能把它放过去", 乙.status === 0 && !((乙.stdout || "") + (乙.stderr || "")).includes("R0301"),
+  ok("开关能把它放过去", 乙.status === 0 && !((乙.stdout || "") + (乙.stderr || "")).includes("HMYR-碼-001"),
     JSON.stringify({ status: 乙.status, out: ((乙.stdout || "") + (乙.stderr || "")).slice(0, 120) }));
 
   const 普 = 投(行们(["fn main() -> Int {", '  print("照跑" + chr(10))', "  return 0", "}"]), "主普.hmoca");
@@ -213,7 +213,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
     "  return b.size",
     "}",
   ]);
-  ok("close 之后读字段给 R0301", 查(关后用).some((d) => d.code === "HMYR-碼-001" && d.severity === "error"), JSON.stringify(查(关后用)));
+  ok("close 之后读字段给 HMYR-碼-001", 查(关后用).some((d) => d.code === "HMYR-碼-001" && d.severity === "error"), JSON.stringify(查(关后用)));
 
   // 交出去之后那块归托管，close 不带走它 —— 那正是 freeze 的意义，所以不该报。
   const 先交 = 行们([
@@ -253,7 +253,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
     "  return keep(b)",
     "}",
   ]);
-  ok("块交给别的函数给 W0311", 查(交块).some((d) => d.code === "HMYR-載-018" && d.severity === "warning"), JSON.stringify(查(交块)));
+  ok("块交给别的函数给 HMYR-載-018", 查(交块).some((d) => d.code === "HMYR-載-018" && d.severity === "warning"), JSON.stringify(查(交块)));
 
   const 传字段 = 行们([
     "fn keep(x: Int) -> Int {",
@@ -280,7 +280,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
     "  return 0",
     "}",
   ]);
-  ok("块存进记录给 R0304", 查(存记录).some((d) => d.code === "HMYR-碼-004" && d.severity === "error"), JSON.stringify(查(存记录)));
+  ok("块存进记录给 HMYR-碼-004", 查(存记录).some((d) => d.code === "HMYR-碼-004" && d.severity === "error"), JSON.stringify(查(存记录)));
 
   const 存大小 = 行们([
     "fn f() -> Int {",
@@ -315,7 +315,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
     "  return 0",
     "}",
   ]);
-  ok("块存进索引给 R0304", 查(存索引).some((d) => d.code === "HMYR-碼-004"), JSON.stringify(查(存索引)));
+  ok("块存进索引给 HMYR-碼-004", 查(存索引).some((d) => d.code === "HMYR-碼-004"), JSON.stringify(查(存索引)));
 
   const 存索引值 = 行们([
     "fn f(表: Int) -> Int {",

@@ -6,8 +6,8 @@
 //
 // 这一套比三样：
 //   一、order 逐项相同 —— 谁先被读到这件事，两边必须一样；
-//   二、缺失的 import 两边都报 E0302；
-//   三、环两边都报 E0301。
+//   二、缺失的 import 两边都报 HMYR-載-003；
+//   三、环两边都报 HMYR-載-001。
 // 临时工程建在仓库里的 .tmp-load-* 下（.gitignore 已经收了这类前缀）。
 import fs from "node:fs";
 import path from "node:path";
@@ -52,7 +52,7 @@ for (const 入口 of ["self/sign.hmoca", "self/release.hmoca", "self/package.hmo
     同 ? "" : "self=" + JSON.stringify(自己) + " 宿主=" + JSON.stringify(那边));
 }
 
-console.log("二、缺失的 import：两边都要说 E0302");
+console.log("二、缺失的 import：两边都要说 HMYR-載-003");
 {
   const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-load-"));
   const 甲 = path.join(临, "a.hmoca");
@@ -60,12 +60,12 @@ console.log("二、缺失的 import：两边都要说 E0302");
   const 宿主 = loadUnit(甲);
   const 宿主码 = (宿主.diagnostics.errors || []).map((e) => e.code);
   const 自己 = 调("只加载", [归一(path.relative(ROOT, 甲))]).trim();
-  ok("宿主报 E0302", 宿主码.includes("HMYR-載-003"), JSON.stringify(宿主码));
-  ok("self 也报 E0302", 自己.indexOf("E0302") >= 0, 自己);
+  ok("宿主报 HMYR-載-003", 宿主码.includes("HMYR-載-003"), JSON.stringify(宿主码));
+  ok("self 也报 HMYR-載-003", 自己.indexOf("HMYR-載-003") >= 0, 自己);
   fs.rmSync(临, { recursive: true, force: true });
 }
 
-console.log("三、循环引用：两边都要说 E0301");
+console.log("三、循环引用：两边都要说 HMYR-載-001");
 {
   const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-load-"));
   const 子 = path.join(临, "sub");
@@ -77,8 +77,8 @@ console.log("三、循环引用：两边都要说 E0301");
   const 宿主 = loadUnit(甲);
   const 宿主码 = (宿主.diagnostics.errors || []).map((e) => e.code);
   const 自己 = 调("只加载", [归一(path.relative(ROOT, 甲))]).trim();
-  ok("宿主报 E0301", 宿主码.includes("HMYR-載-001"), JSON.stringify(宿主码));
-  ok("self 也报 E0301", 自己.indexOf("E0301") >= 0, 自己);
+  ok("宿主报 HMYR-載-001", 宿主码.includes("HMYR-載-001"), JSON.stringify(宿主码));
+  ok("self 也报 HMYR-載-001", 自己.indexOf("HMYR-載-001") >= 0, 自己);
   fs.rmSync(临, { recursive: true, force: true });
 }
 

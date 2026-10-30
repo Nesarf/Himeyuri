@@ -148,7 +148,7 @@ console.log("五、宿主求值器里的文件内置也走能力层");
   const 目录 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-cap-host-"));
   try {
     const 入口 = path.join(目录, "read.hmoca");
-    // main 声明 file 效果才能读：没声明就调 read_text 会撞 R0201，那是另一套钉着的事。
+    // main 声明 file 效果才能读：没声明就调 read_text 会撞 HMYR-內-001，那是另一套钉着的事。
     fs.writeFileSync(入口, "fn main() -> String effects(file) {\n  return read_text(\"SPEC.txt\")\n}\n");
     const 记 = 记账能力();
     const 层 = loadUnit(入口);

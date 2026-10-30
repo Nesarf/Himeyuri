@@ -114,7 +114,7 @@ fn 找槽(名表: Int, 名: String) -> Int {
 }
 
 // 这个名字是不是内置。CALLB 与 CALLF 的区别只在编译期定 —— 名字不在这一张表里，
-// 就按用户函数发 CALLF，运行时查不到会报 R0104，与 JS 那一份一致。
+// 就按用户函数发 CALLF，运行时查不到会报 HMYR-行-005，与 JS 那一份一致。
 //
 // 这张表要与 src/bytecode.mjs 的 内置名、src/vm-builtins.mjs 与 vm/hmyr.c 里那一套对齐。
 fn 是内置(名: String) -> Bool {

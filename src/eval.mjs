@@ -760,7 +760,7 @@ const BUILTINS = {
   // start is a fact about the world and not a fault in the script. The timeout is not optional in
   // spirit: a child that never ends would otherwise hang its host.
   // 从键值对造记录。JSON 与自举那边都需要「用字符串当字段名」这一手，
-  // 而记录不是哈希表：字段名必须是标识符能写的形状，否则拒绝（R0214）。
+  // 而记录不是哈希表：字段名必须是标识符能写的形状，否则拒绝（HMYR-內-014）。
   record_new: (rt, args) => {
     const pairs = args[0];
     if (!Array.isArray(pairs)) rt.fail("HMYR-內-014", "record_of wants a tuple of (name, value) pairs");
@@ -800,7 +800,7 @@ const BUILTINS = {
   // 而记录当字典的第一步正是「知道有哪些键」。标准库的 tables 那一份就卡在这里：
   // 不能列出字段，就无法做通用的置入、删除与合并。
   //
-  // 非记录给 R0217：没有字段可列，也就没有名字可交回 —— 交回空表会把
+  // 非记录给 HMYR-內-017：没有字段可列，也就没有名字可交回 —— 交回空表会把
   // 「这不是记录」说成「这是一条空记录」。
   field_names: (rt, args) => {
     const rec = args[0];
@@ -913,7 +913,7 @@ const BUILTINS = {
     handle.worker = rt.cap.thread.spawn(new URL("./thr-worker.mjs", import.meta.url), { source, entry, outPath, flag });
     if (!handle.worker) {
       // 起不来就交回 -1（一个无效句柄）。不用编号：那不是「拒绝」，是这个线程压根没出生，
-      // 而调用方拿到 -1 之后 join 会得到 R0221——一条路，不是两条。
+      // 而调用方拿到 -1 之后 join 会得到 HMYR-內-020——一条路，不是两条。
       return -1;
     }
     // 顺手把错误也记下来：不让一个起不来的线程把主线程一直挂着。
@@ -1006,7 +1006,7 @@ const BUILTINS = {
   },
   // 写文件：这台运行时只编得出 UTF-8 一类。写不出就拒绝——写出一串看着对、其实错的字节才是灾难。
   // 「这个文件在不在」是文件这一组最基础的问题，而 read_text 只能读。
-  // 没有它，「引一个可选文件」就只能靠 read_text 去撞——而它撞到就是一条 R0211，
+  // 没有它，「引一个可选文件」就只能靠 read_text 去撞——而它撞到就是一条 HMYR-內-011，
   // 于是「引了个不存在的」与「读不了」被混成同一件事。
   file_exists: (rt, args) => {
     const 路径 = String(args[0]);

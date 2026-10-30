@@ -2147,7 +2147,7 @@ static void 记栈(void *帧) {
       char 话[160];
       snprintf(话, sizeof 话, "the stack budget is %llu bytes and this call is %llu bytes into it",
                (unsigned long long)g_栈限, (unsigned long long)用);
-      /* 码用 R0108：语义是「层次太深」，而栈预算是它的字节版本 ——
+      /* 码用 HMYR-行-009：语义是「层次太深」，而栈预算是它的字节版本 ——
        * 平台给不了那么多栈，与深度超限是同一件事的两种量法。 */
       fail("HMYR-行-009", 话);
     }
@@ -3566,7 +3566,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     return 1;
   }
   /* 列目录：顺序已经由 列目录 排好，这里只把名字搬成语言的值。
-   * 打不开是 R0211（与 read_text 同一类：文件系统没给），空目录不是错。 */
+   * 打不开是 HMYR-內-011（与 read_text 同一类：文件系统没给），空目录不是错。 */
   if (name_is(名off, "read_dir")) {
     if (nargs != 1) { fail("HMYR-行-002", "read_dir wants one argument"); return 1; }
     if (args[0].tag != T_STR) { fail("HMYR-行-013", "read_dir wants a path string"); return 1; }
@@ -4296,7 +4296,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     return 1;
   }
   /* ---- 进程：改工作目录 ----------------------------------------------
-   * 成功就交回新的目录（与 JS 那侧同一条约定）；进不去报 R0209。
+   * 成功就交回新的目录（与 JS 那侧同一条约定）；进不去报 HMYR-內-009。
    * 板子上没有目录概念，于是这一条在那里一律报进不去 ——
    * 它不装作成功，因为「换了个地方」在板子上不成立。 */
   if (name_is(名off, "chdir")) {
@@ -4501,7 +4501,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
   }
   /* ---- 线程：桌面那一支真做，板子那一支如实说没有 ----------------------
    * 桌面：一个线程 = 一个独立的 Hmyr机器（线程局部的 g_机 让每个线程看到自己那一台）。
-   * 板子：那台没有线程（也没有种子），所以仍是「spawn 交回 -1、join 与 cancel 报 R0221、
+   * 板子：那台没有线程（也没有种子），所以仍是「spawn 交回 -1、join 与 cancel 报 HMYR-內-020、
    *      count 交回 0」—— 与 JS 那侧「起不来」时同一条路。
    *
    * 上下文、线程表与三个辅助函数的声明在文件头部（g_机 那一段之后），
@@ -5874,7 +5874,7 @@ static DWORD WINAPI 线程体(LPVOID 参) {
 }
 
 /* 起一个线程。交回句柄号，起不来交回 -1 —— 与 JS 那侧「起不来」同一条路：
- * 调用方拿到 -1 之后 join 会得到 R0221，一条路而不是两条。 */
+ * 调用方拿到 -1 之后 join 会得到 HMYR-內-020，一条路而不是两条。 */
 /* 运行时的线程池上限。0 表示用编译期那个数（线程上限）；steady 那一档给 1。
  * 编译期那个数管的是数组大小，这个数管的是「这一次准开几个」。 */
 static int g_线程上限 = 0;
