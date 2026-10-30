@@ -37,6 +37,13 @@ for (const [名, 脚本] of 清单) {
   const 新 = 源.replaceAll('from "../src/loader.mjs"', 'from "../tools/self-bridge.mjs"');
   const 副本 = path.join(SWAP, path.basename(脚本));
   fs.writeFileSync(副本, 新, "utf8");
+  // 套件可能还 import 同目录的辅助文件（./file-kind.mjs、./self-bridge.mjs）——
+  // 副本在 swap/ 里，那些相对路径就断了：ERR_MODULE_NOT_FOUND（2026-11-02 实测，
+  // selfload 与 selfbridge 两套就是这样红的）。一起搬过去。
+  for (const 引 of 新.matchAll(/from "\.\/([^"]+)"/g)) {
+    const 辅 = path.join(path.dirname(源路), 引[1]);
+    if (fs.existsSync(辅)) fs.copyFileSync(辅, path.join(SWAP, 引[1]));
+  }
   候选.push({ 名, 脚本, 副本 });
 }
 
