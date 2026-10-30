@@ -44,8 +44,8 @@ const 转 = (节点) => {
     case "Unary":
       return { kind: "Unary", op: String(节点.op), operand: 转(节点.operand) };
 
-    case "Call":
-      return { kind: "Call", callee: 转(节点.callee), args: (节点.args || []).map(转) };
+    case "调用":
+      return { kind: "调用", callee: 转(节点.callee), args: (节点.args || []).map(转) };
 
     case "Index":
       return { kind: "Index", target: 转(节点.target), index: 转(节点.index) };

@@ -38,7 +38,7 @@ fn postfix_tail(tokens: Int, i: Int, target: Int) {
   if is_punct(tokens[i], "(") {
     let 位 = tokens[i]
     let got = arg_list(tokens, i + 1, ())
-    return postfix_tail(tokens, got.next, {kind: "Call", callee: target, args: got.list, line: 位.line, column: 位.column})
+    return postfix_tail(tokens, got.next, {kind: "调用", callee: target, args: got.list, line: 位.line, column: 位.column})
   }
   if is_punct(tokens[i], ".") {
     if i + 1 < len(tokens) && tokens[i + 1].kind == "ident" {

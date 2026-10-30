@@ -408,7 +408,7 @@ export function parse(tokens, options = {}) {
           if (atPunct(",")) advance(); else break;
         }
         expectPunct(")", "to close the argument list");
-        expr = { kind: "Call", callee: expr, args, line: open.line, column: open.column };
+        expr = { kind: "调用", callee: expr, args, line: open.line, column: open.column };
         continue;
       }
       if (atPunct(".")) {
@@ -486,7 +486,7 @@ export function parse(tokens, options = {}) {
       advance();
       const args = [];
       if (atPunct("(")) { advance(); while (!atPunct(")") && !at("eof")) { args.push(parseExpr()); if (atPunct(",")) advance(); else break; } expectPunct(")"); }
-      return { kind: "Call", callee: { kind: "名", name: "arena", line: t.line, column: t.column }, args, line: t.line, column: t.column };
+      return { kind: "调用", callee: { kind: "名", name: "arena", line: t.line, column: t.column }, args, line: t.line, column: t.column };
     }
 
     // A record literal and a block both start with {. They are told apart by looking ahead: a field

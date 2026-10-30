@@ -99,7 +99,7 @@ export function 实时检查(ast, 选项 = {}) {
       return;
     }
 
-    if (n.kind === "Call" && n.callee && n.callee.kind === "名") {
+    if (n.kind === "调用" && n.callee && n.callee.kind === "名") {
       const 名 = n.callee.name;
       if (名 === "arena") {
         报("arena() allocates in the managed zone; a realtime function must use an arena built before the callback started", n);

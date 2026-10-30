@@ -65,7 +65,7 @@ function 展开式(x, 宏们, 深) {
   }
   const 节点 = 变了 ? { ...出, kind: x.kind } : x;
 
-  if (节点.kind === "Call" && 节点.callee && 节点.callee.kind === "名" && 宏们.has(节点.callee.name)) {
+  if (节点.kind === "调用" && 节点.callee && 节点.callee.kind === "名" && 宏们.has(节点.callee.name)) {
     const 宏 = 宏们.get(节点.callee.name);
     if (!Array.isArray(节点.args) || 节点.args.length !== 宏.params.length) {
       throw new Error("HMYR-形-006 macro " + 宏.name + " takes " + 宏.params.length +

@@ -33,7 +33,7 @@ const 走表达式 = (n) => {
     case "While": 走表达式(n.condition); 走语句(n.body); break;
     case "二元": 走表达式(n.left); 走表达式(n.right); break;
     case "Unary": 走表达式(n.operand); break;
-    case "Call": 走表达式(n.callee); (n.args || []).forEach(走表达式); break;
+    case "调用": 走表达式(n.callee); (n.args || []).forEach(走表达式); break;
     case "Index": 走表达式(n.target); 走表达式(n.index); break;
     case "Field": 走表达式(n.target); break;
     case "Tuple": (n.items || []).forEach(走表达式); break;

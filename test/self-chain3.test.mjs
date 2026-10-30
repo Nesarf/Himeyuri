@@ -108,7 +108,7 @@ console.log("\nthe parts, spelled out");
 console.log("\nwhat used to be out of reach, and is read now");
 {
   const tree = attempt(() => mine("print(1)"));
-  ok("a call is read as a call", !tree.error && tree.value.kind === "Call" && tree.value.args.length === 1, tree.error || JSON.stringify(tree.value));
+  ok("a call is read as a call", !tree.error && tree.value.kind === "调用" && tree.value.args.length === 1, tree.error || JSON.stringify(tree.value));
 }
 {
   const tree = attempt(() => mine("t[1]"));

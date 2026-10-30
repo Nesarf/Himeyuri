@@ -10,7 +10,7 @@
 //   {kind: "名", text}             标识符
 //   {kind: "二元", op, left, right}
 //   {kind: "Unary", op, operand}
-//   {kind: "Call", callee, args}
+//   {kind: "调用", callee, args}
 //   {kind: "Index", target, index}
 //   {kind: "Field", target, name}
 //   {kind: "Tuple", items}
@@ -1064,7 +1064,7 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
     return 求二元(节点.op, 求值(节点.left, 环境), 求值(节点.right, 环境))
   }
   if 种 == "Unary" { return 求一元(节点.op, 求值(节点.operand, 环境)) }
-  if 种 == "Call" { return 求调用(节点, 环境) }
+  if 种 == "调用" { return 求调用(节点, 环境) }
   if 种 == "Index" {
     let 标 = 求值(节点.target, 环境)
     if 标.ok == false { return 标 }

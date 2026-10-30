@@ -47,19 +47,19 @@ console.log("二元与一元：括号的优先级由 AST 决定，不由求值�
 一("字符串相加", bin("+", str("a"), str("b")), 空, "ab");
 
 console.log("调用：这一版认的内置");
-一("len", { kind: "Call", callee: name("len"), args: [str("abc")] }, 空, "3");
-一("str", { kind: "Call", callee: name("str"), args: [int("9")] }, 空, "9");
+一("len", { kind: "调用", callee: name("len"), args: [str("abc")] }, 空, "3");
+一("str", { kind: "调用", callee: name("str"), args: [int("9")] }, 空, "9");
 // 早先这一条写的是「print 不在求值器里（打印是调用方的事）」。
 // 那句约定本身是错的：目标程序就是调用方，它跑在求值器内部，于是它连一句话都说不出。
 // 现在 print 会转发到宿主那一层，交回空元组（写出去的那一下没有值）。
-一("print 转发给宿主（交回空元组）", { kind: "Call", callee: name("print"), args: [str("x")] }, 空, "[]");
-一("参数先求值", { kind: "Call", callee: name("len"), args: [bin("+", str("ab"), str("cd"))] }, 空, "4");
+一("print 转发给宿主（交回空元组）", { kind: "调用", callee: name("print"), args: [str("x")] }, 空, "[]");
+一("参数先求值", { kind: "调用", callee: name("len"), args: [bin("+", str("ab"), str("cd"))] }, 空, "4");
 
 console.log("下标、字段、元组");
 一("下标", { kind: "Index", target: str("abc"), index: int("1") }, 空, "b");
 // 记录现在造得出来了：空记录取一个不存在的字段，报的是「没有这个字段」。
 一("空记录取字段被拒绝", { kind: "Field", target: { kind: "Record", fields: [] }, name: "x" }, 空, "错：没有这个字段：x");
-一("元组取长度", { kind: "Call", callee: name("len"), args: [{ kind: "Tuple", items: [int("1"), int("2")] }] }, 空, "2");
+一("元组取长度", { kind: "调用", callee: name("len"), args: [{ kind: "Tuple", items: [int("1"), int("2")] }] }, 空, "2");
 
 console.log("错处要说清，不静音");
 {
@@ -71,7 +71,7 @@ console.log("错处要说清，不静音");
   ok("不认识的节点", r3.includes("不认识的节点"), JSON.stringify(r3));
   const r4 = call("求值成文字", [{ kind: "Error", text: "坏括号" }, 空]);
   ok("语法层的错被原样带上来", r4.includes("语法层报的错") && r4.includes("坏括号"), JSON.stringify(r4));
-  const r5 = call("求值成文字", [{ kind: "Call", callee: name("nope"), args: [] }, 空]);
+  const r5 = call("求值成文字", [{ kind: "调用", callee: name("nope"), args: [] }, 空]);
   ok("没有的函数据实说", r5.includes("没有这个函数"), JSON.stringify(r5));
   const r6 = call("求值成文字", [bin("+", int("1"), name("缺")), 空]);
   ok("左边对、右边错时整体出错（不拿左边顶上去）", r6.includes("没有这个名字"), JSON.stringify(r6));

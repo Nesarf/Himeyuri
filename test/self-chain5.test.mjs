@@ -85,7 +85,7 @@ console.log("\nthe parts, spelled out");
 }
 {
   const tree = mine("obj.field(1)");
-  ok("a field can be called", tree.kind === "Call" && tree.callee.kind === "Field" && tree.callee.name === "field", JSON.stringify(tree));
+  ok("a field can be called", tree.kind === "调用" && tree.callee.kind === "Field" && tree.callee.name === "field", JSON.stringify(tree));
 }
 {
   const tree = mine("x.y[2]");
@@ -93,7 +93,7 @@ console.log("\nthe parts, spelled out");
 }
 {
   const tree = mine("f().x");
-  ok("a call result can have a field", tree.kind === "Field" && tree.target.kind === "Call", JSON.stringify(tree));
+  ok("a call result can have a field", tree.kind === "Field" && tree.target.kind === "调用", JSON.stringify(tree));
 }
 
 console.log("\nwhat it still cannot read");

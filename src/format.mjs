@@ -137,7 +137,7 @@ class Printer {
       case "名": return node.name;
       case "Unary": return node.op + this.expr(node.operand, level, col + 1);
       case "二元": return this.binary(node, level, col);
-      case "Call": return this.expr(node.callee, level, col) + "(" + node.args.map((a) => this.expr(a, level, col)).join(", ") + ")";
+      case "调用": return this.expr(node.callee, level, col) + "(" + node.args.map((a) => this.expr(a, level, col)).join(", ") + ")";
       case "Field": return this.expr(node.target, level, col) + "." + node.name;
       case "Index": return this.expr(node.target, level, col) + "[" + this.expr(node.index, level, col) + "]";
       case "Tuple": return this.sequence("(", ")", node.items, level, col);

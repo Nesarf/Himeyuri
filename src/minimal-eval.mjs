@@ -763,7 +763,7 @@ export class 最小运行时 {
         const v = stmt.value;
         // 尾位置：return f(...) 里那个调用不必保留这一层。只对被调的是这门语言的函数成立——
         // 内置不经过这条环，而 return 一个内置调用的结果本来也不占栈。
-        if (v && v.kind === "Call" && v.callee.kind === "名" && this.functions.has(v.callee.name)) {
+        if (v && v.kind === "调用" && v.callee.kind === "名" && this.functions.has(v.callee.name)) {
           const 实参 = v.args.map((a) => this.求值(a, scope, effects));
           throw new 尾调用(this.functions.get(v.callee.name), 实参, effects);
         }
@@ -846,7 +846,7 @@ export class 最小运行时 {
         if (index < 0 || index >= target.length) this.坏("HMYR-行-018", "index " + index + " is outside a value of length " + target.length);
         return target[index];
       }
-      case "Call": return this.调用(node, scope, effects);
+      case "调用": return this.调用(node, scope, effects);
       default:
         throw new Error("最小求值器不认这种表达式：'" + node.kind + "'");
     }

@@ -413,7 +413,7 @@ export function loadUnit(entry, options = {}) {
         // 「这个名字是从哪儿来的」，而局部变量从作用域来 —— 那要作用域分析，
         // 而调用点的 callee 不需要：`f(...)` 里的 f 只可能是函数。
         if (n.kind === "名") return;
-        if (n.kind === "Call" && n.callee && n.callee.kind === "名") 报引用(n);
+        if (n.kind === "调用" && n.callee && n.callee.kind === "名") 报引用(n);
         for (const [k, v] of Object.entries(n)) {
           if (k === "line" || k === "column" || k === "kind") continue;
           走(v);

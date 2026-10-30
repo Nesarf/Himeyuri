@@ -23,7 +23,7 @@ export const 检查码 = "HMYR-載-021";
 import { 转移, 空, 满, 关, 移 } from "./owned-state.mjs";
 
 const 是方法调用 = (n) =>
-  n && n.kind === "Call" && n.callee && n.callee.kind === "Field" &&
+  n && n.kind === "调用" && n.callee && n.callee.kind === "Field" &&
   n.callee.target && n.callee.target.kind === "名";
 
 /**
@@ -125,7 +125,7 @@ function 走块(语句们, 状态, 报, 签名表) {
 
     // let X = … —— 先看右值里有没有 放 / 取，再决定 X 自己是什么状态。
     if ((句.kind === "Let" || 句.kind === "Var") && 句.value) {
-      if (句.value.kind === "Call" && 句.value.callee &&
+      if (句.value.kind === "调用" && 句.value.callee &&
           句.value.callee.kind === "名" && 句.value.callee.name === "owned") {
         状态.set(句.name, 空);
         continue;
@@ -147,7 +147,7 @@ function 走块(语句们, 状态, 报, 签名表) {
     // 静态这一层看不见。实测撞到的正是这个 —— 一个 `造(盒)` 在别处往盒里放了值，
     // 回到调用者这边还以为它是空的，于是把一次合法的取判成了 HMYR-碼-006。
     // borrow 保持：那个词的意思就是「只借不改」，信它。
-    if (调 && 调.kind === "Call" && 调.callee && 调.callee.kind === "名" && 签名表.has(调.callee.name)) {
+    if (调 && 调.kind === "调用" && 调.callee && 调.callee.kind === "名" && 签名表.has(调.callee.name)) {
       const 参数们 = 签名表.get(调.callee.name) || [];
       const 实参们 = 调.args || [];
       for (let i = 0; i < 实参们.length; i++) {
@@ -259,7 +259,7 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
     const 走 = (n) => {
       if (!n || typeof n !== "object") return;
       if (Array.isArray(n)) { for (const x of n) 走(x); return; }
-      if (n.kind === "Call" && n.callee) {
+      if (n.kind === "调用" && n.callee) {
         const 主 = n.callee.kind === "Field" ? n.callee.target : null;
         if (主 && 主.kind === "名" && 位们.has(主.name)) {
           const 方法 = n.callee.name;
@@ -317,7 +317,7 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
     const 走 = (n) => {
       if (!n || typeof n !== "object") return false;
       if (Array.isArray(n)) { for (const x of n) if (走(x)) return true; return false; }
-      if (n.kind === "Call" && n.callee) {
+      if (n.kind === "调用" && n.callee) {
         const 主 = n.callee.kind === "Field" ? n.callee.target : null;
         if (主 && 主.kind === "名" && 位们.has(主.name) && 该报.has(位们.get(主.name))) {
           const 方法 = n.callee.name;

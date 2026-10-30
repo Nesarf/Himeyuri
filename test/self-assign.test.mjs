@@ -48,7 +48,7 @@ function jsShape(node) {
   if (node.kind === "二元") return { kind: "二元", op: node.op, left: jsShape(node.left), right: jsShape(node.right) };
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
   if (node.kind === "名") return { kind: "名", text: node.name };
-  if (node.kind === "Call") return { kind: "Call", callee: jsShape(node.callee), args: node.args.map(jsShape) };
+  if (node.kind === "调用") return { kind: "调用", callee: jsShape(node.callee), args: node.args.map(jsShape) };
   if (node.kind === "Index") return { kind: "Index", target: jsShape(node.target), index: jsShape(node.index) };
   if (node.kind === "Field") {
     const target = node.target !== undefined ? node.target : node.object;

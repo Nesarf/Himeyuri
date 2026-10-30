@@ -27,7 +27,7 @@ const 造模块 = (源) => rt.callFunction(rt.functions.get("造模块"), [源],
 // 名字的映射：self 的 kind → 宿主的 kind。
 const 映射 = {
   num: "字", str: "字", name: "名",
-  bin: "二元", unary: "Unary", call: "Call", field: "Field", index: "Index",
+  bin: "二元", unary: "Unary", call: "调用", field: "Field", index: "Index",
   tuple: "Tuple", record: "Record", err: "Error",
   let: "Let", var: "Var", return: "Return", assign: "Assign", expr: "ExprStmt",
   if: "If", while: "While",
@@ -54,7 +54,7 @@ const 子对们 = (s, h) => {
     case "While": return [[s.condition, h.condition]];
     case "二元": return [[s.left, h.left], [s.right, h.right]];
     case "Unary": return [[s.operand, h.operand]];
-    case "Call": return [[s.callee, h.callee], ...列(s.args).map((x, i) => [x, 列(h.args)[i]])];
+    case "调用": return [[s.callee, h.callee], ...列(s.args).map((x, i) => [x, 列(h.args)[i]])];
     case "Field": case "Index": return [[s.target, h.target]];
     case "Tuple": return 列(s.items).map((x, i) => [x, 列(h.items)[i]]);
     default: return [];

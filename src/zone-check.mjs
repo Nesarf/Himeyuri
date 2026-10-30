@@ -27,13 +27,13 @@ const 分配方法 = new Set(["alloc", "alloc_list"]);
 const 名字 = (n) => (n && n.kind === "名" ? n.name : null);
 
 const 是arena调用 = (n) => {
-  if (!n || n.kind !== "Call") return false;
+  if (!n || n.kind !== "调用") return false;
   return 名字(n.callee) === "arena";
 };
 
 // 只认 a.方法(...) 这一种形状。认不出目标是一个名字就不认。
 const 方法调用 = (n) => {
-  if (!n || n.kind !== "Call" || !n.callee || n.callee.kind !== "Field") return null;
+  if (!n || n.kind !== "调用" || !n.callee || n.callee.kind !== "Field") return null;
   const 目标 = 名字(n.callee.target);
   if (!目标) return null;
   return { 目标, 方法: n.callee.name, 参数: n.args || [] };
@@ -177,7 +177,7 @@ export function 区检查(ast, 选项 = {}) {
         return;
       }
 
-      if (n.kind === "Call") {
+      if (n.kind === "调用") {
         if (是arena调用(n) && 在循环里) {
           报("warning", "HMYR-載-016",
             "an arena is built inside a loop: every round allocates a new one, so the total grows with " +

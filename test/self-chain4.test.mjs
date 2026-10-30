@@ -80,11 +80,11 @@ for (const source of CASES) {
 console.log("\nthe parts, spelled out");
 {
   const tree = mine("f(1, 2)");
-  ok("a call keeps its callee and its arguments in order", tree.kind === "Call" && tree.callee.kind === "名" && tree.args.length === 2, JSON.stringify(tree));
+  ok("a call keeps its callee and its arguments in order", tree.kind === "调用" && tree.callee.kind === "名" && tree.args.length === 2, JSON.stringify(tree));
 }
 {
   const tree = mine("g()");
-  ok("a call with no arguments has an empty argument list", tree.kind === "Call" && tree.args.length === 0, JSON.stringify(tree));
+  ok("a call with no arguments has an empty argument list", tree.kind === "调用" && tree.args.length === 0, JSON.stringify(tree));
 }
 {
   const tree = mine("t[i + 1]");
@@ -92,11 +92,11 @@ console.log("\nthe parts, spelled out");
 }
 {
   const tree = mine("f(1)[0]");
-  ok("a call can be subscripted", tree.kind === "Index" && tree.target.kind === "Call", JSON.stringify(tree));
+  ok("a call can be subscripted", tree.kind === "Index" && tree.target.kind === "调用", JSON.stringify(tree));
 }
 {
   const tree = mine("f(t[0]) * 2");
-  ok("they nest inside arithmetic as expected", tree.kind === "二元" && tree.left.kind === "Call" && tree.left.args[0].kind === "Index", JSON.stringify(tree));
+  ok("they nest inside arithmetic as expected", tree.kind === "二元" && tree.left.kind === "调用" && tree.left.args[0].kind === "Index", JSON.stringify(tree));
 }
 {
   const tree = mine("t[0] + t[1]");
@@ -107,7 +107,7 @@ console.log("\nwhat it still cannot read");
 {
   // 字段访问进来之后，字段上的调用也就跟着通了。
   const tree = attempt(() => mine("obj.field(1)"));
-  ok("a call on a field is read", !tree.error && tree.value.kind === "Call" && tree.value.callee.kind === "Field",
+  ok("a call on a field is read", !tree.error && tree.value.kind === "调用" && tree.value.callee.kind === "Field",
     tree.error || JSON.stringify(tree.value));
 }
 {

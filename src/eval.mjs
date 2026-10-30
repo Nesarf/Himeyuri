@@ -57,7 +57,7 @@ class Return extends Error { constructor(value) { super("return"); this.value = 
 // 只卖一个布尔，不卖整张表：表是实现的细节，而「这个名字算不算内置」是可问的事实。
 export const isBuiltin = (name) => Object.prototype.hasOwnProperty.call(BUILTINS, name);
 
-const STAGE0_EXPR = new Set(["二元", "Call", "Field", "名", "If", "Index", "字", "Record", "Tuple", "Unary", "While"]);
+const STAGE0_EXPR = new Set(["二元", "调用", "Field", "名", "If", "Index", "字", "Record", "Tuple", "Unary", "While"]);
 const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
 // 跑 self/ 那六份真正需要的内置。stage0 模式下只放这几个过去。
 // field_names 不在这一张里：自举层现在还不用它，而这张表的意思是「已经量过的必须项」，
@@ -317,7 +317,7 @@ export class Runtime {
         // 只对「被调的是这门语言里的函数」成立：内置函数不经过这条环，
         // 而 return 一个内置调用的结果本来也不占栈。
         const v = stmt.value;
-        if (v && v.kind === "Call" && v.callee.kind === "名" && this.functions.has(v.callee.name)) {
+        if (v && v.kind === "调用" && v.callee.kind === "名" && this.functions.has(v.callee.name)) {
           const 目标 = this.functions.get(v.callee.name);
           this.查可见性(目标);
           const 实参 = v.args.map((a) => this.evalExpr(a, scope, effects));
@@ -416,7 +416,7 @@ export class Runtime {
         if (index < 0 || index >= target.length) this.fail("HMYR-行-018", "index " + index + " is outside a value of length " + target.length);
         return target[index];
       }
-      case "Call": return this.evalCall(node, scope, effects);
+      case "调用": return this.evalCall(node, scope, effects);
       default:
         this.fail("HMYR-行-010", "cannot evaluate a node of kind " + node.kind);
     }

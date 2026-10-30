@@ -53,7 +53,7 @@ function jsShape(node) {
   if (node.kind === "字" && node.type === "int") return { kind: "字", type: "int", text: node.raw };
   if (node.kind === "名") return { kind: "名", text: node.name };
   if (node.kind === "Unary") return { kind: "Unary", op: node.op, operand: jsShape(node.operand) };
-  if (node.kind === "Call") return { kind: "Call", callee: jsShape(node.callee), args: node.args.map(jsShape) };
+  if (node.kind === "调用") return { kind: "调用", callee: jsShape(node.callee), args: node.args.map(jsShape) };
   if (node.kind === "Index") return { kind: "Index", target: jsShape(node.target), index: jsShape(node.index) };
   if (node.kind === "Field") {
     const target = node.target !== undefined ? node.target : node.object;
@@ -113,7 +113,7 @@ console.log("\nprecedence, spelled out");
 console.log("\nwhere it reaches");
 {
   const tree = mine("f(a == b)");
-  ok("an argument can be a comparison", tree.kind === "Call" && tree.args[0].op === "==", JSON.stringify(tree));
+  ok("an argument can be a comparison", tree.kind === "调用" && tree.args[0].op === "==", JSON.stringify(tree));
 }
 {
   const tree = mine("t[a < b]");

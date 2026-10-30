@@ -391,7 +391,7 @@ export const 子集解 = (tokens, options = {}) => {
           if (是标(",")) 进(); else break;
         }
         要标(")", "关实参表");
-        expr = { kind: "Call", callee: expr, args, line: 开.line, column: 开.column };
+        expr = { kind: "调用", callee: expr, args, line: 开.line, column: 开.column };
         continue;
       }
       if (是标(".")) {
@@ -498,7 +498,7 @@ export const 子集解 = (tokens, options = {}) => {
         while (!是标(")") && !是("eof")) { args.push(解析表达式()); if (是标(",")) 进(); else break; }
         要标(")", "关 arena 的括号");
       }
-      return { kind: "Call", callee: { kind: "名", name: "arena", line: t.line, column: t.column }, args, line: t.line, column: t.column };
+      return { kind: "调用", callee: { kind: "名", name: "arena", line: t.line, column: t.column }, args, line: t.line, column: t.column };
     }
 
     if (t.type === "ident") { 进(); return { kind: "名", name: t.value, line: t.line, column: t.column }; }

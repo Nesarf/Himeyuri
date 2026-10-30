@@ -241,8 +241,8 @@ fn 翻表达式(n: Int) {
   if n.kind == "Unary" {
     return {kind: "Unary", op: n.op, operand: 翻表达式(n.operand), line: 行(n), column: 列(n)}
   }
-  if n.kind == "Call" {
-    return {kind: "Call", callee: 翻表达式(n.callee), args: 翻表达式们(n.args, 0, ()), line: 行(n), column: 列(n)}
+  if n.kind == "调用" {
+    return {kind: "调用", callee: 翻表达式(n.callee), args: 翻表达式们(n.args, 0, ()), line: 行(n), column: 列(n)}
   }
   if n.kind == "Field" {
     return {kind: "Field", target: 翻表达式(n.target), name: n.name, line: 行(n), column: 列(n)}

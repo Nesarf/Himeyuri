@@ -78,7 +78,7 @@ console.log("\nexpressions and precedence");
 {
   const r = clean("fn f() {\n  f(1, 2).field\n}\n");
   const expr = r.ast.decls[0].body.statements[0].expr;
-  ok("call then field access", expr.kind === "Field" && expr.target.kind === "Call" && expr.target.args.length === 2);
+  ok("call then field access", expr.kind === "Field" && expr.target.kind === "调用" && expr.target.args.length === 2);
 }
 {
   const r = clean("fn f() {\n  -a\n}\n");

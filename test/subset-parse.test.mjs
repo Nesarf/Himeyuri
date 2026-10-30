@@ -149,7 +149,7 @@ console.log("七、两处后补的两侧同形：arena() 与 own/borrow 参数")
   ok("两棵树相同", 差 === null, 差 || "");
   // 不带括号也认：宿主那一支允许它，两侧分叉的话，「arena 当对象用」这种写法会在一边成一边败。
   const 无括 = 子集解(切("fn f() -> Int {\n  let a = arena\n  return 0\n}\n")).ast.decls[0].body.statements[0].value;
-  ok("不带括号也是同一个 Call", 无括.kind === "Call" && 无括.callee.name === "arena" && 无括.args.length === 0, JSON.stringify(无括));
+  ok("不带括号也是同一个 Call", 无括.kind === "调用" && 无括.callee.name === "arena" && 无括.args.length === 0, JSON.stringify(无括));
 
   // own 与 borrow 原来是「子集不认」的一条，而宿主认得 —— 于是任何带这两个标注的程序
   // 在装载时就被判成语法错，死得还像源码坏了。现在两侧同形，passing 也照抄。

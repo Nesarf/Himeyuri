@@ -102,7 +102,7 @@ const 表达式形状 = (n) => {
     // 调用：形状由「被调者的声明」回答，而回答它的是外面的 形状带调用。
     // 这里交回「说不清」而不是 null —— null 会在 + 的两边当成值用，然后炸在那个地方，
     // 而一个好的检查器不该因为自己不认识的节点而炸。
-    case "Call": return { k: "?" };
+    case "调用": return { k: "?" };
     default: return { k: "?" };
   }
 };
@@ -176,7 +176,7 @@ export const 核对返回类型 = (声明们) => {
     return 类型形状(被.returns);
   };
   const 形状带调用 = (n) => {
-    if (n && n.kind === "Call") return 查调用形状(n);
+    if (n && n.kind === "调用") return 查调用形状(n);
     // 表达式里套着调用时，只对最外层判断 —— 深一层不去追，免得把「说不清」说成「不合」。
     return 表达式形状(n);
   };
@@ -271,7 +271,7 @@ const 编译函数 = (decl) => {
       }
       case "Field": 表达(n.target); 发("FIELD", n.name); return;
       case "Index": 表达(n.target); 表达(n.index); 发("INDEX"); return;
-      case "Call": {
+      case "调用": {
         // 方法调用（a.alloc(16)）：先把主压栈，再压参数，最后一条 CALLM。
         // 这是区的入口 —— 到 2026-10-26 为止这一行是「只认按名字调用」，于是
         // 任何 a.alloc(16) 在 --compile 上都是一句拒绝，区也就只有解释那两条路能跑。

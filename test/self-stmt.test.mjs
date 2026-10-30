@@ -111,7 +111,7 @@ console.log("\nwhat it refuses to guess");
   // A call is not in this subset yet: the chain knows + - * / % and brackets, nothing else. The
   // statement reader reads the name and stops at the bracket, which is honest rather than clever.
   const node = readStatement("f(1)");
-  ok("a call is now read as a call", node.kind === "ExprStmt" && node.value.kind === "Call" && node.value.args.length === 1, JSON.stringify(node));
+  ok("a call is now read as a call", node.kind === "ExprStmt" && node.value.kind === "调用" && node.value.args.length === 1, JSON.stringify(node));
 }
 {
   const node = attempt(() => readStatement(""));

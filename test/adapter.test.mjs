@@ -76,7 +76,7 @@ console.log("二、运算符的优先级在两边一致");
 console.log("三、转不了的东西说清为什么");
 {
   const 树 = expression(例("变([1, 2])"));
-  ok("未知的节点交出 err", 树.kind === "Error" || 树.kind === "Call", JSON.stringify(树).slice(0, 80));
+  ok("未知的节点交出 err", 树.kind === "Error" || 树.kind === "调用", JSON.stringify(树).slice(0, 80));
   const 语句 = expression("fn main() -> Int {\n  let x = 1\n  return x\n}\n");
   // return x 里的 x 是个名字，而这一版不建环境——它转得出形状，算不出来
   ok("名字转得出形状", 语句.kind === "名", JSON.stringify(语句));

@@ -108,7 +108,7 @@ console.log("\nwhat it still cannot read, said plainly");
   ok("a tuple now comes through as a tuple", tuple.list[0].value.kind === "Tuple" && tuple.list[0].value.items.length === 2, JSON.stringify(tuple.list[0]));
 
   const call = readBody("fn f() {\n  print(t[1])\n}\n");
-  ok("a call now comes through as a call whose argument is a subscript", call.list[0].value.kind === "Call" && call.list[0].value.args[0].kind === "Index", JSON.stringify(call.list[0]));
+  ok("a call now comes through as a call whose argument is a subscript", call.list[0].value.kind === "调用" && call.list[0].value.args[0].kind === "Index", JSON.stringify(call.list[0]));
 
   const branch = readBody("fn f() {\n  if a { return 1 }\n  return 2\n}\n");
   ok("if now comes through as an if", branch.list[0].kind === "If" && branch.list[0].then.length === 1, JSON.stringify(branch.list[0]));
