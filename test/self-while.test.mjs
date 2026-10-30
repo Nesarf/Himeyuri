@@ -39,7 +39,7 @@ console.log("一、解析层认 while");
   const tokens = 词法.callFunction(词法.functions.get("scan_lines"), [源], null);
   const 一 = 语法.callFunction(语法.functions.get("parse_statement"), [tokens], null);
   ok("parse_statement 交回一个节点", 一 && 一.node, JSON.stringify(一).slice(0, 100));
-  ok("种类是 while", 一 && 一.node.kind === "While", JSON.stringify(一 && 一.node && 一.node.kind));
+  ok("种类是 while", 一 && 一.node.kind === "当", JSON.stringify(一 && 一.node && 一.node.kind));
   ok("带条件", 一 && 一.node.cond && 一.node.cond.kind === "二元", JSON.stringify(一 && 一.node && 一.node.cond).slice(0, 80));
   ok("带体，而体里有一条语句", 一 && Array.isArray(一.node.body) && 一.node.body.length === 1, JSON.stringify(一 && 一.node && 一.node.body).slice(0, 80));
 }
@@ -66,7 +66,7 @@ console.log("三、那一道闸还在");
   // 那一句只确认它写在那儿，而真实跑一次的成本不值得。
   const e = fs.readFileSync(path.join(ROOT, "self/eval.hmoca"), "utf8");
   ok("执行反复 里有百万次那道闸", e.includes("一百万次"), e.includes("一百万次") ? "在" : "不在");
-  ok("而它在 while 那一路里", e.includes('种 == "While"') && e.includes("执行反复"), "在");
+  ok("而它在 while 那一路里", e.includes('种 == "当"') && e.includes("执行反复"), "在");
 }
 
 console.log("");

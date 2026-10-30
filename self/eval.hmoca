@@ -1217,7 +1217,7 @@ fn 执行(节点: Int, 环境: Int) -> Int {
     if len(节点.otherwise) == 0 { return 好执行(环境, false, ()) }
     return 执行块(节点.otherwise, 环境)
   }
-  if 种 == "While" { return 执行反复(节点, 环境, 0) }
+  if 种 == "当" { return 执行反复(节点, 环境, 0) }
   if 种 == "Error" { return 坏执行("语法层报的错：" + 节点.text) }
   return 坏执行("这一版还不认这种语句：" + 种)
 }

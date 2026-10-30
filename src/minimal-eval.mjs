@@ -794,7 +794,7 @@ export class 最小运行时 {
         return node.op === "-" ? -this.成数(v) : !this.真(v);
       }
       case "二元": return this.二元(node, scope, effects);
-      case "While": {
+      case "当": {
         // 循环用宿主的 while，于是深度不随迭代次数增长。
         let guard = 0;
         while (this.真(this.求值(node.condition, scope, effects))) {

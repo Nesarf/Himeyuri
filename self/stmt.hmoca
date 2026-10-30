@@ -128,7 +128,7 @@ fn parse_while(tokens: Int, i: Int) {
     return {node: {kind: "Error", text: "while", line: 位.line, column: 位.column}, next: at}
   }
   let body = block(tokens, at + 1)
-  return {node: {kind: "While", cond: cond.node, body: body.list, line: 位.line, column: 位.column}, next: body.next}
+  return {node: {kind: "当", cond: cond.node, body: body.list, line: 位.line, column: 位.column}, next: body.next}
 }
 
 // 宿主入口：读一条语句。

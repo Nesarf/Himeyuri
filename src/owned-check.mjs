@@ -164,9 +164,9 @@ function 走块(语句们, 状态, 报, 签名表) {
     // 分支与循环。两只形状都要认：宿主那一层的 parser 给的是语句（kind 就是 If / While），
     // 而子集那一层给的是表达式（ExprStmt 的 expr 是 If / While）。
     // 只认一只的话，另一只上这一节等于没跑 —— 而它会「碰巧」通过，因为走到降级那条路。
-    const 控制 = (句.kind === "If" || 句.kind === "While")
+    const 控制 = (句.kind === "If" || 句.kind === "当")
       ? 句
-      : (调 && (调.kind === "If" || 调.kind === "While") ? 调 : null);
+      : (调 && (调.kind === "If" || 调.kind === "当") ? 调 : null);
 
     if (控制 && 控制.kind === "If") {
       // 两条路径各走一遍（用的是同一份状态的拷贝），再按「都一样才保得住」汇合。
@@ -180,7 +180,7 @@ function 走块(语句们, 状态, 报, 签名表) {
       for (const [键, 态] of 合) 状态.set(键, 态);
       continue;
     }
-    if (控制 && 控制.kind === "While") {
+    if (控制 && 控制.kind === "当") {
       // 零次与多次都要算：体走一遍得出「走过之后」，再与「没走」的那份汇合。
       const 体 = 走块(控制.body ? (控制.body.statements || []) : [], new Map(状态), 报, 签名表);
       const 合 = 合并状态(状态, 体);

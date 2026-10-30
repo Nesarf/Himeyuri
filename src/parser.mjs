@@ -448,7 +448,7 @@ export function parse(tokens, options = {}) {
 
       const body = atPunct("{") ? parseBlock() : null;
 
-      return { kind: "While", condition, body, line: t.line, column: t.column };
+      return { kind: "当", condition, body, line: t.line, column: t.column };
 
     }
 

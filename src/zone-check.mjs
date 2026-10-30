@@ -82,7 +82,7 @@ export function 区检查(ast, 选项 = {}) {
       if (!n || typeof n !== "object") return;
       if (Array.isArray(n)) { for (const x of n) 走(x, 在循环里, 直行); return; }
 
-      if (n.kind === "While") {
+      if (n.kind === "当") {
         // 条件和体都在循环里；体里的语句不再是直行 —— 一轮都不跑也是可能的。
         走(n.condition, true, 直行);
         走(n.body, true, false);

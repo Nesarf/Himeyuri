@@ -307,7 +307,7 @@ const 编译函数 = (decl) => {
         码[完].a = 码.length;
         return;
       }
-      case "While": {
+      case "当": {
         const 头 = 码.length;
         表达(n.condition);
         const 出 = 发("JMPF", -1);

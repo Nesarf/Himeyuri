@@ -57,7 +57,7 @@ class Return extends Error { constructor(value) { super("return"); this.value = 
 // 只卖一个布尔，不卖整张表：表是实现的细节，而「这个名字算不算内置」是可问的事实。
 export const isBuiltin = (name) => Object.prototype.hasOwnProperty.call(BUILTINS, name);
 
-const STAGE0_EXPR = new Set(["二元", "调用", "Field", "名", "If", "Index", "字", "Record", "Tuple", "Unary", "While"]);
+const STAGE0_EXPR = new Set(["二元", "调用", "Field", "名", "If", "Index", "字", "Record", "Tuple", "Unary", "当"]);
 const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
 // 跑 self/ 那六份真正需要的内置。stage0 模式下只放这几个过去。
 // field_names 不在这一张里：自举层现在还不用它，而这张表的意思是「已经量过的必须项」，
@@ -355,7 +355,7 @@ export class Runtime {
         return node.op === "-" ? -this.asNumber(v) : !this.truthy(v);
       }
       case "二元": return this.evalBinary(node, scope, effects);
-      case "While": {
+      case "当": {
 
         // 循环不是递归：这一层用宿主的循环，所以深度不随迭代次数增长。
 

@@ -30,7 +30,7 @@ const 映射 = {
   bin: "二元", unary: "Unary", call: "调用", field: "Field", index: "Index",
   tuple: "Tuple", record: "Record", err: "Error",
   let: "Let", var: "Var", return: "Return", assign: "Assign", expr: "ExprStmt",
-  if: "If", while: "While",
+  if: "If", while: "当",
   Fn: "Fn", Block: "Block", Module: "Module", Import: "Import",
 };
 
@@ -51,7 +51,7 @@ const 子对们 = (s, h) => {
       return [[s.value, h.value]];
     case "ExprStmt": return [[s.expr, h.expr]];
     case "If": return [[s.condition, h.condition]];
-    case "While": return [[s.condition, h.condition]];
+    case "当": return [[s.condition, h.condition]];
     case "二元": return [[s.left, h.left], [s.right, h.right]];
     case "Unary": return [[s.operand, h.operand]];
     case "调用": return [[s.callee, h.callee], ...列(s.args).map((x, i) => [x, 列(h.args)[i]])];
@@ -126,7 +126,7 @@ const 走 = (s, h, 路, 计) => {
     if (数(s.then) !== 数(h.then)) return { 路: 路 + "/then", 因: "语句数 self=" + 数(s.then) + " 宿主=" + 数(h.then) };
     if (数(s.otherwise) !== 数(h.otherwise)) return { 路: 路 + "/otherwise", 因: "语句数 self=" + 数(s.otherwise) + " 宿主=" + 数(h.otherwise) };
   }
-  if (s.kind === "While") {
+  if (s.kind === "当") {
     if (数(s.body) !== 数(h.body)) return { 路: 路 + "/body", 因: "语句数 self=" + 数(s.body) + " 宿主=" + 数(h.body) };
   }
   for (const [己子, 彼子] of 子对们(s, h)) {

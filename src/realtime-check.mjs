@@ -76,7 +76,7 @@ export function 实时检查(ast, 选项 = {}) {
     if (!n || typeof n !== "object") return;
     if (Array.isArray(n)) { for (const x of n) 走(x); return; }
 
-    if (n.kind === "While") {
+    if (n.kind === "当") {
       if (是常量真(n.condition)) {
         报("a loop whose condition is a constant true value never ends on its own; a realtime function must not own such a loop", n);
       }

@@ -428,7 +428,7 @@ export const 子集解 = (tokens, options = {}) => {
       const condition = 解析表达式();
       if (!是标("{")) 不认("子集的 while 必须有块", t);
       const body = 解析块();
-      return { kind: "While", condition, body, line: t.line, column: t.column };
+      return { kind: "当", condition, body, line: t.line, column: t.column };
     }
     if (是("keyword", "if")) {
       进();

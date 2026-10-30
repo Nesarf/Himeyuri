@@ -296,8 +296,8 @@ fn 转语句们(语句们: Int, i: Int, acc: Int) {
     let 内 = {kind: "If", condition: 翻表达式(n.cond), then: 包块(n.then, n.line), otherwise: 包块(n.otherwise, n.line), line: 行(n), column: 列(n)}
     出 = {kind: "ExprStmt", expr: 内, line: 行(n), column: 列(n)}
   }
-  if n.kind == "While" {
-    let 内 = {kind: "While", condition: 翻表达式(n.cond), body: 包块(n.body, n.line), line: 行(n), column: 列(n)}
+  if n.kind == "当" {
+    let 内 = {kind: "当", condition: 翻表达式(n.cond), body: 包块(n.body, n.line), line: 行(n), column: 列(n)}
     出 = {kind: "ExprStmt", expr: 内, line: 行(n), column: 列(n)}
   }
   return 转语句们(语句们, i + 1, acc + (出,))

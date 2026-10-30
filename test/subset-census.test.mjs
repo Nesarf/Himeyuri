@@ -30,7 +30,7 @@ const 走表达式 = (n) => {
   if (n.kind === "二元" || n.kind === "Unary") 计(运算符, String(n.op));
   switch (n.kind) {
     case "If": 走表达式(n.condition); 走语句(n.then); 走语句(n.otherwise); break;
-    case "While": 走表达式(n.condition); 走语句(n.body); break;
+    case "当": 走表达式(n.condition); 走语句(n.body); break;
     case "二元": 走表达式(n.left); 走表达式(n.right); break;
     case "Unary": 走表达式(n.operand); break;
     case "调用": 走表达式(n.callee); (n.args || []).forEach(走表达式); break;
@@ -50,7 +50,7 @@ const 走语句 = (s) => {
     case "ExprStmt": 走表达式(s.expr); break;
     case "Block": (s.statements || []).forEach(走语句); break;
     case "If": 走表达式(s.condition); 走语句(s.then); 走语句(s.otherwise); break;
-    case "While": 走表达式(s.condition); 走语句(s.body); break;
+    case "当": 走表达式(s.condition); 走语句(s.body); break;
   }
 };
 
@@ -77,7 +77,7 @@ console.log("二、表达式：十一种");
   const 实 = [...表达式.keys()].sort();
   ok("表达式种类正好十一种", 实.length === 11, 实.join(" "));
   ok("含 If（它在这一门语言里也是表达式）", 实.includes("If"), 实.join(" "));
-  ok("含 While", 实.includes("While"), 实.join(" "));
+  ok("含 While", 实.includes("当"), 实.join(" "));
 }
 
 console.log("三、If 与 While 的条件确实被扫到（第一次就是漏在这里）");
