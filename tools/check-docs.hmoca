@@ -9,6 +9,15 @@
 // 数据目录（data/）跳过：那里是 Unicode 的原始数据，行首的井号与竖线表格是数据自己的
 // 写法，不是我们写下的文档。
 //
+// 跑全仓要调步数上限（2026-11-02 实测）：默认步数在一半就报 HMYR-R0102（跑得太久），
+// 因为每一份文档都要逐字符扫一遍。HMYR_STEPS 给到四亿之后，11 秒给出 43 份：
+//
+//   HMYR_STEPS=400000000 hmyr tools/check-docs.hmoca
+//
+// 而 43 这个数要与 tools/check-docs.mjs 对得上 —— 两份的跳过规则是同一套
+// （node_modules、.git、build、data、swap、ucd、conformance，以及所有点开头的目录）。
+// 差过一次：JS 版曾经数到 61，多出来的是 ucd/ 与 conformance/ 下的数据表。
+//
 //   node bin/hmyr.mjs tools/check-docs.hmoca
 
 fn 是文档(名: String) -> Bool {
