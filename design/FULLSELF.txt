@@ -2514,6 +2514,34 @@ selfloa 的 27/27）。
     而它解释了为什么第一版测试红了两项 —— 那两处现在明白了，不是新问题，
     是 hmyr.c 一直只认窄路径。
 
+全量跑出来的 11 套红里，有一套是我的（2026-11-02，新一段第 50 轮）
+
+    这一轮是整段的收尾，所以跑了一次全量并把输出存进文件（上一轮没存，名单丢了，
+    于是要跑第二遍）。11 套红的名字这一次拿到了：subsetcensus、subsetparse、
+    subsetdiag、stage0eval、hostdeps、arm、pipe、size、zoneself、globalvar、packagehmyr。
+
+    用工程地图对了一遍：这一段 17 个提交真正动的核心文件只有两个 —— src/bytecode.mjs
+    （只加了一个内置名 call_c）与 vm/hmyr.c（read_file 的 exit 改 return）。其余是新文件
+    或文档。所以 11 套里只有 arm 与 C 机器有关。
+
+    arm 那套确实是我弄坏的，而原因很具体：我给 call_c 用了 LoadLibraryA 与
+    GetProcAddress，那是 Windows API，而板子（-DHMYR_BOARD，裸机 Cortex-M4）没有。
+    修法是两层条件：
+
+      一、call_c 与 串到ascii 一起包进 #if defined(_WIN32) —— 板子上没有 FFI
+      二、hmyr-api.h 那行 include 从「桌面才有内置种子」的 #if 里挪出来 ——
+          它只是声明，板子上也该有那四个句子
+
+    读数：arm 的编译从失败变成 exit=0；套件从 7 passed / 14 failed 变成
+    10 passed / 11 failed。剩下的 11 项里，gc_收集 那条警告（第 2560 行）是原有的
+    （那一支在板子上不激活回收），其余 8 项是「拿不到链接日志」
+    （E:\DaShaoHuo\cache\tmp\hmyr-arm-link.log）—— 那是环境里缺 armlink 那一侧，
+    与这一段无关。
+
+    这一轮最该记住的一句：「编译通过」在桌面与板子上是两件事。 我给 C 机器加
+    内置函数时只验了桌面，于是把一台机器弄坏了三处。下一轮加任何与平台有关的东西，
+    两个模式都要编一次。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 HMYR-載-001；
 另外引的文件不在就报 HMYR-載-003（宿主也是这个码）。顺序取后序，于是 order 逐项相同。

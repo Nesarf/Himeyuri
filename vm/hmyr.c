@@ -39,12 +39,15 @@
 #define 线程局部 __thread
 #endif
 
+/* 四个句子的声明：与平台无关，所以放在内建种子那个条件之外 —— 板子上也有这四个
+ * 句子（板子只是没有 call_c，那一层另有自己的条件）。2026-11-02。 */
+#include "hmyr-api.h"
+
 /* 内置种子：桌面那一支把整份编译器编进来，于是这个可执行文件自带编译能力。
  * 板子上不编它 —— 那台没有文件系统，也用不到 cli_main；而且几百千字节的常量
  * 会把 flash 塞满，那不是「最小机器层」该有的样子。 */
 #if !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
 #include "pack_seed.h"
-#include "hmyr-api.h"
 #endif
 
 
@@ -976,12 +979,15 @@ static Value v_str(const uint16_t *p, uint32_t len) {
 /* 一个 ASCII 串变成语言里的字符串。终端与诊断都拿它交回短序列：
  * 那些序列里没有一个字节是中文，所以逐字节摊成码元就够。 */
 /* 把 HMYR 的串折成 C 的 ASCII（非 ASCII 按低八位截断 —— ABI 第三节说字符串借而不复制，而这一版只认 ASCII）。 */
+/* 只在桌面上：板子既没有 LoadLibrary 也没有 dlopen，所以串到ascii 只给 call_c 用。 */
+#if defined(_WIN32)
 static void 串到ascii(const Value *v, char *buf, int cap) {
   uint32_t n = v->slen < (uint32_t)(cap - 1) ? v->slen : (uint32_t)(cap - 1);
   for (uint32_t i = 0; i < n; i++) buf[i] = (char)(v->s[i] & 0xFF);
   buf[n] = 0;
 }
 
+#endif  /* _WIN32：串到ascii 只给 call_c 用 */
 static Value ascii_text(const char *s) {
   size_t n = strlen(s);
   uint16_t *p = 串存(n ? n : 1);
@@ -4626,6 +4632,9 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     *out = v;
     return 1;
   }
+/* call_c 只在桌面上存在：板子没有 LoadLibrary、没有 dlopen、也没有对应的内存模型。
+ * design/ABI.txt 第六节说的「跨平台要另写一段」在这里就体现为一层条件编译。 */
+#if defined(_WIN32)
   if (name_is(名off, "call_c")) {
     /* 调一个 C 函数（design/ABI.txt 第四节）。这一版只走 Windows：dlfcn 在 MinGW 上
      * 没有，而这一台本来就 include <windows.h> —— 所以是 LoadLibraryA 与 GetProcAddress。
@@ -4683,6 +4692,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     *out = v_num((double)结果);
     return 1;
   }
+#endif  /* _WIN32：call_c 只在桌面上 */
   if (name_is(名off, "view_len")) {
     if (nargs != 1) { fail("HMYR-行-002", "view_len wants one argument"); return 1; }
     Value 类值, 长值;
