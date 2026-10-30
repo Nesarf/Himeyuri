@@ -97,12 +97,12 @@ export const 子集解 = (tokens, options = {}) => {
 
   const 要标 = (v, 什么) => {
     if (是标(v)) return 进();
-    报("HMYR-E0101", "期望 " + JSON.stringify(v) + (什么 ? "（" + 什么 + "）" : "") + "，见到 " + 说明(看()));
+    报("HMYR-形-001", "期望 " + JSON.stringify(v) + (什么 ? "（" + 什么 + "）" : "") + "，见到 " + 说明(看()));
     return null;
   };
   const 要 = (type, 什么) => {
     if (是(type)) return 进();
-    报("HMYR-E0101", "期望 " + (什么 || type) + "，见到 " + 说明(看()));
+    报("HMYR-形-001", "期望 " + (什么 || type) + "，见到 " + 说明(看()));
     return null;
   };
   // 换行只在语句边界有意义，表达式里一律跳过。
@@ -110,7 +110,7 @@ export const 子集解 = (tokens, options = {}) => {
   const 收句 = () => {
     if (是("newline")) { 过空行(); return; }
     if (是标("}") || 是("eof")) return;
-    报("HMYR-E0102", "期望语句结束，见到 " + 说明(看()));
+    报("HMYR-形-002", "期望语句结束，见到 " + 说明(看()));
     恢复();
   };
 
@@ -130,7 +130,7 @@ export const 子集解 = (tokens, options = {}) => {
     while (是("keyword", "import")) imports.push(解析导入());
     过空行();
     while (!是("eof")) {
-      if (++steps > 步限) { 报("HMYR-E0105", "parser 在这一步停住了：" + 说明(看())); break; }
+      if (++steps > 步限) { 报("HMYR-形-005", "parser 在这一步停住了：" + 说明(看())); break; }
       const 先 = i;
       const decl = 解析声明();
       if (decl) decls.push(decl);
@@ -182,7 +182,7 @@ export const 子集解 = (tokens, options = {}) => {
       不认("子集不认这个声明，见到 " + 说明(看()));
     }
     // 而这些宿主也报「不能以它开始一个声明」，于是报同一个码。
-    报("HMYR-E0103", "不能以 " + 说明(看()) + " 开始一个声明");
+    报("HMYR-形-003", "不能以 " + 说明(看()) + " 开始一个声明");
     恢复();
     return null;
   }
@@ -266,7 +266,7 @@ export const 子集解 = (tokens, options = {}) => {
     const list = [];
     while (!是标(")") && !是("eof")) {
       if (是("ident") || 是("keyword")) list.push(进().value);
-      else { 报("HMYR-E0101", "期望效果名，见到 " + 说明(看())); break; }
+      else { 报("HMYR-形-001", "期望效果名，见到 " + 说明(看())); break; }
       // 检查点要在这儿：名字之后紧跟括号就是带参数的效果，而那种形式这一份还不认。
       if (是标("(")) 不认("子集不含带参数的效果");
       if (是标(",")) 进(); else break;
@@ -317,7 +317,7 @@ export const 子集解 = (tokens, options = {}) => {
     const statements = [];
     过空行();
     while (!是标("}") && !是("eof")) {
-      if (++steps > 步限) { 报("HMYR-E0105", "parser 在这一步停住了：" + 说明(看())); break; }
+      if (++steps > 步限) { 报("HMYR-形-005", "parser 在这一步停住了：" + 说明(看())); break; }
       const 先 = i;
       const stmt = 解析语句();
       if (stmt) statements.push(stmt);
@@ -503,7 +503,7 @@ export const 子集解 = (tokens, options = {}) => {
 
     if (t.type === "ident") { 进(); return { kind: "Ident", name: t.value, line: t.line, column: t.column }; }
 
-    报("HMYR-E0104", "期望一个表达式，见到 " + 说明(t), t);
+    报("HMYR-形-004", "期望一个表达式，见到 " + 说明(t), t);
     // 恢复：照宿主——吃掉这个 token，再跳到下一个能开始语句的地方。少这一步，一个缺表达式
     // 会引出第二条（收句）、第三条（外层），而那正是恢复要防的连锁。
     进();

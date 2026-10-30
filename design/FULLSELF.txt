@@ -1589,6 +1589,26 @@ selfloa 的 27/27）。
     CODES-MAP.txt 补了一行说明「E0002 有两处含义」—— 那是换码时才发现的，而它正是
     「按码映射」这个假设的反例。
 
+自立：语法层也换完了（2026-11-02，新一段第 4 轮）
+
+    第二层（形 6 个）换的时候，同一个问题又出现两次：
+
+      E0103    parser 里是「声明无法开始」（语法），而 eval / expand / loader /
+               self-bridge 里是「宏展开失败」。分流成 形-006。
+      E0101    parser 里是「期望某个记号」，而 self-bridge 里是「rev 后面没跟版本号」
+               （装载层的错）。分流成 載-023。
+      W0100    format.mjs 的格式化器警告，与 parser 无关。给它 形-007。
+
+    所以「一个码一处含义」这个假设，在两层里被推翻了三次（E0002、E0103、E0101）。
+    这件事本身值得记：码是共享的，因为写它们的人当时想的是「错误的严重程度」，
+    而不是「哪一处代码报的」。
+
+    做完的：parser.mjs 与 subset-parse.mjs 的五个码 → 形-001 到 形-005；
+    expand / eval / loader / self-bridge 的宏那处 → 形-006；format.mjs → 形-007；
+    self-bridge 的 rev 那处 → 載-023。
+
+    读数：parser、subset-diag、codes-lex、macro、format、docs、lexer 七套全过。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 E0301；
 另外引的文件不在就报 E0302（宿主也是这个码）。顺序取后序，于是 order 逐项相同。

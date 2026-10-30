@@ -109,7 +109,7 @@ console.log("四、错要说清：参数个数不对");
     "}",
   ].join("\n");
   const a = 走求值器(源);
-  ok("求值器报 E0103", String(a.错 || "").includes("HMYR-E0103"), a.错 || "（没有报）");
+  ok("求值器报 E0103", String(a.错 || "").includes("HMYR-形-006"), a.错 || "（没有报）");
   ok("而且说了它要几个参数", String(a.错 || "").includes("1"), a.错 || "");
 }
 

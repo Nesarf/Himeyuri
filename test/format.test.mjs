@@ -121,7 +121,7 @@ console.log("\nwhat the printer does not do yet, said out loud");
   const withComments = "// a note\nfn main() {\n  /* and another */\n  print(1)\n}\n";
   const r = format(withComments);
   const codes = r.diagnostics.items.map((d) => d.code);
-  ok("dropping comments is reported, not silent", codes.includes("HMYR-W0100"));
+  ok("dropping comments is reported, not silent", codes.includes("HMYR-形-007"));
   ok("and the count is in the message", /2 comment/.test(r.diagnostics.items.map((d) => d.message).join(" ")));
   ok("the program still prints", typeof r.text === "string" && r.text.includes("print(1)"));
 }

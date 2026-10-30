@@ -15,7 +15,7 @@
 // 边界（都写成会说的，不写成会猜的）：
 //   ・嵌套：模板里可以再用别的宏，展开到深度上限为止。
 //   ・递归：宏不能展开成自己（那不终止），深度上限会拦住它并报出来。
-//   ・参数个数不对：报 HMYR-E0103（声明形状那一类），不是一个含糊的「没有这个名字」。
+//   ・参数个数不对：报 HMYR-形-006（声明形状那一类），不是一个含糊的「没有这个名字」。
 //   ・捕获：模板里若出现与实参同名的自由标识符，它指的是调用处的那个 —— 参数替换是纯文本式的，
 //     而这一点正是「没有绑定」带来的后果。要更严的卫生，得先有块表达式。
 
@@ -30,7 +30,7 @@ const 上限 = 64;
 const 不递归 = new Set(["line", "column", "kind", "name", "text", "op", "pub", "type", "raw", "severity"]);
 
 function 换回(x, 表, 深) {
-  if (深 > 上限) throw new Error("HMYR-E0103 macro expansion went past " + 上限 + " levels");
+  if (深 > 上限) throw new Error("HMYR-形-006 macro expansion went past " + 上限 + " levels");
   if (Array.isArray(x)) return x.map((y) => 换回(y, 表, 深));
   if (!x || typeof x !== "object") return x;
   // 参数：整个节点换掉，连它自己的子节点都不看（实参树已经展开过了）。
@@ -48,7 +48,7 @@ function 换回(x, 表, 深) {
 }
 
 function 展开式(x, 宏们, 深) {
-  if (深 > 上限) throw new Error("HMYR-E0103 macro expansion went past " + 上限 + " levels");
+  if (深 > 上限) throw new Error("HMYR-形-006 macro expansion went past " + 上限 + " levels");
   if (Array.isArray(x)) return x.map((y) => 展开式(y, 宏们, 深));
   if (!x || typeof x !== "object") return x;
 
@@ -68,7 +68,7 @@ function 展开式(x, 宏们, 深) {
   if (节点.kind === "Call" && 节点.callee && 节点.callee.kind === "Ident" && 宏们.has(节点.callee.name)) {
     const 宏 = 宏们.get(节点.callee.name);
     if (!Array.isArray(节点.args) || 节点.args.length !== 宏.params.length) {
-      throw new Error("HMYR-E0103 macro " + 宏.name + " takes " + 宏.params.length +
+      throw new Error("HMYR-形-006 macro " + 宏.name + " takes " + 宏.params.length +
         " argument(s), got " + (Array.isArray(节点.args) ? 节点.args.length : 0));
     }
     const 表 = new Map();

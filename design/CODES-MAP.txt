@@ -114,3 +114,9 @@ HMYR-載-021  HMYR-E0321 載
 HMYR-載-022  HMYR-E0399 載
 
 注意：HMYR-E0002 有两处含义。lexer.mjs 里是「块注释没闭合」（→ 詞003），而 bin/hmyr.mjs 里是「pipe 或 socket 打不开」（→ 行021）。同一个码表达两件事，这件事是换码的时候才发现的 —— 而它说明映射表要按调用点，不是按码。
+
+第二层换完时补的分流码（同码不同义）：
+
+HMYR-形-006  HMYR-E0103        錯   第二处含义：宏展开失败（eval / expand / loader / self-bridge）
+HMYR-形-007  HMYR-W0100        告   格式化器的警告（format.mjs）
+HMYR-載-023  HMYR-E0101        錯   第二处含义：rev 后面没跟版本号（self-bridge）

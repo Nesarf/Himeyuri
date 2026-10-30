@@ -77,7 +77,7 @@ console.log("三、strict 模式：语法错也抛，而且抛出的消息里有
   let 错 = "";
   try { 子集解(切("fn f() {\n  let a = 1 2\n}\n"), { strict: true }); } catch (e) { 错 = e.message; }
   ok("抛了", 错 !== "", 错);
-  ok("消息里有 E0102", 错.includes("HMYR-E0102"), 错);
+  ok("消息里有 E0102", 错.includes("HMYR-形-002"), 错);
 }
 
 console.log("四、边界照旧：子集不认的构造仍然抛，而不是记成语法错");
@@ -94,8 +94,8 @@ for (const [标, 源] of [
 console.log("五、那一张对照表自己也要能核");
 {
   // 上面八例的宿主答案抄在这里，改宿主那边就该红——而不是让这张表悄悄过期。
-  const 应 = ["HMYR-E0103@1:1", "HMYR-E0104@2:10", "HMYR-E0101@1:13", "HMYR-E0102@2:13",
-    "HMYR-E0101@3:1", "HMYR-E0101@2:14", "HMYR-E0101@2:9", "HMYR-E0101@1:8"];
+  const 应 = ["HMYR-形-003@1:1", "HMYR-形-004@2:10", "HMYR-形-001@1:13", "HMYR-形-002@2:13",
+    "HMYR-形-001@3:1", "HMYR-形-001@2:14", "HMYR-形-001@2:9", "HMYR-形-001@1:8"];
   const 实 = [];
   for (const [, 源] of 例们) {
     const d = 新诊断();

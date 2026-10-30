@@ -22,7 +22,7 @@ console.log("module and import");
   ok("imports are collected in order", r && r.ast.imports.length === 2 && r.ast.imports[1].alias === "m");
 }
 {
-  ok("an import without a path is HMYR-E0101", errorsOf("import\n").includes("HMYR-E0101"));
+  ok("an import without a path is HMYR-形-001", errorsOf("import\n").includes("HMYR-形-001"));
 }
 
 console.log("\nfn and parameters");
@@ -34,7 +34,7 @@ console.log("\nfn and parameters");
   ok("a parameter default is an expression", fn.params[2].fallback.kind === "Literal");
 }
 {
-  ok("a parameter without a type is HMYR-E0101", errorsOf("fn f(x) { }\n").includes("HMYR-E0101"));
+  ok("a parameter without a type is HMYR-形-001", errorsOf("fn f(x) { }\n").includes("HMYR-形-001"));
 }
 
 console.log("\ntypes");
@@ -47,7 +47,7 @@ console.log("\ntypes");
   ok("function type", ps[3].type.kind === "FnType");
 }
 {
-  ok("an unclosed generic is HMYR-E0101", errorsOf("fn f(a: Map<Int) { }\n").includes("HMYR-E0101"));
+  ok("an unclosed generic is HMYR-形-001", errorsOf("fn f(a: Map<Int) { }\n").includes("HMYR-形-001"));
 }
 
 console.log("\nstatements");
@@ -58,10 +58,10 @@ console.log("\nstatements");
   ok("the type annotation is kept", r.ast.decls[0].body.statements[1].type.name === "Int");
 }
 {
-  ok("a missing value after '=' is HMYR-E0104", errorsOf("fn f() {\n  let a =\n}\n").includes("HMYR-E0104"));
+  ok("a missing value after '=' is HMYR-形-004", errorsOf("fn f() {\n  let a =\n}\n").includes("HMYR-形-004"));
 }
 {
-  ok("two expressions on one line is HMYR-E0102", errorsOf("fn f() {\n  a b\n}\n").includes("HMYR-E0102"));
+  ok("two expressions on one line is HMYR-形-002", errorsOf("fn f() {\n  a b\n}\n").includes("HMYR-形-002"));
 }
 
 console.log("\nexpressions and precedence");
@@ -102,7 +102,7 @@ console.log("\nif and match");
   ok("match arms", e.kind === "Match" && e.arms.length === 2);
 }
 {
-  ok("an arm without => is HMYR-E0101", errorsOf("fn f() {\n  match x {\n    1 \"one\"\n  }\n}\n").includes("HMYR-E0101"));
+  ok("an arm without => is HMYR-形-001", errorsOf("fn f() {\n  match x {\n    1 \"one\"\n  }\n}\n").includes("HMYR-形-001"));
 }
 
 console.log("\nrecovery: one mistake does not become a cascade");

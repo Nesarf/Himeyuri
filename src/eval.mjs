@@ -1399,7 +1399,7 @@ export function run(source, options = {}) {
   try {
     ast = 展开模块(未展开);
   } catch (e) {
-    diagnostics.error("HMYR-E0103", String(e.message).replace(/^HMYR-E0103\s*/, ""), 0, 0);
+    diagnostics.error("HMYR-形-006", String(e.message).replace(/^HMYR-形-006\s*/, ""), 0, 0);
     return { output: [], diagnostics, value: null };
   }
   const rt = new Runtime(options);

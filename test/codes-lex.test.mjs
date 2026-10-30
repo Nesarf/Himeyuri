@@ -32,10 +32,10 @@ ok("E0006 不能开始 token 的字符", 词法("a § b").codes.includes("HMYR-�
 
 console.log("语法：E0101、E0102、E0104");
 // 要包在函数体里：裸的 let 在声明层遇到，会命中 E0103（那是「不能在这里开始声明」）。
-ok("E0101 要 token 却读到别的", 语法("fn main() {\n  let = 1\n}\n").codes.includes("HMYR-E0101"), JSON.stringify(语法("fn main() {\n  let = 1\n}\n").codes));
-ok("E0101 另一种：缺等号", 语法("fn main() {\n  let x 1\n}\n").codes.includes("HMYR-E0101"), JSON.stringify(语法("fn main() {\n  let x 1\n}\n").codes));
-ok("E0102 语句没在行尾结束", 语法("fn main() {\n  let x = 1 let y = 2\n}\n").codes.includes("HMYR-E0102"), JSON.stringify(语法("fn main() {\n  let x = 1 let y = 2\n}\n").codes));
-ok("E0104 要表达式却没有", 语法("fn main() {\n  let x =\n}\n").codes.includes("HMYR-E0104"), JSON.stringify(语法("fn main() {\n  let x =\n}\n").codes));
+ok("E0101 要 token 却读到别的", 语法("fn main() {\n  let = 1\n}\n").codes.includes("HMYR-形-001"), JSON.stringify(语法("fn main() {\n  let = 1\n}\n").codes));
+ok("E0101 另一种：缺等号", 语法("fn main() {\n  let x 1\n}\n").codes.includes("HMYR-形-001"), JSON.stringify(语法("fn main() {\n  let x 1\n}\n").codes));
+ok("E0102 语句没在行尾结束", 语法("fn main() {\n  let x = 1 let y = 2\n}\n").codes.includes("HMYR-形-002"), JSON.stringify(语法("fn main() {\n  let x = 1 let y = 2\n}\n").codes));
+ok("E0104 要表达式却没有", 语法("fn main() {\n  let x =\n}\n").codes.includes("HMYR-形-004"), JSON.stringify(语法("fn main() {\n  let x =\n}\n").codes));
 
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

@@ -34,7 +34,7 @@ export function parse(tokens, options = {}) {
   let steps = 0;
   const STEP_LIMIT = 200000;
   const noProgress = () => {
-    diagnostics.error("HMYR-E0105", "the parser stopped making progress at " + describe(peek()), peek().line, peek().column);
+    diagnostics.error("HMYR-形-005", "the parser stopped making progress at " + describe(peek()), peek().line, peek().column);
   };
 
   const peek = (n = 0) => tokens[Math.min(i + n, tokens.length - 1)];
@@ -49,13 +49,13 @@ export function parse(tokens, options = {}) {
 
   function expectPunct(value, what) {
     if (atPunct(value)) return advance();
-    error("HMYR-E0101", "expected '" + value + "'" + (what ? " " + what : "") + ", found " + describe(peek()));
+    error("HMYR-形-001", "expected '" + value + "'" + (what ? " " + what : "") + ", found " + describe(peek()));
     return null;
   }
 
   function expect(type, what) {
     if (at(type)) return advance();
-    error("HMYR-E0101", "expected " + (what || type) + ", found " + describe(peek()));
+    error("HMYR-形-001", "expected " + (what || type) + ", found " + describe(peek()));
     return null;
   }
 
@@ -66,7 +66,7 @@ export function parse(tokens, options = {}) {
   const endStatement = () => {
     if (at("newline")) { skipNewlines(); return; }
     if (atPunct("}") || at("eof")) return;
-    error("HMYR-E0102", "expected the end of the statement, found " + describe(peek()));
+    error("HMYR-形-002", "expected the end of the statement, found " + describe(peek()));
   };
 
   // Resynchronise: report once, then continue from something that can start a statement.
@@ -101,7 +101,7 @@ export function parse(tokens, options = {}) {
       const before = i;
       const decl = parseDecl();
       if (decl) decls.push(decl);
-      if (i === before) { error("HMYR-E0103", "cannot start a declaration with " + describe(peek())); recover(); }
+      if (i === before) { error("HMYR-形-003", "cannot start a declaration with " + describe(peek())); recover(); }
       skipNewlines();
     }
     return { kind: "Module", imports, decls, rev };
@@ -330,7 +330,7 @@ export function parse(tokens, options = {}) {
       const before = i;
       const stmt = parseStatement();
       if (stmt) statements.push(stmt);
-      if (i === before) { error("HMYR-E0103", "cannot start a statement with " + describe(peek())); recover(); }
+      if (i === before) { error("HMYR-形-003", "cannot start a statement with " + describe(peek())); recover(); }
       skipNewlines();
     }
     expectPunct("}", "to close the block");
@@ -533,7 +533,7 @@ export function parse(tokens, options = {}) {
 
     if (t.type === "ident") { advance(); return { kind: "Ident", name: t.value, line: t.line, column: t.column }; }
 
-    error("HMYR-E0104", "expected an expression, found " + describe(t));
+    error("HMYR-形-004", "expected an expression, found " + describe(t));
     advance();
     // Resynchronise at the next statement or argument boundary. Without this, one missing expression
     // produces a second complaint from endStatement and then a third, which is exactly the cascade the

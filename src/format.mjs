@@ -32,7 +32,7 @@ export function format(source, options = {}) {
 
   const comments = (source.match(/\/\//g) || []).length + (source.match(/\/\*/g) || []).length;
   if (comments && !options.quiet) {
-    diagnostics.warn("HMYR-W0100", comments + " comment(s) were dropped: this printer has no place to attach them yet");
+    diagnostics.warn("HMYR-形-007", comments + " comment(s) were dropped: this printer has no place to attach them yet");
   }
   if (diagnostics.errors.length) return { text: null, diagnostics };
 
