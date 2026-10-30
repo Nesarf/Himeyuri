@@ -1218,6 +1218,30 @@ selfloa 的 27/27）。
     下一问：R0130 说的是「某个值不是数」，而两边的树已经一样 —— 所以要打的是求值那
     一刻的变量绑定（加 的 a 与 b 各绑到了什么），而不是再看树的形状。
 
+第二段：宏模板里的字面量没有 value（2026-11-02，第 27 轮）
+
+    探针把 加 与 main 分开跑：加(1, 2) 给 3，而 main() 报 R0130。于是把 main 展开后
+    的 body 全文打出来，差别只有一处：
+
+      左边 Call 加(1,2) 的两个实参   {kind:"Literal", type:"int", value:1, …}
+      右边那个 10                   {kind:"Literal", type:"int", text:"10", raw:"10"}
+                                    ← 没有 value
+
+    宏模板走的是 self/chain.hmoca 的 atom，那里产出的字面量只有 text 与 raw；
+    而普通函数里的字面量走 run.hmoca 的 翻表达式，那一份是有 value 的。宿主求值器读
+    Literal 时读 value，缺了它就是 undefined —— 那正是 R0130 的真身。
+
+    补法试了两版都不成：
+
+      用 eval.hmoca 的 数字值       它带着 按基读 / 数到 / 小数到 一整串，链进来就把
+                                   compile.hmoca 与 pack.hmoca 拖进了 eval，
+                                   namespace 的入口计数当场红
+      在 chain.hmoca 里写个 小整数   造整棵 直接抛 HMYR-SELF，整套装载塌了
+
+    所以这一处回退了（git checkout self/chain.hmoca）。现在的状态是 macro 红那一条、
+    其余绿。而「宏模板的字面量缺 value」这个结论留着：缺的不是一个数字转换，而是
+    「chain 那一层产出的节点形状要与 翻表达式 对齐」这件事 —— 下一轮从它接着走。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 E0301；
 另外引的文件不在就报 E0302（宿主也是这个码）。顺序取后序，于是 order 逐项相同。
