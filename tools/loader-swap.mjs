@@ -15,12 +15,34 @@
 // 为什么放 swap/ 而不是临时目录：套件里的 ROOT 是「脚本所在目录的上一级」，
 // swap/ 与 test/、tools/ 同级，于是所有相对路径（../src/xxx、../self/xxx）都不必改。
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SWAP = path.join(ROOT, "swap");
+
+// 整机水位（与 tools/starting-count.mjs 同一套口径）：可用内存低于这个数就先等一等，
+// 等不到就停手并把这件事说出来。
+//
+// 为什么这一件也需要它（2026-11-02）：一轮全量跑到 inflate 那套时 exit null —— 那套
+// 单独跑 21 项全过、53 秒，而串行跑到它的时候进程被杀掉了。这一件原来没有任何水位，
+// 也没有把「被杀掉」与「这套真的红」分开报，于是两份读数差了一套（105 与 106），
+// 而差的那一套其实是环境。
+const 水位MB = Number((process.argv.find((a) => a.startsWith("--mem=")) || "").slice(6)) || 1500;
+const 水位最多等秒 = Number((process.argv.find((a) => a.startsWith("--memWait=")) || "").slice(10)) || 120;
+
+function 等水位() {
+  const 限 = Date.now() + 水位最多等秒 * 1000;
+  while (os.freemem() / (1024 * 1024) < 水位MB) {
+    if (Date.now() > 限) return false;
+    console.log("  （可用内存低于 " + 水位MB + " MB，先等一等）");
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 3000);
+  }
+  return true;
+}
+
 const 清单 = fs.readFileSync(path.join(ROOT, "tools/suite-list.txt"), "utf8")
   .split("\n").map((l) => l.trim()).filter(Boolean)
   .map((l) => l.split("\t")).filter((p) => p.length >= 2);
@@ -55,11 +77,21 @@ const 要跑 = 只要 ? 候选.filter((c) => 只要.has(c.名)) : 候选;
 console.log("候选套件（import 了宿主 loader 的）：" + 要跑.length);
 const 能换 = [];
 const 换不动 = [];
+const 被杀 = [];
 const t0 = Date.now();
 for (const c of 要跑) {
+  if (!等水位()) {
+    console.log("  可用内存一直低于 " + 水位MB + " MB，停在这里 —— 后面的套件这一次没量。");
+    break;
+  }
   const r = spawnSync(process.execPath, [c.副本], { cwd: ROOT, encoding: "utf8", timeout: 300000 });
   if (r.status === 0) 能换.push(c.名);
-  else {
+  else if (r.status === null) {
+    // status 是 null 说明进程被信号杀掉（超时、内存、或者别的外力），而不是套件自己
+    // 报红 —— 这两件事必须分开报，否则读数会把环境算成代码（2026-11-02：inflate
+    // 在串行里被杀掉，而它单独跑 21 项全过）。
+    被杀.push({ 名: c.名, 信号: r.signal || "未知" });
+  } else {
     const 行 = (String(r.stdout || "") + String(r.stderr || "")).split("\n")
       .filter((l) => l.includes("不通过") || l.includes("Error") || l.includes("error")).slice(0, 1)[0] || ("exit " + r.status);
     换不动.push({ 名: c.名, 第一处: 行.trim().slice(0, 150) });
@@ -69,6 +101,10 @@ console.log("");
 console.log("能换  " + 能换.length + " / " + 候选.length);
 console.log("换不动 " + 换不动.length);
 for (const f of 换不动) console.log("  " + f.名.padEnd(22) + " " + f.第一处);
+if (被杀.length) {
+  console.log("被杀  " + 被杀.length + "（不是代码红，是环境：超时或内存）");
+  for (const f of 被杀) console.log("  " + f.名.padEnd(22) + " 信号 " + f.信号);
+}
 console.log("");
 console.log("用时 " + Math.round((Date.now() - t0) / 1000) + " 秒");
 // --keep：跑完不删 swap/ —— 查「副本是不是旧的」时要用（2026-11-02）。
