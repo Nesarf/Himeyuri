@@ -18,6 +18,9 @@ export const CODES = [
   { code: "HMYR-內-018", stage: "host", checkedBy: "test/index.test.mjs", meaning: "index_get asked for a key the index does not hold: refused rather than handing back nothing" },
   { code: "HMYR-內-019", stage: "host", checkedBy: "test/index.test.mjs", meaning: "an index operation given something that is not an index: refused rather than guessing" },
   { code: "HMYR-內-020", stage: "host", checkedBy: "test/threads.test.mjs", meaning: "a thread handle that does not exist" },
+  // C 机器（vm/hmyr.c）里那条线程柄用行-020，而不是內-020 —— 两个层各有各的编号，
+  // 而扩了 conformance 的视野之后才看出后者从没登记。2026-11-02。
+  { code: "HMYR-行-020", stage: "host", internal: true, meaning: "the C machine has no thread handle: this machine has no thread capability" },
   { code: "HMYR-內-021", stage: "host", checkedBy: "test/threads.test.mjs", meaning: "a thread that did not finish within the given time" },
   { code: "HMYR-內-022", stage: "host", checkedBy: "test/profile.test.mjs", meaning: "the thread pool is full: steady gives one slot, elastic gives the compile-time number" },
   { code: "HMYR-內-014", stage: "host", checkedBy: "test/record-new.test.mjs", meaning: "record_new given something that is not a (name, value) tuple, or a name a record cannot hold: records are not hashmaps" },

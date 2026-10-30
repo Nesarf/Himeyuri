@@ -210,7 +210,7 @@ const walk = (dir) => {
     if (entry.name === "node_modules" || entry.name === ".git") continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) walk(full);
-    else if (entry.name.endsWith(".mjs")) sources.push(full);
+    else if (entry.name.endsWith(".mjs") || entry.name.endsWith(".c") || entry.name.endsWith(".hmoca")) sources.push(full);
   }
 };
 // 扫 src 与 tools：两边都会 emit 编号。
@@ -220,6 +220,8 @@ const walk = (dir) => {
 // 而一个「登记了却没人 emit」的误报，正是这一条规则该避免的那种噪声。
 walk(path.join(ROOT, "src"));
 walk(path.join(ROOT, "tools"));
+walk(path.join(ROOT, "vm"));
+walk(path.join(ROOT, "self"));
 const emitted = new Set();
 for (const file of sources) {
   const text = fs.readFileSync(file, "utf8");
@@ -233,9 +235,13 @@ const registered = new Set(CODES.map((c) => c.code));
 const unregistered = [...emitted].filter((c) => !registered.has(c));
 const planned = new Set(CODES.filter((c) => c.planned).map((c) => c.code));
 const dead = [...registered].filter((c) => !emitted.has(c) && !planned.has(c));
+// 码可以长得像而实际上不是一个东西 —— 终端把两个不同的汉字显示成同一个乱码，
+// 肉眼看就分不出。所以红了的时候把码位一起打出来：一个码是哪几个字，码位说了算。
+const 码位 = (s) => [...s].map((ch) => "U+" + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")).join(" ");
+const 带码位 = (list) => list.map((c) => c + " [" + 码位(c) + "]").join(", ");
 console.log("  " + registered.size + " registered, " + emitted.size + " emitted by the sources");
-console.log("  " + (unregistered.length ? "unregistered: " + unregistered.join(", ") : "every emitted code is registered"));
-console.log("  " + (dead.length ? "registered but never emitted: " + dead.join(", ") : "every registered code is emitted, apart from " + planned.size + " reserved for work not done yet"));
+console.log("  " + (unregistered.length ? "unregistered: " + 带码位(unregistered) : "every emitted code is registered"));
+console.log("  " + (dead.length ? "registered but never emitted: " + 带码位(dead) : "every registered code is emitted, apart from " + planned.size + " reserved for work not done yet"));
 const duplicated = CODES.map((c) => c.code).filter((c, i, all) => all.indexOf(c) !== i);
 console.log("  " + (duplicated.length ? "registered twice: " + duplicated.join(", ") : "no code is registered twice"));
 
