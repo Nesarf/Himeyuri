@@ -170,6 +170,12 @@ export function loadUnit(entry, options = {}) {
     let 键 = String(原).startsWith("./") ? String(原).slice(2) : String(原);
     键 = 键.split("/").join(path.sep);
     modules.set(键, m);
+    // 自举层交回的 pub 是 1 / 0（它那一侧没有 JS 的 true / false），而宿主的可见性检查
+    // 是严格比较 true（src/eval.mjs 第 129 行）—— 不折的话，一个写了 pub 的跨模块调用
+    // 照样被拒成 HMYR-R0250（2026-11-02 实测）。折一次，量与树同大，不随程序走。
+    for (const decl of m.decls || []) {
+      if (typeof decl.pub === "number") decl.pub = decl.pub !== 0;
+    }
     // 区与实时那两条编译期检查：宿主在 visit 里做，桥这条路上原来一样也没有 ——
     // 于是 zonestatic / realtime 那两套的判据看到的是 ok:true（2026-11-02）。
     逐模块检查(m, path.basename(键), 诊断, options);
@@ -262,7 +268,15 @@ export function loadUnit(entry, options = {}) {
         if (!p) continue;
         const 目标 = resolveImport(能力, 键, p, 诊断);
         if (!目标) continue;
-        if (imp.alias) 别名表.set(imp.alias, 目标);
+        if (imp.alias) {
+          // 别名的值必须与模块表的键同形（order 里是相对形式），否则 模块成员 拿着
+          // 一个绝对路径去模块声明表里查，查不到 —— 症状是「别名点成员调得动」那条
+          // 报 HMYR-R0104「没有这个名字」（2026-11-02 实测）。
+          let 别名键 = String(目标);
+          const 头 = ROOT + path.sep;
+          if (别名键.startsWith(头)) 别名键 = path.relative(ROOT, 别名键);
+          别名表.set(imp.alias, 别名键.split("/").join(path.sep));
+        }
       }
     }
   }
@@ -300,7 +314,9 @@ export function loadUnit(entry, options = {}) {
 
 export function runUnit(unit, options = {}) {
   const rt = new Runtime(options);
-  for (const key of unit.order) rt.registerModule(unit.modules.get(key));
+  // 第二个参数是「这个声明属于哪个文件」—— 归属表靠它填，而「招牌来自哪个文件」
+  // 与「跨模块可见性」两条判据问的都是它。不传的话归属者是 null（2026-11-02 实测）。
+  for (const key of unit.order) rt.registerModule(unit.modules.get(key), key);
   // 别名要登记进运行时，否则 命名空间::名字 这种写法全报「没有这个名字」——
   // 宿主 loader 的 runUnit 也做这一件（src/loader.mjs 第 435 行）。
   for (const [名, 文件] of unit.别名表 || []) rt.登记别名(名, 文件);
