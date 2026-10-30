@@ -1,7 +1,7 @@
 // 种子与内置表同步：种子是提交的产物，它不会自己跟上源码。
 //
 // 这一套的由来：跑一段用 split 的程序，走 hmyr prog.hmoca 那条路（种子编译），
-// 得到 HMYR-R0104 there is no such function。而 split 是早就搬完的一格。
+// 得到 HMYR-行-005 there is no such function。而 split 是早就搬完的一格。
 // 于是量了一下种子到底认得多少 —— 七十二个内置里只认得三十一个。
 //
 // 为什么以前没人发现：self-contained 那一套验的是「可执行文件自带编译器」，

@@ -228,7 +228,7 @@ fn 翻表达式(n: Int) {
   }
   if n.kind == "Ident" {
     // true 与 false 在这一侧是标识符（词法把关键字也归在 ident 里），在宿主那边是字面量。
-    // 不转的话，宿主会去找一个叫 false 的名字 —— 报 HMYR-R0104，而那句话听起来像拼写错误。
+    // 不转的话，宿主会去找一个叫 false 的名字 —— 报 HMYR-行-005，而那句话听起来像拼写错误。
     if n.text == "true" { return {kind: "Literal", type: "bool", value: true, raw: false, text: n.text, line: 行(n), column: 列(n)} }
     if n.text == "false" { return {kind: "Literal", type: "bool", value: false, raw: false, text: n.text, line: 行(n), column: 列(n)} }
     // nil 在宿主那边是一个字面量（type "nil"、值 null），不是名字。

@@ -57,7 +57,7 @@ const C = [...new Set([...读("vm/hmyr.c").matchAll(/name_is\(name_idx, "([a-zA-
 // 第七处（2026-10-25 补）：自举编译器自己的「是内置」表，在 self/compile.hmyr 里。
 //
 // 为什么它必须在这一份账上：种子（bootstrap/pack.hmtn）就是它的字节码，所以这张表
-// 落后等于种子落后，而种子落后只表现为「HMYR-R0104 there is no such function」——
+// 落后等于种子落后，而种子落后只表现为「HMYR-行-005 there is no such function」——
 // 那个症状看起来像调用写错了，不像账没对齐。这一天量到的正是这件事：这一份报
 // 「六处齐了」，而种子里缺四十一个内置。
 //

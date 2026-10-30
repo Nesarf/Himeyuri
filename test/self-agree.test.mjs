@@ -90,7 +90,7 @@ console.log("二、已知的语义差异：改参数");
   ]);
   const 甲 = 宿主的(源);
   const 乙 = 那边的(源);
-  ok("宿主拒绝给参数赋值（R0150）", 甲.err === "HMYR-R0150", JSON.stringify(甲).slice(0, 60));
+  ok("宿主拒绝给参数赋值（R0150）", 甲.err === "HMYR-行-017", JSON.stringify(甲).slice(0, 60));
   ok("而自举接受了它（差异仍在）", 乙.value === 1, JSON.stringify(乙).slice(0, 60));
   ok("两边因此不同（这一条是记录，不是通过）", 甲.err !== undefined && 乙.value !== undefined);
 }

@@ -125,7 +125,7 @@ function 取顺序(机器, 码, 目录, 相对, 绝对) {
   const r = spawnSync(机器, [码, 目录, 相对], {
     encoding: "utf8",
     // 步限提到启动器主路径那一档：默认的五百万步对 self/ 下几百行的文件不够，
-    // 症状是 HMYR-R0102 the program ran for too long（2026-11-01 实测）。
+    // 症状是 HMYR-行-003 the program ran for too long（2026-11-01 实测）。
     env: 子环境(),
     // 同上：一次运行没有上限，就是一颗能挂住整个套件的钉子。
     timeout: 120000,
@@ -298,7 +298,7 @@ export function loadUnitSelf(entry, options = {}) {
   // 第二趟：别名、共享名字。宿主在 visit 与 return 之间做这两件
   // （src/loader.mjs 第 305 行与第 366 行），而适配层原来一件都没做。
   //
-  // 症状（2026-11-01 实测）：namespace 那五条判据全部报 HMYR-R0104「没有这个名字」——
+  // 症状（2026-11-01 实测）：namespace 那五条判据全部报 HMYR-行-005「没有这个名字」——
   // 因为 命名空间::名字 这种写法要靠别名表才认得出，而交回的是一个空 Map；
   // 而 self-chain2 要的 HMYR-載-004（两个模块声明同一个名字）从来没出现过。
   const 别名表 = new Map();

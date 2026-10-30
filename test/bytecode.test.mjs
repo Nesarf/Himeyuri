@@ -148,7 +148,7 @@ console.log("四、错误编号也照旧");
       return 错;
     };
     const 小 = 跑(false), 大 = 跑(true);
-    ok("两边都报 R0120", 小.includes("HMYR-R0120") && 大.includes("HMYR-R0120"), "最小 " + 小 + " · 字节码 " + 大);
+    ok("两边都报 R0120", 小.includes("HMYR-行-012") && 大.includes("HMYR-行-012"), "最小 " + 小 + " · 字节码 " + 大);
   } finally {
     fs.rmSync(临, { recursive: true, force: true });
   }

@@ -99,7 +99,7 @@ const 内置 = {
   // 为此少写了半截演示，design/FFI.txt 第六节留着那条缺口。
   校验和: (rt, a) => {
     const 元组 = a[0];
-    if (!Array.isArray(元组)) rt.坏("HMYR-R0130", "校验和 wants a tuple of bytes");
+    if (!Array.isArray(元组)) rt.坏("HMYR-行-013", "校验和 wants a tuple of bytes");
     const 表 = 校验表();
     let c = -1;
     const 吃一个 = (b) => { c = (c >>> 8) ^ 表[(c ^ (rt.成数(b) & 0xff)) & 0xff]; };
@@ -128,16 +128,16 @@ const 内置 = {
   // 可变数组：标记与原版解释器一致 —— 一个打了 symbol 的宿主数组。
   数组: (rt, a) => {
     const t = a[0];
-    if (!Array.isArray(t)) rt.坏("HMYR-R0150", "数组() 要一个元组");
+    if (!Array.isArray(t)) rt.坏("HMYR-行-017", "数组() 要一个元组");
     const 出 = [...t];
     出[数组标] = true;
     return 出;
   },
   设: (rt, a) => {
     const 列 = a[0];
-    if (!Array.isArray(列) || 列[数组标] !== true) rt.坏("HMYR-R0151", "设() 的第一个参数必须是 数组() 造出来的可变数组");
+    if (!Array.isArray(列) || 列[数组标] !== true) rt.坏("HMYR-行-018", "设() 的第一个参数必须是 数组() 造出来的可变数组");
     const i = Math.floor(rt.成数(a[1]));
-    if (!Number.isFinite(i) || i < 0 || i >= 列.length) rt.坏("HMYR-R0152", "下标越出数组：" + i);
+    if (!Number.isFinite(i) || i < 0 || i >= 列.length) rt.坏("HMYR-行-019", "下标越出数组：" + i);
     列[i] = a[2];
     return 列;
   },
@@ -145,7 +145,7 @@ const 内置 = {
     const v = a[0];
     if (码元.是码元序列(v)) return 码元.长(v);
     if (typeof v === "string" || Array.isArray(v)) return v.length;
-    rt.坏("HMYR-R0140", "len() wants a string or a tuple");
+    rt.坏("HMYR-行-015", "len() wants a string or a tuple");
   },
   str: (rt, a) => rt.成串(a[0]),
   slice: (rt, a) => {
@@ -313,17 +313,17 @@ const 内置 = {
   },
   thr_count: (rt) => Array.from(THREADS.values()).filter((h) => rt.cap.thread.load(h.flag) === 0).length,
   // arena：三区模型的桩，字段是函数值；这一份也没有一等函数值。
-  arena: (rt) => rt.坏("HMYR-R0104", "arena is a stub for the zone model: its fields are functions, and this machine has no first-class functions"),
+  arena: (rt) => rt.坏("HMYR-行-005", "arena is a stub for the zone model: its fields are functions, and this machine has no first-class functions"),
   // owned：与 arena 一样是桩。自举层自己实现区与所有权（self/eval.hmoca），
   // 而这一份跑的是自举层，它不用这两个 —— 七处内置表的账要对得上，所以这里留一格。
-  owned: (rt) => rt.坏("HMYR-R0104", "owned is a stub on this machine for the same reason arena is"),
+  owned: (rt) => rt.坏("HMYR-行-005", "owned is a stub on this machine for the same reason arena is"),
   // FFI 的最小形状：这一台跑的是自举层，它自己实现（self/eval.hmoca），
   // 而七处内置表的账要对得上，所以这六格在这里是桩。
-  bytes_view: (rt) => rt.坏("HMYR-R0104", "bytes_view is a stub on this machine for the same reason arena is"),
-  view_len: (rt) => rt.坏("HMYR-R0104", "view_len is a stub on this machine for the same reason arena is"),
-  view_get: (rt) => rt.坏("HMYR-R0104", "view_get is a stub on this machine for the same reason arena is"),
-  view_set: (rt) => rt.坏("HMYR-R0104", "view_set is a stub on this machine for the same reason arena is"),
-  fmt_number: (rt) => rt.坏("HMYR-R0104", "fmt_number is a stub on this machine for the same reason arena is"),
+  bytes_view: (rt) => rt.坏("HMYR-行-005", "bytes_view is a stub on this machine for the same reason arena is"),
+  view_len: (rt) => rt.坏("HMYR-行-005", "view_len is a stub on this machine for the same reason arena is"),
+  view_get: (rt) => rt.坏("HMYR-行-005", "view_get is a stub on this machine for the same reason arena is"),
+  view_set: (rt) => rt.坏("HMYR-行-005", "view_set is a stub on this machine for the same reason arena is"),
+  fmt_number: (rt) => rt.坏("HMYR-行-005", "fmt_number is a stub on this machine for the same reason arena is"),
   // 跑一个程序：一份记录，五个字段。跑不起来也照实报告，不抛。
   run_program: (rt, a) => {
     const 命令 = rt.成串(a[0]);
@@ -417,11 +417,11 @@ const 内置 = {
     return Math.trunc(rt.成数(a[0]));
   },
   min: (rt, a) => {
-    if (a.length === 0) rt.坏("HMYR-R0101", "min wants at least one argument");
+    if (a.length === 0) rt.坏("HMYR-行-002", "min wants at least one argument");
     return Math.min(...a.map((x) => rt.成数(x)));
   },
   max: (rt, a) => {
-    if (a.length === 0) rt.坏("HMYR-R0101", "max wants at least one argument");
+    if (a.length === 0) rt.坏("HMYR-行-002", "max wants at least one argument");
     return Math.max(...a.map((x) => rt.成数(x)));
   },
   // 归一化与 Unicode 属性都要一张字符表，而那张表是能力，不是这一层能自制的。
@@ -521,7 +521,7 @@ const 内置 = {
     // 于是「读出来再写回去」这件事只认前两种时会失败。2026-10-26 撞上的：
     // 容器那一份在 bin/hmyr.mjs 下报「wants a tuple of bytes」，同一份代码在字节码机上是好的。
     const 是视图 = typeof ArrayBuffer !== "undefined" && ArrayBuffer.isView(元组);
-    if (!元组 || !(元组.items || Array.isArray(元组) || 是视图)) return rt.坏("HMYR-R0130", "write_bytes wants a tuple of bytes");
+    if (!元组 || !(元组.items || Array.isArray(元组) || 是视图)) return rt.坏("HMYR-行-013", "write_bytes wants a tuple of bytes");
     // 元素可以是字节，也可以是一块字节（语言那边按块累积，省掉平方复制）。
     const 字节 = [];
     for (const x of (元组.items || 元组)) {
@@ -690,14 +690,14 @@ export class 最小运行时 {
   // 尾调用用循环吃掉，于是尾递归的深度不吃宿主栈。
   // 那一行「换函数也计一步」是必须的：纯尾递归每层不做一次求值，不记步就是死循环。
   调用函数(decl, args, fromEffects) {
-    if (++this.depth > this.maxDepth) this.坏("HMYR-R0108", "call depth exceeded (" + this.maxDepth + ")");
+    if (++this.depth > this.maxDepth) this.坏("HMYR-行-009", "call depth exceeded (" + this.maxDepth + ")");
     try {
       let 当前 = decl, 实参 = args, 效果 = fromEffects;
       for (;;) {
         try { return this.调用函数内(当前, 实参, 效果); }
         catch (e) {
           if (e instanceof 尾调用) {
-            if (++this.steps > this.stepLimit) this.坏("HMYR-R0102", "the program ran for too long without finishing");
+            if (++this.steps > this.stepLimit) this.坏("HMYR-行-003", "the program ran for too long without finishing");
             当前 = e.decl; 实参 = e.args; 效果 = e.fromEffects;
             continue;
           }
@@ -723,11 +723,11 @@ export class 最小运行时 {
       let v;
       if (i < args.length) v = args[i];
       else if (p.fallback) v = this.求值(p.fallback, scope, null);
-      else this.坏("HMYR-R0101", "function '" + decl.name + "' expects " + decl.params.length + " argument(s), got " + args.length);
+      else this.坏("HMYR-行-002", "function '" + decl.name + "' expects " + decl.params.length + " argument(s), got " + args.length);
       scope.set(p.name, v, false);
     }
     if (args.length > decl.params.length) {
-      this.坏("HMYR-R0101", "function '" + decl.name + "' expects " + decl.params.length + " argument(s), got " + args.length);
+      this.坏("HMYR-行-002", "function '" + decl.name + "' expects " + decl.params.length + " argument(s), got " + args.length);
     }
     const inner = this.允许(decl.effects);
     try {
@@ -755,7 +755,7 @@ export class 最小运行时 {
       case "Assign": {
         const value = this.求值(stmt.value, scope, effects);
         if (!scope.assign(stmt.name, value)) {
-          this.坏("HMYR-R0150", "cannot assign to '" + stmt.name + "': it is not a variable declared with var, or it is not in scope");
+          this.坏("HMYR-行-017", "cannot assign to '" + stmt.name + "': it is not a variable declared with var, or it is not in scope");
         }
         return value;
       }
@@ -776,8 +776,8 @@ export class 最小运行时 {
   }
 
   求值(node, scope, effects) {
-    if (++this.steps > this.stepLimit) this.坏("HMYR-R0102", "the program ran for too long without finishing");
-    if (!node || node.kind === "Error") this.坏("HMYR-R0103", "a syntax error reached the evaluator");
+    if (++this.steps > this.stepLimit) this.坏("HMYR-行-003", "the program ran for too long without finishing");
+    if (!node || node.kind === "Error") this.坏("HMYR-行-004", "a syntax error reached the evaluator");
     switch (node.kind) {
       case "Literal":
         // 字符串也可以住在码元序列里（选项 字符串用码元序列）。打开之后，
@@ -786,7 +786,7 @@ export class 最小运行时 {
       case "Ident": {
         if (scope.has(node.name)) return scope.get(node.name);
         if (this.globals.has(node.name)) return this.globals.get(node.name);
-        this.坏("HMYR-R0104", "there is no name '" + node.name + "' in scope");
+        this.坏("HMYR-行-005", "there is no name '" + node.name + "' in scope");
         break;
       }
       case "Unary": {
@@ -818,7 +818,7 @@ export class 最小运行时 {
       case "Field": {
         const target = this.求值(node.target, scope, effects);
         if (target === null || typeof target !== "object" || !(node.name in target)) {
-          this.坏("HMYR-R0106", "no field '" + node.name + "' on that value");
+          this.坏("HMYR-行-007", "no field '" + node.name + "' on that value");
         }
         return typeof target[node.name] === "function" ? target[node.name].bind(target) : target[node.name];
       }
@@ -837,13 +837,13 @@ export class 最小运行时 {
               console.error("越界现场 目标=" + JSON.stringify(target).slice(0, 120)
                 + " 下标=" + index + " 节点=" + JSON.stringify(node).slice(0, 260));
             }
-            this.坏("HMYR-R0151", "index " + index + " is outside a value of length " + 长);
+            this.坏("HMYR-行-018", "index " + index + " is outside a value of length " + 长);
           }
           // 下标取一个码元，而取出来的那一个码元也是字符串值 —— 所以它是一个只有一位的序列。
           return 码元.码点(码元.元(target, index));
         }
-        if (typeof target !== "string" && !Array.isArray(target)) this.坏("HMYR-R0152", "cannot index " + 述(target));
-        if (index < 0 || index >= target.length) this.坏("HMYR-R0151", "index " + index + " is outside a value of length " + target.length);
+        if (typeof target !== "string" && !Array.isArray(target)) this.坏("HMYR-行-019", "cannot index " + 述(target));
+        if (index < 0 || index >= target.length) this.坏("HMYR-行-018", "index " + index + " is outside a value of length " + target.length);
         return target[index];
       }
       case "Call": return this.调用(node, scope, effects);
@@ -874,7 +874,7 @@ export class 最小运行时 {
     }
     const callee = this.求值(node.callee, scope, effects);
     if (typeof callee === "function") return callee(...args);
-    this.坏("HMYR-R0107", "that value is not callable");
+    this.坏("HMYR-行-008", "that value is not callable");
   }
 
   二元(node, scope, effects) {
@@ -903,10 +903,10 @@ export class 最小运行时 {
       case "-": return this.成数(a) - this.成数(b);
       case "*": return this.成数(a) * this.成数(b);
       case "/":
-        if (this.成数(b) === 0) this.坏("HMYR-R0120", "division by zero");
+        if (this.成数(b) === 0) this.坏("HMYR-行-012", "division by zero");
         return this.成数(a) / this.成数(b);
       case "%":
-        if (this.成数(b) === 0) this.坏("HMYR-R0120", "division by zero");
+        if (this.成数(b) === 0) this.坏("HMYR-行-012", "division by zero");
         return this.成数(a) % this.成数(b);
       case "==": return this.相等(a, b);
       case "!=": return !this.相等(a, b);
@@ -915,14 +915,14 @@ export class 最小运行时 {
       case "<=": return 有序(a, b) && this.比(a, b) <= 0;
       case ">": return this.比(a, b) > 0;
       case ">=": return 有序(a, b) && this.比(a, b) >= 0;
-      default: this.坏("HMYR-R0111", "no evaluation for operator " + node.op);
+      default: this.坏("HMYR-行-011", "no evaluation for operator " + node.op);
     }
   }
 
   成数(v) {
     if (typeof v === "number") return v;
     if (typeof v === "boolean") return v ? 1 : 0;
-    this.坏("HMYR-R0130", "expected a number, found " + 述(v));
+    this.坏("HMYR-行-013", "expected a number, found " + 述(v));
   }
   成串(v) {
     // 这是「一个值怎么写成一个字符串」的那一条规矩。而在码元序列那种底上，
@@ -946,7 +946,7 @@ export class 最小运行时 {
     if (码元.是码元序列(a) && 码元.是码元序列(b)) return 码元.比(a, b);
     if (typeof a === "number" && typeof b === "number") return a < b ? -1 : a > b ? 1 : 0;
     if (typeof a === "string" && typeof b === "string") return a < b ? -1 : a > b ? 1 : 0;
-    this.坏("HMYR-R0131", "cannot compare " + 述(a) + " with " + 述(b));
+    this.坏("HMYR-行-014", "cannot compare " + 述(a) + " with " + 述(b));
   }
 }
 

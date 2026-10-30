@@ -245,7 +245,7 @@ console.log("七、as 别名：`名.成员` 真的能用");
   const 单没 = loadUnit(没有);
   let 果没 = null;
   try { 果没 = runUnit(单没).run(单没.modules.get(没有)); } catch (e) { 果没 = e; }
-  ok("别名点不存在的给 R0106", !!果没 && String(果没.code) === "HMYR-R0106",
+  ok("别名点不存在的给 R0106", !!果没 && String(果没.code) === "HMYR-行-007",
     String(果没 && (果没.code || 果没)).slice(0, 100));
 }
 

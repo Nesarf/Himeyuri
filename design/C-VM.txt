@@ -45,7 +45,7 @@ C 版虚拟机：那台不是 JS 的机器
            abs、floor、int、min、max、
            record_new、field_get、field_has、field_names、file_exists、
            read_text、read_lines、write_text、write_bytes、f64_bytes、pack_value、argv
-    其它   报 HMYR-R0104 并把缺的那个名字说出来
+    其它   报 HMYR-行-005 并把缺的那个名字说出来
 
   字符表随机器一起搬过去了，四张：
 

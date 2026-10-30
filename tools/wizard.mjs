@@ -72,7 +72,7 @@ console.log("  四、接下来");
 console.log("     想跑一段看看：   node bin/hmyr.mjs examples/hello.hmoca");
 console.log("     想读这门语言：   design/TOUR.txt（给人读的，不是给做的人读的）");
 console.log("     想知道它装了什么：node tools/manifest.mjs");
-console.log("     遇到错误编号：   node tools/helper.mjs HMYR-R0110");
+console.log("     遇到错误编号：   node tools/helper.mjs HMYR-行-010");
 console.log("     想知道自己旧了： node tools/update.mjs");
 console.log("");
 if (要紧 === 0) console.log("  起得来。上面的可选件缺几件也不要紧。");

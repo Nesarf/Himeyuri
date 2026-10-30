@@ -1164,7 +1164,7 @@
     二十八节之后，run.hmoca 的 main 多了一条「编译并执行一段新程序」的判据。
     而它在默认路径上崩了：
 
-      Error: index 9 is outside a value of length 9   (HMYR-R0151)
+      Error: index 9 is outside a value of length 9   (HMYR-行-018)
 
     同一份 run.hmoca 在 C 机器上跑得好好的，六行输出全对。
 
@@ -1240,7 +1240,7 @@
 
     minimal-eval 的第八三一行是下标：
 
-      if (!码元.在界内(target, index)) this.坏("HMYR-R0151", ...)
+      if (!码元.在界内(target, index)) this.坏("HMYR-行-018", ...)
 
     所以它说的是「某个 HMYR 表达式访问了 x[1]，而 x 长一」。
     而 C 机器对同样的访问没有报 —— 也就是说那边容忍了。
@@ -1657,9 +1657,9 @@
       HMYR_STACK_LIMIT=25000 hmyr.exe run.hmoks
 
     它量的尺子与板子上那两行 depth=/stack= 是同一把：最深帧地址减最浅帧地址。
-    超了就报 HMYR-R0108，并把用了多少字节一起说出来 —— 只说「太深了」帮不了人算账：
+    超了就报 HMYR-行-009，并把用了多少字节一起说出来 —— 只说「太深了」帮不了人算账：
 
-      HMYR-R0108 the stack budget is 25000 bytes and this call is 28752 bytes into it
+      HMYR-行-009 the stack budget is 25000 bytes and this call is 28752 bytes into it
 
     六份自举层在桌面上的两次，正好是板子上那件事的两面：
 
@@ -1749,7 +1749,7 @@
     记录字面量的字段名靠「连续的一段池索引」：执行期按 in->a 加 i 取。
     去重一上，那一段不再连续，症状是
 
-      HMYR-R0106 no field with that name
+      HMYR-行-007 no field with that name
 
     所以正确形状是：装载期强制追加（pool_push），执行期去重（命中装载期那一段）。
 

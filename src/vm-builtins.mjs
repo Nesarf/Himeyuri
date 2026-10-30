@@ -72,17 +72,17 @@ export const 内置表 = {
   // 可变数组：与解释器同一个约定 —— 一个 tag 为 array 的值，设 原地改。
   数组: { 做: (vm, a) => {
     const t = a[0];
-    if (!t || t.tag !== "tuple") return vm.坏("HMYR-R0150", "数组() 要一个元组");
+    if (!t || t.tag !== "tuple") return vm.坏("HMYR-行-017", "数组() 要一个元组");
     return { tag: "array", items: [...t.items] };
   } },
   设: { 做: (vm, a) => {
     const 列 = a[0];
     if (!列 || 列.tag !== "array") {
-      return vm.坏("HMYR-R0151", "设() 的第一个参数必须是 数组() 造出来的可变数组");
+      return vm.坏("HMYR-行-018", "设() 的第一个参数必须是 数组() 造出来的可变数组");
     }
     const i = 数.下整(vm.成数(a[1]));
     if (数.比(i, 0) < 0 || 数.比(i, 列.items.length) >= 0) {
-      return vm.坏("HMYR-R0152", "下标越出数组：" + i + "（长度 " + 列.items.length + "）");
+      return vm.坏("HMYR-行-019", "下标越出数组：" + i + "（长度 " + 列.items.length + "）");
     }
     列.items[i] = a[2];
     return 列;
@@ -91,7 +91,7 @@ export const 内置表 = {
     const v = a[0];
     if (vm.文.是串(v)) return 数.造(vm.文.长(v));
     if (v && (v.tag === "tuple" || v.tag === "array")) return 数.造(v.items.length);
-    return vm.坏("HMYR-R0140", "len() wants a string or a tuple");
+    return vm.坏("HMYR-行-015", "len() wants a string or a tuple");
   } },
   // 交回的必须是「语言的字符串值」，不是宿主串 —— 在当前那个底上要用当前底的表示。
   // 少了 由宿主 这一步，str() 在码元序列底上会把一个宿主串塞进值域，下一次 len 就报 R0140。
@@ -380,11 +380,11 @@ export const 内置表 = {
   floor: { 做: (vm, a) => 数.下整(vm.成数(a[0])) },
   int: { 做: (vm, a) => 数.截断(vm.成数(a[0])) },
   min: { 做: (vm, a) => {
-    if (a.length === 0) return vm.坏("HMYR-R0101", "min wants at least one argument");
+    if (a.length === 0) return vm.坏("HMYR-行-002", "min wants at least one argument");
     return 数.最小(a.map((x) => vm.成数(x)));
   } },
   max: { 做: (vm, a) => {
-    if (a.length === 0) return vm.坏("HMYR-R0101", "max wants at least one argument");
+    if (a.length === 0) return vm.坏("HMYR-行-002", "max wants at least one argument");
     return 数.最大(a.map((x) => vm.成数(x)));
   } },
   // 归一化与 Unicode 属性要一张字符表，而那张表是数据 —— 它住在能力层的 unicode 组里。
@@ -411,11 +411,11 @@ export const 内置表 = {
     const 起 = vm.成数(a[1]);
     const 长 = vm.成数(a[2]);
     if (!源 || (源.tag !== "tuple" && 源.tag !== "array")) {
-      return vm.坏("HMYR-R0152", "bytes_view wants bytes (a tuple or an array)");
+      return vm.坏("HMYR-行-019", "bytes_view wants bytes (a tuple or an array)");
     }
     const 总 = 源.items.length;
     if (!Number.isInteger(起) || !Number.isInteger(长) || 起 < 0 || 长 < 0 || 起 + 长 > 总) {
-      return vm.坏("HMYR-R0151", "bytes_view range is outside the bytes (" + 总 + ")");
+      return vm.坏("HMYR-行-018", "bytes_view range is outside the bytes (" + 总 + ")");
     }
     const m = new Map();
     m.set("kind", "view");
@@ -427,36 +427,36 @@ export const 内置表 = {
   view_len: { 做: (vm, a) => {
     const w = a[0];
     if (!w || w.tag !== "index" || w.m.get("kind") !== "view") {
-      return vm.坏("HMYR-R0152", "view_len wants a window");
+      return vm.坏("HMYR-行-019", "view_len wants a window");
     }
     return 数.造(w.m.get("长"));
   } },
   view_get: { 做: (vm, a) => {
     const w = a[0];
     if (!w || w.tag !== "index" || w.m.get("kind") !== "view") {
-      return vm.坏("HMYR-R0152", "view_get wants a window");
+      return vm.坏("HMYR-行-019", "view_get wants a window");
     }
     const i = vm.成数(a[1]);
     const 长 = w.m.get("长");
     if (!Number.isInteger(i) || i < 0 || i >= 长) {
-      return vm.坏("HMYR-R0151", "view_get is outside the window (" + 长 + ")");
+      return vm.坏("HMYR-行-018", "view_get is outside the window (" + 长 + ")");
     }
     return w.m.get("源").items[w.m.get("起") + i];
   } },
   view_set: { 做: (vm, a) => {
     const w = a[0];
     if (!w || w.tag !== "index" || w.m.get("kind") !== "view") {
-      return vm.坏("HMYR-R0152", "view_set wants a window");
+      return vm.坏("HMYR-行-019", "view_set wants a window");
     }
     const i = vm.成数(a[1]);
     const 长 = w.m.get("长");
     if (!Number.isInteger(i) || i < 0 || i >= 长) {
-      return vm.坏("HMYR-R0152", "view_set is outside the window (" + 长 + ")");
+      return vm.坏("HMYR-行-019", "view_set is outside the window (" + 长 + ")");
     }
     // 只有数组（可变）能写 —— 与 设 同一条判据、同一套码。
     const 源 = w.m.get("源");
     if (!源 || 源.tag !== "array") {
-      return vm.坏("HMYR-R0151", "view_set: the window was opened on bytes that cannot be written");
+      return vm.坏("HMYR-行-018", "view_set: the window was opened on bytes that cannot be written");
     }
     源.items[w.m.get("起") + i] = a[2];
     return a[2];
@@ -554,7 +554,7 @@ export const 内置表 = {
   write_bytes: { 效果: "file", 做: (vm, a) => {
     const 路径 = vm.成串(a[0]);
     const 元组 = a[1];
-    if (!元组 || 元组.tag !== "tuple") return vm.坏("HMYR-R0130", "write_bytes wants a tuple of bytes");
+    if (!元组 || 元组.tag !== "tuple") return vm.坏("HMYR-行-013", "write_bytes wants a tuple of bytes");
     // 取整走 number 那一层，不在这里写 Math —— test/numbers.test.mjs 盯着这件事。
     // 元素可以是字节，也可以是一块字节（语言那边按块累积）。
     const 字节 = [];
@@ -657,7 +657,7 @@ export const 内置表 = {
   // CRC32：纯算术，不需要效果。参数收字节元组，元素可以是一字节，也可以是一块。
   校验和: { 做: (vm, a) => {
     const 元组 = a[0];
-    if (!元组 || 元组.tag !== "tuple") return vm.坏("HMYR-R0130", "校验和 wants a tuple of bytes");
+    if (!元组 || 元组.tag !== "tuple") return vm.坏("HMYR-行-013", "校验和 wants a tuple of bytes");
     const 表 = 取校验表();
     let c = -1;
     // 长度取 items.length：这一侧的值是普通 JS 数组，ilen 是 C 那台的字段名。
@@ -738,7 +738,7 @@ export function 调区方法(主, 名, 参, vm) {
       if (参.length !== 2) return { 错: "存 要两个参数" };
       const 位 = 参[0];
       if (typeof 位 !== "number" || 位 < 0 || 位 >= 容量) {
-        return { 码: "HMYR-R0151", 错: "slot " + 位 + " is outside this block (size " + 容量 + ")" };
+        return { 码: "HMYR-行-018", 错: "slot " + 位 + " is outside this block (size " + 容量 + ")" };
       }
       格.m.set(String(位), 参[1]);
       return { 值: 主 };
@@ -747,7 +747,7 @@ export function 调区方法(主, 名, 参, vm) {
       if (参.length !== 1) return { 错: "取 要一个参数" };
       const 位 = 参[0];
       if (typeof 位 !== "number" || 位 < 0 || 位 >= 容量) {
-        return { 码: "HMYR-R0151", 错: "slot " + 位 + " is outside this block (size " + 容量 + ")" };
+        return { 码: "HMYR-行-018", 错: "slot " + 位 + " is outside this block (size " + 容量 + ")" };
       }
       return { 值: 格.m.has(String(位)) ? 格.m.get(String(位)) : null };
     }

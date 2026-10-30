@@ -195,7 +195,7 @@ fn skip_trivia(s: String, i: Int, keep_lines: Bool) -> Int {
 // 合并成本是 n log 段数。
 //
 // 128 写成字面量而不是 const 名字：模块级的 const 在字节码那条路上不在作用域里，
-// 报的是 HMYR-R0104 没有这个名字（2026-11-02 量出来的，bytecode 那套一红九项）。
+// 报的是 HMYR-行-005 没有这个名字（2026-11-02 量出来的，bytecode 那套一红九项）。
 fn 攒(们: Int, 段: Int, t: Int) {
   let 新 = 段 + (t,)
   if len(新) >= 128 { return {们: 们 + (新,), 段: ()} }

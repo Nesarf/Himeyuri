@@ -65,7 +65,7 @@ console.log("二、越界给 R0151（两端）");
   ]), "乙.hmoca");
   const r1 = 跑([过头]);
   const 出1 = (r1.stdout || "") + (r1.stderr || "");
-  ok("建立时越界给 R0151", 出1.includes("HMYR-R0151") && !出1.includes("没有拦住"), JSON.stringify(出1.slice(0, 160)));
+  ok("建立时越界给 R0151", 出1.includes("HMYR-行-018") && !出1.includes("没有拦住"), JSON.stringify(出1.slice(0, 160)));
 
   const 读过头 = 投(行们([
     "fn main() -> Int effects(process) {",
@@ -77,7 +77,7 @@ console.log("二、越界给 R0151（两端）");
   ]), "丙.hmoca");
   const r2 = 跑([读过头]);
   const 出2 = (r2.stdout || "") + (r2.stderr || "");
-  ok("读取时越界给 R0151", 出2.includes("HMYR-R0151"), JSON.stringify(出2.slice(0, 160)));
+  ok("读取时越界给 R0151", 出2.includes("HMYR-行-018"), JSON.stringify(出2.slice(0, 160)));
 
   const 负 = 投(行们([
     "fn main() -> Int effects(process) {",
@@ -89,7 +89,7 @@ console.log("二、越界给 R0151（两端）");
   ]), "丁.hmoca");
   const r3 = 跑([负]);
   const 出3 = (r3.stdout || "") + (r3.stderr || "");
-  ok("负的起点也给 R0151", 出3.includes("HMYR-R0151") && !出3.includes("没有拦住"), JSON.stringify(出3.slice(0, 160)));
+  ok("负的起点也给 R0151", 出3.includes("HMYR-行-018") && !出3.includes("没有拦住"), JSON.stringify(出3.slice(0, 160)));
 }
 
 console.log("三、三台一致");
@@ -202,11 +202,11 @@ console.log("六、不可写的源：元组上写要拒");
   ]), "不.hmoca");
   const 甲 = 跑([p]);
   const 甲出 = (甲.stdout || "") + (甲.stderr || "");
-  ok("默认路径：元组上写被拒（R0151）", 甲出.includes("HMYR-R0151") && !甲出.includes("没有拦住"),
+  ok("默认路径：元组上写被拒（R0151）", 甲出.includes("HMYR-行-018") && !甲出.includes("没有拦住"),
     JSON.stringify(甲出.slice(0, 160)));
   const 乙 = 跑(["--compile", p]);
   const 乙出 = (乙.stdout || "") + (乙.stderr || "");
-  ok("--compile：同一句", 乙出.includes("HMYR-R0151") && !乙出.includes("没有拦住"),
+  ok("--compile：同一句", 乙出.includes("HMYR-行-018") && !乙出.includes("没有拦住"),
     JSON.stringify(乙出.slice(0, 160)));
 
   // 自举层那一条路对不可写的源没有同一句话可给：它的 设() 报的是底层那句。

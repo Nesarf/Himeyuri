@@ -176,7 +176,7 @@ export class Runtime {
     const 表 = this.模块声明.get(文件);
     const decl = 表 ? 表.get(node.name) : undefined;
     if (!decl) {
-      this.fail("HMYR-R0106", "module '" + 主.name + "' has no '" + node.name + "'");
+      this.fail("HMYR-行-007", "module '" + 主.name + "' has no '" + node.name + "'");
     }
     // 一个私有名字经由别名访问，仍然是跨模块 —— 同一条可见性规则。
     // 检查放在这里，调用点就不必再查一次：这两处是同一个判断的两种写法，
@@ -196,7 +196,7 @@ export class Runtime {
       else if (decl.kind === "Const") this.globals.set(decl.name, this.evalExpr(decl.value, new Scope(null)));
     }
     const main = this.functions.get("main");
-    if (!main) this.fail("HMYR-R0100", "no main function to run");
+    if (!main) this.fail("HMYR-行-001", "no main function to run");
     // The entry point declares nothing, which means it may do nothing effectful (SPEC 2.4: no
     // hidden network). Passing a label here instead of a set was a bug: the check then read the
     // label as a set of permitted effects.
@@ -216,7 +216,7 @@ export class Runtime {
   callFunction(decl, args, fromEffects) {
     // Recursion without a base case would otherwise exhaust the host stack and surface as a host
     // crash rather than a diagnostic. The depth belongs to the language.
-    if (++this.depth > this.maxDepth) this.fail("HMYR-R0108", "call depth exceeded (" + this.maxDepth + ")");
+    if (++this.depth > this.maxDepth) this.fail("HMYR-行-009", "call depth exceeded (" + this.maxDepth + ")");
     // 一个循环而不是一次调用：尾调用不新压一帧，于是尾递归的深度不吃宿主栈。
     // 这一层只算一次深度——换函数不算离开这一层，那正是尾调用的意思。
     try {
@@ -234,7 +234,7 @@ export class Runtime {
             // 为什么必须有这一行：纯尾递归（return f() 而没有实参）在每一层
             // 一次求值都不做，于是它既不吃栈也不吃步数——那会变成一个真正停不下来的循环。
             // 三步数本来就是「这件事还要做多久」的账，而换一次函数也是一件事。
-            if (++this.steps > this.stepLimit) this.fail("HMYR-R0102", "the program ran for too long without finishing");
+            if (++this.steps > this.stepLimit) this.fail("HMYR-行-003", "the program ran for too long without finishing");
             当前 = e.decl; 当前实参 = e.args; 当前效果 = e.fromEffects; continue;
           }
           throw e;
@@ -262,11 +262,11 @@ export class Runtime {
       const p = decl.params[i];
       if (i < args.length) values.push(args[i]);
       else if (p.fallback) values.push(this.evalExpr(p.fallback, scope));
-      else this.fail("HMYR-R0101", "function '" + decl.name + "' expects " + decl.params.length + " argument(s), got " + args.length);
+      else this.fail("HMYR-行-002", "function '" + decl.name + "' expects " + decl.params.length + " argument(s), got " + args.length);
       scope.set(p.name, values[i], false);
     }
     if (args.length > decl.params.length) {
-      this.fail("HMYR-R0101", "function '" + decl.name + "' expects " + decl.params.length + " argument(s), got " + args.length);
+      this.fail("HMYR-行-002", "function '" + decl.name + "' expects " + decl.params.length + " argument(s), got " + args.length);
     }
     const inner = this.allowed(decl.effects);
     this.持有格栈.push([]);
@@ -306,7 +306,7 @@ export class Runtime {
       case "Assign": {
         const value = this.evalExpr(stmt.value, scope, effects);
         if (!scope.assign(stmt.name, value)) {
-          this.fail("HMYR-R0150", "cannot assign to '" + stmt.name + "': it is not a variable declared with var, or it is not in scope");
+          this.fail("HMYR-行-017", "cannot assign to '" + stmt.name + "': it is not a variable declared with var, or it is not in scope");
         }
         return value;
       }
@@ -331,13 +331,13 @@ export class Runtime {
         if (stmt.decl.kind === "Const") { const v = this.evalExpr(stmt.decl.value, scope, effects); scope.set(stmt.decl.name, v, false); return v; }
         return null;
       default:
-        this.fail("HMYR-R0110", "cannot execute a statement of kind " + stmt.kind);
+        this.fail("HMYR-行-010", "cannot execute a statement of kind " + stmt.kind);
     }
   }
 
   evalExpr(node, scope, effects) {
-    if (++this.steps > this.stepLimit) this.fail("HMYR-R0102", "the program ran for too long without finishing");
-    if (!node || node.kind === "Error") this.fail("HMYR-R0103", "a syntax error reached the evaluator");
+    if (++this.steps > this.stepLimit) this.fail("HMYR-行-003", "the program ran for too long without finishing");
+    if (!node || node.kind === "Error") this.fail("HMYR-行-004", "a syntax error reached the evaluator");
     if (this.stage0 && !STAGE0_EXPR.has(node.kind)) {
       throw new Error("stage 0 does not need the expression kind '" + node.kind + "'");
     }
@@ -347,7 +347,7 @@ export class Runtime {
       case "Ident": {
         if (scope.has(node.name)) return scope.get(node.name);
         if (this.globals.has(node.name)) return this.globals.get(node.name);
-        this.fail("HMYR-R0104", "there is no name '" + node.name + "' in scope");
+        this.fail("HMYR-行-005", "there is no name '" + node.name + "' in scope");
         break;
       }
       case "Unary": {
@@ -391,7 +391,7 @@ export class Runtime {
             return this.evalExpr(arm.body, scope, effects);
           }
         }
-        this.fail("HMYR-R0105", "no match arm accepted the value");
+        this.fail("HMYR-行-006", "no match arm accepted the value");
         break;
       }
       case "Block": return this.execBlock(node, scope, effects);
@@ -404,7 +404,7 @@ export class Runtime {
       case "Field": {
         const target = this.evalExpr(node.target, scope, effects);
         if (target === null || typeof target !== "object" || !(node.name in target)) {
-          this.fail("HMYR-R0106", "no field '" + node.name + "' on that value");
+          this.fail("HMYR-行-007", "no field '" + node.name + "' on that value");
         }
         return typeof target[node.name] === "function" ? target[node.name].bind(target) : target[node.name];
       }
@@ -412,13 +412,13 @@ export class Runtime {
         const target = this.evalExpr(node.target, scope, effects);
         // 下标先取下整，与 slice 的起止、设()、chr() 同一条规矩。
         const index = 下整(this.asNumber(this.evalExpr(node.index, scope, effects)));
-        if (typeof target !== "string" && !Array.isArray(target)) this.fail("HMYR-R0152", "cannot index " + describe(target));
-        if (index < 0 || index >= target.length) this.fail("HMYR-R0151", "index " + index + " is outside a value of length " + target.length);
+        if (typeof target !== "string" && !Array.isArray(target)) this.fail("HMYR-行-019", "cannot index " + describe(target));
+        if (index < 0 || index >= target.length) this.fail("HMYR-行-018", "index " + index + " is outside a value of length " + target.length);
         return target[index];
       }
       case "Call": return this.evalCall(node, scope, effects);
       default:
-        this.fail("HMYR-R0110", "cannot evaluate a node of kind " + node.kind);
+        this.fail("HMYR-行-010", "cannot evaluate a node of kind " + node.kind);
     }
   }
 
@@ -462,11 +462,11 @@ export class Runtime {
       const 主 = this.evalExpr(node.callee.target, scope, effects);
       const 法 = 主 === null || 主 === undefined ? undefined : 主[node.callee.name];
       if (typeof 法 === "function") return 法.apply(主, args);
-      this.fail("HMYR-R0107", "that value is not callable");
+      this.fail("HMYR-行-008", "that value is not callable");
     }
     const callee = this.evalExpr(node.callee, scope, effects);
     if (typeof callee === "function") return callee(...args);
-    this.fail("HMYR-R0107", "that value is not callable");
+    this.fail("HMYR-行-008", "that value is not callable");
   }
 
   evalBinary(node, scope, effects) {
@@ -492,10 +492,10 @@ export class Runtime {
       case "-": return 数减(this.asNumber(a), this.asNumber(b));
       case "*": return 数乘(this.asNumber(a), this.asNumber(b));
       case "/":
-        if (数零(this.asNumber(b))) this.fail("HMYR-R0120", "division by zero");
+        if (数零(this.asNumber(b))) this.fail("HMYR-行-012", "division by zero");
         return 数除(this.asNumber(a), this.asNumber(b));
       case "%":
-        if (数零(this.asNumber(b))) this.fail("HMYR-R0120", "division by zero");
+        if (数零(this.asNumber(b))) this.fail("HMYR-行-012", "division by zero");
         return 数余(this.asNumber(a), this.asNumber(b));
       case "==": return this.equal(a, b);
       case "!=": return !this.equal(a, b);
@@ -505,14 +505,14 @@ export class Runtime {
       case "<=": return 有序(a, b) && this.compare(a, b) <= 0;
       case ">": return this.compare(a, b) > 0;
       case ">=": return 有序(a, b) && this.compare(a, b) >= 0;
-      default: this.fail("HMYR-R0111", "no evaluation for operator " + node.op);
+      default: this.fail("HMYR-行-011", "no evaluation for operator " + node.op);
     }
   }
 
   asNumber(v) {
     if (typeof v === "number") return v;
     if (typeof v === "boolean") return v ? 1 : 0;
-    this.fail("HMYR-R0130", "expected a number, found " + describe(v));
+    this.fail("HMYR-行-013", "expected a number, found " + describe(v));
   }
   asString(v) {
     if (typeof v === "string") return v;
@@ -527,7 +527,7 @@ export class Runtime {
   compare(a, b) {
     if (typeof a === "number" && typeof b === "number") return 数比(a, b);
     if (typeof a === "string" && typeof b === "string") return a < b ? -1 : a > b ? 1 : 0;
-    this.fail("HMYR-R0131", "cannot compare " + describe(a) + " with " + describe(b));
+    this.fail("HMYR-行-014", "cannot compare " + describe(a) + " with " + describe(b));
   }
 }
 
@@ -721,15 +721,15 @@ const BUILTINS = {
   // 可变数组：从元组复制一个，之后可以原地改。
   数组: (rt, args) => {
     const t = args[0];
-    if (!Array.isArray(t)) rt.fail("HMYR-R0150", "数组() 要一个元组，拿到的是 " + describe(t));
+    if (!Array.isArray(t)) rt.fail("HMYR-行-017", "数组() 要一个元组，拿到的是 " + describe(t));
     return 造数组(t);
   },
   设: (rt, args) => {
     const a = args[0];
-    if (!是数组(a)) rt.fail("HMYR-R0151", "设() 的第一个参数必须是 数组() 造出来的可变数组");
+    if (!是数组(a)) rt.fail("HMYR-行-018", "设() 的第一个参数必须是 数组() 造出来的可变数组");
     const i = Math.floor(rt.asNumber(args[1]));
     if (!Number.isFinite(i) || i < 0 || i >= a.length) {
-      rt.fail("HMYR-R0152", "下标越出数组：" + i + "（长度 " + a.length + "）");
+      rt.fail("HMYR-行-019", "下标越出数组：" + i + "（长度 " + a.length + "）");
     }
     a[i] = args[2];
     return a;
@@ -737,12 +737,12 @@ const BUILTINS = {
   len: (rt, args) => {
     const v = args[0];
     if (typeof v === "string" || Array.isArray(v)) return v.length;
-    rt.fail("HMYR-R0140", "len() wants a string or a tuple");
+    rt.fail("HMYR-行-015", "len() wants a string or a tuple");
   },
   str: (rt, args) => rt.asString(args[0]),
   int: (rt, args) => {
     const n = Number(args[0]);
-    if (Number.isNaN(n)) rt.fail("HMYR-R0141", "int() cannot read " + describe(args[0]));
+    if (Number.isNaN(n)) rt.fail("HMYR-行-016", "int() cannot read " + describe(args[0]));
     return Math.trunc(n);
   },
   abs: (rt, args) => Math.abs(rt.asNumber(args[0])),
@@ -835,37 +835,37 @@ const BUILTINS = {
     const 起 = rt.asNumber(a[1]);
     const 长 = rt.asNumber(a[2]);
     const 是字节 = Array.isArray(源) || (源 && typeof 源 === "object" && typeof 源.length === "number");
-    if (!是字节) rt.fail("HMYR-R0152", "bytes_view wants bytes (a tuple or an array), found " + describe(源));
+    if (!是字节) rt.fail("HMYR-行-019", "bytes_view wants bytes (a tuple or an array), found " + describe(源));
     if (!Number.isInteger(起) || !Number.isInteger(长) || 起 < 0 || 长 < 0 || 起 + 长 > 源.length) {
-      rt.fail("HMYR-R0151", "bytes_view range " + 起 + "+" + 长 + " is outside the bytes (" + 源.length + ")");
+      rt.fail("HMYR-行-018", "bytes_view range " + 起 + "+" + 长 + " is outside the bytes (" + 源.length + ")");
     }
     return { kind: "view", 源, 起, 长 };
   },
   view_len: (rt, a) => {
     const w = a[0];
-    if (!w || w.kind !== "view") rt.fail("HMYR-R0152", "view_len wants a window, found " + describe(w));
+    if (!w || w.kind !== "view") rt.fail("HMYR-行-019", "view_len wants a window, found " + describe(w));
     return w.长;
   },
   view_get: (rt, a) => {
     const w = a[0];
-    if (!w || w.kind !== "view") rt.fail("HMYR-R0152", "view_get wants a window, found " + describe(w));
+    if (!w || w.kind !== "view") rt.fail("HMYR-行-019", "view_get wants a window, found " + describe(w));
     const i = rt.asNumber(a[1]);
     if (!Number.isInteger(i) || i < 0 || i >= w.长) {
-      rt.fail("HMYR-R0151", "view_get " + i + " is outside the window (" + w.长 + ")");
+      rt.fail("HMYR-行-018", "view_get " + i + " is outside the window (" + w.长 + ")");
     }
     return w.源[w.起 + i];
   },
   view_set: (rt, a) => {
     const w = a[0];
-    if (!w || w.kind !== "view") rt.fail("HMYR-R0152", "view_set wants a window, found " + describe(w));
+    if (!w || w.kind !== "view") rt.fail("HMYR-行-019", "view_set wants a window, found " + describe(w));
     const i = rt.asNumber(a[1]);
     if (!Number.isInteger(i) || i < 0 || i >= w.长) {
-      rt.fail("HMYR-R0152", "view_set " + i + " is outside the window (" + w.长 + ")");
+      rt.fail("HMYR-行-019", "view_set " + i + " is outside the window (" + w.长 + ")");
     }
     // 只有可变的源能写 —— 与 设() 同一条判据、同一套码。
     // 元组是不可变值，对它写会改到一个共享的值上，所以这里拒。
     if (!Array.isArray(w.源) || w.源[数组标] !== true) {
-      rt.fail("HMYR-R0151", "view_set: the window was opened on bytes that cannot be written");
+      rt.fail("HMYR-行-018", "view_set: the window was opened on bytes that cannot be written");
     }
     w.源[w.起 + i] = a[2];
     return a[2];
@@ -1296,14 +1296,14 @@ const BUILTINS = {
         const block = { size: 容量, live: true, zone: "arena", 格: new Array(Math.max(0, 容量)).fill(null) };
         block.存 = function (i, v) {
           if (typeof i !== "number" || i < 0 || i >= this.size) {
-            rt.fail("HMYR-R0151", "slot " + i + " is outside this block (size " + this.size + ")");
+            rt.fail("HMYR-行-018", "slot " + i + " is outside this block (size " + this.size + ")");
           }
           this.格[i] = v;
           return this;
         };
         block.取 = function (i) {
           if (typeof i !== "number" || i < 0 || i >= this.size) {
-            rt.fail("HMYR-R0151", "slot " + i + " is outside this block (size " + this.size + ")");
+            rt.fail("HMYR-行-018", "slot " + i + " is outside this block (size " + this.size + ")");
           }
           return this.格[i];
         };
@@ -1409,7 +1409,7 @@ export function run(source, options = {}) {
   } catch (e) {
     if (e.code) diagnostics.error(e.code, e.message, 0, 0);
     // last resort: if the host stack went first anyway, say it in the language's own terms
-    else if (e instanceof RangeError) diagnostics.error("HMYR-R0108", "call depth exceeded");
+    else if (e instanceof RangeError) diagnostics.error("HMYR-行-009", "call depth exceeded");
     else throw e;
   }
   return { output: rt.output, diagnostics, value };

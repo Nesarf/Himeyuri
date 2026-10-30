@@ -34,7 +34,7 @@ const 二元运算 = {
 // 所以它带的是内部那一条码（与「求值器遇到不认的节点种类」同一条），
 // 而不是一个可以说「你写错了」的编号。露栈的样子比编号难读得多。
 export class 编译错 extends Error {
-  constructor(话, 码 = "HMYR-R0110") { super(话); this.code = 码; }
+  constructor(话, 码 = "HMYR-行-010") { super(话); this.code = 码; }
 }
 
 // ---- 返回类型：编译期核对 ----

@@ -88,7 +88,7 @@ export class 虚拟机 {
   成数(v) {
     const n = 数.收(v);
     if (n !== null) return n;
-    this.坏("HMYR-R0130", "expected a number, found " + 述(v, this.文));
+    this.坏("HMYR-行-013", "expected a number, found " + 述(v, this.文));
     return 0;                       // 停机之后这个值不会被用到，给个 0 免得算出 NaN
   }
   成串(v) {
@@ -109,7 +109,7 @@ export class 虚拟机 {
     if (数.是数(a) && 数.是数(b)) return 数.比(a, b);
     if (this.文.是串(a) && this.文.是串(b)) return this.文.比(a, b);
     // 带上 pc：这条错曾经只说「不能比较」，而查它要的是「在哪比」。
-    this.坏("HMYR-R0131", "cannot compare " + 述(a, this.文) + " with " + 述(b, this.文) + " at pc " + (this.当前pc === undefined ? "?" : this.当前pc) + " in " + (this.当前函 === undefined ? "?" : this.当前函));
+    this.坏("HMYR-行-014", "cannot compare " + 述(a, this.文) + " with " + 述(b, this.文) + " at pc " + (this.当前pc === undefined ? "?" : this.当前pc) + " in " + (this.当前函 === undefined ? "?" : this.当前函));
     return 0;
   }
 
@@ -133,9 +133,9 @@ export class 虚拟机 {
     // 判「是不是宿主串」要走 text.mjs 那一份，不在这里写 typeof —— 与那两个执行器同一条规矩。
     const 参数 = (实参 || []).map((x) => (是宿主串(x) ? 收进来(this.文, x) : x));
     const 函 = this.程序.函数们.get(名);
-    if (!函) { this.坏("HMYR-R0104", "there is no name '" + 名 + "' in scope"); return { ok: false, ...this.停机 }; }
+    if (!函) { this.坏("HMYR-行-005", "there is no name '" + 名 + "' in scope"); return { ok: false, ...this.停机 }; }
     if (++this.深 > this.深限) {
-      this.坏("HMYR-R0108", "call depth exceeded (" + this.深限 + ")");
+      this.坏("HMYR-行-009", "call depth exceeded (" + this.深限 + ")");
       return { ok: false, ...this.停机 };
     }
     try {
@@ -151,7 +151,7 @@ export class 虚拟机 {
         }
       }
       if (参数.length !== 函.参数量) {
-        this.坏("HMYR-R0101", "function '" + 名 + "' expects " + 函.参数量 + " argument(s), got " + 参数.length);
+        this.坏("HMYR-行-002", "function '" + 名 + "' expects " + 函.参数量 + " argument(s), got " + 参数.length);
         return { ok: false, ...this.停机 };
       }
       const 帧 = { 槽: new Array(函.槽数).fill(null).map(() => ({ v: null, 可写: true })), 效果: new Set(函.效果), 持有格们: [] };
@@ -186,9 +186,9 @@ export class 虚拟机 {
     const 压 = (v) => { 栈.push(v); };
     for (;;) {
       if (this.停机) return null;
-      if (++this.步 > this.步限) { this.坏("HMYR-R0102", "the program ran for too long without finishing"); return null; }
+      if (++this.步 > this.步限) { this.坏("HMYR-行-003", "the program ran for too long without finishing"); return null; }
       const 指令 = 码[pc];
-      if (!指令) { this.坏("HMYR-R0110", "the instruction stream ran off its end"); return null; }
+      if (!指令) { this.坏("HMYR-行-010", "the instruction stream ran off its end"); return null; }
       if (迹要) { 迹.push({ pc, op: 指令.op, n: 栈.length }); if (迹.length > 迹长) 迹.shift(); }
       this.当前pc = pc;
       switch (指令.op) {
@@ -199,13 +199,13 @@ export class 虚拟机 {
         case "ASSIGN": {
           const 槽 = 帧.槽[指令.a];
           const v = 弹();
-          if (!槽.可写) { this.坏("HMYR-R0150", "cannot assign to a name that was not declared with var (slot " + 指令.a + " at pc " + pc + ")"); return null; }
+          if (!槽.可写) { this.坏("HMYR-行-017", "cannot assign to a name that was not declared with var (slot " + 指令.a + " at pc " + pc + ")"); return null; }
           槽.v = v;
           pc++; break;
         }
         case "POP": 弹(); pc++; break;
         case "GLOBAL": {
-          if (!this.全局.has(指令.a)) { this.坏("HMYR-R0104", "there is no name '" + 指令.a + "' in scope"); return null; }
+          if (!this.全局.has(指令.a)) { this.坏("HMYR-行-005", "there is no name '" + 指令.a + "' in scope"); return null; }
           压(this.全局.get(指令.a)); pc++; break;
         }
         // 顶层常量的登记：值在栈顶，名字是立即数。写进全局表的只有这一条指令 ——
@@ -224,10 +224,10 @@ export class 虚拟机 {
         case "SUB": { const b = 弹(), a = 弹(); 压(数.减(this.成数(a), this.成数(b))); pc++; break; }
         case "MUL": { const b = 弹(), a = 弹(); 压(数.乘(this.成数(a), this.成数(b))); pc++; break; }
         case "DIV": { const b = 弹(), a = 弹();
-          if (数.是零(this.成数(b))) { this.坏("HMYR-R0120", "division by zero"); return null; }
+          if (数.是零(this.成数(b))) { this.坏("HMYR-行-012", "division by zero"); return null; }
           压(数.除(this.成数(a), this.成数(b))); pc++; break; }
         case "MOD": { const b = 弹(), a = 弹();
-          if (数.是零(this.成数(b))) { this.坏("HMYR-R0120", "division by zero"); return null; }
+          if (数.是零(this.成数(b))) { this.坏("HMYR-行-012", "division by zero"); return null; }
           压(数.余(this.成数(a), this.成数(b))); pc++; break; }
         case "EQ": { const b = 弹(), a = 弹(); 压(this.相等(a, b)); pc++; break; }
         case "NE": { const b = 弹(), a = 弹(); 压(!this.相等(a, b)); pc++; break; }
@@ -261,7 +261,7 @@ export class 虚拟机 {
             // 区与块是索引，它们的字段也要能读（b.zone / b.size / b.live）。
             // 记录先问、索引后问：同名时记录赢，与 self/eval 那条同一顺序。
             if (t && t.tag === "index" && t.m.has(指令.a)) { 压(t.m.get(指令.a)); pc++; break; }
-            this.坏("HMYR-R0106", "no field '" + 指令.a + "' on that value");
+            this.坏("HMYR-行-007", "no field '" + 指令.a + "' on that value");
             return null;
           }
           if (域要) {
@@ -293,13 +293,13 @@ export class 虚拟机 {
           // 小数下标原来是直接把宿主的 undefined 压进值域，而那不是这门语言的值。
           const i = 数.下整(this.成数(弹())), t = 弹();
           if (this.文.是串(t)) {
-            if (!this.文.在界内(t, i)) { this.坏("HMYR-R0151", "index " + 数.成文(i) + " is outside a value of length " + this.文.长(t)); return null; }
+            if (!this.文.在界内(t, i)) { this.坏("HMYR-行-018", "index " + 数.成文(i) + " is outside a value of length " + this.文.长(t)); return null; }
             压(this.文.元(t, i));
           } else if (t && (t.tag === "tuple" || t.tag === "array")) {
-            if (i < 0 || i >= t.items.length) { this.坏("HMYR-R0151", "index " + 数.成文(i) + " is outside a value of length " + t.items.length); return null; }
+            if (i < 0 || i >= t.items.length) { this.坏("HMYR-行-018", "index " + 数.成文(i) + " is outside a value of length " + t.items.length); return null; }
             压(t.items[i]);
           } else {
-            this.坏("HMYR-R0152", "cannot index " + 述(t, this.文));
+            this.坏("HMYR-行-019", "cannot index " + 述(t, this.文));
             return null;
           }
           pc++; break;
@@ -309,7 +309,7 @@ export class 虚拟机 {
           if (叫要 && 叫数 < 叫上限) { process.stderr.write("EV " + 事件号() + " CALLB " + 指令.a + " n=" + n + "\n"); 叫数++; }
           const 实参 = 栈.splice(栈.length - n, n);
           const 内置项 = 内置表[指令.a];
-          if (!内置项) { this.坏("HMYR-R0104", "there is no builtin '" + 指令.a + "'"); return null; }
+          if (!内置项) { this.坏("HMYR-行-005", "there is no builtin '" + 指令.a + "'"); return null; }
           if (内置项.效果 && !(帧.效果 instanceof Set && 帧.效果.has(内置项.效果))) {
             this.坏("HMYR-R0201", "builtin '" + 指令.a + "' needs effect '" + 内置项.效果 + "', which the caller did not declare");
             return null;
@@ -348,7 +348,7 @@ export class 虚拟机 {
           // 效果与参数数的检查照做：省掉的是帧，不是规矩。
           if (码[pc + 1] && 码[pc + 1].op === "RET") {
             const 函 = this.程序.函数们.get(指令.a);
-            if (!函) { this.坏("HMYR-R0104", "there is no name '" + 指令.a + "' in scope"); return null; }
+            if (!函) { this.坏("HMYR-行-005", "there is no name '" + 指令.a + "' in scope"); return null; }
             for (const 效 of 函.效果) {
               if (效 === "realtime") continue;
               if (!帧.效果.has(效)) {
@@ -357,7 +357,7 @@ export class 虚拟机 {
               }
             }
             if (实参.length !== 函.参数量) {
-              this.坏("HMYR-R0101", "function '" + 指令.a + "' expects " + 函.参数量 + " argument(s), got " + 实参.length);
+              this.坏("HMYR-行-002", "function '" + 指令.a + "' expects " + 函.参数量 + " argument(s), got " + 实参.length);
               return null;
             }
             帧.槽 = new Array(函.槽数).fill(null).map(() => ({ v: null, 可写: true }));
@@ -389,7 +389,7 @@ export class 虚拟机 {
           break;
         }
         case "RET": return 弹();
-        default: this.坏("HMYR-R0110", "cannot execute the opcode " + 指令.op); return null;
+        default: this.坏("HMYR-行-010", "cannot execute the opcode " + 指令.op); return null;
       }
     }
   }

@@ -206,7 +206,7 @@ export function loadUnit(entry, options = {}) {
     // 参数的 passing 也要折：自举层没有 null，没有前缀时给的是空元组，深转之后
     // 成了空数组 —— 而空数组是真值，宿主那边是 null。求值器里凡按「有没有 passing」
     // 判的地方，在这条路上都会走错分支（2026-11-02：macro 那套「模板里带一次真调用」
-    // 报 HMYR-R0130 expected a number, found undefined，而两边的树形状是一样的）。
+    // 报 HMYR-行-013 expected a number, found undefined，而两边的树形状是一样的）。
     for (const decl of m.decls || []) {
       for (const p of decl.params || []) {
         if (Array.isArray(p.passing) && p.passing.length === 0) p.passing = null;
@@ -222,7 +222,7 @@ export function loadUnit(entry, options = {}) {
     // 宏模板里的字面量没有 value：模板是 self/chain.hmoca 的 atom 解析的，而那里只给
     // text 与 raw（普通函数体走 run.hmoca 的 翻表达式，那一份有 value）。宿主求值器读
     // Literal 时读 value，缺了它就是 undefined，于是「模板里带一次真调用」报
-    // HMYR-R0130（2026-11-02 实测）。
+    // HMYR-行-013（2026-11-02 实测）。
     //
     // 补在这一层而不是自举层：这是桥的形状转换处，与 pub 的 1/0、passing 的空数组
     // 是同一类对齐 —— 而且试过改 self/chain.hmoca，两次都弄坏了别的套件。

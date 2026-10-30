@@ -42,7 +42,7 @@ export function runEmbedded(source, granted = []) {
     const value = runtime.run(parsed.ast);
     return { ok: true, stage: "run", output: runtime.output, value, diagnostics, granted: [...grantedSet] };
   } catch (e) {
-    diagnostics.error(e.code || "HMYR-R0100", e.message, 0, 0);
+    diagnostics.error(e.code || "HMYR-行-001", e.message, 0, 0);
     return { ok: false, stage: "run", output: runtime.output, value: null, diagnostics };
   }
 }

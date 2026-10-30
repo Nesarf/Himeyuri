@@ -510,7 +510,7 @@ selfloa 的 27/27）。
 
     这一轮补的是宿主 loader 在 visit 之后做的第二趟 —— 适配层原来一件都没搬。
 
-    一、别名表。它原来是空 Map，于是 命名空间::名字 这种写法全报 HMYR-R0104
+    一、别名表。它原来是空 Map，于是 命名空间::名字 这种写法全报 HMYR-行-005
         （没有这个名字），namespace 那五条判据一条不剩。现在按每个模块的 imports
         与别名登记，宿主同一件事在 src/loader.mjs 第 305 行。
 
@@ -590,7 +590,7 @@ selfloa 的 27/27）。
           症状是一串「not an integer literal: '1.5' '4.5' '43.5'」，看起来像数字
           字面量出了问题，其实全在二分取一半那一行。取整要用 floor。
 
-      二、模块级的 const 在字节码那条路上不在作用域里（HMYR-R0104 没有这个名字）。
+      二、模块级的 const 在字节码那条路上不在作用域里（HMYR-行-005 没有这个名字）。
           128 只能写成字面量。这一条让 bytecode 那套一次红九项，而报的是「没有这个名字」，
           与「常量写错了」听起来完全是两件事。
 
@@ -782,7 +782,7 @@ selfloa 的 27/27）。
 
     差的那四份是大数据表：runtime/ucd/codepoints.txt（42 MB）与 conformance 下的
     Unihan 与 NFC 对照表。旧版只跳了 data/，于是它们也被扫进去了 —— 而它用正则，
-    快得看不出代价。手写版一跑就撞步限（HMYR-R0102），于是「跳什么」第一次变成了
+    快得看不出代价。手写版一跑就撞步限（HMYR-行-003），于是「跳什么」第一次变成了
     必须说清的事，而不是一个碰巧够用的省略。
 
     性能上还有一条读数：同一份工具，走解释器（bin/hmyr.mjs 的默认路径）对 design/
@@ -918,7 +918,7 @@ selfloa 的 27/27）。
 
       别名表=[]
       模块声明键=["...\\厨.hmoca", "...\\main.hmoca"]
-      抛错：HMYR-R0104 there is no name '厨' in scope
+      抛错：HMYR-行-005 there is no name '厨' in scope
 
     别名表是空的。而源头在 self/run.hmoca 的 导入节点们：它写死 alias: ""，
     注释还留着「alias 与 rev 先留空 —— 这一层的语法还不认它们」。rev 后来认了，
@@ -1155,10 +1155,10 @@ selfloa 的 27/27）。
     给 跑() 加了一条可开打印（HMYR_DEPTH_TRACE=1，打错的编号、maxDepth 与 depth），
     两边的读数：
 
-      开关量法  宿主 错=HMYR-R0108  maxDepth=500  depth=1
-                最小 错=HMYR-R0108  maxDepth=500  depth=1
+      开关量法  宿主 错=HMYR-行-009  maxDepth=500  depth=1
+                最小 错=HMYR-行-009  maxDepth=500  depth=1
       桥        宿主 错=RangeError  maxDepth=500  depth=0
-                最小 错=HMYR-R0108  maxDepth=500  depth=1
+                最小 错=HMYR-行-009  maxDepth=500  depth=1
 
     同一个程序、同一份 runUnit、同一份 Runtime（maxDepth 都是 500），而桥那条路上
     宿主那一路的 depth 是 0 就撞了引擎的栈 —— 说明那段递归没有被 callFunction 那一层
@@ -1199,7 +1199,7 @@ selfloa 的 27/27）。
                    （不是 Block —— 宏的 body 是表达式，换回那一层按表达式走）
 
     读数：macro 那套在桥那边第一案从「没有这个名字 两次」变成「模板里带一次真调用」
-    （HMYR-R0130）—— 展开这一层通了，下一案是更深的一层。
+    （HMYR-行-013）—— 展开这一层通了，下一案是更深的一层。
 
     加了 切片 与 宏声明 两个函数，三处计数跟着动：self-compile 的 body 28 → 30、
     bootstrap 的声明 216 → 218、bytecode 的函数 215 → 217。四套现在全过。
@@ -1212,7 +1212,7 @@ selfloa 的 27/27）。
 
     空数组是真值 —— 凡按「有没有 passing」判的地方都会走错分支。所以桥在模块循环里
     把空的 passing 折成 null，与宿主对齐。这一处没有让 macro 那套变绿（同一个
-    HMYR-R0130 还在），但它是两边形状对齐的一步，而这一类差异（1/0 的 pub、空数组的
+    HMYR-行-013 还在），但它是两边形状对齐的一步，而这一类差异（1/0 的 pub、空数组的
     passing）已经出现过三次。
 
     下一问：R0130 说的是「某个值不是数」，而两边的树已经一样 —— 所以要打的是求值那
@@ -1325,8 +1325,8 @@ selfloa 的 27/27）。
 
     按上一轮定的量法写了探针（递增 n、二分找撞栈点），读数干净：
 
-      桥的树 + 宿主 Runtime    撞栈 n≈500  码=HMYR-R0108
-      宿主的树 + 宿主 Runtime   撞栈 n≈500  码=HMYR-R0108
+      桥的树 + 宿主 Runtime    撞栈 n≈500  码=HMYR-行-009
+      宿主的树 + 宿主 Runtime   撞栈 n≈500  码=HMYR-行-009
 
     两台一模一样。而 minimal-eval 那套在桥那条路上报的是「宿主 RangeError /
     最小 R0108」，带 HMYR_DEPTH_TRACE 再跑一次还是这样。
@@ -1369,7 +1369,7 @@ selfloa 的 27/27）。
     按上一轮那一问，让套件的现场把入口与源码首行一起打出来：
 
       宿主  错=RangeError  maxDepth=500  depth=0  入口=xxxxxxx.hmoca  首行="fn 深(n: Int) -> Int {"
-      最小  错=HMYR-R0108  maxDepth=500  depth=1  入口=xxxxxxx.hmoca  首行="fn 深(n: Int) -> Int {"
+      最小  错=HMYR-行-009  maxDepth=500  depth=1  入口=xxxxxxx.hmoca  首行="fn 深(n: Int) -> Int {"
 
     入口与首行与探针的程序完全一样（探针里两台都在 n≈500 时给 R0108）。所以同一段
     程序、同一份 runUnit，套件里宿主那一路先撞栈，探针里不撞 —— 差别在进程状态，
@@ -1421,7 +1421,7 @@ selfloa 的 27/27）。
       一、HMYR 版从 . 起步的时候会走进 .tmp-crc-* 与 .tmp-readdir-*（测试留下的
           临时目录），深度在那里耗掉一半 —— 于是 design/ 只查到两份就停了。
           修法：点开头的一律跳过。
-      二、修完之后它报 HMYR-R0102（跑得太久）：全仓的 .txt 在默认步数下不够。
+      二、修完之后它报 HMYR-行-003（跑得太久）：全仓的 .txt 在默认步数下不够。
           把 HMYR_STEPS 调到四亿，它 11 秒给出 43 份。
       三、JS 版是 61 份 —— 差的那 18 份是 ucd/ 与 conformance/ 下的数据表
           （42 MB 的码点表、29 MB 与 17 MB 的 Unihan 对照），以及 swap/ 下的临时台。
@@ -1533,7 +1533,7 @@ selfloa 的 27/27）。
 
 自立的第一份文档：错误码按层重编（2026-11-02，新一段第 1 轮）
 
-    现状：全仓 98 个码（src、tools、bin 里 82 个）。形状是 HMYR-E0001、HMYR-R0108、
+    现状：全仓 98 个码（src、tools、bin 里 82 个）。形状是 HMYR-E0001、HMYR-行-009、
     HMYR-載-004 —— 前缀 + 单字母 + 四位数字。那个单字母分的是严重程度（错误 / 运行时 /
     警告），而它是编译器世界的通行写法，不是 HMYR 自己的分法。
 

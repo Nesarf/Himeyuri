@@ -17,18 +17,18 @@ const 程序 = (body) => "fn main() -> Int {\n  " + body + "\n}\n";
 const 断言 = (label, code, body) => ok(label, 跑(程序(body)).includes(code), JSON.stringify(跑(程序(body))));
 
 console.log("值的拒绝");
-断言("R0120 除以零", "HMYR-R0120", "return 1 / 0");
-断言("R0130 要有数字", "HMYR-R0130", 'return "a" - 1');
-断言("R0131 两个值不能比", "HMYR-R0131", 'return 1 < "a"');
+断言("R0120 除以零", "HMYR-行-012", "return 1 / 0");
+断言("R0130 要有数字", "HMYR-行-013", 'return "a" - 1');
+断言("R0131 两个值不能比", "HMYR-行-014", 'return 1 < "a"');
 
 console.log("内置的拒绝");
-断言("R0140 len 没有长度", "HMYR-R0140", "return len(1)");
-断言("R0141 int 读不出", "HMYR-R0141", 'return int("abc")');
+断言("R0140 len 没有长度", "HMYR-行-015", "return len(1)");
+断言("R0141 int 读不出", "HMYR-行-016", 'return int("abc")');
 
 console.log("变量与下标");
-断言("R0150 给不可变的赋值", "HMYR-R0150", "let x = 1\n  x = 2\n  return x");
-断言("R0151 下标越界", "HMYR-R0151", 'return ("a", "b")[5]');
-断言("R0152 被下标的东西没有元素", "HMYR-R0152", "return 5[0]");
+断言("R0150 给不可变的赋值", "HMYR-行-017", "let x = 1\n  x = 2\n  return x");
+断言("R0151 下标越界", "HMYR-行-018", 'return ("a", "b")[5]');
+断言("R0152 被下标的东西没有元素", "HMYR-行-019", "return 5[0]");
 
 console.log("两道门");
 {

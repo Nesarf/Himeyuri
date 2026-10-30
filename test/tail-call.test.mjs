@@ -28,7 +28,7 @@ console.log("一、尾递归：深度不再吃宿主栈");
   // 五十万层撞的该是「步数」而不是「深度」——那说明栈那一层真的不再随深度增长了。
   // 默认五百万步下跑不完五十万层，那是步数的账，不是栈的账。
   const 深 = 跑(尾(500000));
-  ok("尾递归五十万层撞的是步数而不是深度", 深.err === "HMYR-R0102", JSON.stringify(深));
+  ok("尾递归五十万层撞的是步数而不是深度", 深.err === "HMYR-行-003", JSON.stringify(深));
 }
 
 console.log("二、非尾递归：深度限制没有变");
@@ -36,7 +36,7 @@ console.log("二、非尾递归：深度限制没有变");
   ok("非尾递归一百层仍对（100）", 跑(非尾(100)).value === 100, JSON.stringify(跑(非尾(100))));
   // 五千层在旧版与新版都该撞深度——尾调用优化只对尾位置成立，而这里不是。
   const 深 = 跑(非尾(5000));
-  ok("非尾递归五千层仍撞深度", 深.err === "HMYR-R0108", JSON.stringify(深));
+  ok("非尾递归五千层仍撞深度", 深.err === "HMYR-行-009", JSON.stringify(深));
 }
 
 console.log("三、普通调用与参数检查照旧");
@@ -44,7 +44,7 @@ console.log("三、普通调用与参数检查照旧");
   const 加 = "fn add(a: Int, b: Int) -> Int {\n  return a + b\n}\nfn main() -> Int {\n  return add(20, 22)\n}\n";
   ok("两个参数的调用给 42", 跑(加).value === 42, JSON.stringify(跑(加)));
   const 少 = "fn f(a: Int, b: Int) -> Int {\n  return a\n}\nfn main() -> Int {\n  return f(1)\n}\n";
-  ok("参数少了仍报 R0101", 跑(少).err === "HMYR-R0101", JSON.stringify(跑(少)));
+  ok("参数少了仍报 R0101", 跑(少).err === "HMYR-行-002", JSON.stringify(跑(少)));
 }
 
 console.log("四、尾调用不能绕过效果检查");
