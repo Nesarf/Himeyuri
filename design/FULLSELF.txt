@@ -1150,6 +1150,25 @@ selfloa 的 27/27）。
     读数：stage0eval、numbers、namespace、module 四套在桥那边零套换不动；
     开关量法上 stage0eval 与 minimal-eval 都过。
 
+第二段：撞深度那一条，桥的树让深度从 0 就撞栈（2026-11-02，第 21 轮）
+
+    给 跑() 加了一条可开打印（HMYR_DEPTH_TRACE=1，打错的编号、maxDepth 与 depth），
+    两边的读数：
+
+      开关量法  宿主 错=HMYR-R0108  maxDepth=500  depth=1
+                最小 错=HMYR-R0108  maxDepth=500  depth=1
+      桥        宿主 错=RangeError  maxDepth=500  depth=0
+                最小 错=HMYR-R0108  maxDepth=500  depth=1
+
+    同一个程序、同一份 runUnit、同一份 Runtime（maxDepth 都是 500），而桥那条路上
+    宿主那一路的 depth 是 0 就撞了引擎的栈 —— 说明那段递归没有被 callFunction 那一层
+    的计数看见，而是发生在别处。
+
+    所以这条不是「深度上限坏了」，是「桥的树让这段递归换了形状」。下一问很具体：
+    把桥的树与宿主的树里 深 那个函数的 body 并排打出来，看 1 + 深(n - 1) 被包成了
+    什么节点 —— 若它在桥那边成了表达式里套调用，宿主那一路就会在表达式求值里递归，
+    而那一段没有深度计数。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 E0301；
 另外引的文件不在就报 E0302（宿主也是这个码）。顺序取后序，于是 order 逐项相同。

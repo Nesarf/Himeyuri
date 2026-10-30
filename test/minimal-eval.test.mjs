@@ -36,15 +36,25 @@ const 跑 = (入口, 用最小, argv) => {
     capabilities: 本机能力(),
   };
   let 码 = 0;
+  let rt = null;
   try {
     const 层 = loadUnit(入口);
     if (!层.ok) return { 码: -2, 出: 出.w, 错: 出.e, 诊断: 层.diagnostics.errors.map((x) => x.code) };
-    const rt = 用最小 ? 最小运行(层, 选项) : runUnit(层, 选项);
+    rt = 用最小 ? 最小运行(层, 选项) : runUnit(层, 选项);
     rt.argv = argv || [];
     if (!用最小) rt.writeErr = 选项.writeErr;
     码 = rt.callFunction(rt.functions.get("main") || rt.functions.get("命令行入口"), [], null) ?? 0;
   } catch (e) {
     码 = -1;
+    // 可开的现场（HMYR_DEPTH_TRACE=1）：撞深度那一条要说清「深度有没有被数」。
+    // 2026-11-02 实测：同一个程序在开关量法下两路都给 R0108，而在桥那条路上宿主那一路
+    // 给的是引擎自己的栈溢出 —— 而探针里两台都抛 RangeError、depth 停在 1 与 0。
+    // 三个数一起打，才分得清是「深度没被数」还是「树的形状让递归更深」。
+    if (process.env.HMYR_DEPTH_TRACE) {
+      console.error("[depth] " + (用最小 ? "最小" : "宿主") +
+        " 错=" + (e.code || e.constructor.name) +
+        " maxDepth=" + (rt && rt.maxDepth) + " depth=" + (rt && rt.depth));
+    }
     出.e += (e.code || "") + " " + e.message;
   }
   return { 码, 出: 出.w.trim(), 错: 出.e.trim() };
