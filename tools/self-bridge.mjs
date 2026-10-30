@@ -71,6 +71,23 @@ function 取引导() {
   return 引导;
 }
 
+// 宏模板里的字面量补 value（只在桥这一层做，理由见模块循环里那段）。
+const 补字面量 = (n) => {
+  if (!n || typeof n !== "object") return;
+  if (Array.isArray(n)) {
+    for (const x of n) 补字面量(x);
+    return;
+  }
+  if (n.kind === "Literal" && n.value === undefined && typeof n.text === "string") {
+    if (n.type === "int") n.value = Number(n.text);
+    else if (n.type === "string") n.value = n.text;
+  }
+  for (const [k, v] of Object.entries(n)) {
+    if (k === "line" || k === "column" || k === "kind") continue;
+    补字面量(v);
+  }
+};
+
 // 桥自己的诊断袋。原来 error 与 warn 是空函数 —— 于是「第二趟的检查」报了等于没报：
 // zonestatic、realtime、ownedcheck 三套的判据要的是「装载应当失败」，而它们拿到的
 // 永远是 ok:true 与一个空数组（2026-11-02 实测）。现在按 Diagnostics 的形状收集。
@@ -202,6 +219,15 @@ export function loadUnit(entry, options = {}) {
       诊断.error("HMYR-E0103", String(e.message).replace(/^HMYR-E0103\s*/, ""), 0, 0);
       模 = m;
     }
+    // 宏模板里的字面量没有 value：模板是 self/chain.hmoca 的 atom 解析的，而那里只给
+    // text 与 raw（普通函数体走 run.hmoca 的 翻表达式，那一份有 value）。宿主求值器读
+    // Literal 时读 value，缺了它就是 undefined，于是「模板里带一次真调用」报
+    // HMYR-R0130（2026-11-02 实测）。
+    //
+    // 补在这一层而不是自举层：这是桥的形状转换处，与 pub 的 1/0、passing 的空数组
+    // 是同一类对齐 —— 而且试过改 self/chain.hmoca，两次都弄坏了别的套件。
+    // 展开之后补：展开会产出模板里的新字面量。
+    补字面量(模);
     modules.set(键, 模);
     // 自举层交回的 pub 是 1 / 0（它那一侧没有 JS 的 true / false），而宿主的可见性检查
     // 是严格比较 true（src/eval.mjs 第 129 行）—— 不折的话，一个写了 pub 的跨模块调用
