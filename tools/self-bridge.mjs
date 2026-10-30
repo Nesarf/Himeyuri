@@ -186,6 +186,15 @@ export function loadUnit(entry, options = {}) {
     // 同一棵没有宏的树。宿主那一路把它放在 reader 里（src/loader.mjs 第 244 行），
     // 而桥的树是自举层造的，没人做过这一遍 —— 于是 macro 那套在桥这条路上
     // 「没有这个名字 两次」（2026-11-02）。
+    // 参数的 passing 也要折：自举层没有 null，没有前缀时给的是空元组，深转之后
+    // 成了空数组 —— 而空数组是真值，宿主那边是 null。求值器里凡按「有没有 passing」
+    // 判的地方，在这条路上都会走错分支（2026-11-02：macro 那套「模板里带一次真调用」
+    // 报 HMYR-R0130 expected a number, found undefined，而两边的树形状是一样的）。
+    for (const decl of m.decls || []) {
+      for (const p of decl.params || []) {
+        if (Array.isArray(p.passing) && p.passing.length === 0) p.passing = null;
+      }
+    }
     let 模 = m;
     try {
       模 = 展开模块(m);
