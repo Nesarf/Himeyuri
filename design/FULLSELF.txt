@@ -2542,6 +2542,38 @@ selfloa 的 27/27）。
     内置函数时只验了桌面，于是把一台机器弄坏了三处。下一轮加任何与平台有关的东西，
     两个模式都要编一次。
 
+11 套红里只有 arm 是我们的，其余 10 套用两次回退验过（2026-11-02，新一段第 51 轮）
+
+    上一轮的 11 套红只知名字、不知归属。这一轮用两个回退实验把它们分清了，
+    而两个实验都很便宜：把可疑文件换回 4368faa 那一版，跑同一批套件，再换回来。
+
+    实验一：vm/hmyr.c 回到 read_file 仍 exit 的那一版。
+      pipe         6 passed, 1 failed   ← 与现在一模一样
+      size         3 passed, 1 failed   ← 一样
+      zoneself    40 passed, 1 failed   ← 一样
+      globalvar    6 passed, 2 failed   ← 一样
+      packagehmyr 20 passed, 1 failed   ← 一样
+
+    实验二：src/bytecode.mjs 回到没有 call_c 那一版。
+      subsetcensus 10 passed, 1 failed  ← 一样
+      subsetparse  35 passed, 2 failed  ← 一样
+      subsetdiag    8 passed, 9 failed  ← 一样
+      stage0eval   22 passed, 3 failed  ← 一样
+      hostdeps     16 passed, 3 failed  ← 一样
+
+    所以这 10 套是早就红的，与这一段无关；而 11 套里唯一由这一段造成的是 arm
+    （Windows-only 的 call_c 没进平台条件），它已经从 14 处失败降到 11 处，
+    剩下的 11 项是 GC 警告与缺 armlink 那一侧的链接日志。
+
+    两次实验之后 git status 都是 0 处改动，工作区干净。
+
+    而 pipe 那一条的失败原因值得单独记：run_bytecode 读不到文件时报 HMYR-詞-009，
+    而测试期待 HMYR-詞-003。那是换码时两处没对齐 —— 与 E0002 双义同一类问题，
+    而它属于换码那一段的遗留，不是这一段的。
+
+    这 10 套红记在这里，不当成绩也不当债务认领：它们是更早那一段留下的，
+    要修就单独开一段，用一条一条对的方式修，而不是在一次收尾里顺手改。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 HMYR-載-001；
 另外引的文件不在就报 HMYR-載-003（宿主也是这个码）。顺序取后序，于是 order 逐项相同。
