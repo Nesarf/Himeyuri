@@ -1609,6 +1609,27 @@ selfloa 的 27/27）。
 
     读数：parser、subset-diag、codes-lex、macro、format、docs、lexer 七套全过。
 
+自立：装载层换完了（2026-11-02，新一段第 5 轮）
+
+    最大的一层：載 22 个码、128 处引用、跨 28 份文件。分布是 E0304 28 处（清单）、
+    W0303 12 处（可见性）、E0321 12 处（持有格）、E0301 10 处（环）、W0302 9 处
+    （共享名），其余在 12 到 1 处之间。
+
+    换之前先查了两个可疑的复用（W0304 在 eval.mjs、W0303 在 subset-parse.mjs）——
+    结果两处都只是注释里提到码名，没有真正复用。所以这一层一次换完，144 处。
+
+    两件要一起改的东西：
+
+      self/run.hmoca 里的 E0301 与 E0302   → runtime/run.hmoks 重新生成
+      vm/hmyr.c 里的码                      → C 机器重新编译（gcc 那条命令的
+                                              -Wl,--stack,67108864 要用引号包住，
+                                              否则 PowerShell 会把逗号当成分隔符）
+
+    读数：module、module-rev、pkg-manifest、owned-check、realtime、zone-static、
+    namespace、hmget、self-load、docs 十套全过。
+
+    于是三层换完了：詞 9、形 7、載 22，共 38 个码。剩機 12、行 20、內 23、碼 6。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 E0301；
 另外引的文件不在就报 E0302（宿主也是这个码）。顺序取后序，于是 order 逐项相同。
