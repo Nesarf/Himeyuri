@@ -71,4 +71,6 @@ console.log("换不动 " + 换不动.length);
 for (const f of 换不动) console.log("  " + f.名.padEnd(22) + " " + f.第一处);
 console.log("");
 console.log("用时 " + Math.round((Date.now() - t0) / 1000) + " 秒");
-fs.rmSync(SWAP, { recursive: true, force: true });
+// --keep：跑完不删 swap/ —— 查「副本是不是旧的」时要用（2026-11-02）。
+if (!process.argv.includes("--keep")) fs.rmSync(SWAP, { recursive: true, force: true });
+else console.log("swap/ 留着（--keep）");
