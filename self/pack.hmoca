@@ -83,41 +83,41 @@ fn 放值(状态: Int, v: Int) -> Int {
 
 // ---- 指令 ----
 fn 操作码(op: String) -> Int {
-  if op == "ADD" { return 0 }
-  if op == "ASSIGN" { return 1 }
-  if op == "BOOL" { return 2 }
-  if op == "CALLB" { return 3 }
-  if op == "CALLF" { return 4 }
-  if op == "CONST" { return 5 }
-  if op == "DIV" { return 6 }
-  if op == "EQ" { return 7 }
-  if op == "FIELD" { return 8 }
-  if op == "GE" { return 9 }
-  if op == "GLOBAL" { return 10 }
-  if op == "GT" { return 11 }
-  if op == "INDEX" { return 12 }
-  if op == "JMP" { return 13 }
-  if op == "JMPF" { return 14 }
-  if op == "JMPF_KEEP" { return 15 }
-  if op == "JMPT" { return 16 }
-  if op == "JMPT_KEEP" { return 17 }
-  if op == "LE" { return 18 }
-  if op == "LOAD" { return 19 }
-  if op == "LT" { return 20 }
-  if op == "MOD" { return 21 }
-  if op == "MUL" { return 22 }
-  if op == "NE" { return 23 }
-  if op == "NEG" { return 24 }
-  if op == "NOT" { return 25 }
-  if op == "POP" { return 26 }
-  if op == "RECORD" { return 27 }
-  if op == "RET" { return 28 }
-  if op == "STORE" { return 29 }
-  if op == "SUB" { return 30 }
-  if op == "TUPLE" { return 31 }
+  if op == "加" { return 0 }
+  if op == "赋值" { return 1 }
+  if op == "布尔" { return 2 }
+  if op == "调内置" { return 3 }
+  if op == "调函数" { return 4 }
+  if op == "常量" { return 5 }
+  if op == "除" { return 6 }
+  if op == "等" { return 7 }
+  if op == "字段" { return 8 }
+  if op == "大等" { return 9 }
+  if op == "全域取" { return 10 }
+  if op == "大" { return 11 }
+  if op == "索引" { return 12 }
+  if op == "跳" { return 13 }
+  if op == "假跳" { return 14 }
+  if op == "假跳留" { return 15 }
+  if op == "真跳" { return 16 }
+  if op == "真跳留" { return 17 }
+  if op == "小等" { return 18 }
+  if op == "取" { return 19 }
+  if op == "小" { return 20 }
+  if op == "余" { return 21 }
+  if op == "乘" { return 22 }
+  if op == "不等" { return 23 }
+  if op == "负" { return 24 }
+  if op == "非" { return 25 }
+  if op == "弃" { return 26 }
+  if op == "记录" { return 27 }
+  if op == "返回" { return 28 }
+  if op == "存" { return 29 }
+  if op == "减" { return 30 }
+  if op == "组" { return 31 }
   // 新号追加在末尾，旧号不动 —— 见 src/code-file.mjs 那一行说明。
-  if op == "CALLM" { return 32 }
-  if op == "SETGLOBAL" { return 33 }
+  if op == "调方法" { return 32 }
+  if op == "全域存" { return 33 }
   return 0 - 1
 }
 
@@ -127,32 +127,32 @@ fn 操作码(op: String) -> Int {
 // 记错时的症状是「不认的操作码」—— 因为后面的字节被整体错位读了。
 fn 放指令(状态: Int, 码: Int) -> Int {
   var 收 = 放(状态, 操作码(码.op))
-  if 码.op == "CONST" { return 放值(收, 码.a) }
-  if 码.op == "LOAD" { return 放u16(收, 码.a) }
-  if 码.op == "STORE" {
+  if 码.op == "常量" { return 放值(收, 码.a) }
+  if 码.op == "取" { return 放u16(收, 码.a) }
+  if 码.op == "存" {
     if 码.b { return 放(放u16(收, 码.a), 1) }
     return 放(放u16(收, 码.a), 0)
   }
-  if 码.op == "ASSIGN" { return 放u16(收, 码.a) }
+  if 码.op == "赋值" { return 放u16(收, 码.a) }
   // GLOBAL 的立即数是一个名字串（别的都按编号），而跳转目标是 u32 ——
   // 与 src/code-file.mjs 的 立即数形状 一致。宽度记错的样子是「整段错位」。
-  if 码.op == "GLOBAL" { return 放串(收, 码.a) }
-  if 码.op == "JMP" { return 放u32(收, 码.a) }
-  if 码.op == "JMPF" { return 放u32(收, 码.a) }
-  if 码.op == "JMPT" { return 放u32(收, 码.a) }
-  if 码.op == "JMPF_KEEP" { return 放u32(收, 码.a) }
-  if 码.op == "JMPT_KEEP" { return 放u32(收, 码.a) }
+  if 码.op == "全域取" { return 放串(收, 码.a) }
+  if 码.op == "跳" { return 放u32(收, 码.a) }
+  if 码.op == "假跳" { return 放u32(收, 码.a) }
+  if 码.op == "真跳" { return 放u32(收, 码.a) }
+  if 码.op == "假跳留" { return 放u32(收, 码.a) }
+  if 码.op == "真跳留" { return 放u32(收, 码.a) }
   // 调用：名字串在前，实参数在后 —— 顺序与 src/code-file.mjs 的写者一致。
   // 反过来的症状不是「读不出来」，而是读出来一个两码元的名字，然后整段错位。
-  if 码.op == "CALLF" { return 放u16(放串(收, 码.a), 码.b) }
-  if 码.op == "CALLB" { return 放u16(放串(收, 码.a), 码.b) }
+  if 码.op == "调函数" { return 放u16(放串(收, 码.a), 码.b) }
+  if 码.op == "调内置" { return 放u16(放串(收, 码.a), 码.b) }
   // 方法调用与那两个同一个形状：名字串在前，实参数在后。
-  if 码.op == "CALLM" { return 放u16(放串(收, 码.a), 码.b) }
+  if 码.op == "调方法" { return 放u16(放串(收, 码.a), 码.b) }
   // 顶层常量的登记：立即数是一个名字，与 GLOBAL 同形状。
-  if 码.op == "SETGLOBAL" { return 放串(收, 码.a) }
-  if 码.op == "FIELD" { return 放串(收, 码.a) }
-  if 码.op == "TUPLE" { return 放u16(收, 码.a) }
-  if 码.op == "RECORD" {
+  if 码.op == "全域存" { return 放串(收, 码.a) }
+  if 码.op == "字段" { return 放串(收, 码.a) }
+  if 码.op == "组" { return 放u16(收, 码.a) }
+  if 码.op == "记录" {
     var 收2 = 放u16(收, len(码.a))
     var i = 0
     while i < len(码.a) {

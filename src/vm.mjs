@@ -193,61 +193,61 @@ export class 虚拟机 {
       this.当前pc = pc;
       switch (指令.op) {
         // 字面量是编译期从宿主串来的，所以它进来时要落到选定的那种底上。
-        case "CONST": 压(this.码元串 && typeof 指令.a === "string" ? 收进来(this.文, 指令.a) : 指令.a); pc++; break;
-        case "LOAD": 压(帧.槽[指令.a].v); pc++; break;
-        case "STORE": 帧.槽[指令.a] = { v: 弹(), 可写: 指令.b === true }; pc++; break;
-        case "ASSIGN": {
+        case "常量": 压(this.码元串 && typeof 指令.a === "string" ? 收进来(this.文, 指令.a) : 指令.a); pc++; break;
+        case "取": 压(帧.槽[指令.a].v); pc++; break;
+        case "存": 帧.槽[指令.a] = { v: 弹(), 可写: 指令.b === true }; pc++; break;
+        case "赋值": {
           const 槽 = 帧.槽[指令.a];
           const v = 弹();
           if (!槽.可写) { this.坏("HMYR-行-017", "cannot assign to a name that was not declared with var (slot " + 指令.a + " at pc " + pc + ")"); return null; }
           槽.v = v;
           pc++; break;
         }
-        case "POP": 弹(); pc++; break;
-        case "GLOBAL": {
+        case "弃": 弹(); pc++; break;
+        case "全域取": {
           if (!this.全局.has(指令.a)) { this.坏("HMYR-行-005", "there is no name '" + 指令.a + "' in scope"); return null; }
           压(this.全局.get(指令.a)); pc++; break;
         }
         // 顶层常量的登记：值在栈顶，名字是立即数。写进全局表的只有这一条指令 ——
         // 用户代码里的赋值（ASSIGN）只碰槽，所以「全局可变」这件事并没有因此打开。
-        case "SETGLOBAL": this.全局.set(指令.a, 弹()); pc++; break;
-        case "BOOL": 压(真(弹(), this.文)); pc++; break;
-        case "NEG": 压(数.反(this.成数(弹()))); pc++; break;
-        case "NOT": 压(!真(弹(), this.文)); pc++; break;
-        case "ADD": { const b = 弹(), a = 弹();
+        case "全域存": this.全局.set(指令.a, 弹()); pc++; break;
+        case "布尔": 压(真(弹(), this.文)); pc++; break;
+        case "负": 压(数.反(this.成数(弹()))); pc++; break;
+        case "非": 压(!真(弹(), this.文)); pc++; break;
+        case "加": { const b = 弹(), a = 弹();
           // 数组 + 什么 都拼成一个新元组：+ 从来不就地改，这是它和 设 的分界。
           if (a && b && (a.tag === "tuple" || a.tag === "array") && (b.tag === "tuple" || b.tag === "array")) 压(new 类元组([...a.items, ...b.items]));
           // 拼接要在选定的那种底上做：先把这个值写成文本，再落到那层去。
           else if (this.文.是串(a) || this.文.是串(b)) 压(this.文.拼(收进来(this.文, this.成串(a)), 收进来(this.文, this.成串(b))));
           else 压(数.加(this.成数(a), this.成数(b)));
           pc++; break; }
-        case "SUB": { const b = 弹(), a = 弹(); 压(数.减(this.成数(a), this.成数(b))); pc++; break; }
-        case "MUL": { const b = 弹(), a = 弹(); 压(数.乘(this.成数(a), this.成数(b))); pc++; break; }
-        case "DIV": { const b = 弹(), a = 弹();
+        case "减": { const b = 弹(), a = 弹(); 压(数.减(this.成数(a), this.成数(b))); pc++; break; }
+        case "乘": { const b = 弹(), a = 弹(); 压(数.乘(this.成数(a), this.成数(b))); pc++; break; }
+        case "除": { const b = 弹(), a = 弹();
           if (数.是零(this.成数(b))) { this.坏("HMYR-行-012", "division by zero"); return null; }
           压(数.除(this.成数(a), this.成数(b))); pc++; break; }
-        case "MOD": { const b = 弹(), a = 弹();
+        case "余": { const b = 弹(), a = 弹();
           if (数.是零(this.成数(b))) { this.坏("HMYR-行-012", "division by zero"); return null; }
           压(数.余(this.成数(a), this.成数(b))); pc++; break; }
-        case "EQ": { const b = 弹(), a = 弹(); 压(this.相等(a, b)); pc++; break; }
-        case "NE": { const b = 弹(), a = 弹(); 压(!this.相等(a, b)); pc++; break; }
-        case "LT": { const b = 弹(), a = 弹(); 压(this.比(a, b) < 0); pc++; break; }
+        case "等": { const b = 弹(), a = 弹(); 压(this.相等(a, b)); pc++; break; }
+        case "不等": { const b = 弹(), a = 弹(); 压(!this.相等(a, b)); pc++; break; }
+        case "小": { const b = 弹(), a = 弹(); 压(this.比(a, b) < 0); pc++; break; }
         // 同上：<= 与 >= 先问「能不能比」，因为「比」把不可比压成 0。
-        case "LE": { const b = 弹(), a = 弹(); 压(数.有序(a, b) && this.比(a, b) <= 0); pc++; break; }
-        case "GT": { const b = 弹(), a = 弹(); 压(this.比(a, b) > 0); pc++; break; }
-        case "GE": { const b = 弹(), a = 弹(); 压(数.有序(a, b) && this.比(a, b) >= 0); pc++; break; }
-        case "JMP": pc = 指令.a; break;
-        case "JMPF": if (!真(弹(), this.文)) pc = 指令.a; else pc++; break;
-        case "JMPT": if (真(弹(), this.文)) pc = 指令.a; else pc++; break;
+        case "小等": { const b = 弹(), a = 弹(); 压(数.有序(a, b) && this.比(a, b) <= 0); pc++; break; }
+        case "大": { const b = 弹(), a = 弹(); 压(this.比(a, b) > 0); pc++; break; }
+        case "大等": { const b = 弹(), a = 弹(); 压(数.有序(a, b) && this.比(a, b) >= 0); pc++; break; }
+        case "跳": pc = 指令.a; break;
+        case "假跳": if (!真(弹(), this.文)) pc = 指令.a; else pc++; break;
+        case "真跳": if (真(弹(), this.文)) pc = 指令.a; else pc++; break;
         // 短路那两个：跳走时不弹栈——栈上留着的就是整个表达式的值（下一句 BOOL 转成布尔）。
-        case "JMPF_KEEP": if (!真(栈[栈.length - 1], this.文)) pc = 指令.a; else { 弹(); pc++; } break;
-        case "JMPT_KEEP": if (真(栈[栈.length - 1], this.文)) pc = 指令.a; else { 弹(); pc++; } break;
-        case "TUPLE": {
+        case "假跳留": if (!真(栈[栈.length - 1], this.文)) pc = 指令.a; else { 弹(); pc++; } break;
+        case "真跳留": if (真(栈[栈.length - 1], this.文)) pc = 指令.a; else { 弹(); pc++; } break;
+        case "组": {
           const n = 指令.a;
           压(new 类元组(栈.splice(栈.length - n, n)));
           pc++; break;
         }
-        case "RECORD": {
+        case "记录": {
           const 名们 = 指令.a;
           const 值们 = 栈.splice(栈.length - 名们.length, 名们.length);
           const 字段 = new Map();
@@ -255,7 +255,7 @@ export class 虚拟机 {
           压(new 类记录(字段));
           pc++; break;
         }
-        case "FIELD": {
+        case "字段": {
           const t = 弹();
           if (!t || t.tag !== "record" || !t.fields.has(指令.a)) {
             // 区与块是索引，它们的字段也要能读（b.zone / b.size / b.live）。
@@ -288,7 +288,7 @@ export class 虚拟机 {
           压(t.fields.get(指令.a));
           pc++; break;
         }
-        case "INDEX": {
+        case "索引": {
           // 下标先取下整：与 slice 的起止、设()、chr() 走同一个 数.下整 ——
           // 小数下标原来是直接把宿主的 undefined 压进值域，而那不是这门语言的值。
           const i = 数.下整(this.成数(弹())), t = 弹();
@@ -304,7 +304,7 @@ export class 虚拟机 {
           }
           pc++; break;
         }
-        case "CALLB": {
+        case "调内置": {
           const n = 指令.b;
           if (叫要 && 叫数 < 叫上限) { process.stderr.write("EV " + 事件号() + " CALLB " + 指令.a + " n=" + n + "\n"); 叫数++; }
           const 实参 = 栈.splice(栈.length - n, n);
@@ -319,7 +319,7 @@ export class 虚拟机 {
           压(结果 === undefined ? null : 结果);
           pc++; break;
         }
-        case "CALLF": {
+        case "调函数": {
           this.当前函 = 指令.a;
           const n = 指令.b;
           if (叫要 && 叫数 < 叫上限) {
@@ -346,7 +346,7 @@ export class 虚拟机 {
           // 而 tokenize 那样的「每读一个 token 递归一次」正是靠这一点才跑得动一千多层。
           //
           // 效果与参数数的检查照做：省掉的是帧，不是规矩。
-          if (码[pc + 1] && 码[pc + 1].op === "RET") {
+          if (码[pc + 1] && 码[pc + 1].op === "返回") {
             const 函 = this.程序.函数们.get(指令.a);
             if (!函) { this.坏("HMYR-行-005", "there is no name '" + 指令.a + "' in scope"); return null; }
             for (const 效 of 函.效果) {
@@ -373,7 +373,7 @@ export class 虚拟机 {
           压(r.值);
           pc++; break;
         }
-        case "CALLM": {
+        case "调方法": {
           // 方法调用（a.alloc(16)）：主先压栈，参数按序压，最后这一条。
           // 分派交给 vm-builtins 的 调区方法 —— 与自举层那边同一套键与同一套判词，
           // 因为「三台机器同一个答案」靠的是判词相同，不是实现相同。
@@ -388,7 +388,7 @@ export class 虚拟机 {
           pc++;
           break;
         }
-        case "RET": return 弹();
+        case "返回": return 弹();
         default: this.坏("HMYR-行-010", "cannot execute the opcode " + 指令.op); return null;
       }
     }

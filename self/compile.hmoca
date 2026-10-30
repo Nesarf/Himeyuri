@@ -214,17 +214,17 @@ fn 是内置(名: String) -> Bool {
   return false
 }
 
-fn 二元码(op: String) -> String {  if op == "+" { return "ADD" }
-  if op == "-" { return "SUB" }
-  if op == "*" { return "MUL" }
-  if op == "/" { return "DIV" }
-  if op == "%" { return "MOD" }
-  if op == "==" { return "EQ" }
-  if op == "!=" { return "NE" }
-  if op == "<" { return "LT" }
-  if op == "<=" { return "LE" }
-  if op == ">" { return "GT" }
-  if op == ">=" { return "GE" }
+fn 二元码(op: String) -> String {  if op == "+" { return "加" }
+  if op == "-" { return "减" }
+  if op == "*" { return "乘" }
+  if op == "/" { return "除" }
+  if op == "%" { return "余" }
+  if op == "==" { return "等" }
+  if op == "!=" { return "不等" }
+  if op == "<" { return "小" }
+  if op == "<=" { return "小等" }
+  if op == ">" { return "大" }
+  if op == ">=" { return "大等" }
   return ""
 }
 
@@ -307,30 +307,30 @@ fn 数字值(s: String) -> Int {
 fn 表达(节点: Int, 状态: Int) {
   let 种 = 节点.kind
   if 种 == "字" && 节点.type == "int" {
-    return {ok: true, 状态: 发(状态, {op: "CONST", a: 数字值(节点.text)})}
+    return {ok: true, 状态: 发(状态, {op: "常量", a: 数字值(节点.text)})}
   }
   if 种 == "字" && 节点.type == "string" {
-    return {ok: true, 状态: 发(状态, {op: "CONST", a: 节点.text})}
+    return {ok: true, 状态: 发(状态, {op: "常量", a: 节点.text})}
   }
   if 种 == "名" {
     // true 与 false 到这一步是「一个名字」：自举的切词器把关键字一律当成标识符
     // （见 lex.hmyr 开头那段）。求值器里有这个特判，编译器也要有 ——
     // 少了它的症状是「没有这个槽：true」，而那句话会让你去查作用域。
-    if 节点.text == "true" { return {ok: true, 状态: 发(状态, {op: "CONST", a: true})} }
-    if 节点.text == "false" { return {ok: true, 状态: 发(状态, {op: "CONST", a: false})} }
+    if 节点.text == "true" { return {ok: true, 状态: 发(状态, {op: "常量", a: true})} }
+    if 节点.text == "false" { return {ok: true, 状态: 发(状态, {op: "常量", a: false})} }
     let 号 = 找槽(状态.名表, 节点.text)
     // 槽里没有就是全局：模块级 const 走这一条。宿主那一份（src/bytecode.mjs）
     // 一直是这么做的 —— 「if (!有) 发 GLOBAL」—— 而这一份少了它，于是任何读
     // 模块级常量的函数都编不出来，报的却是「没有这个槽」，那句话会让人去查作用域。
-    if 号 < 0 { return {ok: true, 状态: 发(状态, {op: "GLOBAL", a: 节点.text})} }
-    return {ok: true, 状态: 发(状态, {op: "LOAD", a: 号})}
+    if 号 < 0 { return {ok: true, 状态: 发(状态, {op: "全域取", a: 节点.text})} }
+    return {ok: true, 状态: 发(状态, {op: "取", a: 号})}
   }
   if 种 == "二元" {
     // 短路那两个不是一条指令的事：左操作数算出之后留在栈上，
     // 由 JMP*_KEEP 决定「跳过右边」还是「弹掉它继续算」。
     // 两条路的最后都要把留下的那个值转成布尔 —— 那是 BOOL 的活。
-    if 节点.op == "&&" { return 编短路(节点, 状态, "JMPF_KEEP") }
-    if 节点.op == "||" { return 编短路(节点, 状态, "JMPT_KEEP") }
+    if 节点.op == "&&" { return 编短路(节点, 状态, "假跳留") }
+    if 节点.op == "||" { return 编短路(节点, 状态, "真跳留") }
     let l = 表达(节点.left, 状态)
     if l.ok == false { return l }
     let r = 表达(节点.right, l.状态)
@@ -342,8 +342,8 @@ fn 表达(节点: Int, 状态: Int) {
   if 种 == "一元" {
     let o = 表达(节点.operand, 状态)
     if o.ok == false { return o }
-    if 节点.op == "-" { return {ok: true, 状态: 发(o.状态, {op: "NEG"})} }
-    if 节点.op == "!" { return {ok: true, 状态: 发(o.状态, {op: "NOT"})} }
+    if 节点.op == "-" { return {ok: true, 状态: 发(o.状态, {op: "负"})} }
+    if 节点.op == "!" { return {ok: true, 状态: 发(o.状态, {op: "非"})} }
     return {ok: false, 错: "不认的一元运算：" + 节点.op}
   }
   if 种 == "调用" {
@@ -355,19 +355,19 @@ fn 表达(节点: Int, 状态: Int) {
       if 主.ok == false { return 主 }
       let 方的参 = 编实参(节点.args, 主.状态, 0)
       if 方的参.ok == false { return 方的参 }
-      return {ok: true, 状态: 发(方的参.状态, {op: "CALLM", a: 节点.callee.name, b: len(节点.args)})}
+      return {ok: true, 状态: 发(方的参.状态, {op: "调方法", a: 节点.callee.name, b: len(节点.args)})}
     }
     let 参 = 编实参(节点.args, 状态, 0)
     if 参.ok == false { return 参 }
     if 是内置(节点.callee.text) {
-      return {ok: true, 状态: 发(参.状态, {op: "CALLB", a: 节点.callee.text, b: len(节点.args)})}
+      return {ok: true, 状态: 发(参.状态, {op: "调内置", a: 节点.callee.text, b: len(节点.args)})}
     }
-    return {ok: true, 状态: 发(参.状态, {op: "CALLF", a: 节点.callee.text, b: len(节点.args)})}
+    return {ok: true, 状态: 发(参.状态, {op: "调函数", a: 节点.callee.text, b: len(节点.args)})}
   }
   if 种 == "组" {
     let 项 = 编实参(节点.items, 状态, 0)
     if 项.ok == false { return 项 }
-    return {ok: true, 状态: 发(项.状态, {op: "TUPLE", a: len(节点.items)})}
+    return {ok: true, 状态: 发(项.状态, {op: "组", a: len(节点.items)})}
   }
   if 种 == "记录" {
     return 编记录(节点.fields, 状态, 0)
@@ -375,14 +375,14 @@ fn 表达(节点: Int, 状态: Int) {
   if 种 == "字段" {
     let t = 表达(节点.target, 状态)
     if t.ok == false { return t }
-    return {ok: true, 状态: 发(t.状态, {op: "FIELD", a: 节点.name})}
+    return {ok: true, 状态: 发(t.状态, {op: "字段", a: 节点.name})}
   }
   if 种 == "索引" {
     let t = 表达(节点.target, 状态)
     if t.ok == false { return t }
     let i = 表达(节点.index, t.状态)
     if i.ok == false { return i }
-    return {ok: true, 状态: 发(i.状态, {op: "INDEX"})}
+    return {ok: true, 状态: 发(i.状态, {op: "索引"})}
   }
   return {ok: false, 错: "这一版还编不了这种表达式：" + 种}
 }
@@ -396,7 +396,7 @@ fn 编记录(字段们: Int, 状态: Int, i: Int) -> Int {
 }
 
 fn 发记录(状态: Int, 字段们: Int, i: Int, 名们: Int) {
-  if i >= len(字段们) { return {ok: true, 状态: 发(状态, {op: "RECORD", a: 名们})} }
+  if i >= len(字段们) { return {ok: true, 状态: 发(状态, {op: "记录", a: 名们})} }
   return 发记录(状态, 字段们, i + 1, 名们 + (字段们[i].name,))
 }
 
@@ -419,14 +419,14 @@ fn 编短路(节点: Int, 状态: Int, 码: String) {
   let s1 = 发(l.状态, {op: 码, a: 0 - 1})
   let r = 表达(节点.right, s1)
   if r.ok == false { return r }
-  let s2 = 发(r.状态, {op: "BOOL"})
+  let s2 = 发(r.状态, {op: "布尔"})
   let 位过 = 码长(s2)
-  let s3 = 发(s2, {op: "JMP", a: 0 - 1})
+  let s3 = 发(s2, {op: "跳", a: 0 - 1})
   let 补 = 码长(s3)
-  let s4 = 发(s3, {op: "BOOL"})
+  let s4 = 发(s3, {op: "布尔"})
   let 过 = 码长(s4)
   let 修1 = 改位(s4, 位短, {op: 码, a: 补})
-  let 修2 = 改位(修1, 位过, {op: "JMP", a: 过})
+  let 修2 = 改位(修1, 位过, {op: "跳", a: 过})
   return {ok: true, 状态: 修2, 结束: false}
 }
 
@@ -442,14 +442,14 @@ fn 语句(节点: Int, 状态: Int) {
   if 种 == "返回" {
     let v = 表达(节点.value, 状态)
     if v.ok == false { return v }
-    return {ok: true, 状态: 发(v.状态, {op: "RET"}), 结束: true}
+    return {ok: true, 状态: 发(v.状态, {op: "返回"}), 结束: true}
   }
   if 种 == "定" || 种 == "变" {
     let v = 表达(节点.value, 状态)
     if v.ok == false { return v }
     let 号 = v.状态.槽
     let 记过 = 状态(v.状态.块, v.状态.小, 号 + 1, v.状态.名表 + ((节点.name, 号),))
-    return {ok: true, 状态: 发(记过, {op: "STORE", a: 号, b: 种 == "变"}), 结束: false}
+    return {ok: true, 状态: 发(记过, {op: "存", a: 号, b: 种 == "变"}), 结束: false}
   }
   if 种 == "赋值" {
     let 号 = 找槽(状态.名表, 节点.name)
@@ -458,11 +458,11 @@ fn 语句(节点: Int, 状态: Int) {
     if 号 < 0 {
       let v = 表达(节点.value, 状态)
       if v.ok == false { return v }
-      return {ok: true, 状态: 发(v.状态, {op: "SETGLOBAL", a: 节点.name}), 结束: false}
+      return {ok: true, 状态: 发(v.状态, {op: "全域存", a: 节点.name}), 结束: false}
     }
     let v = 表达(节点.value, 状态)
     if v.ok == false { return v }
-    return {ok: true, 状态: 发(v.状态, {op: "ASSIGN", a: 号}), 结束: false}
+    return {ok: true, 状态: 发(v.状态, {op: "赋值", a: 号}), 结束: false}
   }
   if 种 == "表达式语句" {
     // 表达式语句：只编表达式，丢不丢值由 编块 决定 —— 它知道这是不是最后一条。
@@ -481,15 +481,15 @@ fn 语句(节点: Int, 状态: Int) {
     let c = 表达(节点.cond, 状态)
     if c.ok == false { return c }
     let 位跳尾 = 码长(c.状态)
-    let s1 = 发(c.状态, {op: "JMPF", a: 0 - 1})
+    let s1 = 发(c.状态, {op: "假跳", a: 0 - 1})
     let 体 = 编块不留值(节点.body, s1, 0)
     if 体.ok == false { return 体 }
-    let s2 = 发(体.状态, {op: "JMP", a: 起})
+    let s2 = 发(体.状态, {op: "跳", a: 起})
     // while 整个算出一个值（空），与 JS 那一份一致；而 JS 那边它是「表达式语句」，
     // 所以值还要丢掉 —— 两条合起来才是对的字节。
     let 尾 = 码长(s2)
-    let s3 = 发(发(s2, {op: "CONST", a: ()}), {op: "POP"})
-    let 修 = 改位(s3, 位跳尾, {op: "JMPF", a: 尾})
+    let s3 = 发(发(s2, {op: "常量", a: ()}), {op: "弃"})
+    let 修 = 改位(s3, 位跳尾, {op: "假跳", a: 尾})
     return {ok: true, 状态: 修, 结束: false}
   }
   return {ok: false, 错: "这一版还编不了这种语句：" + 种}
@@ -515,11 +515,11 @@ fn 编如果(节点: Int, 状态: Int) {
   let c = 表达(节点.cond, 状态)
   if c.ok == false { return c }
   let 位跳假 = 码长(c.状态)
-  let s1 = 发(c.状态, {op: "JMPF", a: 0 - 1})
+  let s1 = 发(c.状态, {op: "假跳", a: 0 - 1})
   let 真 = 编块(节点.then, s1, 0)
   if 真.ok == false { return 真 }
   let 位跳尾 = 码长(真.状态)
-  let s2 = 发(真.状态, {op: "JMP", a: 0 - 1})
+  let s2 = 发(真.状态, {op: "跳", a: 0 - 1})
   let 假起 = 码长(s2)
   var 假 = s2
   if len(节点.otherwise) > 0 {
@@ -527,12 +527,12 @@ fn 编如果(节点: Int, 状态: Int) {
     if r.ok == false { return r }
     假 = r.状态
   } else {
-    假 = 发(s2, {op: "CONST", a: ()})
+    假 = 发(s2, {op: "常量", a: ()})
   }
   let 位尾 = 码长(假)
-  let s3 = 发(假, {op: "POP"})
-  let 修1 = 改位(s3, 位跳假, {op: "JMPF", a: 假起})
-  let 修2 = 改位(修1, 位跳尾, {op: "JMP", a: 位尾})
+  let s3 = 发(假, {op: "弃"})
+  let 修1 = 改位(s3, 位跳假, {op: "假跳", a: 假起})
+  let 修2 = 改位(修1, 位跳尾, {op: "跳", a: 位尾})
   return {ok: true, 状态: 修2, 结束: false}
 }
 
@@ -547,7 +547,7 @@ fn 编块不留值(语句们: Int, 状态: Int, i: Int) {
   if r.结束 { return {ok: true, 状态: r.状态, 结束: true} }
   var 下 = r.状态
   if 语句们[i].kind == "表达式语句" {
-    下 = 发(下, {op: "POP"})
+    下 = 发(下, {op: "弃"})
   }
   return 编块不留值(语句们, 下, i + 1)
 }
@@ -564,7 +564,7 @@ fn 编块(语句们: Int, 状态: Int, i: Int) {
   if r.结束 { return {ok: true, 状态: r.状态, 结束: true} }
   var 下 = r.状态
   if i + 1 < len(语句们) && 语句们[i].kind == "表达式语句" {
-    下 = 发(下, {op: "POP"})
+    下 = 发(下, {op: "弃"})
   }
   return 编块(语句们, 下, i + 1)
 }
@@ -582,7 +582,7 @@ fn 编函数(函数: Int) {
   }
   let r = 编块(体, 状态((), (), len(参名们), 名表), 0)
   if r.ok == false { return {ok: false, 错: 名 + "：" + r.错} }
-  let 码 = 拼平(r.状态) + ({op: "CONST", a: ()}, {op: "RET"})
+  let 码 = 拼平(r.状态) + ({op: "常量", a: ()}, {op: "返回"})
   return {ok: true, 函数: {名: 名, 参数量: len(参名们), 槽数: r.状态.槽, 效果: (), 码: 码}}
 }
 
@@ -601,13 +601,13 @@ fn 编常量们(常量们: Int, i: Int, 状态们: Int) {
   let 项 = 常量们[i]
   let r = 表达(项[1], 状态们)
   if r.ok == false { return {ok: false, 错: "常量 " + 项[0] + "：" + r.错} }
-  return 编常量们(常量们, i + 1, 发(r.状态, {op: "SETGLOBAL", a: 项[0]}))
+  return 编常量们(常量们, i + 1, 发(r.状态, {op: "全域存", a: 项[0]}))
 }
 
 fn 编顶层段(常量们: Int) {
   let r = 编常量们(常量们, 0, 状态((), (), 0, ()))
   if r.ok == false { return r }
-  let 码 = 拼平(r.状态) + ({op: "CONST", a: ()}, {op: "RET"})
+  let 码 = 拼平(r.状态) + ({op: "常量", a: ()}, {op: "返回"})
   return {ok: true, 函数: {名: "__hmyr_top__", 参数量: 0, 槽数: r.状态.槽, 效果: (), 码: 码}}
 }
 

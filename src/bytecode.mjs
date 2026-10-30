@@ -24,10 +24,10 @@
 //
 //   { op, a, b }：a 与 b 是可选的立即数。指令数组本身就是程序，跳转用绝对下标。
 //   值都在一个操作数栈上。函数体各自是一段指令，函数名到入口下标的表在 program 里。
-const 一元运算 = { "-": "NEG", "!": "NOT" };
+const 一元运算 = { "-": "负", "!": "非" };
 const 二元运算 = {
-  "+": "ADD", "-": "SUB", "*": "MUL", "/": "DIV", "%": "MOD",
-  "==": "EQ", "!=": "NE", "<": "LT", "<=": "LE", ">": "GT", ">=": "GE",
+  "+": "加", "-": "减", "*": "乘", "/": "除", "%": "余",
+  "==": "等", "!=": "不等", "<": "小", "<=": "小等", ">": "大", ">=": "大等",
 };
 
 // 编译器不认某个形状时抛这个。「这一份不认」是实现限制，不是程序错了 ——
@@ -230,11 +230,11 @@ const 编译函数 = (decl) => {
   // ---- 表达式：结果留在栈顶 ----
   const 表达 = (n) => {
     switch (n.kind) {
-      case "字": 发("CONST", n.value); return;
+      case "字": 发("常量", n.value); return;
       case "名": {
         const 有 = 查(n.name);
-        if (!有) 发("GLOBAL", n.name);          // 顶层常量之类，交给运行时的全局表
-        else 发("LOAD", 有.槽);
+        if (!有) 发("全域取", n.name);          // 顶层常量之类，交给运行时的全局表
+        else 发("取", 有.槽);
         return;
       }
       case "一元":
@@ -245,12 +245,12 @@ const 编译函数 = (decl) => {
         // 短路：&& 与 || 要跳，不能先算右边。
         if (n.op === "&&" || n.op === "||") {
           表达(n.left);
-          const 跳 = 发(n.op === "&&" ? "JMPF_KEEP" : "JMPT_KEEP", -1);
+          const 跳 = 发(n.op === "&&" ? "假跳留" : "真跳留", -1);
           表达(n.right);
-          发("BOOL");
-          const 完 = 发("JMP", -1);
+          发("布尔");
+          const 完 = 发("跳", -1);
           码[跳].a = 码.length;
-          发("BOOL");
+          发("布尔");
           码[完].a = 码.length;
           return;
         }
@@ -261,16 +261,16 @@ const 编译函数 = (decl) => {
       }
       case "组": {
         for (const 项 of n.items) 表达(项);
-        发("TUPLE", n.items.length);
+        发("组", n.items.length);
         return;
       }
       case "记录": {
         for (const f of n.fields) { 表达(f.value); }
-        发("RECORD", n.fields.map((f) => f.name));
+        发("记录", n.fields.map((f) => f.name));
         return;
       }
-      case "字段": 表达(n.target); 发("FIELD", n.name); return;
-      case "索引": 表达(n.target); 表达(n.index); 发("INDEX"); return;
+      case "字段": 表达(n.target); 发("字段", n.name); return;
+      case "索引": 表达(n.target); 表达(n.index); 发("索引"); return;
       case "调用": {
         // 方法调用（a.alloc(16)）：先把主压栈，再压参数，最后一条 CALLM。
         // 这是区的入口 —— 到 2026-10-26 为止这一行是「只认按名字调用」，于是
@@ -280,13 +280,13 @@ const 编译函数 = (decl) => {
         if (n.callee.kind === "字段") {
           表达(n.callee.target);
           for (const a of n.args) 表达(a);
-          发("CALLM", n.callee.name, n.args.length);
+          发("调方法", n.callee.name, n.args.length);
           return;
         }
         if (n.callee.kind !== "名") throw new 编译错("只认按名字调用：self/ 里没有别的写法");
         for (const a of n.args) 表达(a);
-        if (内置名.has(n.callee.name)) 发("CALLB", n.callee.name, n.args.length);
-        else 发("CALLF", n.callee.name, n.args.length);
+        if (内置名.has(n.callee.name)) 发("调内置", n.callee.name, n.args.length);
+        else 发("调函数", n.callee.name, n.args.length);
         return;
       }
       case "若": {
@@ -294,15 +294,15 @@ const 编译函数 = (decl) => {
         // 「没有 otherwise」时把 CONST null 放在假分支上，而不是放在 then 之后——
         // 放在 then 之后会让两个分支各留一个值，栈就错位了。
         表达(n.condition);
-        const 假 = 发("JMPF", -1);
-        if (n.then) { 进层(); 语句们(n.then.statements, true); 出层(); } else 发("CONST", null);
-        const 完 = 发("JMP", -1);
+        const 假 = 发("假跳", -1);
+        if (n.then) { 进层(); 语句们(n.then.statements, true); 出层(); } else 发("常量", null);
+        const 完 = 发("跳", -1);
         码[假].a = 码.length;
         if (n.otherwise) {
           if (n.otherwise.kind === "块") { 进层(); 语句们(n.otherwise.statements, true); 出层(); }
           else 表达(n.otherwise);
         } else {
-          发("CONST", null);
+          发("常量", null);
         }
         码[完].a = 码.length;
         return;
@@ -310,11 +310,11 @@ const 编译函数 = (decl) => {
       case "当": {
         const 头 = 码.length;
         表达(n.condition);
-        const 出 = 发("JMPF", -1);
+        const 出 = 发("假跳", -1);
         if (n.body) { 进层(); 语句们(n.body.statements, false); 出层(); }
-        发("JMP", 头);
+        发("跳", 头);
         码[出].a = 码.length;
-        发("CONST", null);        // while 的值是 null，与宿主一致
+        发("常量", null);        // while 的值是 null，与宿主一致
         return;
       }
       default:
@@ -334,7 +334,7 @@ const 编译函数 = (decl) => {
         const 槽 = 分配(s.name, s.kind === "变");
         // 可变性放在指令上：执行时 STORE 把它记进槽，ASSIGN 读它。
         // 宿主那边这件事由作用域链在运行时判（HMYR-行-017），这里同样在运行时判。
-        发("STORE", 槽, s.kind === "变");
+        发("存", 槽, s.kind === "变");
         return;
       }
       case "赋值": {
@@ -342,18 +342,18 @@ const 编译函数 = (decl) => {
         // 槽里没有就是模块级的名字：写它要 SETGLOBAL，与读它走 GLOBAL 是对称的。
         // 顶层的 var 才落在这一条上；函数里的 var 在槽里，走 ASSIGN（那条会验「可写」）。
         表达(s.value);
-        if (!有) { 发("SETGLOBAL", s.name); return; }
-        发("ASSIGN", 有.槽);
+        if (!有) { 发("全域存", s.name); return; }
+        发("赋值", 有.槽);
         return;
       }
       case "返回": {
-        if (s.value) 表达(s.value); else 发("CONST", null);
-        发("RET");
+        if (s.value) 表达(s.value); else 发("常量", null);
+        发("返回");
         return;
       }
       case "表达式语句":
         表达(s.expr);
-        if (!留值) 发("POP");
+        if (!留值) 发("弃");
         return;
       default:
         throw new 编译错("这一份不认这种语句：" + s.kind);
@@ -365,11 +365,11 @@ const 编译函数 = (decl) => {
 
   // 顶层常量的初始化：编成这个函数的开头一段。VM 在调 main 之前调这个函数一次。
   // 顺序上必须在「函数体」之前 —— 常量先站稳，函数才跑得动。
-  for (const 声 of decl.顶层常量 || []) { 表达(声.value); 发("SETGLOBAL", 声.name); }
+  for (const 声 of decl.顶层常量 || []) { 表达(声.value); 发("全域存", 声.name); }
 
   语句们((decl.body && decl.body.statements) || []);
-  发("CONST", null);
-  发("RET");
+  发("常量", null);
+  发("返回");
   return { 名: decl.name, 码, 槽数, 参数量: (decl.params || []).length, 效果: decl.effects || [] };
 };
 

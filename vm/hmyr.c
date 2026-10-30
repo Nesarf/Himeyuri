@@ -1479,11 +1479,11 @@ enum {
 };
 
 static const char *op_names[] = {
-  "ADD", "ASSIGN", "BOOL", "CALLB", "CALLF", "CONST", "DIV", "EQ",
-  "FIELD", "GE", "GLOBAL", "GT", "INDEX", "JMP", "JMPF", "JMPF_KEEP",
-  "JMPT", "JMPT_KEEP", "LE", "LOAD", "LT", "MOD", "MUL", "NE",
-  "NEG", "NOT", "POP", "RECORD", "RET", "STORE", "SUB", "TUPLE",
-  "CALLM", "SETGLOBAL"
+  "加", "赋值", "布尔", "调内置", "调函数", "常量", "除", "等",
+  "字段", "大等", "全域取", "大", "索引", "跳", "假跳", "假跳留",
+  "真跳", "真跳留", "小等", "取", "小", "余", "乘", "不等",
+  "负", "非", "弃", "记录", "返回", "存", "减", "组",
+  "调方法", "全域存"
 };
 
 typedef struct {

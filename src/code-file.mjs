@@ -25,23 +25,23 @@ export const 版本 = 1;
 // 操作码：按名字排序之后编号。排序是为了「同一个名字永远是同一个号」——
 // 将来加指令时新号追加在末尾，旧号不动，于是旧文件仍然读得进来。
 export const 操作码表 = [
-  "ADD", "ASSIGN", "BOOL", "CALLB", "CALLF", "CONST", "DIV", "EQ", "FIELD", "GE",
-  "GLOBAL", "GT", "INDEX", "JMP", "JMPF", "JMPF_KEEP", "JMPT", "JMPT_KEEP", "LE",
-  "LOAD", "LT", "MOD", "MUL", "NE", "NEG", "NOT", "POP", "RECORD", "RET", "STORE",
-  "SUB", "TUPLE", "CALLM", "SETGLOBAL",
+  "加", "赋值", "布尔", "调内置", "调函数", "常量", "除", "等", "字段", "大等",
+  "全域取", "大", "索引", "跳", "假跳", "假跳留", "真跳", "真跳留", "小等",
+  "取", "小", "余", "乘", "不等", "负", "非", "弃", "记录", "返回", "存",
+  "减", "组", "调方法", "全域存",
 ];
 
 export const 码 = new Map(操作码表.map((名, i) => [名, i]));
 
 // 立即数的形状：none | u16 | u32 | name | slot | store | record | call | value | tuple
 export const 立即数形状 = {
-  CONST: "value", LOAD: "u16", STORE: "store", ASSIGN: "u16", POP: "none",
-  GLOBAL: "name", BOOL: "none", NEG: "none", NOT: "none",
-  ADD: "none", SUB: "none", MUL: "none", DIV: "none", MOD: "none",
-  EQ: "none", NE: "none", LT: "none", LE: "none", GT: "none", GE: "none",
-  JMP: "u32", JMPF: "u32", JMPT: "u32", JMPF_KEEP: "u32", JMPT_KEEP: "u32",
-  TUPLE: "u16", RECORD: "record", FIELD: "name", INDEX: "none",
-  CALLB: "call", CALLF: "call", CALLM: "call", SETGLOBAL: "name", RET: "none",
+  常量: "value", 取: "u16", 存: "store", 赋值: "u16", 弃: "none",
+  全域取: "name", 布尔: "none", 负: "none", 非: "none",
+  加: "none", 减: "none", 乘: "none", 除: "none", 余: "none",
+  等: "none", 不等: "none", 小: "none", 小等: "none", 大: "none", 大等: "none",
+  跳: "u32", 假跳: "u32", 真跳: "u32", 假跳留: "u32", 真跳留: "u32",
+  组: "u16", 记录: "record", 字段: "name", 索引: "none",
+  调内置: "call", 调函数: "call", 调方法: "call", 全域存: "name", 返回: "none",
 };
 
 class 写者 {
