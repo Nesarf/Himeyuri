@@ -220,7 +220,10 @@ export function loadUnit(entry, options = {}) {
       const 算路径 = p.startsWith("./") || p.startsWith("../") || /^[A-Za-z]:[\\/]/.test(p) || path.isAbsolute(p);
       if (!算路径) continue;
       const 目标路 = path.resolve(path.dirname(键), p.split("/").join(path.sep));
-      const 目标 = modules.get(目标路);
+      // 查表要用 order 里的键（相对形式）—— 拿绝对路径去 modules.get 永远查不到，
+      // 于是版本协商一条都不报，而判据那边看到的是「没有 E0303」（2026-11-02 实测）。
+      const 目标键 = order.find((k) => path.resolve(k) === 目标路);
+      const 目标 = 目标键 ? modules.get(目标键) : undefined;
       if (!目标) continue;
       const 有 = 目标.rev;
       const 要 = imp.rev;
@@ -237,6 +240,8 @@ export function loadUnit(entry, options = {}) {
     }
   }
   // 非路径的 import：加载器跳过它（那是包管理器的事），但那句话要说出来 —— 宿主用的是 W0301。
+  // 顺便记下「哪些文件是靠包名进来的」：清单检查只该对它们做（见下面那段）。
+  const 包名目标 = new Set();
   for (const 键 of order) {
     for (const imp of Array.from(modules.get(键).imports || [])) {
       const p = String((imp && imp.path) || "");
@@ -247,6 +252,8 @@ export function loadUnit(entry, options = {}) {
           code: "HMYR-W0301",
           message: "import of '" + p + "' is not a path; the package manager will own that",
         });
+        const 解 = resolveImport(本机能力(), 键, p, null);
+        if (解) 包名目标.add(path.resolve(解));
       }
     }
   }
@@ -282,14 +289,22 @@ export function loadUnit(entry, options = {}) {
 
   // 清单的版本与入口顶部的 rev 必须一致（宿主 src/loader.mjs 第 325 到 340 行）。
   // 两处写同一件事看着冗余，但它们的读者不同：清单给包管理看，rev 给装载器看。
-  // 只对「某个包的 index.hmoca」做这一条 —— 而「真的是包的入口」由旁边有没有
-  // hmyr.hmkit 来问（临时文件常常就叫 index.hmoca，那件事在 loader-self 里踩过一次）。
+  // 只对「靠包名 import 进来的入口」做 —— 宿主那一路也是这样，清单校验挂在
+  // resolveImport 的包名分支里。
   {
     const 能力 = 本机能力();
     for (const 键 of order) {
       if (path.basename(键) !== "index.hmoca") continue;
+      // 只查「靠包名 import 进来的入口」—— 宿主那一路也是这样：清单校验挂在
+      // resolveImport 的包名分支里。原来对每个 index.hmoca 都查，于是
+      // ownedcheck 那条「包名版本 → E0303」拿到的是清单的 E0304（2026-11-02）。
+      if (!包名目标.has(path.resolve(键))) continue;
       const 包目录 = path.dirname(键);
-      const 包根 = 找包根(能力, 键);
+      // 用绝对路径找包根：order 的键是相对仓库的，而 找包根 要一层层往上问
+      // hmyr.hmkit 在不在 —— 从相对路径出发会问错地方，从而把一个合规的包
+      // 判成「没有清单」（E0304）。这是桥报 E0304 而判据要 E0303 的原因
+      // （2026-11-02）。
+      const 包根 = 找包根(能力, path.resolve(键));
       const 清单路 = path.join(包根, path.basename(包目录), "hmyr.hmkit");
       if (!fs.existsSync(清单路)) continue;
       const 清单 = 读包清单(能力, 包根, path.basename(包目录), 诊断);
