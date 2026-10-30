@@ -54,14 +54,14 @@ const 数值类型名 = new Set(["Int", "Num", "Float", "Double", "Number", "UIn
 // 把类型节点化成一个好比较的形状。
 const 类型形状 = (t) => {
   if (!t) return null;
-  if (t.kind === "TupleType") return { k: "tuple", items: (t.items || []).map(类型形状) };
+  if (t.kind === "组类型") return { k: "tuple", items: (t.items || []).map(类型形状) };
   // 记录类型：字段名与每个字段的形状。字段按名字对，不按顺序对 ——
   // 一个记录的意思不取决于字段写在前还是在后。
-  if (t.kind === "RecordType") {
+  if (t.kind === "记录类型") {
     return { k: "record", fields: (t.fields || []).map((f) => [f.name, 类型形状(f.type)]) };
   }
-  if (t.kind === "FnType") return { k: "fn" };
-  if (t.kind === "TypeRef") {
+  if (t.kind === "函数类型") return { k: "fn" };
+  if (t.kind === "类型名") {
     if (数值类型名.has(t.name)) return { k: "num" };
     if (t.name === "String" || t.name === "Str") return { k: "str" };
     if (t.name === "Bool" || t.name === "Boolean") return { k: "bool" };

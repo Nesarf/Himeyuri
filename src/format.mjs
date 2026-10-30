@@ -88,13 +88,13 @@ class Printer {
 
   type(t) {
     switch (t.kind) {
-      case "TypeRef": {
+      case "类型名": {
         let out = t.name;
         if (t.args && t.args.length) out += "<" + t.args.map((a) => this.type(a)).join(", ") + ">";
         return out + (t.nullable ? "?" : "");
       }
-      case "TupleType": return "(" + t.items.map((i) => this.type(i)).join(", ") + ")";
-      case "FnType": return "fn(" + t.params.map((p) => this.type(p)).join(", ") + ") -> " + this.type(t.returns);
+      case "组类型": return "(" + t.items.map((i) => this.type(i)).join(", ") + ")";
+      case "函数类型": return "fn(" + t.params.map((p) => this.type(p)).join(", ") + ") -> " + this.type(t.returns);
       default: return "Unknown";
     }
   }

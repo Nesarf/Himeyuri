@@ -37,7 +37,7 @@ const read = (source) => {
 
 function jsTypeName(t) {
   if (!t) return "";
-  if (t.kind === "TypeRef") return t.name + (t.nullable ? "?" : "");
+  if (t.kind === "类型名") return t.name + (t.nullable ? "?" : "");
   return t.kind;
 }
 function jsSignature(source) {

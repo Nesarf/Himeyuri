@@ -43,8 +43,8 @@ console.log("\ntypes");
   const ps = r.ast.decls[0].params;
   ok("generic type arguments", ps[0].type.args.length === 2);
   ok("nullable is marked", ps[1].type.nullable === true);
-  ok("tuple type", ps[2].type.kind === "TupleType" && ps[2].type.items.length === 2);
-  ok("function type", ps[3].type.kind === "FnType");
+  ok("tuple type", ps[2].type.kind === "组类型" && ps[2].type.items.length === 2);
+  ok("function type", ps[3].type.kind === "函数类型");
 }
 {
   ok("an unclosed generic is HMYR-形-001", errorsOf("fn f(a: Map<Int) { }\n").includes("HMYR-形-001"));

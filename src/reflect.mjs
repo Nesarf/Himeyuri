@@ -67,9 +67,9 @@ export function symbols(ast) {
 export function typeName(t) {
   if (!t) return null;
   switch (t.kind) {
-    case "TypeRef": return t.name + (t.args && t.args.length ? "<" + t.args.map(typeName).join(", ") + ">" : "") + (t.nullable ? "?" : "");
-    case "TupleType": return "(" + t.items.map(typeName).join(", ") + ")";
-    case "FnType": return "fn(" + t.params.map(typeName).join(", ") + ") -> " + typeName(t.returns);
+    case "类型名": return t.name + (t.args && t.args.length ? "<" + t.args.map(typeName).join(", ") + ">" : "") + (t.nullable ? "?" : "");
+    case "组类型": return "(" + t.items.map(typeName).join(", ") + ")";
+    case "函数类型": return "fn(" + t.params.map(typeName).join(", ") + ") -> " + typeName(t.returns);
     default: return t.kind;
   }
 }

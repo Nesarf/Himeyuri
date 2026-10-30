@@ -275,7 +275,7 @@ fn 效果们(tokens: Int, 起: Int, 末: Int) {
   return 收名从(tokens, 开 + 1, 闭, true, 0, ())
 }
 
-// 返回类型：`-> X` 里那个 X。宿主把它记成 {kind:"TypeRef", name}，
+// 返回类型：`-> X` 里那个 X。宿主把它记成 {kind:"类型名", name}，
 // 而这一层原来只收名字、参数、语句、效果 —— 于是静态核对拿不到 returns，
 // 字节码产物也少了它那一段。收成一个字符串，包成节点的事留给包装层。
 // 一个类型：裸名、元组 (A, B)、记录 {x: A}。宿主把它们记成 TypeRef / TupleType / RecordType，
@@ -285,14 +285,14 @@ fn 类型在(tokens: Int, i: Int, 末: Int) {
   let t = tokens[i]
   if t.kind == "punct" && t.text == "(" { return 类型元组(tokens, i + 1, 末, ()) }
   if t.kind == "punct" && t.text == "{" { return 类型记录(tokens, i + 1, 末, ()) }
-  if t.kind == "ident" { return {node: {kind: "TypeRef", name: t.text}, next: i + 1} }
+  if t.kind == "ident" { return {node: {kind: "类型名", name: t.text}, next: i + 1} }
   return {node: (), next: i + 1}
 }
 
 fn 类型元组(tokens: Int, i: Int, 末: Int, acc: Int) {
-  if i >= 末 { return {node: {kind: "TupleType", items: acc}, next: i} }
+  if i >= 末 { return {node: {kind: "组类型", items: acc}, next: i} }
   let t = tokens[i]
-  if t.kind == "punct" && t.text == ")" { return {node: {kind: "TupleType", items: acc}, next: i + 1} }
+  if t.kind == "punct" && t.text == ")" { return {node: {kind: "组类型", items: acc}, next: i + 1} }
   if t.kind == "punct" && t.text == "," { return 类型元组(tokens, i + 1, 末, acc) }
   let 项 = 类型在(tokens, i, 末)
   if 项.node == () { return 类型元组(tokens, i + 1, 末, acc) }
@@ -300,9 +300,9 @@ fn 类型元组(tokens: Int, i: Int, 末: Int, acc: Int) {
 }
 
 fn 类型记录(tokens: Int, i: Int, 末: Int, acc: Int) {
-  if i >= 末 { return {node: {kind: "RecordType", fields: acc}, next: i} }
+  if i >= 末 { return {node: {kind: "记录类型", fields: acc}, next: i} }
   let t = tokens[i]
-  if t.kind == "punct" && t.text == "}" { return {node: {kind: "RecordType", fields: acc}, next: i + 1} }
+  if t.kind == "punct" && t.text == "}" { return {node: {kind: "记录类型", fields: acc}, next: i + 1} }
   if t.kind == "punct" && t.text == "," { return 类型记录(tokens, i + 1, 末, acc) }
   if t.kind != "ident" { return 类型记录(tokens, i + 1, 末, acc) }
   // 名 : 类型

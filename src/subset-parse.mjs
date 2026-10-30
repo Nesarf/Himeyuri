@@ -293,7 +293,7 @@ export const 子集解 = (tokens, options = {}) => {
         if (是标(",")) { 进(); 过空行(); } else break;
       }
       要标("}", "关记录类型");
-      return { kind: "RecordType", fields, line: t.line, column: t.column };
+      return { kind: "记录类型", fields, line: t.line, column: t.column };
     }
     if (是标("(")) {
       进();
@@ -303,13 +303,13 @@ export const 子集解 = (tokens, options = {}) => {
         if (是标(",")) 进(); else break;
       }
       要标(")", "关元组类型");
-      return items.length === 1 ? items[0] : { kind: "TupleType", items, line: t.line, column: t.column };
+      return items.length === 1 ? items[0] : { kind: "组类型", items, line: t.line, column: t.column };
     }
     if (是("keyword", "fn")) 不认("子集不含函数类型");
     const 名 = 要("ident", "类型名");
     if (是标("<")) 不认("子集不含泛型类型");
     if (是标("?")) 不认("子集不含可空类型");
-    return { kind: "TypeRef", name: 名 ? 名.value : "<error>", args: [], nullable: false, line: t.line, column: t.column };
+    return { kind: "类型名", name: 名 ? 名.value : "<error>", args: [], nullable: false, line: t.line, column: t.column };
   }
 
   function 解析块() {

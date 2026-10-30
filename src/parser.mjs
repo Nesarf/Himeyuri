@@ -229,14 +229,14 @@ export function parse(tokens, options = {}) {
         if (atPunct(",")) { advance(); skipNewlines(); } else break;
       }
       expectPunct("}");
-      return { kind: "RecordType", fields, line: t.line, column: t.column };
+      return { kind: "记录类型", fields, line: t.line, column: t.column };
     }
     if (atPunct("(")) {                       // tuple or grouped
       advance();
       const items = [];
       while (!atPunct(")") && !at("eof")) { items.push(parseType()); if (atPunct(",")) advance(); else break; }
       expectPunct(")");
-      return items.length === 1 ? items[0] : { kind: "TupleType", items, line: t.line, column: t.column };
+      return items.length === 1 ? items[0] : { kind: "组类型", items, line: t.line, column: t.column };
     }
     if (at("keyword", "fn")) {                // fn type
       advance();
@@ -245,7 +245,7 @@ export function parse(tokens, options = {}) {
       while (!atPunct(")") && !at("eof")) { params.push(parseType()); if (atPunct(",")) advance(); else break; }
       expectPunct(")");
       expectPunct("->");
-      return { kind: "FnType", params, returns: parseType(), line: t.line, column: t.column };
+      return { kind: "函数类型", params, returns: parseType(), line: t.line, column: t.column };
     }
     const name = expect("ident", "a type name");
     const args = [];
@@ -256,7 +256,7 @@ export function parse(tokens, options = {}) {
     }
     let nullable = false;
     if (atPunct("?")) { advance(); nullable = true; }
-    return { kind: "TypeRef", name: name ? name.value : "<error>", args, nullable, line: t.line, column: t.column };
+    return { kind: "类型名", name: name ? name.value : "<error>", args, nullable, line: t.line, column: t.column };
   }
 
   function parseTypeAlias() {
