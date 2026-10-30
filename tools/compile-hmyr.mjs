@@ -74,9 +74,9 @@ if (用JS落盘) {
       效果: Array.from(f.效果 || []),
       码: Array.from(f.码 || []).map((i) => {
         const 指令 = { op: i.op };
-        // RECORD 的立即数是**字符串数组**（写文件时按 n 个名字落盘），
+        // 记录 的立即数是字符串数组（写文件时按 n 个名字落盘），
         // 不是语言里的元组值 —— 所以它不走 转值。
-        if (i.op === "RECORD") 指令.a = Array.from(i.a || []);
+        if (i.op === "记录") 指令.a = Array.from(i.a || []);
         else if (i.a !== undefined) 指令.a = 转值(i.a);
         if (i.b !== undefined) 指令.b = i.b;
         return 指令;

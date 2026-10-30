@@ -51,8 +51,8 @@ const 编 = (() => {
         效果: Array.from(f.效果 || []),
         码: Array.from(f.码 || []).map((i) => {
           const 指令 = { op: i.op };
-          // RECORD 的立即数是字符串数组，不是语言值 —— 与 tools/compile-hmyr.mjs 同一处理。
-          if (i.op === "RECORD") 指令.a = Array.from(i.a || []);
+          // 记录 的立即数是字符串数组，不是语言值 —— 与 tools/compile-hmyr.mjs 同一处理。
+          if (i.op === "记录") 指令.a = Array.from(i.a || []);
           else if (i.a !== undefined) 指令.a = 转值(i.a);
           if (i.b !== undefined) 指令.b = i.b;
           return 指令;
