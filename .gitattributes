@@ -7,3 +7,14 @@
 # 源码那边也一样：一份文件的内容应当是它被写下的样子，
 # 而不是取决于谁在什么系统上检出它。
 * -text
+
+# GitHub 的语言统计（linguist）不认识 .hmoca，于是 11357 行自举层被它算成
+# 「Other 0.5%」，而仓库主页上写着 JavaScript 68% —— 那个数会因为这一条而变。
+#
+# linguist-detectable=true 是「这是一门语言，请统计它」；linguist-language 给的是一个
+# 名字，而 HMYR 不在 GitHub 维护的语言表里，所以它可能仍显示成 Other —— 这一点没法
+# 从仓库这一侧解决，只有 linguist 收录了才算数。先把「它是代码」这件事说清楚。
+#
+# 2026-11-02 实测：.hmoca 116 份 712 KB，.mjs 292 份 2.0 MB，.c 6 份 300 KB。
+*.hmoca linguist-detectable=true linguist-language=HMYR
+
