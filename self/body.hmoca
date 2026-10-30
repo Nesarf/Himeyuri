@@ -146,7 +146,7 @@ fn next_fn(tokens: Int, i: Int) -> Int {
 fn next_decl(tokens: Int, i: Int) -> Int {
   if i >= len(tokens) { return -1 }
   let t = tokens[i]
-  if t.kind == "ident" && (t.text == "fn" || t.text == "const" || t.text == "var") { return i }
+  if t.kind == "ident" && (t.text == "fn" || t.text == "const" || t.text == "var" || t.text == "macro") { return i }
   return next_decl(tokens, i + 1)
 }
 
@@ -324,6 +324,33 @@ fn 返回类型在(tokens: Int, 起: Int, 末: Int) {
   return ()
 }
 
+// 切一段 token 出来（含起点，不含末）。表达式那一层从 0 开始吃，所以要先切。
+fn 切片(tokens: Int, i: Int, 末: Int, acc: Int) {
+  if i >= 末 { return acc }
+  return 切片(tokens, i + 1, 末, acc + (tokens[i],))
+}
+
+// macro 名(参数) = 表达式 的解析，交回 {name, params, body, next}。
+//
+// 表达式交给 chain：它从 0 开始吃一串 token，所以这里先切出「= 之后到行尾」那一段。
+// 参数收的是字符串元组 —— 与 fn 的参数同一套收法，只是宏的参数没有 borrow / own
+// 那种前缀，它们就是名字。
+fn 宏声明(tokens: Int, at: Int) {
+  if at + 1 >= len(tokens) { return {name: "", params: (), body: (), next: at + 1} }
+  let 名 = tokens[at + 1].text
+  let 开 = 括号位(tokens, at + 1, len(tokens))
+  if 开 < 0 { return {name: "", params: (), body: (), next: at + 2} }
+  let 闭 = 反括号位(tokens, 开 + 1, len(tokens), 0)
+  if 闭 < 0 { return {name: "", params: (), body: (), next: 开 + 1} }
+  let 参 = 收名从(tokens, 开 + 1, 闭, true, 0, ())
+  let 等 = 等号位(tokens, 闭 + 1, len(tokens))
+  if 等 < 0 { return {name: "", params: 参, body: (), next: 闭 + 1} }
+  let 末 = 行尾位(tokens, 等 + 1)
+  let 片 = 切片(tokens, 等 + 1, 末, ())
+  let 体 = chain(片).node
+  return {name: 名, params: 参, body: 体, next: 末}
+}
+
 fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
   let at = next_decl(tokens, i)
   if at < 0 { return {fns: acc, consts: 常量们, next: len(tokens)} }
@@ -336,6 +363,18 @@ fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
     let 常 = 常量在(tokens, at, 是var)
     if 常.name == "" { return decls_from(tokens, 常.next, acc, 常量们) }
     return decls_from(tokens, 常.next, acc, 常量们 + ((常.name, 常.value, 常.writable),))
+  }
+  // macro 名(参数) = 表达式 —— 宏声明。
+  //
+  // 为什么要在这一层认它：宏的展开在宿主那一边（src/expand.mjs 的 展开模块），
+  // 而它要的是一条 kind 为 Macro 的声明。自举层原来只认 fn / const / var，
+  // 于是宏声明被整个跳过、树里没有它，展开那一步拿到空表 —— macro 那套在桥这条
+  // 路上报「没有这个名字 两次」（2026-11-02 实测）。
+  if 位.text == "macro" {
+    let 宏 = 宏声明(tokens, at)
+    if 宏.name == "" { return decls_from(tokens, 宏.next, acc, 常量们) }
+    // 九件：与 Fn 同形的前八件，第九件标成 "macro"，第三件放的是表达式（不是语句们）。
+    return decls_from(tokens, 宏.next, acc + ((宏.name, 宏.params, 宏.body, (), 位.line, 位.column, (), 0, "macro"),), 常量们)
   }
   let 名 = 名字在(tokens, at)
   let open = find_body(tokens, at + 1)

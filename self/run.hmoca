@@ -339,6 +339,11 @@ fn 包声明(声明们: Int, i: Int, acc: Int) {
   if len(d) > 3 { 效 = d[3] }
   if len(d) > 4 { 行 = d[4] }
   if len(d) > 5 { 列 = d[5] }
+  // 第九件是 "macro" 的时候，第三件放的是表达式而不是语句们 —— 宏的 body 是一个
+  // 表达式（src/expand.mjs 的换回按表达式走），所以这里不能包成 Block。
+  if len(d) > 8 && d[8] == "macro" {
+    return 包声明(声明们, i + 1, acc + ({kind: "Macro", name: 名, params: 参, body: 句, line: 行, column: 列},))
+  }
   var 返 = ()
   if len(d) > 6 { 返 = d[6] }
   // 第八件是「这个声明是不是 pub」（self/body.hmoca 的 decls_from 现在收它）。

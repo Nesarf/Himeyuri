@@ -40,7 +40,9 @@ console.log("一、六份，默认栈下，名字与顺序都与宿主一致");
   // 2026-11-02：lex 从 26 到 30 —— 词法器改成分块累积，加了 攒、取范围、合并们、收段
   // 四个函数（原来是 acc + (t,) 一路拼，长文件是平方级的）。
   // 同日 run 从 62 到 64：包名解析搬进自举层，加了 是包名字 与 当路径。
-  const 期 = { lex: 30, chain: 27, stmt: 10, body: 28, eval: 57, run: 64 };
+  // 再到 body 从 28 到 30：2026-11-02 加了 切片 与 宏声明 —— 自举层的 parser
+  // 现在认 macro 声明（那之前它把宏整个跳过，于是展开那一层拿到空表）。
+  const 期 = { lex: 30, chain: 27, stmt: 10, body: 30, eval: 57, run: 64 };
   for (const 名 of Object.keys(期)) {
     const 路 = path.join(ROOT, "self", 名 + ".hmoca");
     const 甲 = 算名(路);
