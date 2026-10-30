@@ -79,7 +79,9 @@ console.log("二、连不上时出声，而不是把输出丢掉");
   ok("退出码是 2（出口没有去处时的那个约定）", r.status === 2, String(r.status));
   // 只看「含有编号」是不够的：Node 打 ReferenceError 的堆栈时会把那一行源码一起打出来，
   // 编号就藏在源码文本里，于是断言会假通过。这里改成看第一行、并且明说不许有堆栈。
-  ok("stderr 的第一行就是那条消息", 话.split("\n")[0].includes("HMYR-詞-003"), JSON.stringify(话.slice(0, 80)));
+  // 编号是 HMYR-行-021（出口没有去处那一条）。原先这里写的是 詞-003，
+  // 而 詞-003 是「块注释没闭合」—— 换码时错配了，2026-11-02 对齐。
+  ok("stderr 的第一行就是那条消息", 话.split("\n")[0].includes("HMYR-行-021"), JSON.stringify(话.slice(0, 80)));
   ok("而且没有堆栈混在里面", !话.includes("ReferenceError") && !话.includes("    at "), JSON.stringify(话.slice(0, 200)));
 }
 

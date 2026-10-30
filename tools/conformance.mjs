@@ -222,6 +222,9 @@ walk(path.join(ROOT, "src"));
 walk(path.join(ROOT, "tools"));
 walk(path.join(ROOT, "vm"));
 walk(path.join(ROOT, "self"));
+// bin/ 也发码（出口连不上是那里的 行-021），而它以前不在视野里，
+// 于是那条码既查不到「有没有登记」也数不进「有没有发出」。2026-11-02。
+walk(path.join(ROOT, "bin"));
 const emitted = new Set();
 for (const file of sources) {
   const text = fs.readFileSync(file, "utf8");
@@ -229,7 +232,10 @@ for (const file of sources) {
   // [EWR] 加四位数字 —— 那样一个都匹配不到，于是「登记的码一个都没发出」全表飘红。
   // 而放宽成「引号里任意一串」又太宽：startsWith("HMYR-詞-") 那种前缀片段会被当成码。
   // 所以认「HMYR- 开头、以三位数字结尾」—— 两种形状都满足，而前缀片段不满足。
-  for (const m of text.matchAll(/"(HMYR-[^\s"]*-\d{3})"/g)) emitted.add(m[1]);
+  // 而码后面不一定紧跟闭引号：bin/ 那一侧写成一条完整消息（"HMYR-行-021 the pipe..."
+  // 与 "HMYR-行-021 ...\n"），src/ 那一侧才是码独占一个字符串。2026-11-02 放宽成
+  // 「码后面是空白或引号都算」，于是 bin/ 那种写法也能被数到。
+  for (const m of text.matchAll(/"(HMYR-[^\s"]*-\d{3})(?=[\s"])/g)) emitted.add(m[1]);
 }
 const registered = new Set(CODES.map((c) => c.code));
 const unregistered = [...emitted].filter((c) => !registered.has(c));

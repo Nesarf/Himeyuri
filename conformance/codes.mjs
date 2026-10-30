@@ -71,6 +71,27 @@ export const CODES = [
   { code: "HMYR-行-017", stage: "run", checkedBy: "test/codes-value.test.mjs", meaning: "assignment to something that is not a variable declared with var" },
   { code: "HMYR-行-018", stage: "run", checkedBy: "test/codes-value.test.mjs", meaning: "a subscript is outside the length of the value" },
   { code: "HMYR-行-019", stage: "run", checkedBy: "test/codes-value.test.mjs", meaning: "the value being subscripted has no elements" },
+  // bin/hmyr.mjs 的那一条。它原先在注释里与测试里都写作 詞-003，而 詞-003 是
+  // 「块注释没闭合」—— 换码时错配了。2026-11-02 对齐：代码、注释、测试三处都改成它。
+  { code: "HMYR-行-021", stage: "host", checkedBy: "test/pipe.test.mjs", meaning: "the output destination cannot be opened: the pipe or the socket refused the connection" },
+  // 容器那一层（ittgn / 打包 / hmget）的十二条。它们原先一条都没登记 —— 不是漏写，
+  // 而是 conform 以前不扫 bin/ 与 tools/ 里的那几种写法。2026-11-02 扩视野之后一次露出来。
+  // 其中十一条没有测试提到（容器格式的错，程序不能主动触发），器-004 有 ittgn 那套。
+  { code: "HMYR-器-001", stage: "tool", internal: true, meaning: "that name cannot live in a container: the entry is the container's logic, not a member" },
+  { code: "HMYR-器-002", stage: "tool", internal: true, meaning: "the container nests too deep: twelve levels is the limit" },
+  { code: "HMYR-器-003", stage: "tool", internal: true, meaning: "the container cannot be read" },
+  { code: "HMYR-器-004", stage: "tool", checkedBy: "test/ittgn.test.mjs", meaning: "the container has no member by that name" },
+  { code: "HMYR-器-005", stage: "tool", internal: true, meaning: "the container header carries a version this build does not know" },
+  { code: "HMYR-器-006", stage: "tool", internal: true, meaning: "the member table ends in the middle of something" },
+  { code: "HMYR-器-007", stage: "tool", internal: true, meaning: "a member path is not a legal relative path" },
+  { code: "HMYR-器-008", stage: "tool", internal: true, meaning: "the container holds no runnable entry: it needs a source or a bytecode member" },
+  { code: "HMYR-器-009", stage: "tool", internal: true, meaning: "that zip has no member table, so it probably was not unpacked from a container" },
+  { code: "HMYR-器-010", stage: "tool", internal: true, meaning: "the member table carries a version this build does not know" },
+  { code: "HMYR-器-011", stage: "tool", internal: true, meaning: "the zip root holds neither a seed nor a bytecode entry under the container's base name" },
+  { code: "HMYR-器-012", stage: "tool", internal: true, meaning: "the member table names a member the zip does not contain" },
+  { code: "HMYR-載-022", stage: "link", internal: true, meaning: "fetching a release ended in an unexpected failure rather than a known one" },
+  // C 机器读不到字节码文件。它有两套测试真的会走到这里（命令行与自足那两套）。
+  { code: "HMYR-詞-009", stage: "load", checkedBy: "test/cli.test.mjs", meaning: "the bytecode file cannot be read, or it has no main function" },
 
   { code: "HMYR-載-001", stage: "link", checkedBy: "test/module.test.mjs", meaning: "a circular import: the file is already being loaded" },
   { code: "HMYR-載-003", stage: "link", checkedBy: "test/module.test.mjs", meaning: "an imported file does not exist" },
