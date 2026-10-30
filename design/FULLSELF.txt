@@ -1843,6 +1843,38 @@ selfloa 的 27/27）。
     这一轮的账：没有留下代码改动（kind 回退了），留下的是一句更硬的判断 ——
     分流码让「旧码到新码」永远是按调用点的表，凡是拿它当函数用的地方都会错位。
 
+自立：conform 修到「84 登记、84 发出」（2026-11-02，新一段第 16 轮）
+
+    conform 那一套红，一层层剥下去是四个环：
+
+      一、九条 case 的期望码错位
+
+          conformance/cases.mjs 里九条的 expect 被换错了一号（期望 形-002 而源码给
+          形-001，等等）。用 git 看换码前的原值：C-0021 原本是 HMYR-E0101，而它被
+          换成了 形-002 —— 一号之差，因为裸码那一轮与带前缀那一轮用的不是同一张映射。
+
+      二、conformance.mjs 扫源码的正则还是旧形状
+
+          它用 /"(HMYR-[EWR]\d{4})"/ 找「源码发出了哪些码」—— 新码一个都匹配不到，
+          于是「登记的码一个都没发出」全表飘红（四十几条）。
+
+      三、放宽之后又太宽
+
+          改成「引号里任意一串」以后，startsWith("HMYR-詞-") 那种前缀片段被当成码，
+          于是 unregistered 里冒出半截。收紧成「以三位数字结尾」才对。
+
+      四、两个分流码从没登记
+
+          形-007（格式化器的警告，原 W0100）与 載-023（rev 后面没跟版本号，原 E0101
+          的第二处含义）—— 它们是我新加的，而两张表里都没有。补进去之后 84 条。
+
+    读数：84 registered、84 emitted、every emitted code is registered、every registered
+    code is emitted、no code is registered twice —— 核心判据全过。而 process.exit 仍
+    是 1，那来自 bad 里别的项（xpassed 与 unexplained 那一组），下一轮再看。
+
+    这一轮留下的代码改动：cases.mjs 九条 expect、conformance.mjs 一条正则、两张表各
+    加两条。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 HMYR-載-001；
 另外引的文件不在就报 HMYR-載-003（宿主也是这个码）。顺序取后序，于是 order 逐项相同。
