@@ -248,10 +248,10 @@ export class 虚拟机 {
           pc++; break;
         }
         case "记录": {
-          const 名们 = 指令.a;
-          const 值们 = 栈.splice(栈.length - 名们.length, 名们.length);
+          const 名册 = 指令.a;
+          const 值们 = 栈.splice(栈.length - 名册.length, 名册.length);
           const 字段 = new Map();
-          for (let i = 0; i < 名们.length; i++) 字段.set(名们[i], 值们[i]);
+          for (let i = 0; i < 名册.length; i++) 字段.set(名册[i], 值们[i]);
           压(new 类记录(字段));
           pc++; break;
         }

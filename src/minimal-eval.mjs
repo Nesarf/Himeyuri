@@ -611,13 +611,13 @@ const 内置 = {
   // 名字仍然是字符串值，走与 argv 同一条落地路径。
   read_dir: (rt, a) => {
     const 路径 = rt.成串(a[0]);
-    let 名们;
-    try { 名们 = rt.cap.file.listDir(路径); }
+    let 名册;
+    try { 名册 = rt.cap.file.listDir(路径); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
       rt.坏("HMYR-內-011", "cannot list '" + 藏路径(路径) + "'" + 原因);
     }
-    return 名们.map((x) => (rt.码元串 ? 码元.由宿主(String(x)) : String(x)));
+    return 名册.map((x) => (rt.码元串 ? 码元.由宿主(String(x)) : String(x)));
   },
   // 这是不是一个目录。问不到就是 false。
   is_dir: (rt, a) => {

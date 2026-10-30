@@ -100,15 +100,15 @@ fn 去尾逗号(行: String) -> String {
 // 这一层靠 is_dir 分岔 —— read_dir 只给名字，说不了「这是不是一个目录」。
 // 元组相加在这里够用：一层几十项，深度两层。
 pub fn 走文件(路: String) effects(file) {
-  let 名们 = read_dir(路)
+  let 名册 = read_dir(路)
   var 文们 = ()
   var 子们 = ()
   var i = 0
-  while i < len(名们) {
-    if is_dir(路 + "/" + 名们[i]) {
-      子们 = 子们 + (名们[i],)
+  while i < len(名册) {
+    if is_dir(路 + "/" + 名册[i]) {
+      子们 = 子们 + (名册[i],)
     } else {
-      文们 = 文们 + (名们[i],)
+      文们 = 文们 + (名册[i],)
     }
     i = i + 1
   }
@@ -394,17 +394,17 @@ pub fn 主(出路: String) effects(file, process) {
   块们 = r1.块们
   块 = r1.块
   块行数 = r1.行数
-  let 库名们 = 走文件("runtime")
+  let 库名册 = 走文件("runtime")
   var 库末 = 0 - 1
   i = 0
-  while i < len(库名们) {
-    if 以尾(库名们[i], ".hmoca") { 库末 = i }
+  while i < len(库名册) {
+    if 以尾(库名册[i], ".hmoca") { 库末 = i }
     i = i + 1
   }
   i = 0
-  while i < len(库名们) {
-    if 以尾(库名们[i], ".hmoca") {
-      let 库项们 = 造库项("runtime/" + 库名们[i])
+  while i < len(库名册) {
+    if 以尾(库名册[i], ".hmoca") {
+      let 库项们 = 造库项("runtime/" + 库名册[i])
       k = 0
       while k < len(库项们) {
         var 库行 = 库项们[k]
@@ -468,17 +468,17 @@ pub fn 主(出路: String) effects(file, process) {
   块们 = r5.块们
   块 = r5.块
   块行数 = r5.行数
-  let 具名们 = read_dir("tools")
+  let 具名册 = read_dir("tools")
   var 具末 = 0 - 1
   i = 0
-  while i < len(具名们) {
-    if 以尾(具名们[i], ".mjs") { 具末 = i }
+  while i < len(具名册) {
+    if 以尾(具名册[i], ".mjs") { 具末 = i }
     i = i + 1
   }
   i = 0
-  while i < len(具名们) {
-    if 以尾(具名们[i], ".mjs") {
-      let 具项们 = 造名项(具名们[i], "tools/" + 具名们[i])
+  while i < len(具名册) {
+    if 以尾(具名册[i], ".mjs") {
+      let 具项们 = 造名项(具名册[i], "tools/" + 具名册[i])
       k = 0
       while k < len(具项们) {
         var 具行 = 具项们[k]
@@ -502,17 +502,17 @@ pub fn 主(出路: String) effects(file, process) {
   块们 = r7.块们
   块 = r7.块
   块行数 = r7.行数
-  let 档名们 = read_dir("design")
+  let 档名册 = read_dir("design")
   var 档末 = 0 - 1
   i = 0
-  while i < len(档名们) {
-    if 以尾(档名们[i], ".txt") { 档末 = i }
+  while i < len(档名册) {
+    if 以尾(档名册[i], ".txt") { 档末 = i }
     i = i + 1
   }
   i = 0
-  while i < len(档名们) {
-    if 以尾(档名们[i], ".txt") {
-      let 档项们 = 造名项(档名们[i], "design/" + 档名们[i])
+  while i < len(档名册) {
+    if 以尾(档名册[i], ".txt") {
+      let 档项们 = 造名项(档名册[i], "design/" + 档名册[i])
       k = 0
       while k < len(档项们) {
         var 档行 = 档项们[k]

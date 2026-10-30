@@ -140,11 +140,11 @@ fn 拼(们: Int) -> String {
 
 fn 走(路径: String, 出: Int, 次: Int) -> Int effects(file) {
   if 次 > 24 { return 出 }
-  let 名们 = read_dir(路径)
+  let 名册 = read_dir(路径)
   var 收 = 出
   var i = 0
-  while i < len(名们) {
-    let 名 = 名们[i]
+  while i < len(名册) {
+    let 名 = 名册[i]
     if 要跳过(名) == false {
       let 全 = 路径 + "/" + 名
       if is_dir(全) {

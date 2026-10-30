@@ -25,10 +25,10 @@ console.log("一、这一格在六处都有");
     "src/eval.mjs", "src/minimal-eval.mjs", "src/vm-builtins.mjs",
     "src/bytecode.mjs", "self/eval.hmoca", "vm/hmyr.c",
   ];
-  const 名们 = ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"];
+  const 名册 = ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"];
   for (const f of 源) {
     const 文 = fs.readFileSync(path.join(ROOT, f), "utf8");
-    for (const 名 of 名们) ok(f + " 认识 " + 名, 文.includes(名), "");
+    for (const 名 of 名册) ok(f + " 认识 " + 名, 文.includes(名), "");
   }
 }
 

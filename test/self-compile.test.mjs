@@ -18,7 +18,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 const 自举 = runUnit(loadUnit(path.join(ROOT, "self/run.hmoca")), { maxDepth: 20000, stepLimit: 3000000000 });
-const 算名 = (路) => Array.from(自举.callFunction(自举.functions.get("函数名们"), [fs.readFileSync(路, "utf8")], null));
+const 算名 = (路) => Array.from(自举.callFunction(自举.functions.get("函数名册"), [fs.readFileSync(路, "utf8")], null));
 const 宿名 = (路) => {
   const 宿 = loadUnit(路);
   const 本 = 宿.modules.get(路);

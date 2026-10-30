@@ -245,7 +245,7 @@ fn 收名从(tokens: Int, i: Int, 末: Int, 等下个: Bool, 深: Int, acc: Int)
   return 收名从(tokens, i + 1, 末, 等下个, 深, acc)
 }
 
-fn 参数名们(tokens: Int, 起: Int, 末: Int) {
+fn 参数名册(tokens: Int, 起: Int, 末: Int) {
   let 开 = 括号位(tokens, 起, 末)
   if 开 < 0 { return () }
   let 闭 = 反括号位(tokens, 开 + 1, 末, 0)
@@ -260,7 +260,7 @@ fn 找词(tokens: Int, i: Int, 末: Int, w: String) -> Int {
   return 找词(tokens, i + 1, 末, w)
 }
 
-// 效果名们：在右括号与 { 之间找 effects( … )，收里面的名字。
+// 效果名册：在右括号与 { 之间找 effects( … )，收里面的名字。
 //
 // 为什么需要它：函数表以前只收（名字, 参数名, 语句们），于是「声明了 effects(file)」
 // 这件事在自举那一层根本不存在 —— 结果是凡声明效果的程序一调要效果的函数就撞 HMYR-內-001，
@@ -380,10 +380,10 @@ fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
   let open = find_body(tokens, at + 1)
   if open < 0 { return {fns: acc, consts: 常量们, next: len(tokens)} }
   let got = each(tokens, open + 1, ())
-  // 六件：名字、参数名们、语句们、效果名们、行、列。
+  // 六件：名字、参数名册、语句们、效果名册、行、列。
   // 位置加在**末尾**，所以读 选[2] 与 选[3] 的老代码一行都不用改 ——
   // 而声明层要包成 Fn 节点时，位置才有东西可抄。
-  let 参名们 = 参数名们(tokens, at + 1, open)
+  let 参名册 = 参数名册(tokens, at + 1, open)
   let 效们 = 效果们(tokens, at + 1, open)
   // 第七件是返回类型。它加在末尾，所以读 选[2] 与 选[3] 的老代码一行都不用改。
   let 返型 = 返回类型在(tokens, at + 1, open)
@@ -393,10 +393,10 @@ fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
   // pub 写在 fn 前一个记号：next_decl 只停在 fn/const/var，所以它被跳过了。
   var 公开 = 0
   if at > 0 && tokens[at - 1].kind == "ident" && tokens[at - 1].text == "pub" { 公开 = 1 }
-  return decls_from(tokens, got.next, acc + ((名, 参名们, got.list, 效们, 位.line, 位.column, 返型, 公开),), 常量们)
+  return decls_from(tokens, got.next, acc + ((名, 参名册, got.list, 效们, 位.line, 位.column, 返型, 公开),), 常量们)
 }
 
-// 交回 {fns: ((名字, 参数名们, 语句们, 效果名们, 行, 列), …), consts: ((名字, 值), …), next}。
+// 交回 {fns: ((名字, 参数名册, 语句们, 效果名册, 行, 列), …), consts: ((名字, 值), …), next}。
 pub fn parse_decls(tokens: Int) -> Int {
   return decls_from(tokens, 0, (), ())
 }

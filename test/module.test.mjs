@@ -99,11 +99,11 @@ try {
     const 包入口 = path.join(根, "main-pkg.hmoca");
     fs.writeFileSync(包入口, 'import "工具包"\n\nfn main() -> Int {\n  return 0\n}\n', "utf8");
     const unit = loadUnit(包入口);
-    const 名们 = unit.order.map((f) => path.basename(f));
-    const 包位 = 名们.indexOf("index.hmoca");
-    const 主位 = 名们.indexOf("main-pkg.hmoca");
-    ok("the package is in the order at all", 包位 >= 0, JSON.stringify(名们));
-    ok("and its entry comes first", 包位 >= 0 && 主位 >= 0 && 包位 < 主位, JSON.stringify(名们));
+    const 名册 = unit.order.map((f) => path.basename(f));
+    const 包位 = 名册.indexOf("index.hmoca");
+    const 主位 = 名册.indexOf("main-pkg.hmoca");
+    ok("the package is in the order at all", 包位 >= 0, JSON.stringify(名册));
+    ok("and its entry comes first", 包位 >= 0 && 主位 >= 0 && 包位 < 主位, JSON.stringify(名册));
   }
 
   console.log("\nthe real thing: the bootstrapping files");

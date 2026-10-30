@@ -54,9 +54,9 @@ console.log("二、跑起来之后，函数表也是同一批名字");
 {
   const 默认 = runUnit(loadUnit(path.join(ROOT, "self/run.hmoca")));
   const 宿主 = runUnit(loadUnit(path.join(ROOT, "self/run.hmoca"), { reader: 宿主读 }));
-  const 名们 = (rt) => [...rt.functions.keys()].sort();
-  ok("函数个数相同", 名们(默认).length === 名们(宿主).length, 名们(默认).length + " 对 " + 名们(宿主).length);
-  ok("函数名逐个相同", JSON.stringify(名们(默认)) === JSON.stringify(名们(宿主)));
+  const 名册 = (rt) => [...rt.functions.keys()].sort();
+  ok("函数个数相同", 名册(默认).length === 名册(宿主).length, 名册(默认).length + " 对 " + 名册(宿主).length);
+  ok("函数名逐个相同", JSON.stringify(名册(默认)) === JSON.stringify(名册(宿主)));
   const 跑 = (rt, s) => rt.callFunction(rt.functions.get("跑"), [s], null);
   ok("同一段源码给同一个答案", 跑(默认, "1 + 2 * 3") === 跑(宿主, "1 + 2 * 3"), JSON.stringify(跑(默认, "1 + 2 * 3")));
   ok("而那个答案是七", 跑(默认, "1 + 2 * 3") === "7");

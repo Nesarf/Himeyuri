@@ -68,8 +68,8 @@ if (!有编译器) {
       env: { ...process.env, HMYR_STEPS: "2000000000" },
     });
     ok("HMYR 那一份跑完了", h.status === 0, String(h.status) + " " + String(h.stderr).slice(0, 160));
-    const 名们 = ["ucd-letter.h", "ucd-mark.h"];
-    for (const 名 of 名们) {
+    const 名册 = ["ucd-letter.h", "ucd-mark.h"];
+    for (const 名 of 名册) {
       const a = fs.existsSync(path.join(甲, 名)) ? fs.readFileSync(path.join(甲, 名)) : null;
       const b = fs.existsSync(path.join(乙, 名)) ? fs.readFileSync(path.join(乙, 名)) : null;
       const 同 = !!a && !!b && a.length === b.length && Buffer.compare(a, b) === 0;

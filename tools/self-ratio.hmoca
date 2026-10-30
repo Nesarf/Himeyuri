@@ -32,15 +32,15 @@ fn 数行(内容: String) -> Int {
 fn 数(相对: String, 后缀: String, 次: Int) -> Int effects(file) {
   if 次 > 24 { return 0 }
   if is_dir(相对) == false { return 0 }
-  let 名们 = read_dir(相对)
+  let 名册 = read_dir(相对)
   var 行 = 0
   var i = 0
-  while i < len(名们) {
-    let 全 = 相对 + "/" + 名们[i]
+  while i < len(名册) {
+    let 全 = 相对 + "/" + 名册[i]
     if is_dir(全) {
       行 = 行 + 数(全, 后缀, 次 + 1)
     } else {
-      if 尾是(名们[i], 后缀) {
+      if 尾是(名册[i], 后缀) {
         行 = 行 + 数行(read_text(全, "utf8"))
       }
     }

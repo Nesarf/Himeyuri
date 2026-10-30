@@ -1017,13 +1017,13 @@ const BUILTINS = {
   // 会让清单在两个实现之间不一致，且只在某个文件系统上现形。
   read_dir: (rt, args) => {
     const 路径 = String(args[0]);
-    let 名们;
-    try { 名们 = rt.cap.file.listDir(路径); }
+    let 名册;
+    try { 名册 = rt.cap.file.listDir(路径); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
       rt.fail("HMYR-內-011", "cannot list '" + 藏路径(路径) + "'" + 原因);
     }
-    return 名们;
+    return 名册;
   },
   // 这是不是一个目录。问不到就交回 false —— 与 file_exists 同一个态度：
   // 「问不到」与「不是」在调用者眼里通常是同一件事，而多一个错误码只让人多写一段。

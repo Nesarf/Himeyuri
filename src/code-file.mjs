@@ -148,9 +148,9 @@ export const 写程序 = (程序) => {
       else if (形 === "store") { w.u16(指令.a); w.u8(指令.b ? 1 : 0); }
       else if (形 === "tuple") w.u16(指令.a);
       else if (形 === "record") {
-        const 名们 = 指令.a;
-        w.u16(名们.length);
-        for (const 名 of 名们) w.串(名);
+        const 名册 = 指令.a;
+        w.u16(名册.length);
+        for (const 名 of 名册) w.串(名);
       } else if (形 === "call") { w.串(指令.a); w.u16(指令.b); }
       else if (形 === "value") w.值(指令.a);
     }
@@ -195,9 +195,9 @@ export const 读程序 = (字节, 工厂) => {
       else if (形 === "tuple") 指令.a = r.u16();
       else if (形 === "record") {
         const n = r.u16();
-        const 名们 = [];
-        for (let k = 0; k < n; k++) 名们.push(r.串());
-        指令.a = 名们;
+        const 名册 = [];
+        for (let k = 0; k < n; k++) 名册.push(r.串());
+        指令.a = 名册;
       } else if (形 === "call") { 指令.a = r.串(); 指令.b = r.u16(); }
       else if (形 === "value") 指令.a = r.值(元组工厂, 记录工厂);
       码列.push(指令);

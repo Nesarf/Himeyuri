@@ -642,13 +642,13 @@ export const 内置表 = {
   // 值现在自己带标签，所以每个名字都要经过 vm.文.由宿主 落到选定的那种底上。
   read_dir: { 效果: "file", 做: (vm, a) => {
     const 路径 = vm.成串(a[0]);
-    let 名们;
-    try { 名们 = vm.cap.file.listDir(路径); }
+    let 名册;
+    try { 名册 = vm.cap.file.listDir(路径); }
     catch (err) {
       const 原因 = 在用脱敏() ? "" : ": " + String(err && err.message ? err.message : err);
       return vm.坏("HMYR-內-011", "cannot list '" + 藏路径(路径) + "'" + 原因);
     }
-    return new 类元组(名们.map((x) => vm.文.由宿主(String(x))));
+    return new 类元组(名册.map((x) => vm.文.由宿主(String(x))));
   } },
   // 这是不是一个目录。递归要走下去就得先问这一句；问不到就是 false。
   is_dir: { 效果: "file", 做: (vm, a) => {

@@ -120,7 +120,7 @@ static int 比名字(const void *a, const void *b) {
 
 static char **列目录(const char *utf8, uint32_t *out_n) {
   *out_n = 0;
-  char **名们 = NULL;
+  char **名册 = NULL;
   uint32_t 数 = 0, 容 = 0;
 #if defined(_WIN32)
   int 宽长 = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
@@ -146,9 +146,9 @@ static char **列目录(const char *utf8, uint32_t *out_n) {
     WideCharToMultiByte(CP_UTF8, 0, 找.cFileName, -1, 名, 字节数, NULL, NULL);
     if (数 == 容) {
       容 = 容 ? 容 * 2 : 16;
-      名们 = (char **)realloc(名们, (size_t)容 * sizeof(char *));
+      名册 = (char **)realloc(名册, (size_t)容 * sizeof(char *));
     }
-    名们[数++] = 名;
+    名册[数++] = 名;
   } while (FindNextFileW(h, &找));
   FindClose(h);
 #elif !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
@@ -162,9 +162,9 @@ static char **列目录(const char *utf8, uint32_t *out_n) {
     strcpy(名, 项->d_name);
     if (数 == 容) {
       容 = 容 ? 容 * 2 : 16;
-      名们 = (char **)realloc(名们, (size_t)容 * sizeof(char *));
+      名册 = (char **)realloc(名册, (size_t)容 * sizeof(char *));
     }
-    名们[数++] = 名;
+    名册[数++] = 名;
   }
   closedir(d);
 #else
@@ -173,11 +173,11 @@ static char **列目录(const char *utf8, uint32_t *out_n) {
   (void)容;
   return NULL;
 #endif
-  if (数 > 0) qsort(名们, (size_t)数, sizeof(char *), 比名字);
+  if (数 > 0) qsort(名册, (size_t)数, sizeof(char *), 比名字);
   *out_n = 数;
   /* 空目录要交回一个非 NULL：NULL 是「打不开」，这两种结局不能混成一种。 */
-  if (名们 == NULL) 名们 = (char **)calloc(1, sizeof(char *));
-  return 名们;
+  if (名册 == NULL) 名册 = (char **)calloc(1, sizeof(char *));
+  return 名册;
 }
 
 /* Two range tables generated from the Unicode corpus by tools/ucd-c.mjs.
@@ -3592,9 +3592,9 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     if (args[0].tag != T_STR) { fail("HMYR-行-013", "read_dir wants a path string"); return 1; }
     char *p = utf16_to_utf8(args[0].s, args[0].slen);
     uint32_t n = 0;
-    char **名们 = 列目录(p, &n);
+    char **名册 = 列目录(p, &n);
     free(p);
-    if (!名们) { fail("HMYR-內-011", "cannot list that directory"); return 1; }
+    if (!名册) { fail("HMYR-內-011", "cannot list that directory"); return 1; }
     Value v = v_null();
     v.tag = T_TUPLE;
     v.ilen = n;
@@ -3603,15 +3603,15 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
       uint32_t 长 = 0;
       /* utf8_to_utf16 的内存来自 arena（串存），由 GC 管 —— 不能 free。
        * 第一版在这里写了 free(u)，那是把 arena 指针交给堆去释放。 */
-      uint16_t *u = utf8_to_utf16(名们[i], strlen(名们[i]), &长);
+      uint16_t *u = utf8_to_utf16(名册[i], strlen(名册[i]), &长);
       v.items[i] = v_str(u, 长);
       /* 名字与数组由 列目录 分配，而它定义在 #define malloc→hm_malloc 之前 ——
        * 于是那几个指针属于系统堆。这里必须用 原free，不能让它走 hm_free：
        * 两套堆的指针混着释放，症状是 0xC0000374（堆损坏），而错误信息里
        * 一个字都不会说这件事。 */
-      原free(名们[i]);
+      原free(名册[i]);
     }
-    原free(名们);
+    原free(名册);
     *out = v;
     return 1;
   }

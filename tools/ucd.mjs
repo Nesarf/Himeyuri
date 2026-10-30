@@ -171,14 +171,14 @@ export const 主 = () => {
   const 脚本们 = 脚本表();
   const 类别 = new Map();
   for (const c of 字符) 类别.set(c.类别, (类别.get(c.类别) || 0) + 1);
-  const 脚本名们 = new Set(脚本们.map((s) => s.名));
+  const 脚本名册 = new Set(脚本们.map((s) => s.名));
 
   fs.mkdirSync(产物目录, { recursive: true });
   const 摘要 = {
     版本: "Unicode 16.0.0",
     字符数据行数: 字符.length,
     块数: 块们.length,
-    脚本数: 脚本名们.size,
+    脚本数: 脚本名册.size,
     类别分布: Object.fromEntries([...类别].sort((a, b) => b[1] - a[1])),
     抽查: [
       { 码点: "U+0041", 名字: 字符表.get(0x41)?.名字, 类别: 字符表.get(0x41)?.类别, 块: 块名(0x41), 脚本: 脚本名(0x41) },

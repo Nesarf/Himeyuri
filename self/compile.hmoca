@@ -395,9 +395,9 @@ fn 编记录(字段们: Int, 状态: Int, i: Int) -> Int {
   return 编记录(字段们, r.状态, i + 1)
 }
 
-fn 发记录(状态: Int, 字段们: Int, i: Int, 名们: Int) {
-  if i >= len(字段们) { return {ok: true, 状态: 发(状态, {op: "记录", a: 名们})} }
-  return 发记录(状态, 字段们, i + 1, 名们 + (字段们[i].name,))
+fn 发记录(状态: Int, 字段们: Int, i: Int, 名册: Int) {
+  if i >= len(字段们) { return {ok: true, 状态: 发(状态, {op: "记录", a: 名册})} }
+  return 发记录(状态, 字段们, i + 1, 名册 + (字段们[i].name,))
 }
 
 // 短路：左操作数留在栈上，JMP*_KEEP 按它的真假决定跳不跳。
@@ -572,18 +572,18 @@ fn 编块(语句们: Int, 状态: Int, i: Int) {
 // 一个函数：参数按顺序占前几个槽，然后编体，末尾补「交回空」。
 fn 编函数(函数: Int) {
   let 名 = 函数[0]
-  let 参名们 = 函数[1]
+  let 参名册 = 函数[1]
   let 体 = 函数[2]
   var 名表 = ()
   var i = 0
-  while i < len(参名们) {
-    名表 = 名表 + ((参名们[i], i),)
+  while i < len(参名册) {
+    名表 = 名表 + ((参名册[i], i),)
     i = i + 1
   }
-  let r = 编块(体, 状态((), (), len(参名们), 名表), 0)
+  let r = 编块(体, 状态((), (), len(参名册), 名表), 0)
   if r.ok == false { return {ok: false, 错: 名 + "：" + r.错} }
   let 码 = 拼平(r.状态) + ({op: "常量", a: ()}, {op: "返回"})
-  return {ok: true, 函数: {名: 名, 参数量: len(参名们), 槽数: r.状态.槽, 效果: (), 码: 码}}
+  return {ok: true, 函数: {名: 名, 参数量: len(参名册), 槽数: r.状态.槽, 效果: (), 码: 码}}
 }
 
 fn 编函数们(函数们: Int, i: Int, acc: Int) {

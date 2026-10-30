@@ -63,13 +63,13 @@ function 等水位() {
 // 碰到」的那一批。间接依赖先不论，因为那是下一段的事。
 function 直接依赖() {
   const 目录 = path.join(ROOT, "test");
-  const 名们 = [];
+  const 名册 = [];
   for (const 名 of fs.readdirSync(目录)) {
     if (!名.endsWith(".test.mjs")) continue;
     const 源 = fs.readFileSync(path.join(目录, 名), "utf8");
-    if (源.includes("../src/loader.mjs")) 名们.push(名);
+    if (源.includes("../src/loader.mjs")) 名册.push(名);
   }
-  return 名们.sort();
+  return 名册.sort();
 }
 
 const 机器 = process.env.HMYR_C_VM || "";

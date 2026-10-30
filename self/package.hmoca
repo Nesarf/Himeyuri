@@ -25,11 +25,11 @@
 import "./zip.hmoca"
 import "./manifest.hmoca"
 
-fn 收一件(路们: Int, 目录: String, 名们: Int) {
+fn 收一件(路们: Int, 目录: String, 名册: Int) {
   var 出 = 路们
   var i = 0
-  while i < len(名们) {
-    出 = 出 + (目录 + "/" + 名们[i],)
+  while i < len(名册) {
+    出 = 出 + (目录 + "/" + 名册[i],)
     i = i + 1
   }
   return 出
@@ -72,13 +72,13 @@ pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String
   // runtime/：只收源码与产物，语料按后缀跳过（理由见上）。
   // 走文件 是递归的，所以 runtime/ucd/blocks.hmyr 也会进来 —— 清单里列了它。
   if 只收 == "" {
-    let 语名们 = 走文件("runtime")
+    let 语名册 = 走文件("runtime")
     var j = 0
-    while j < len(语名们) {
+    while j < len(语名册) {
       var 要 = false
-      if 以尾(语名们[j], ".hmoca") { 要 = true }
-      if 以尾(语名们[j], ".hmoks") || 以尾(语名们[j], ".hmtn") { 要 = true }
-      if 要 { 路们 = 收一件(路们, "runtime", (语名们[j],)) }
+      if 以尾(语名册[j], ".hmoca") { 要 = true }
+      if 以尾(语名册[j], ".hmoks") || 以尾(语名册[j], ".hmtn") { 要 = true }
+      if 要 { 路们 = 收一件(路们, "runtime", (语名册[j],)) }
       j = j + 1
     }
   }

@@ -64,8 +64,8 @@ const 样本 = [
 
 console.log("一、字节码那台能跑自己的解释器吗");
 {
-  const 空 = 调("函数名们", ["fn main() -> Int {\n  return 7\n}\n"]);
-  ok("函数名们 在 vm 上跑得动", !空.err, 空.err || JSON.stringify(空.value).slice(0, 40));
+  const 空 = 调("函数名册", ["fn main() -> Int {\n  return 7\n}\n"]);
+  ok("函数名册 在 vm 上跑得动", !空.err, 空.err || JSON.stringify(空.value).slice(0, 40));
 }
 
 console.log("二、同一段程序，两台机器给出同一个答案");

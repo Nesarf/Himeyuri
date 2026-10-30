@@ -158,10 +158,10 @@ export const 本机能力 = (options = {}) => ({
         const 是记录 = x && x.tag === "record" ? x.fields : (x && typeof x === "object" && !Array.isArray(x) ? x : null);
         if (是记录) {
           段.push(5);
-          const 名们 = 是记录 instanceof Map ? [...是记录.keys()] : Object.keys(是记录);
-          u16(名们.length);
-          for (const k of 名们) 串(k);
-          for (const k of 名们) 值(是记录 instanceof Map ? 是记录.get(k) : 是记录[k]);
+          const 名册 = 是记录 instanceof Map ? [...是记录.keys()] : Object.keys(是记录);
+          u16(名册.length);
+          for (const k of 名册) 串(k);
+          for (const k of 名册) 值(是记录 instanceof Map ? 是记录.get(k) : 是记录[k]);
           return;
         }
         if (x === true || x === false) { 段.push(3); 段.push(x ? 1 : 0); return; }

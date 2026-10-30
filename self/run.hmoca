@@ -77,7 +77,7 @@ fn 跑程序文字(源码: String) -> String {
     let 全部 = parse_decls(tokens)
     if len(全部.fns) == 0 { return "错：声明里没有 fn" }
     let 选 = 选函数(全部.fns, "main")
-    let 体 = 选[2]   // 声明现在是（名字, 参数名们, 语句们），语句们是第三件
+    let 体 = 选[2]   // 声明现在是（名字, 参数名册, 语句们），语句们是第三件
     let r = 跑程序带常量与参(体, 全部.fns, 全部.consts, (), ())
     if r.ok == false { return "错：" + r.text }
     return str(r.value)
@@ -193,7 +193,7 @@ fn 加载多(目录: String, 路们: Int, i: Int, 栈: Int, 已载: Int) effects
 // ---- 声明层：把元组包成节点 ----
 //
 // 宿主的树有三层：Module → Fn → Block → 语句。这一侧以前只有元组
-// （名字, 参数名们, 语句们, 效果名们, 行, 列），于是两边的节点数永远对不上 ——
+// （名字, 参数名册, 语句们, 效果名册, 行, 列），于是两边的节点数永远对不上 ——
 // 比较只能问「self 的位置宿主有没有」，问不了「节点对不对得上」。
 //
 // 这两个函数只做包装，不动解析：解析仍是 parse_decls 与 parse_body 干的活。
@@ -314,14 +314,14 @@ fn 包块(语句们: Int, 行: Int) {
 //
 // borrow 与 own 是两个前缀词，收名 那一层把它们也当名字收进来了 —— 所以这里
 // 见到它们就把下一个名字配上去。没有前缀的参数 passing 留空。
-fn 转参数们(名们: Int, i: Int, acc: Int) {
-  if i >= len(名们) { return acc }
-  let 名 = 名们[i]
+fn 转参数们(名册: Int, i: Int, acc: Int) {
+  if i >= len(名册) { return acc }
+  let 名 = 名册[i]
   if 名 == "borrow" || 名 == "own" {
-    if i + 1 < len(名们) { return 转参数们(名们, i + 2, acc + ({name: 名们[i + 1], passing: 名},)) }
+    if i + 1 < len(名册) { return 转参数们(名册, i + 2, acc + ({name: 名册[i + 1], passing: 名},)) }
     return acc
   }
-  return 转参数们(名们, i + 1, acc + ({name: 名, passing: ()},))
+  return 转参数们(名册, i + 1, acc + ({name: 名, passing: ()},))
 }
 
 fn 包声明(声明们: Int, i: Int, acc: Int) {
@@ -448,7 +448,7 @@ fn 造整棵(入口: String) effects(file) {
 // 只解析、不求值，交回声明树。
 //
 // 量「节点位置」时用它：求值会把树丢掉，而位置在树上。函数的形状与 parse_decls 交回的
-// 一致 —— 声明是 (名字, 参数名们, 语句们)。
+// 一致 —— 声明是 (名字, 参数名册, 语句们)。
 fn 解析程序(源: String) {
   let 净 = 去导入(源)
   if 行首是声明(净) {
@@ -847,7 +847,7 @@ fn 函数名从(函数们: Int, i: Int, acc: Int) -> Int {
 }
 
 // 一段源码声明了哪些函数名，按出现的顺序。
-fn 函数名们(源码: String) -> Int {
+fn 函数名册(源码: String) -> Int {
   let 全部 = parse_decls(scan_lines(源码))
   return 函数名从(全部.fns, 0, ())
 }

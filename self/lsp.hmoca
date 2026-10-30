@@ -267,8 +267,8 @@ fn 导入路们(文本: String) -> Int {
   return 出
 }
 
-// 一份文件的签名们。读不了就交回空元组 —— 问了一个打不开的文件不是错误。
-fn 文件签名们(路: String) -> Int {
+// 一份文件的签名册。读不了就交回空元组 —— 问了一个打不开的文件不是错误。
+fn 文件签名册(路: String) -> Int {
   var 出 = ()
   if file_exists(路) { 出 = all_signatures(scan(read_text(路))) }
   return 出
@@ -323,7 +323,7 @@ fn 处理(体: String, 文本: String) effects(file) {
     var i = 0
     while i < len(路们) {
       let 目标 = 拼导入(基, 路们[i])
-      let 命中 = 找签名(文件签名们(目标), 名)
+      let 命中 = 找签名(文件签名册(目标), 名)
       if !field_has(命中, "空") {
         let 那份 = read_text(目标)
         var 址 = "file:///" + 目标
