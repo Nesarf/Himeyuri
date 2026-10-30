@@ -1,0 +1,172 @@
+// 文档里不该藏着渲染记号。
+//
+// 这一份原来是 tools/check-docs.mjs，2026-11-02 用 HMYR 重写。判据不是「看起来差不多」，
+// 而是「同一棵树上跑出同一张清单」—— 旧的那份打印份数、每一份的通过与否、以及命中的记号名。
+//
+// 没有正则，所以八种记号都是手写扫描。这件事本身说明了这条规矩：文档是普通文本，
+// 读得懂它的东西不该依赖某一个渲染器。
+//
+// 数据目录（data/）跳过：那里是 Unicode 的原始数据，行首的井号与竖线表格是数据自己的
+// 写法，不是我们写下的文档。
+//
+//   node bin/hmyr.mjs tools/check-docs.hmoca
+
+fn 是文档(名: String) -> Bool {
+  let n = len(名)
+  if n >= 4 && slice(名, n - 4, n) == ".txt" { return true }
+  if n >= 4 && slice(名, n - 4, n) == ".rst" { return true }
+  if n >= 5 && slice(名, n - 5, n) == ".adoc" { return true }
+  return false
+}
+
+fn 要跳过(名: String) -> Bool {
+  if 名 == "node_modules" { return true }
+  if 名 == ".git" { return true }
+  if 名 == "build" { return true }
+  if 名 == "data" { return true }
+  if 名 == "swap" { return true }
+  // ucd 是码点表（runtime/ucd/codepoints.txt 有 42 MB），conformance 下是 Unihan 与
+  // NFC 的对照表（29 MB 与 17 MB）—— 都是数据，不是我们写下的文档。
+  //
+  // 旧那一份只跳了 data/，于是这些也被扫进去了；它用正则，快得看不出代价。
+  // 这一份是手写扫描，一跑就撞步限（HMYR-R0102）—— 于是这条「跳什么」第一次
+  // 变成了必须说清的事，而不是一个碰巧够用的省略。
+  if 名 == "ucd" { return true }
+  if 名 == "conformance" { return true }
+  return false
+}
+
+fn 有片(文: String, 片: String) -> Bool {
+  let 片长 = len(片)
+  if 片长 == 0 { return true }
+  var i = 0
+  while i + 片长 <= len(文) {
+    if slice(文, i, i + 片长) == 片 { return true }
+    i = i + 1
+  }
+  return false
+}
+
+fn 行首是(行: String, 头: String) -> Bool {
+  if len(行) < len(头) { return false }
+  return slice(行, 0, len(头)) == 头
+}
+
+fn 含(们: Int, 值: String) -> Bool {
+  var i = 0
+  while i < len(们) {
+    if 们[i] == 值 { return true }
+    i = i + 1
+  }
+  return false
+}
+
+// 行首那一列的记号。都不命中就交回空串。
+fn 行记号(行: String) -> String {
+  if 行首是(行, "```") { return "fenced code block" }
+  if 行首是(行, "# ") { return "hash heading" }
+  if 行首是(行, "## ") { return "hash heading" }
+  if 行首是(行, "### ") { return "hash heading" }
+  if 行首是(行, "> ") { return "blockquote" }
+  if 行首是(行, "- [ ]") { return "task checkbox" }
+  if 行首是(行, "- [x]") { return "task checkbox" }
+  if 行首是(行, "- [X]") { return "task checkbox" }
+  if 行首是(行, "* [ ]") { return "task checkbox" }
+  if 行首是(行, "* [x]") { return "task checkbox" }
+  if 行首是(行, "* [X]") { return "task checkbox" }
+  if 行首是(行, "|") && len(行) >= 2 && slice(行, len(行) - 1, len(行)) == "|" { return "table row" }
+  return ""
+}
+
+// 整份文本里命中的行首记号（去重，按出现顺序）。
+fn 行记号们(文: String) -> Int {
+  var 出 = ()
+  var 起 = 0
+  var i = 0
+  while i <= len(文) {
+    let 到尾 = i == len(文)
+    if 到尾 || 文[i] == chr(10) {
+      let 记 = 行记号(slice(文, 起, i))
+      if 记 != "" && 含(出, 记) == false { 出 = 出 + (记,) }
+      起 = i + 1
+    }
+    i = i + 1
+  }
+  return 出
+}
+
+// 不在行首的那三种。逐行找，因为逐字符找整份（几十 KB 一份）是平方的。
+fn 行内记号们(文: String) -> Int {
+  var 出 = ()
+  var 起 = 0
+  var i = 0
+  while i <= len(文) {
+    let 到尾 = i == len(文)
+    if 到尾 || 文[i] == chr(10) {
+      let 行 = slice(文, 起, i)
+      if 含(出, "bold marker") == false && 有片(行, "**") { 出 = 出 + ("bold marker",) }
+      if 含(出, "backtick code span") == false && 有片(行, "`") { 出 = 出 + ("backtick code span",) }
+      if 含(出, "inline link") == false && 有片(行, "](") && 有片(行, "[") { 出 = 出 + ("inline link",) }
+      起 = i + 1
+    }
+    i = i + 1
+  }
+  return 出
+}
+
+fn 拼(们: Int) -> String {
+  var 出 = ""
+  var i = 0
+  while i < len(们) {
+    if i > 0 { 出 = 出 + ", " }
+    出 = 出 + 们[i]
+    i = i + 1
+  }
+  return 出
+}
+
+fn 走(路径: String, 出: Int, 次: Int) -> Int effects(file) {
+  if 次 > 24 { return 出 }
+  let 名们 = read_dir(路径)
+  var 收 = 出
+  var i = 0
+  while i < len(名们) {
+    let 名 = 名们[i]
+    if 要跳过(名) == false {
+      let 全 = 路径 + "/" + 名
+      if is_dir(全) {
+        收 = 走(全, 收, 次 + 1)
+      } else {
+        if 是文档(名) { 收 = 收 + (全,) }
+      }
+    }
+    i = i + 1
+  }
+  return 收
+}
+
+fn main() -> Int effects(file, process) {
+  // 没有参数时走全仓；给了参数就只走那一个目录（先拿 design/ 试性能）。
+  let 参们 = argv()
+  var 起 = "."
+  if len(参们) > 1 { 起 = 参们[1] }
+  let 文们 = 走(起, (), 0)
+  var 坏 = 0
+  var i = 0
+  while i < len(文们) {
+    let 路 = 文们[i]
+    let 文 = read_text(路, "utf8")
+    let 记们 = 行记号们(文) + 行内记号们(文)
+    let 相对 = slice(路, 2, len(路))
+    if len(记们) == 0 {
+      print("  [通过] " + 相对 + chr(10))
+    } else {
+      坏 = 坏 + 1
+      print("  [不通过] " + 相对 + "  " + 拼(记们) + chr(10))
+    }
+    i = i + 1
+  }
+  print(chr(10) + str(len(文们)) + " document(s) checked, " + str(坏) + " with rendering syntax" + chr(10))
+  if 坏 == 0 { return 0 }
+  return 1
+}
