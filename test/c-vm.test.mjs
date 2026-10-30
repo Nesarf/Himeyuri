@@ -338,10 +338,10 @@ console.log("十、大小写：表搬过来了，两台机器逐单元一样");
     "  return 出",
     "}",
     "fn main() -> Int effects(file) {",
-    '  var 行们 = read_lines("' + 路径 + '")',
+    '  var 行批 = read_lines("' + 路径 + '")',
     "  var i = 0",
-    "  while i < len(行们) {",
-    "    var 字 = chr(to_int(行们[i]))",
+    "  while i < len(行批) {",
+    "    var 字 = chr(to_int(行批[i]))",
     '    print(单元们(to_upper(字)) + " | " + 单元们(to_lower(字)) + " | " + 单元们(to_lower(chr(913) + 字)) + " | " + 单元们(to_lower(字 + chr(913))) + " | " + 单元们(to_upper(chr(913) + 字)) + "\\n")',
     "    i = i + 1",
     "  }",
@@ -494,9 +494,9 @@ console.log("十一、归一化：分解、排序、组合，这台机器也做"
     }
   }
 
-  const 行们 = [];
-  for (const cp of [...单码].sort((a, b) => a - b)) 行们.push({ 种: "单", 文: String.fromCodePoint(cp), cp });
-  for (const [a, b, c] of 组合对) 行们.push({ 种: "对", 文: String.fromCodePoint(a) + String.fromCodePoint(b), 到: c });
+  const 行批 = [];
+  for (const cp of [...单码].sort((a, b) => a - b)) 行批.push({ 种: "单", 文: String.fromCodePoint(cp), cp });
+  for (const [a, b, c] of 组合对) 行批.push({ 种: "对", 文: String.fromCodePoint(a) + String.fromCodePoint(b), 到: c });
   // 组合类的次序：拿两个类不同的记号，和同一个起头按两种先后排，两行该给同一个结果。
   // 类相同的两个不换位，所以挑的时候要挑不同的类 —— 这一点本身也是那条规则的边界。
   const 各类代表 = new Map();
@@ -508,19 +508,19 @@ console.log("十一、归一化：分解、排序、组合，这台机器也做"
   for (let k = 0; k + 1 < 代表们.length; k += 1) {
     const 前 = String.fromCodePoint(0x41, 代表们[k], 代表们[k + 1]);
     const 后 = String.fromCodePoint(0x41, 代表们[k + 1], 代表们[k]);
-    行们.push({ 种: "序", 文: 前, 伴: 后 });
-    行们.push({ 种: "序", 文: 后, 伴: 前 });
+    行批.push({ 种: "序", 文: 前, 伴: 后 });
+    行批.push({ 种: "序", 文: 后, 伴: 前 });
   }
   // 韩文：初声 + 中声，再加一个终声。
   for (let L = 0x1100; L < 0x1100 + 19; L += 3) {
     for (let V = 0x1161; V < 0x1161 + 21; V += 4) {
-      行们.push({ 种: "韩", 文: String.fromCodePoint(L) + String.fromCodePoint(V), 长: 1 });
-      行们.push({ 种: "韩", 文: String.fromCodePoint(L) + String.fromCodePoint(V) + String.fromCodePoint(0x11A8), 长: 1 });
+      行批.push({ 种: "韩", 文: String.fromCodePoint(L) + String.fromCodePoint(V), 长: 1 });
+      行批.push({ 种: "韩", 文: String.fromCodePoint(L) + String.fromCodePoint(V) + String.fromCodePoint(0x11A8), 长: 1 });
     }
   }
 
   const 清单 = path.join(临, "nfc-sample.txt");
-  fs.writeFileSync(清单, 行们.map((r) => r.文).join("\n") + "\n", "utf8");
+  fs.writeFileSync(清单, 行批.map((r) => r.文).join("\n") + "\n", "utf8");
   const 路径 = 清单.replace(/\\/g, "/");
   const 源码 = [
     "fn 单元们(s: String) -> String {",
@@ -534,10 +534,10 @@ console.log("十一、归一化：分解、排序、组合，这台机器也做"
     "  return 出",
     "}",
     "fn main() -> Int effects(file) {",
-    '  var 行们 = read_lines("' + 路径 + '")',
+    '  var 行批 = read_lines("' + 路径 + '")',
     "  var i = 0",
-    "  while i < len(行们) {",
-    '    print(单元们(nfc(行们[i])) + "\\n")',
+    "  while i < len(行批) {",
+    '    print(单元们(nfc(行批[i])) + "\\n")',
     "    i = i + 1",
     "  }",
     "  return 0",
@@ -558,12 +558,12 @@ console.log("十一、归一化：分解、排序、组合，这台机器也做"
   const 序错 = [];
   const 韩错 = [];
   const 位置 = new Map();
-  for (let i = 0; i < 行们.length; i++) 位置.set(行们[i].文, i);
-  for (let i = 0; i < 行们.length; i++) {
+  for (let i = 0; i < 行批.length; i++) 位置.set(行批[i].文, i);
+  for (let i = 0; i < 行批.length; i++) {
     const 甲行 = String(甲[i] || "").trim();
     const 乙行 = String(乙[i] || "").trim();
     if (甲行 !== 乙行) 机器错.push(i);
-    const 行 = 行们[i];
+    const 行 = 行批[i];
     if (行.种 === "单" && 语料.has(行.cp)) {
       const 期 = 语料.get(行.cp).map((cp) => 单元串(cp)).join(" ");
       if (乙行 !== 期) 语料错.push(i);
@@ -575,13 +575,13 @@ console.log("十一、归一化：分解、排序、组合，这台机器也做"
       if (长 !== 行.长) 韩错.push(i);
     }
   }
-  const 说 = (i) => "第 " + i + " 行（" + 行们[i].种 + "），甲 " + JSON.stringify(甲[i]) + " 乙 " + JSON.stringify(乙[i]);
+  const 说 = (i) => "第 " + i + " 行（" + 行批[i].种 + "），甲 " + JSON.stringify(甲[i]) + " 乙 " + JSON.stringify(乙[i]);
   ok("两台机器对整批样本一样", 机器错.length === 0, 机器错.length ? 说(机器错[0]) : "");
   ok("每个码点归一之后该是什么，与语料一字不差（" + 语料.size + " 个）",
      语料错.length === 0, 语料错.length ? 说(语料错[0]) : "");
   ok("组合对：前一个加后一个拼成第三个（" + 组合对.length + " 对）", 对错.length === 0, 对错.length ? 说(对错[0]) : "");
   ok("组合类的次序：两种先后给同一个结果", 序错.length === 0, 序错.length ? 说(序错[0]) : "");
-  ok("韩文字母拼成音节（" + 行们.filter((q) => q.种 === "韩").length + " 组）",
+  ok("韩文字母拼成音节（" + 行批.filter((q) => q.种 === "韩").length + " 组）",
      韩错.length === 0, 韩错.length ? 说(韩错[0]) : "");
   ok("组合对那一批确实跑了", 组合对.length > 900 && 乙.length > 5000, 组合对.length + " 对 / " + 乙.length + " 行");
 }

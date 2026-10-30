@@ -38,12 +38,12 @@ console.log("二、全量清单在仓库里，而且是从 check-all 导出来�
   const 全清单 = path.join(ROOT, "tools/suite-list.txt");
   ok("tools/suite-list.txt 在", fs.existsSync(全清单));
   if (fs.existsSync(全清单)) {
-    const 行们 = fs.readFileSync(全清单, "utf8").trim().split("\n").filter((l) => l.includes("\t"));
-    ok("清单至少一百条", 行们.length >= 100, String(行们.length));
-    ok("每条都是「名字 + 路径」", 行们.every((l) => {
+    const 行批 = fs.readFileSync(全清单, "utf8").trim().split("\n").filter((l) => l.includes("\t"));
+    ok("清单至少一百条", 行批.length >= 100, String(行批.length));
+    ok("每条都是「名字 + 路径」", 行批.every((l) => {
       const 列 = l.split("\t");
       return 列.length === 2 && (列[1].startsWith("test/") || 列[1].startsWith("tools/"));
-    }), 行们[0] || "");
+    }), 行批[0] || "");
   }
 }
 

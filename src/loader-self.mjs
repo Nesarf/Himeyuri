@@ -133,12 +133,12 @@ function 取顺序(机器, 码, 目录, 相对, 绝对) {
   if (r.status !== 0) {
     return { 错: String(r.stderr || r.stdout || "").trim() || "适配层退出码 " + r.status };
   }
-  const 行们 = String(r.stdout || "")
+  const 行批 = String(r.stdout || "")
     .split("\n")
     .map((s) => s.trim())
     .filter(Boolean);
-  if (行们.length === 1 && 行们[0].startsWith("错 ")) return { 错: 行们[0].slice(2) };
-  const order = 行们.map((s) => path.resolve(s));
+  if (行批.length === 1 && 行批[0].startsWith("错 ")) return { 错: 行批[0].slice(2) };
+  const order = 行批.map((s) => path.resolve(s));
   try {
     fs.mkdirSync(path.dirname(存), { recursive: true });
     fs.writeFileSync(存, JSON.stringify(order), "utf8");

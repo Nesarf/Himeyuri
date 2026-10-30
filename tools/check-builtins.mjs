@@ -31,9 +31,9 @@ for (const 行 of 主体.split("\n")) {
 // 二、规格第一圈：那一行里点名了哪些
 const spec = 读("SPEC.txt");
 // 规格里「标准库第一圈」说了两处：一处是枚举，一处是定稿叙述。两处都算。
-const 环行们 = spec.split("\n").filter((l) => l.includes("标准库第一圈"));
-if (环行们.length === 0) { console.error("  找不到「标准库第一圈」"); process.exit(2); }
-const 环里 = Array.from(new Set(环行们.flatMap((l) =>
+const 环行批 = spec.split("\n").filter((l) => l.includes("标准库第一圈"));
+if (环行批.length === 0) { console.error("  找不到「标准库第一圈」"); process.exit(2); }
+const 环里 = Array.from(new Set(环行批.flatMap((l) =>
   Array.from(l.matchAll(/[a-z_][a-z0-9_]*/g)).map((m) => m[0]))));
 
 // 三、能力契约文档：分组列出的名字

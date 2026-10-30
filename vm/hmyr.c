@@ -3835,8 +3835,8 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     /* 去掉行尾的 \r，好让 CRLF 与 LF 两种文件读出来一样。 */
     if (得 > 0 && 缓[得 - 1] == '\r') { 得--; 缓[得] = 0; }
     uint32_t 行长 = 0;
-    uint16_t *行们 = utf8_to_utf16(缓, 得, &行长);
-    Value 行 = v_str(行们, 行长);
+    uint16_t *行批 = utf8_to_utf16(缓, 得, &行长);
+    Value 行 = v_str(行批, 行长);
     Value 记 = v_null();
     记.tag = T_RECORD;
     记.rec.n = 2;
@@ -3898,7 +3898,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     }
     return 1;
   }
-  /* 从标准输入读 N 个字节。交回 {字节们, 结束}。
+  /* 从标准输入读 N 个字节。交回 {字节串, 结束}。
    * 与 read_stdin_line 分开，是因为 JSON-RPC 那类东西的请求体未必只有一行：
    * 先读头拿到长度，再按长度读这么多字节 —— 两件事，两格。
    * 结束表示「没读满」：EOF 先到了。 */
@@ -3926,11 +3926,11 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
       结束 = (得 < (size_t)want) ? 1 : 0;
 #endif
       {
-        Value 字节们 = v_null();
-        字节们.tag = T_TUPLE;
-        字节们.ilen = (uint32_t)得;
-        字节们.items = alloc_values((uint32_t)(得 ? 得 : 1));
-        for (size_t i = 0; i < 得; i++) 字节们.items[i] = v_num((double)buf[i]);
+        Value 字节串 = v_null();
+        字节串.tag = T_TUPLE;
+        字节串.ilen = (uint32_t)得;
+        字节串.items = alloc_values((uint32_t)(得 ? 得 : 1));
+        for (size_t i = 0; i < 得; i++) 字节串.items[i] = v_num((double)buf[i]);
         free(buf);
         {
           Value 记 = v_null();
@@ -3939,9 +3939,12 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
           记.rec.vals = alloc_values(2);
           记.rec.names = (const uint16_t **)calloc(2, sizeof(uint16_t *));
           记.rec.name_lens = (uint32_t *)calloc(2, sizeof(uint32_t));
-          static const uint16_t 名字节[] = {0x5b57, 0x8282, 0x4eec};
+          /* 字段名的码位写在这里，不用字符串字面量 —— 所以改这个名字时
+           * 按字符串搜是搜不到的：0x5b57 字、0x8282 节、0x4e32 串。
+           * 2026-11-02 从 0x4eec（们）改成 0x4e32（串），因为集合名不用「们」了。 */
+          static const uint16_t 名字节[] = {0x5b57, 0x8282, 0x4e32};
           static const uint16_t 名终[] = {0x7ed3, 0x675f};
-          记.rec.names[0] = 名字节; 记.rec.name_lens[0] = 3; 记.rec.vals[0] = 字节们;
+          记.rec.names[0] = 名字节; 记.rec.name_lens[0] = 3; 记.rec.vals[0] = 字节串;
           记.rec.names[1] = 名终; 记.rec.name_lens[1] = 2; 记.rec.vals[1] = v_bool(结束);
           *out = 记;
         }
@@ -4000,14 +4003,14 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
       if (末 > 起 && 文[末 - 1] == '\r') 末--;
       if (i == 得 && 末 == 起) break;   /* 末尾空行 */
       uint32_t 行长 = 0;
-      uint16_t *行们 = utf8_to_utf16(文 + 起, 末 - 起, &行长);
+      uint16_t *行批 = utf8_to_utf16(文 + 起, 末 - 起, &行长);
       if (数 >= 容) {
         容 *= 2;
         Value *新 = alloc_values(容);
         for (uint32_t k = 0; k < 数; k++) 新[k] = v.items[k];
         v.items = 新;
       }
-      v.items[数++] = v_str(行们, 行长);
+      v.items[数++] = v_str(行批, 行长);
       起 = i + 1;
     }
     free(文);

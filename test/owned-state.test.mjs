@@ -37,8 +37,8 @@ const hmyr侧 = (序) => {
   const 入 = 序.map((x) => x.态 + " " + x.动作).join("\n") + "\n";
   const r = spawnSync(process.execPath, [具, 脚本], { input: 入, encoding: "utf8", timeout: 300000 });
   // 默认那条路会把 main 的返回值当最后一行打出来 —— 那不是判定，去掉它。
-  const 行们 = String(r.stdout || "").split("\n").filter((x) => x.length > 0 && x !== "0");
-  return { 出: 行们, 码: r.status, 误: String(r.stderr || "") };
+  const 行批 = String(r.stdout || "").split("\n").filter((x) => x.length > 0 && x !== "0");
+  return { 出: 行批, 码: r.status, 误: String(r.stderr || "") };
 };
 
 console.log("一、十二种组合");

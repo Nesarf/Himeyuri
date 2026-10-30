@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 源路 = path.join(ROOT, "vm/hmyr.c");
-const 行们 = fs.readFileSync(源路, "utf8").split(/\r?\n/);
+const 行批 = fs.readFileSync(源路, "utf8").split(/\r?\n/);
 
 // 文件级声明：行首就是 static，且是「变量声明」而不是函数或原型 ——
 // 判据是行里没有括号。多行的初始化（带换行的数组）在这里只取第一行，
@@ -31,8 +31,8 @@ const 行们 = fs.readFileSync(源路, "utf8").split(/\r?\n/);
 // 早一版按类型名排除（void / Value），于是 static Value *g_stack 被误伤了 ——
 // 而它正是一个根。排除条件按形状写，不按类型名写。
 const 声明 = [];
-for (let i = 0; i < 行们.length; i++) {
-  const 行 = 行们[i];
+for (let i = 0; i < 行批.length; i++) {
+  const 行 = 行批[i];
   if (!/^static\s/.test(行)) continue;
   if (/^static\s+const\b/.test(行)) continue;          // 常量不是状态
   const 体 = 行.replace(/\/\*.*$/, "").trim();
@@ -49,9 +49,9 @@ const 项 = 声明.filter((d) => (见过.has(d.名字) ? false : (见过.add(d.�
 const 数引用 = (名字) => {
   const re = new RegExp("\\b" + 名字.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b");
   let n = 0;
-  for (let i = 0; i < 行们.length; i++) {
+  for (let i = 0; i < 行批.length; i++) {
     if (i + 1 === 项.find((x) => x.名字 === 名字)?.行号) continue;
-    if (re.test(行们[i])) n++;
+    if (re.test(行批[i])) n++;
   }
   return n;
 };
@@ -59,7 +59,7 @@ const 数引用 = (名字) => {
 const 带数 = 项.map((d) => ({ ...d, 引用: 数引用(d.名字) })).sort((a, b) => b.引用 - a.引用);
 
 console.log("vm/hmyr.c 的文件级可变状态");
-console.log("  源行数 " + 行们.length);
+console.log("  源行数 " + 行批.length);
 console.log("  可变声明 " + 带数.length + " 项（static const 不计）");
 console.log("");
 const 宽 = Math.max(...带数.map((d) => d.名字.length), 4);

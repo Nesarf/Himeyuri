@@ -39,20 +39,20 @@ console.log("一、列宽按最宽那一格算");
 
 console.log("二、占位符那一行不画");
 {
-  const 行们 = [[0, [甲, 空]], [1, [空, 空]], [2, [丙, 空]]];
-  const 去 = call("去空行", [行们]);
+  const 行批 = [[0, [甲, 空]], [1, [空, 空]], [2, [丙, 空]]];
+  const 去 = call("去空行", [行批]);
   ok("三行剩下两行", 去.length === 2, String(去.length));
   ok("留下的是第零与第二行", 去[0][0] === 0 && 去[1][0] === 2, JSON.stringify(去.map((r) => r[0])));
 }
 
 console.log("三、行号说出位置");
 {
-  const 行们 = [[0, [甲]], [1, [空]], [2, [丙]]];
-  const 出 = call("画格子表", [call("去空行", [行们])]);
-  const 行们出 = 出.split("\n").filter((l) => l.length > 0);
-  ok("输出只有两行", 行们出.length === 2, String(行们出.length));
-  ok("第一行以 0 开头", 行们出[0].startsWith("0"), JSON.stringify(行们出[0].slice(0, 6)));
-  ok("第二行以 2 开头（不是 1）", 行们出[1].startsWith("2"), JSON.stringify(行们出[1].slice(0, 6)));
+  const 行批 = [[0, [甲]], [1, [空]], [2, [丙]]];
+  const 出 = call("画格子表", [call("去空行", [行批])]);
+  const 行批出 = 出.split("\n").filter((l) => l.length > 0);
+  ok("输出只有两行", 行批出.length === 2, String(行批出.length));
+  ok("第一行以 0 开头", 行批出[0].startsWith("0"), JSON.stringify(行批出[0].slice(0, 6)));
+  ok("第二行以 2 开头（不是 1）", 行批出[1].startsWith("2"), JSON.stringify(行批出[1].slice(0, 6)));
 }
 
 console.log("四、空格与占位");

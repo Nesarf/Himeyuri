@@ -167,58 +167,58 @@ const 内置 = {
   // 字节元组转文本：按 UTF-8 解码。解码手写，理由同 read_stdin_line 那一条。
   bytes_to_text: (rt, a) => {
     const 项们 = a[0];
-    const 字节们 = [];
-    for (let i = 0; i < 项们.length; i++) 字节们.push(Number(项们[i]) & 0xFF);
+    const 字节串 = [];
+    for (let i = 0; i < 项们.length; i++) 字节串.push(Number(项们[i]) & 0xFF);
     let s = "";
     let i = 0;
-    while (i < 字节们.length) {
-      const b0 = 字节们[i];
+    while (i < 字节串.length) {
+      const b0 = 字节串[i];
       let cp = 0, 续 = 0;
       if (b0 < 0x80) { cp = b0; 续 = 0; }
       else if ((b0 & 0xE0) === 0xC0) { cp = b0 & 0x1F; 续 = 1; }
       else if ((b0 & 0xF0) === 0xE0) { cp = b0 & 0x0F; 续 = 2; }
       else { cp = b0 & 0x07; 续 = 3; }
       i++;
-      for (let k = 0; k < 续 && i < 字节们.length; k++) { cp = (cp << 6) | (字节们[i] & 0x3F); i++; }
+      for (let k = 0; k < 续 && i < 字节串.length; k++) { cp = (cp << 6) | (字节串[i] & 0x3F); i++; }
       s += String.fromCodePoint(cp);
     }
     return s;
   },
-  // 从标准输入读 N 个字节：交回 {字节们, 结束}。结束表示没读满（EOF 先到了）。
+  // 从标准输入读 N 个字节：交回 {字节串, 结束}。结束表示没读满（EOF 先到了）。
   read_stdin_bytes: (rt, a) => {
     const n = Math.max(0, Math.floor(rt.成数(a[0])));
-    const 字节们 = [];
-    while (字节们.length < n) {
+    const 字节串 = [];
+    while (字节串.length < n) {
       let b;
-      try { b = rt.cap.terminal.readSync(n - 字节们.length); } catch (err) { b = null; }
+      try { b = rt.cap.terminal.readSync(n - 字节串.length); } catch (err) { b = null; }
       if (!b || b.length === 0) break;
-      for (let i = 0; i < b.length; i++) 字节们.push(b[i]);
+      for (let i = 0; i < b.length; i++) 字节串.push(b[i]);
     }
-    return { 字节们, 结束: 字节们.length < n };
+    return { 字节串, 结束: 字节串.length < n };
   },
   // 从标准输入读一行：交回 {行, 结束}。结束是 EOF，与空行是两件事。
   // 解码手写：这一份的宿主依赖钉在十项上，而 Buffer 与 Uint8Array 都不在那十项里。
   read_stdin_line: (rt) => {
-    const 字节们 = [];
+    const 字节串 = [];
     let 结束 = false;
     for (;;) {
       let b;
       try { b = rt.cap.terminal.readSync(1); } catch (err) { b = null; }
       if (!b || b.length === 0) { 结束 = true; break; }
       if (b[0] === 10) break;
-      字节们.push(b[0]);
+      字节串.push(b[0]);
     }
     let s = "";
     let i = 0;
-    while (i < 字节们.length) {
-      const b0 = 字节们[i];
+    while (i < 字节串.length) {
+      const b0 = 字节串[i];
       let cp = 0, 续 = 0;
       if (b0 < 0x80) { cp = b0; 续 = 0; }
       else if ((b0 & 0xE0) === 0xC0) { cp = b0 & 0x1F; 续 = 1; }
       else if ((b0 & 0xF0) === 0xE0) { cp = b0 & 0x0F; 续 = 2; }
       else { cp = b0 & 0x07; 续 = 3; }
       i++;
-      for (let k = 0; k < 续 && i < 字节们.length; k++) { cp = (cp << 6) | (字节们[i] & 0x3F); i++; }
+      for (let k = 0; k < 续 && i < 字节串.length; k++) { cp = (cp << 6) | (字节串[i] & 0x3F); i++; }
       s += String.fromCodePoint(cp);
     }
     if (s.endsWith("\r")) s = s.slice(0, -1);

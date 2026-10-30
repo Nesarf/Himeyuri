@@ -74,31 +74,31 @@ for (const [cp, 直] of 直分解) {
 
 // ---- 五、写出来 ----
 const 写分解 = () => {
-  const 行们 = [];
+  const 行批 = [];
   for (const [cp, 全] of 全分解) {
     const 填 = [0, 0, 0, 0];
     for (let i = 0; i < 全.length; i++) 填[i] = 全[i];
-    行们.push("  {0x" + cp.toString(16).toUpperCase() + "u, " + 全.length + "u, {"
+    行批.push("  {0x" + cp.toString(16).toUpperCase() + "u, " + 全.length + "u, {"
       + 填.map((v) => "0x" + v.toString(16).toUpperCase() + "u").join(", ") + "}},");
   }
-  return 行们.join("\n");
+  return 行批.join("\n");
 };
 
 const 写组合类 = () => {
-  const 行们 = [];
+  const 行批 = [];
   for (const [cp, ccc] of [...组合类.entries()].sort((a, b) => a[0] - b[0])) {
-    行们.push("  {0x" + cp.toString(16).toUpperCase() + "u, " + ccc + "u},");
+    行批.push("  {0x" + cp.toString(16).toUpperCase() + "u, " + ccc + "u},");
   }
-  return 行们.join("\n");
+  return 行批.join("\n");
 };
 
 const 写组合 = () => {
-  const 行们 = [];
+  const 行批 = [];
   for (const [a, b, cp] of 组合) {
-    行们.push("  {0x" + a.toString(16).toUpperCase() + "u, 0x" + b.toString(16).toUpperCase()
+    行批.push("  {0x" + a.toString(16).toUpperCase() + "u, 0x" + b.toString(16).toUpperCase()
       + "u, 0x" + cp.toString(16).toUpperCase() + "u},");
   }
-  return 行们.join("\n");
+  return 行批.join("\n");
 };
 
 const 文本 = `/* Unicode 的归一化数据，C 那台机器用（NFC 要的那三样）。

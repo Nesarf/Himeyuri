@@ -116,7 +116,7 @@ fn main() -> Int effects(file) {
     return 2
   }
   let 文 = read_text(参[1])
-  let 行们 = split(文, chr(10))
+  let 行批 = split(文, chr(10))
   var 字起 = ()
   var 字止 = ()
   var 记起 = ()
@@ -124,8 +124,8 @@ fn main() -> Int effects(file) {
   var 字上 = 0 - 2
   var 记上 = 0 - 2
   var i = 0
-  while i < len(行们) {
-    let 行 = 行们[i]
+  while i < len(行批) {
+    let 行 = 行批[i]
     if len(行) > 0 {
       let 段 = split(行, ";")
       if len(段) >= 3 {

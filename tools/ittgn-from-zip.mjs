@@ -39,14 +39,14 @@ if (!fs.existsSync(表路)) {
   console.error("HMYR-器-009 这份 zip 里没有成员表（" + 成员表名 + "）—— 它可能不是从容器转来的");
   process.exit(1);
 }
-const 行们 = fs.readFileSync(表路, "utf8").split("\n").map((x) => x.replace(/\r$/, "")).filter((x) => x.length > 0);
-if (行们[0] !== "1") {
-  console.error("HMYR-器-010 成员表的版本不认识：" + 行们[0]);
+const 行批 = fs.readFileSync(表路, "utf8").split("\n").map((x) => x.replace(/\r$/, "")).filter((x) => x.length > 0);
+if (行批[0] !== "1") {
+  console.error("HMYR-器-010 成员表的版本不认识：" + 行批[0]);
   process.exit(1);
 }
-const 容器基名 = 行们[1];
-const 入口名 = 行们[2];
-const 成员名册 = 行们.slice(3);
+const 容器基名 = 行批[1];
+const 入口名 = 行批[2];
+const 成员名册 = 行批.slice(3);
 
 // 入口的内容取根目录那一对之一。两个都试，因为摊开之后它们本该相同，
 // 而「本该相同」这件事不该让这里挑死一个名字 —— 有人可能只留下一个。

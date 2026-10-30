@@ -20,10 +20,10 @@ import "./compile.hmoca"
 // ---- 字节累加：语言里没有可变引用，所以每一步交回新的元组 ----
 //
 // 而「每一步都复制一次已累积的全部内容」是平方级的：几万字节就撑不住（第十四轮撞到的那次
-// out of memory 就是它）。所以按块收：攒够 512 个字节就封成一块，块们再拼成一个元组。
+// out of memory 就是它）。所以按块收：攒够 512 个字节就封成一块，块堆再拼成一个元组。
 // 块的数量只有总量的五百一十二分之一，于是复制量从平方掉到接近线性。
 //
-// 交给 write_bytes 的是「块们的元组」（二维），由世界那一侧一次拍平写出 ——
+// 交给 write_bytes 的是「块堆的元组」（二维），由世界那一侧一次拍平写出 ——
 // 拍平在那边是一次线性扫描，不在这边一次次复制。
 pub fn 块长() -> Int {
   return 512
@@ -39,7 +39,7 @@ fn 放(状态: Int, x: Int) {
   return {块: 状态.块, 小: 小}
 }
 
-// 收尾：还在手上的那些字节也封成一块，交回块们。
+// 收尾：还在手上的那些字节也封成一块，交回块堆。
 fn 收尾(状态: Int) -> Int {
   if len(状态.小) == 0 { return 状态.块 }
   return 状态.块 + (状态.小,)
@@ -67,7 +67,7 @@ fn 放串(状态: Int, s: String) -> Int {
   return 收
 }
 
-fn 放字节们(状态: Int, 们: Int) -> Int {
+fn 放字节串(状态: Int, 们: Int) -> Int {
   var 收 = 状态
   var i = 0
   while i < len(们) {
@@ -78,7 +78,7 @@ fn 放字节们(状态: Int, 们: Int) -> Int {
 }
 
 fn 放值(状态: Int, v: Int) -> Int {
-  return 放字节们(状态, pack_value(v))
+  return 放字节串(状态, pack_value(v))
 }
 
 // ---- 指令 ----
@@ -227,7 +227,7 @@ fn 是导入行(行: String) -> Bool {
   return true
 }
 
-// 按换行拆成行们。写成循环，而不是「每个字符递归一层」：
+// 按换行拆成行批。写成循环，而不是「每个字符递归一层」：
 // 那种写法的递归深度就是字符数 —— 一份五百多行的源码一万六千层，
 // 而这台机器的每一层调用都占一层 C 栈，64 MB 直接见底（实测退出码 0xC00000FD）。
 fn 拆行(文本: String) {
@@ -247,10 +247,10 @@ fn 拆行(文本: String) {
   return acc + (slice(文本, 起, len(文本)),)
 }
 
-fn 去导入从(行们: Int, i: Int, acc: String) -> String {
-  if i >= len(行们) { return acc }
-  if 是导入行(行们[i]) { return 去导入从(行们, i + 1, acc) }
-  return 去导入从(行们, i + 1, acc + 行们[i] + chr(10))
+fn 去导入从(行批: Int, i: Int, acc: String) -> String {
+  if i >= len(行批) { return acc }
+  if 是导入行(行批[i]) { return 去导入从(行批, i + 1, acc) }
+  return 去导入从(行批, i + 1, acc + 行批[i] + chr(10))
 }
 
 fn 去导入(源码: String) -> String {

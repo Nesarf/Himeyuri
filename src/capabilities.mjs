@@ -103,13 +103,13 @@ export const 本机能力 = (options = {}) => ({
     readLines: (p) => {
       const 文 = fs.readFileSync(p, "utf8");
       if (文 === "") return [];
-      const 行们 = 文.split("\n");
-      if (行们.length > 0 && 行们[行们.length - 1] === "") 行们.pop();
-      return 行们.map((行) => (行.endsWith("\r") ? 行.slice(0, -1) : 行));
+      const 行批 = 文.split("\n");
+      if (行批.length > 0 && 行批[行批.length - 1] === "") 行批.pop();
+      return 行批.map((行) => (行.endsWith("\r") ? 行.slice(0, -1) : 行));
     },
     // 这一条是 .hmyrb 落盘要用的：把语言算出来的字节交出去，由世界这一侧落成文件。
     //
-    // 也接受「块们的元组」（二维）：在语言里按块累积再拍平是线性的，
+    // 也接受「块堆的元组」（二维）：在语言里按块累积再拍平是线性的，
     // 一次性拍平在这里做，比让语言那边每放一个字节都复制一次累积便宜得多。
     writeBytes: (p, 字节) => {
       const 平 = [];

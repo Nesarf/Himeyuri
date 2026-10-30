@@ -88,14 +88,14 @@ pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String
     return 1
   }
 
-  var 块们 = ()
+  var 块堆 = ()
   var 心们 = ()
   var 偏移 = 0
   var 总原始 = 0
   var k = 0
   while k < len(路们) {
     let 一 = 成员(路们[k], 正规名(路们[k]), 要压, 偏移)
-    块们 = 块们 + (一.块,)
+    块堆 = 块堆 + (一.块,)
     心们 = 心们 + (一.中心,)
     偏移 = 偏移 + len(一.块)
     总原始 = 总原始 + 一.原始
@@ -106,7 +106,7 @@ pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String
   if 附加路 != "" {
     if file_exists(附加路) {
       let 额外 = 成员(附加路, 附加名, 要压, 偏移)
-      块们 = 块们 + (额外.块,)
+      块堆 = 块堆 + (额外.块,)
       心们 = 心们 + (额外.中心,)
       偏移 = 偏移 + len(额外.块)
       总原始 = 总原始 + 额外.原始
@@ -115,11 +115,11 @@ pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String
       print("  要收的 " + 附加路 + " 不在，包里不会有清单" + chr(10))
     }
   }
-  let 体 = 拼平(块们, 0, len(块们))
+  let 体 = 拼平(块堆, 0, len(块堆))
   let 录 = 拼平(心们, 0, len(心们))
-  let 收尾 = 尾(len(块们), len(录), 偏移)
+  let 收尾 = 尾(len(块堆), len(录), 偏移)
   write_bytes(包路, (体, 录, 收尾))
-  print("  收了 " + str(len(块们)) + " 个文件，原样 " + str(总原始) + " 字节 → " + str(len(体) + len(录) + len(收尾)) + " 字节的包" + chr(10))
+  print("  收了 " + str(len(块堆)) + " 个文件，原样 " + str(总原始) + " 字节 → " + str(len(体) + len(录) + len(收尾)) + " 字节的包" + chr(10))
   return 0
 }
 

@@ -151,21 +151,21 @@ export const 账本 = [
 ];
 
 export function 表格() {
-  const 行们 = [];
+  const 行批 = [];
   const 宽 = (s, n) => {
     let 出 = s;
     while (出.length < n) 出 += " ";
     return 出;
   };
   for (const 项 of 账本) {
-    行们.push(宽(项.状态, 10) + 宽(项.名, 22) + (项.在哪 || 项.证明.join(" ")));
+    行批.push(宽(项.状态, 10) + 宽(项.名, 22) + (项.在哪 || 项.证明.join(" ")));
   }
-  return 行们;
+  return 行批;
 }
 
 if (process.argv[1] && process.argv[1].endsWith("tooling-ledger.mjs")) {
-  const 行们 = 表格();
-  for (const 行 of 行们) console.log(行);
+  const 行批 = 表格();
+  for (const 行 of 行批) console.log(行);
   const 搬了 = 账本.filter((x) => x.状态.startsWith("搬")).length;
   console.log("");
   console.log("共 " + 账本.length + " 项：搬了 " + 搬了 + " 项，不搬 " + (账本.length - 搬了) + " 项");

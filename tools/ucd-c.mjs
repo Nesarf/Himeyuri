@@ -17,7 +17,7 @@ const 源 = process.argv[2] ? path.resolve(process.argv[2]) : path.join(ROOT, "r
 const 出目录 = process.argv[3] ? path.resolve(process.argv[3]) : path.join(ROOT, "vm");
 
 const 文 = fs.readFileSync(源, "utf8");
-const 行们 = 文.split("\n");
+const 行批 = 文.split("\n");
 
 const 字们 = [];   // 字母区间
 const 记们 = [];   // 记号区间
@@ -30,7 +30,7 @@ const 收集 = (列, cp) => {
   列.push([cp, cp]);
 };
 
-for (const 行 of 行们) {
+for (const 行 of 行批) {
   if (!行) continue;
   // 形状：U+XXXX;name;category;block;script
   const 段 = 行.split(";");
@@ -47,9 +47,9 @@ for (const 行 of 行们) {
 const 写表 = (名, 列, 说明) => {
   const 平 = [];
   for (const [起, 止] of 列) { 平.push(起, 止); }
-  const 行们 = [];
+  const 行批 = [];
   for (let i = 0; i < 平.length; i += 8) {
-    行们.push("  " + 平.slice(i, i + 8).map((v) => "0x" + v.toString(16) + "u").join(", ") + ",");
+    行批.push("  " + 平.slice(i, i + 8).map((v) => "0x" + v.toString(16) + "u").join(", ") + ",");
   }
   const 文本 =
 `/* ${说明}
@@ -64,7 +64,7 @@ const 写表 = (名, 列, 说明) => {
 #include <stddef.h>
 
 static const uint32_t ${名.toLowerCase()}_ranges[] = {
-${行们.join("\n")}
+${行批.join("\n")}
 };
 
 static const size_t ${名.toLowerCase()}_count = ${列.length};

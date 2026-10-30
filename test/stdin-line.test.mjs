@@ -70,7 +70,7 @@ if (!有编译器) {
       const 源 = [
         "fn main() -> Int {",
         "  let r = read_stdin_bytes(5)",
-        '  print(bytes_to_text(r.字节们) + " ")',
+        '  print(bytes_to_text(r.字节串) + " ")',
         "  print(str(r.结束) + chr(10))",
         "  return 0",
         "}",

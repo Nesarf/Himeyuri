@@ -22,19 +22,19 @@ const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
-const 行们 = (v) => v.join("\n") + "\n";
+const 行批 = (v) => v.join("\n") + "\n";
 const 投 = (内容, 名) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
 const 有警告 = (单, 码) => 单.diagnostics.warnings.some((w) => w.code === 码);
 
 console.log("一、非 pub 跨模块用：说一声");
 {
-  投(行们([
+  投(行批([
     "fn 私房菜() -> Int {",
     "  return 7",
     "}",
   ]), "厨房.hmoca");
 
-  const 入口 = 投(行们([
+  const 入口 = 投(行批([
     "import \"./厨房.hmoca\"",
     "",
     "fn main() -> Int {",
@@ -54,13 +54,13 @@ console.log("一、非 pub 跨模块用：说一声");
 
 console.log("二、pub 的跨模块用：不报");
 {
-  投(行们([
+  投(行批([
     "pub fn 招牌菜() -> Int {",
     "  return 9",
     "}",
   ]), "厨房.hmoca");
 
-  const 入口 = 投(行们([
+  const 入口 = 投(行批([
     "import \"./厨房.hmoca\"",
     "",
     "fn main() -> Int {",
@@ -75,7 +75,7 @@ console.log("二、pub 的跨模块用：不报");
 
 console.log("三、同一个模块里用非 pub：不报");
 {
-  const 入口 = 投(行们([
+  const 入口 = 投(行批([
     "fn 私房菜() -> Int {",
     "  return 7",
     "}",
@@ -94,12 +94,12 @@ console.log("四、归属表：名字来自哪个模块");
   // 命名空间第一步的地基：求值器记下每个名字来自哪个文件。
   // 它只记，不改查找 —— 所以这一节只验「问得出来」，不验「拦得住」（那是下一步，
   // 而下一步要动求值器，代价写在 SPEC 6.4 里）。
-  投(行们([
+  投(行批([
     "pub fn 招牌() -> Int {",
     "  return 1",
     "}",
   ]), "厨.hmoca");
-  const 入口 = 投(行们([
+  const 入口 = 投(行批([
     "import \"./厨.hmoca\"",
     "",
     "fn main() -> Int {",
@@ -119,7 +119,7 @@ console.log("五、真拦：非 pub 的名字跨模块调用被拒（HMYR-內-02
   // 这一节验的是「拦得住」。它曾经只是「记一条」（HMYR-載-008），因为库里一个 pub 都没写，
   // 一开就把整个仓库打红。2026-10-27 做完 pub 迁移（tools/pub-census.mjs 盘出
   // 14 + 62 个名字、19 个入口全仓归零），它才升成拒绝。
-  投(行们([
+  投(行批([
     "fn 私房菜() -> Int {",
     "  return 7",
     "}",
@@ -129,7 +129,7 @@ console.log("五、真拦：非 pub 的名字跨模块调用被拒（HMYR-內-02
     "}",
   ]), "厨.hmoca");
 
-  const 偷 = 投(行们([
+  const 偷 = 投(行批([
     "import \"./厨.hmoca\"",
     "",
     "fn main() -> Int {",
@@ -143,7 +143,7 @@ console.log("五、真拦：非 pub 的名字跨模块调用被拒（HMYR-內-02
   ok("非 pub 被拒（HMYR-內-023）", !!错 && String(错.code) === "HMYR-內-023",
     String(错 && (错.code + " " + 错.message)).slice(0, 120));
 
-  const 正 = 投(行们([
+  const 正 = 投(行批([
     "import \"./厨.hmoca\"",
     "",
     "fn main() -> Int {",
@@ -156,7 +156,7 @@ console.log("五、真拦：非 pub 的名字跨模块调用被拒（HMYR-內-02
   ok("pub 的跨模块调用通过", 果正 === 11, String(果正 && (果正.code || 果正)));
 
   // 同模块里用自家的私有函数：最常见的一种写法，不该被拦。
-  const 自家 = 投(行们([
+  const 自家 = 投(行批([
     "fn 私房菜() -> Int {",
     "  return 7",
     "}",
@@ -200,7 +200,7 @@ console.log("七、as 别名：`名.成员` 真的能用");
   //
   // 别名不是变量：去求 `厨` 的值只会得到「没有这个变量」，所以这条路必须在
   // 「求 callee」之前判断。判据里那两个用例就是为这一点写的。
-  投(行们([
+  投(行批([
     "pub fn 招牌菜() -> Int {",
     "  return 11",
     "}",
@@ -210,7 +210,7 @@ console.log("七、as 别名：`名.成员` 真的能用");
     "}",
   ]), "厨.hmoca");
 
-  const 用别名 = 投(行们([
+  const 用别名 = 投(行批([
     "import \"./厨.hmoca\" as 厨",
     "",
     "fn main() -> Int {",
@@ -222,7 +222,7 @@ console.log("七、as 别名：`名.成员` 真的能用");
   try { 果用 = runUnit(单用).run(单用.modules.get(用别名)); } catch (e) { 果用 = e; }
   ok("别名点成员调得动", 果用 === 11, String(果用 && (果用.code || 果用)));
 
-  const 越界 = 投(行们([
+  const 越界 = 投(行批([
     "import \"./厨.hmoca\" as 厨",
     "",
     "fn main() -> Int {",
@@ -235,7 +235,7 @@ console.log("七、as 别名：`名.成员` 真的能用");
   ok("别名点私有的也被拒（HMYR-內-023）", !!果越 && String(果越.code) === "HMYR-內-023",
     String(果越 && (果越.code || 果越)).slice(0, 100));
 
-  const 没有 = 投(行们([
+  const 没有 = 投(行批([
     "import \"./厨.hmoca\" as 厨",
     "",
     "fn main() -> Int {",

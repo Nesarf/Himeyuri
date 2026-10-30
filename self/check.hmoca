@@ -11,10 +11,10 @@
 // 一段输出的最后一行：套件的判定就在那一行（「N passed, M failed」）。
 fn 最后一行(文: String) -> String {
   if len(文) == 0 { return "" }
-  let 行们 = split(文, chr(10))
-  var i = len(行们) - 1
+  let 行批 = split(文, chr(10))
+  var i = len(行批) - 1
   while i >= 0 {
-    let 行 = 行们[i]
+    let 行 = 行批[i]
     if len(行) > 0 { return 行 }
     i = i - 1
   }
@@ -41,12 +41,12 @@ fn main() -> Int effects(file, process) {
   var 清单路 = "tools/suite-list.txt"
   if len(参) > 1 { 清单路 = 参[1] }
   let 文 = read_text(清单路)
-  let 行们 = split(文, chr(10))
+  let 行批 = split(文, chr(10))
   var 过 = 0
   var 败 = 0
   var i = 0
-  while i < len(行们) {
-    let 行 = 行们[i]
+  while i < len(行批) {
+    let 行 = 行批[i]
     if len(行) > 0 {
       let 列 = split(行, chr(9))
       if len(列) >= 2 {

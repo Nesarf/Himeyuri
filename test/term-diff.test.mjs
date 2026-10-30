@@ -24,9 +24,9 @@ const call = (name, args) => {
   return rt.callFunction(fn, args, null);
 };
 
-const 布 = (行们) => {
-  let b = call("空画布", [行们.length, 6]);
-  for (let i = 0; i < 行们.length; i++) b = call("换行", [b, i, 行们[i]]);
+const 布 = (行批) => {
+  let b = call("空画布", [行批.length, 6]);
+  for (let i = 0; i < 行批.length; i++) b = call("换行", [b, i, 行批[i]]);
   return b;
 };
 

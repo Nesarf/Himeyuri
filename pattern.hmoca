@@ -43,15 +43,15 @@ fn 画一行(格们: Int) -> String {
 
 // pattern 就是若干行。每一个是 (行号, 格们) —— 行号显式带着，
 // 因为空行被省略之后，「这是第几行」只能由数据说，不能由位置说。
-fn 画格子从(行们: Int, i: Int, acc: String) -> String {
-  if i >= len(行们) { return acc }
-  let 行 = 行们[i]
+fn 画格子从(行批: Int, i: Int, acc: String) -> String {
+  if i >= len(行批) { return acc }
+  let 行 = 行批[i]
   let 号 = str(行[0])
-  return 画格子从(行们, i + 1, acc + 补空到(号, 3) + " " + 画一行(行[1]) + "\n")
+  return 画格子从(行批, i + 1, acc + 补空到(号, 3) + " " + 画一行(行[1]) + "\n")
 }
 
-fn 画格子表(行们: Int) -> String {
-  return 画格子从(行们, 0, "")
+fn 画格子表(行批: Int) -> String {
+  return 画格子从(行批, 0, "")
 }
 
 // 空行（整行都是空串）压掉，而保留行号——于是「哪里是空的」由行号说出来。
@@ -81,20 +81,20 @@ fn 整行空(格们: Int) -> Bool {
   return 压空行从(格们, 0, true)
 }
 
-fn 去空行从(行们: Int, i: Int, acc: Int) -> Int {
-  if i >= len(行们) { return acc }
-  if 整行空(行们[i][1]) { return 去空行从(行们, i + 1, acc) }
-  return 去空行从(行们, i + 1, acc + (行们[i],))
+fn 去空行从(行批: Int, i: Int, acc: Int) -> Int {
+  if i >= len(行批) { return acc }
+  if 整行空(行批[i][1]) { return 去空行从(行批, i + 1, acc) }
+  return 去空行从(行批, i + 1, acc + (行批[i],))
 }
 
-fn 去空行(行们: Int) -> Int {
-  return 去空行从(行们, 0, ())
+fn 去空行(行批: Int) -> Int {
+  return 去空行从(行批, 0, ())
 }
 
 fn main() -> Int {
-  let 行们 = ((0, ("C-4 01 v64 A0F", "--- .. ... ...", "G-4 02 v48 ...")),
+  let 行批 = ((0, ("C-4 01 v64 A0F", "--- .. ... ...", "G-4 02 v48 ...")),
               (1, ("--- .. ... ...", "--- .. ... ...", "--- .. ... ...")),
               (2, ("E-4 01 v64 A0F", "--- .. ... ...", "C-5 01 v40 ...")))
-  print(画格子表(去空行(行们)))
+  print(画格子表(去空行(行批)))
   return 0
 }

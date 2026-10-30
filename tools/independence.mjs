@@ -16,8 +16,8 @@ import { 账本 } from "./tooling-ledger.mjs";
 import { 工具们, 闭包, 入口们 } from "./runtime-path.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const 行们 = [];
-const 报 = (名, 值) => 行们.push([名, 值]);
+const 行批 = [];
+const 报 = (名, 值) => 行批.push([名, 值]);
 
 // 一、种子：它是一份能跑的东西，而不是一份记录。
 {
@@ -54,9 +54,9 @@ const 报 = (名, 值) => 行们.push([名, 值]);
 
 // 五、一条能被机器读的结论。
 {
-  const 差 = 行们.find(([名]) => 名 === "世界面");
-  const 账 = 行们.find(([名]) => 名 === "工具账本");
-  const 路 = 行们.find(([名]) => 名 === "运行时路径");
+  const 差 = 行批.find(([名]) => 名 === "世界面");
+  const 账 = 行批.find(([名]) => 名 === "工具账本");
+  const 路 = 行批.find(([名]) => 名 === "运行时路径");
   const 齐 = 差 && 差[1].includes("差 0 格") && 路 && !路[1].includes("越界");
   const 清 = 账 && !账[1].includes("没写理由");
   // 自举层那几格也补齐了，所以结论里点的是四处的名字，而不是「见文档」。
@@ -65,7 +65,7 @@ const 报 = (名, 值) => 行们.push([名, 值]);
     : "还有没结清的地方，见上面几行");
 }
 
-for (const [名, 值] of 行们) {
+for (const [名, 值] of 行批) {
   let 头 = 名;
   while (头.length < 12) 头 += " ";
   console.log("  " + 头 + 值);

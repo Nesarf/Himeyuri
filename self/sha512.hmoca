@@ -121,7 +121,7 @@ fn 零64() -> (Int, Int) { return (0, 0) }
 // ---- 分块与压缩 ----
 
 // 一块 128 字节 → 16 个 64 位字（大端）。
-fn 读块(字节们: Int, 起: Int) {
+fn 读块(字节串: Int, 起: Int) {
   var 出 = ()
   var i = 0
   while i < 16 {
@@ -130,8 +130,8 @@ fn 读块(字节们: Int, 起: Int) {
     var hi = 0
     var k = 0
     while k < 4 {
-      hi = hi * 256 + to_int(字节们[位 + k])
-      lo = lo * 256 + to_int(字节们[位 + 4 + k])
+      hi = hi * 256 + to_int(字节串[位 + k])
+      lo = lo * 256 + to_int(字节串[位 + 4 + k])
       k = k + 1
     }
     出 = 出 + ((lo, hi),)
@@ -180,9 +180,9 @@ fn 压缩(哈希们: Int, 块: Int) {
 }
 
 // 填充：补一个 0x80，补零到 112 mod 128，最后 16 字节写大端的消息位长。
-fn 填充(字节们: Int) {
-  let 长 = len(字节们)
-  var 出 = 字节们 + (128,)
+fn 填充(字节串: Int) {
+  let 长 = len(字节串)
+  var 出 = 字节串 + (128,)
   while len(出) % 128 != 112 {
     出 = 出 + (0,)
   }
@@ -201,8 +201,8 @@ fn 填充(字节们: Int) {
 }
 
 // 与 sha512 同一套，但交回字节元组 —— 验签要的是 64 个字节，不是 128 个字符。
-pub fn sha512字节(字节们: Int) {
-  let 填 = 填充(字节们)
+pub fn sha512字节(字节串: Int) {
+  let 填 = 填充(字节串)
   let 串 = 初始串()
   var 哈希们 = ()
   var i = 0
@@ -231,8 +231,8 @@ pub fn sha512字节(字节们: Int) {
   return 出
 }
 
-fn sha512(字节们: Int) {
-  let 填 = 填充(字节们)
+fn sha512(字节串: Int) {
+  let 填 = 填充(字节串)
   let 串 = 初始串()
   var 哈希们 = ()
   var i = 0

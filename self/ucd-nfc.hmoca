@@ -121,13 +121,13 @@ fn main() -> Int effects(file, process) {
   var 直分解 = index_new()      // 码点 → 分解后的元组
   var 组合类 = index_new()      // 码点 → 组合类
   // 码点列表用可变数组：元组拼接是 O(n²)，这份语料有好几万行，走不到一半就撞步数上限。
-  let 行们 = split(源码, chr(10))
-  var 序列 = 数组(行们)         // 长度够用，实际填 序数 个
+  let 行批 = split(源码, chr(10))
+  var 序列 = 数组(行批)         // 长度够用，实际填 序数 个
   var 序数 = 0
 
   var i = 0
-  while i < len(行们) {
-    let 行 = 行们[i]
+  while i < len(行批) {
+    let 行 = 行批[i]
     if len(行) > 0 {
       let 段 = split(行, ";")
       if len(段) >= 15 {
@@ -182,7 +182,7 @@ fn main() -> Int effects(file, process) {
   }
 
   // ---- 组合对：(前, 后) → 合成后的码点，按两个输入排序 ----
-  var 组合 = 数组(行们)
+  var 组合 = 数组(行批)
   var 组合数 = 0
   var n = 0
   while n < 序数 {

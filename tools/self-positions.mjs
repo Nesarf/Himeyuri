@@ -52,8 +52,8 @@ for (const [名, 源] of 样本) {
 console.log("二、行号真的在翻页（不是恒等于 1）");
 {
   const 己 = 自己切("let a = 1\nlet b = 2\nlet c = 3\n");
-  const 行们 = 己.map((t) => t.line);
-  ok("出现过第 2 行与第 3 行", 行们.includes(2) && 行们.includes(3), JSON.stringify(行们));
+  const 行批 = 己.map((t) => t.line);
+  ok("出现过第 2 行与第 3 行", 行批.includes(2) && 行批.includes(3), JSON.stringify(行批));
 }
 
 console.log("");

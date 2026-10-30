@@ -28,14 +28,14 @@ const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
-const 行们 = (v) => v.join("\n") + "\n";
+const 行批 = (v) => v.join("\n") + "\n";
 const 投 = (内容, 名) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
 const 跑 = (参) => spawnSync(process.execPath, [具, ...参], { encoding: "utf8", cwd: 临, timeout: 300000 });
 const 行 = (s) => String(s || "").split("\n").map((x) => x.trimEnd()).filter((x) => x.length > 0);
 
 console.log("一、长度与读值");
 {
-  const p = 投(行们([
+  const p = 投(行批([
     "fn main() -> Int effects(process) {",
     "  let 源 = (10, 11, 12, 13, 14)",
     "  let 窗 = bytes_view(源, 1, 3)",
@@ -55,7 +55,7 @@ console.log("一、长度与读值");
 
 console.log("二、越界给 HMYR-行-018（两端）");
 {
-  const 过头 = 投(行们([
+  const 过头 = 投(行批([
     "fn main() -> Int effects(process) {",
     "  let 源 = (1, 2, 3)",
     "  let 窗 = bytes_view(源, 1, 5)",
@@ -67,7 +67,7 @@ console.log("二、越界给 HMYR-行-018（两端）");
   const 出1 = (r1.stdout || "") + (r1.stderr || "");
   ok("建立时越界给 HMYR-行-018", 出1.includes("HMYR-行-018") && !出1.includes("没有拦住"), JSON.stringify(出1.slice(0, 160)));
 
-  const 读过头 = 投(行们([
+  const 读过头 = 投(行批([
     "fn main() -> Int effects(process) {",
     "  let 源 = (1, 2, 3)",
     "  let 窗 = bytes_view(源, 0, 2)",
@@ -79,7 +79,7 @@ console.log("二、越界给 HMYR-行-018（两端）");
   const 出2 = (r2.stdout || "") + (r2.stderr || "");
   ok("读取时越界给 HMYR-行-018", 出2.includes("HMYR-行-018"), JSON.stringify(出2.slice(0, 160)));
 
-  const 负 = 投(行们([
+  const 负 = 投(行批([
     "fn main() -> Int effects(process) {",
     "  let 源 = (1, 2, 3)",
     "  let 窗 = bytes_view(源, 0 - 1, 2)",
@@ -143,7 +143,7 @@ console.log("五、可写窗口：写进窗口，源也跟着变");
 {
   // 这一条是「不拷贝」最强的证据。元组不可变，所以在只读窗口上测不到
   // 「改了源之后窗口看到新值」；可变数组测得到 —— 而它证明窗口与源是同一块内存。
-  const p = 投(行们([
+  const p = 投(行批([
     "fn main() -> Int effects(process) {",
     "  let 源 = 数组((10, 11, 12, 13))",
     "  let 窗 = bytes_view(源, 1, 2)",
@@ -191,7 +191,7 @@ console.log("五、可写窗口：写进窗口，源也跟着变");
 console.log("六、不可写的源：元组上写要拒");
 {
   // 元组是不可变值，对它写会改到一个共享的值上。与 设() 同一套码：HMYR-行-018。
-  const p = 投(行们([
+  const p = 投(行批([
     "fn main() -> Int effects(process) {",
     "  let 源 = (10, 11, 12)",
     "  let 窗 = bytes_view(源, 0, 2)",
@@ -239,7 +239,7 @@ console.log("六、call_c 的三条失败");
     if (编.status !== 0) console.log("  跳过  call_c 那台这一次没编出来：" + String(编.stderr || "").slice(0, 100));
     if (编.status === 0) {
       const 跑一条 = (库, 符, 参) => {
-        const 源 = 投(行们([
+        const 源 = 投(行批([
           "fn main() -> Int effects(process) {",
           '  print(str(call_c("' + 库 + '", "' + 符 + '", ' + 参 + ')) + chr(10))',
           "  return 0",

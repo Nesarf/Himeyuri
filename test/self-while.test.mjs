@@ -31,7 +31,7 @@ const 那边的 = (源) => {
   if (回 && 回.ok === false) return { err: 回.text || "报错" };
   return { value: 回 && Object.prototype.hasOwnProperty.call(回, "value") ? 回.value : 回 };
 };
-const 写 = (行们) => 行们.join("\n") + "\n";
+const 写 = (行批) => 行批.join("\n") + "\n";
 
 console.log("一、解析层认 while");
 {

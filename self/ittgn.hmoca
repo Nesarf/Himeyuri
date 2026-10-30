@@ -86,11 +86,11 @@ fn 串UTF8(s: String) {
 }
 
 // UTF-8 字节 → 码点 → 字符串。与上面那一份成对。
-fn UTF8串(字节们, 起: Int, 止: Int) -> String {
+fn UTF8串(字节串, 起: Int, 止: Int) -> String {
   var s = ""
   var i = 起
   while i < 止 {
-    let b0 = 字节们[i]
+    let b0 = 字节串[i]
     var cp = 0
     var 续 = 0
     if b0 < 128 {
@@ -112,7 +112,7 @@ fn UTF8串(字节们, 起: Int, 止: Int) -> String {
     i = i + 1
     var k = 0
     while k < 续 && i < 止 {
-      cp = cp * 64 + (字节们[i] % 64)
+      cp = cp * 64 + (字节串[i] % 64)
       i = i + 1
       k = k + 1
     }
@@ -121,15 +121,15 @@ fn UTF8串(字节们, 起: Int, 止: Int) -> String {
   return s
 }
 
-// 切一段字节。为什么不写 slice(字节们, 起, 止)：最小求值器那边的 slice 只认
+// 切一段字节。为什么不写 slice(字节串, 起, 止)：最小求值器那边的 slice 只认
 // 字符串与码元序列，数组进去会走「转成字符串」那条（"104,101,…"），而 write_bytes
 // 不收字符串。给 slice 加数组那一支试过，cli 整套大面积红 —— 有地方正靠旧行为做事。
 // 所以字节的切法留在这一层，一处，明写着。
-fn 字节段(字节们, 起: Int, 止: Int) {
+fn 字节段(字节串, 起: Int, 止: Int) {
   var 出 = ()
   var i = 起
   while i < 止 {
-    出 = 出 + (字节们[i],)
+    出 = 出 + (字节串[i],)
     i = i + 1
   }
   return 出
@@ -147,26 +147,26 @@ fn 小32(n: Int) {
   return (一, 二, 三, 四)
 }
 
-fn 读16(字节们, 位: Int) -> Int {
-  return 字节们[位] + 字节们[位 + 1] * 256
+fn 读16(字节串, 位: Int) -> Int {
+  return 字节串[位] + 字节串[位 + 1] * 256
 }
 
-fn 读32(字节们, 位: Int) -> Int {
-  return 字节们[位] + 字节们[位 + 1] * 256 + 字节们[位 + 2] * 65536 + 字节们[位 + 3] * 16777216
+fn 读32(字节串, 位: Int) -> Int {
+  return 字节串[位] + 字节串[位 + 1] * 256 + 字节串[位 + 2] * 65536 + 字节串[位 + 3] * 16777216
 }
 
 // 扫一遍成员表：交回每项的 (名, 数据起, 数据止)。
-fn 扫(字节们) {
-  if len(字节们) < 12 { return () }
-  let 数 = 读16(字节们, 10)
+fn 扫(字节串) {
+  if len(字节串) < 12 { return () }
+  let 数 = 读16(字节串, 10)
   var 出 = ()
   var 位 = 12
   var i = 0
   while i < 数 {
-    let 名长 = 读16(字节们, 位)
-    let 名 = UTF8串(字节们, 位 + 2, 位 + 2 + 名长)
+    let 名长 = 读16(字节串, 位)
+    let 名 = UTF8串(字节串, 位 + 2, 位 + 2 + 名长)
     let 长位 = 位 + 2 + 名长
-    let 数据长 = 读32(字节们, 长位)
+    let 数据长 = 读32(字节串, 长位)
     let 起 = 长位 + 4
     出 = 出 + ((名, 起, 起 + 数据长),)
     位 = 起 + 数据长
@@ -205,12 +205,12 @@ fn 装(包路: String, 文件们) -> Int effects(file) {
 }
 
 fn 列(包路: String) -> Int effects(file) {
-  let 字节们 = read_bytes(包路)
-  if len(字节们) < 12 || UTF8串(字节们, 0, 9) != "HMYRITTGN" {
+  let 字节串 = read_bytes(包路)
+  if len(字节串) < 12 || UTF8串(字节串, 0, 9) != "HMYRITTGN" {
     print("HMYR-器-003 这不是容器：" + 包路 + chr(10))
     return 4
   }
-  let 成员们 = 扫(字节们)
+  let 成员们 = 扫(字节串)
   var i = 0
   while i < len(成员们) {
     let 一 = 成员们[i]
@@ -221,17 +221,17 @@ fn 列(包路: String) -> Int effects(file) {
 }
 
 fn 取(包路: String, 名: String, 出: String) -> Int effects(file) {
-  let 字节们 = read_bytes(包路)
-  if len(字节们) < 12 || UTF8串(字节们, 0, 9) != "HMYRITTGN" {
+  let 字节串 = read_bytes(包路)
+  if len(字节串) < 12 || UTF8串(字节串, 0, 9) != "HMYRITTGN" {
     print("HMYR-器-003 这不是容器：" + 包路 + chr(10))
     return 4
   }
-  let 成员们 = 扫(字节们)
+  let 成员们 = 扫(字节串)
   var i = 0
   while i < len(成员们) {
     let 一 = 成员们[i]
     if 一[0] == 名 {
-      write_bytes(出, (字节段(字节们, 一[1], 一[2]),))
+      write_bytes(出, (字节段(字节串, 一[1], 一[2]),))
       print("取了 " + 名 + " → " + 出 + chr(10))
       return 0
     }

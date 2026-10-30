@@ -200,24 +200,24 @@ export const 内置表 = {
   // 字节元组转文本：按 UTF-8 解码。read_stdin_bytes 交回字节，而请求体是 UTF-8。
   bytes_to_text: { 做: (vm, a) => {
     const 项们 = a[0].items;
-    const 字节们 = [];
-    for (let i = 0; i < 项们.length; i++) 字节们.push(数.下整(项们[i].num) & 0xFF);
-    return vm.文.由宿主(Buffer.from(字节们).toString("utf8"));
+    const 字节串 = [];
+    for (let i = 0; i < 项们.length; i++) 字节串.push(数.下整(项们[i].num) & 0xFF);
+    return vm.文.由宿主(Buffer.from(字节串).toString("utf8"));
   } },
-  // 从标准输入读 N 个字节：交回 {字节们, 结束}。结束表示没读满（EOF 先到了）。
+  // 从标准输入读 N 个字节：交回 {字节串, 结束}。结束表示没读满（EOF 先到了）。
   read_stdin_bytes: { 做: (vm, a) => {
     const 原 = 数.下整(vm.成数(a[0]));
     const n = 数.比(原, 0) < 0 ? 0 : 原;
-    const 字节们 = [];
-    while (字节们.length < n) {
+    const 字节串 = [];
+    while (字节串.length < n) {
       let b;
-      try { b = vm.cap.terminal.readSync(n - 字节们.length); } catch { b = null; }
+      try { b = vm.cap.terminal.readSync(n - 字节串.length); } catch { b = null; }
       if (!b || b.length === 0) break;
-      for (let i = 0; i < b.length; i++) 字节们.push(b[i]);
+      for (let i = 0; i < b.length; i++) 字节串.push(b[i]);
     }
     return new 类记录(new Map([
-      ["字节们", new 类元组(字节们.map((x) => 数.造(x)))],
-      ["结束", 字节们.length < n],
+      ["字节串", new 类元组(字节串.map((x) => 数.造(x)))],
+      ["结束", 字节串.length < n],
     ]));
   } },
   // 从标准输入读一行：交回 {行, 结束}。结束是 EOF，与空行是两件事。

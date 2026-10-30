@@ -18,7 +18,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const 行们 = fs.readFileSync(path.join(ROOT, "vm/hmyr.c"), "utf8").split(/\r?\n/);
+const 行批 = fs.readFileSync(path.join(ROOT, "vm/hmyr.c"), "utf8").split(/\r?\n/);
 
 // 要搬进结构的那几项。第一刀把根收进了 Hmyr机器，第二刀把执行位置也收了进去 ——
 // 于是这一份现在数的是「多少个函数直接读 g_机」，也就是第三刀（给函数加参数）
@@ -27,8 +27,8 @@ const 目标 = ["g_机"];
 const 控制 = new Set(["if", "while", "for", "switch", "do", "else", "return", "sizeof"]);
 
 const 函数行 = [];
-for (let i = 0; i < 行们.length; i++) {
-  const 行 = 行们[i];
+for (let i = 0; i < 行批.length; i++) {
+  const 行 = 行批[i];
   // 函数定义的样子：括号收尾之后就是左花括号。带 static 也行，顶格也行 ——
   // 早一版要求「顶格且以 { 结尾」，于是这份 C 里一个函数都没认出来
   // （它是 static 开头）。判据按形状写，不按位置写。
@@ -44,19 +44,19 @@ for (let i = 0; i < 行们.length; i++) {
 const 归属 = new Map();   // 函数名 → Set(目标名)
 for (let k = 0; k < 函数行.length; k++) {
   const 起 = 函数行[k].行;
-  const 止 = k + 1 < 函数行.length ? 函数行[k + 1].行 : 行们.length;
+  const 止 = k + 1 < 函数行.length ? 函数行[k + 1].行 : 行批.length;
   const 集 = new Set();
   for (let i = 起; i < 止; i++) {
     for (const 名 of 目标) {
       const re = new RegExp("(^|[^A-Za-z0-9_])" + 名 + "(?![A-Za-z0-9_])");
-      if (re.test(行们[i])) 集.add(名);
+      if (re.test(行批[i])) 集.add(名);
     }
   }
   if (集.size) 归属.set(函数行[k].名, 集);
 }
 
 console.log("第二刀的价码：执行位置要进结构，哪些函数得收下它");
-console.log("  源行数 " + 行们.length);
+console.log("  源行数 " + 行批.length);
 console.log("  函数定义 " + 函数行.length + " 个");
 console.log("  碰到执行位置的 " + 归属.size + " 个");
 console.log("");

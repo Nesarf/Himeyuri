@@ -107,19 +107,19 @@ const 区可 = 收区间("Case_Ignorable");
 
 // ---- 五、写出来 ----
 const 写映射 = (名, 列, 说明) => {
-  const 行们 = [];
+  const 行批 = [];
   for (const [cp, 单元] of 列) {
     const 填 = [0, 0, 0];
     for (let i = 0; i < 单元.length; i++) 填[i] = 单元[i];
     const 头 = "{0x" + cp.toString(16).toUpperCase() + "u, " + 单元.length + "u, {";
-    行们.push("  " + 头 + 填.map((v) => "0x" + v.toString(16).toUpperCase() + "u").join(", ") + "}},");
+    行批.push("  " + 头 + 填.map((v) => "0x" + v.toString(16).toUpperCase() + "u").join(", ") + "}},");
   }
   return `/* ${说明}
  *
  * 按码点升序，二分查找。${列.length} 条。
  */
 static const HmyrCaseEntry ${名}[] = {
-${行们.join("\n")}
+${行批.join("\n")}
 };
 
 static const size_t ${名}_count = ${列.length};
@@ -129,16 +129,16 @@ static const size_t ${名}_count = ${列.length};
 const 写区间 = (名, 列, 说明) => {
   const 平 = [];
   for (const [起, 止] of 列) 平.push(起, 止);
-  const 行们 = [];
+  const 行批 = [];
   for (let i = 0; i < 平.length; i += 8) {
-    行们.push("  " + 平.slice(i, i + 8).map((v) => "0x" + v.toString(16).toUpperCase() + "u").join(", ") + ",");
+    行批.push("  " + 平.slice(i, i + 8).map((v) => "0x" + v.toString(16).toUpperCase() + "u").join(", ") + ",");
   }
   return `/* ${说明}
  *
  * 每两个数一段：起、止，两端都含。${列.length} 段。
  */
 static const uint32_t ${名}[] = {
-${行们.join("\n")}
+${行批.join("\n")}
 };
 
 static const size_t ${名}_count = ${列.length};

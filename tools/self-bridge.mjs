@@ -193,7 +193,7 @@ export function loadUnit(entry, options = {}) {
   modules.get = (k) => 原get(k) || 别名.get(k);
   const order = [];
   const 路径们 = Array.from(树.路径们 || []);
-  Array.from(树.模块们).forEach((m, i) => {
+  Array.from(树.模块族).forEach((m, i) => {
     const 原 = 路径们[i] || (相对 + "#" + i);
     // 加载器用的是 /（HMYR 里没有反斜杠），而调用方拿 path.join / path.resolve 得到的是本机形式。
     // order 与 modules 的键都用本机形式，这样 indexOf(path.join(...)) 才找得到。

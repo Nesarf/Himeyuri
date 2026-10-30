@@ -249,8 +249,8 @@ console.log("十、C 那台也认容器");
     // 比之前先去掉两类差：一类是 C 那台写进 stderr 的内部日志（「编了几个块」），
     // 那不叫程序说了什么；另一类是 JS 启动器替程序打出的返回值（单独一行的纯数字），
     // 那是它的显示选择，C 那台不做这件事。去掉之后剩下的，才是「程序说了什么」。
-    const 行们 = (s) => String(s || "").split("\n").filter((x) => x.length > 0 && !/^-?\d+$/.test(x));
-    ok("C 那台跑出同一段标准输出", JSON.stringify(行们(c.stdout)) === JSON.stringify(行们(js.stdout)),
+    const 行批 = (s) => String(s || "").split("\n").filter((x) => x.length > 0 && !/^-?\d+$/.test(x));
+    ok("C 那台跑出同一段标准输出", JSON.stringify(行批(c.stdout)) === JSON.stringify(行批(js.stdout)),
       JSON.stringify([js.stdout, c.stdout]));
   }
 }

@@ -433,16 +433,16 @@ fn 造整棵(入口: String) effects(file) {
   // 含斜杠的裸路径会被当成「不成形状」丢掉，于是整棵树是空的、而 ok 还是真
   // （2026-11-02 实测：桥的 loadUnit 交回 ok=true 而 order=0、modules=0）。
   let r = 加载走(".", 当路径(入口), (), ())
-  if r.错 != "" { return {ok: false, 错: r.错, 模块们: (), 路径们: ()} }
-  var 模块们 = ()
+  if r.错 != "" { return {ok: false, 错: r.错, 模块族: (), 路径们: ()} }
+  var 模块族 = ()
   var i = 0
   while i < len(r.已载) {
     let 源码 = read_text(r.已载[i], "utf8")
-    模块们 = 模块们 + (造模块(源码),)
+    模块族 = 模块族 + (造模块(源码),)
     i = i + 1
   }
   // 路径与模块一起交回去：宿主 loader 的 order 是路径，桥要能照原样说同一个序列。
-  return {ok: true, 错: "", 模块们: 模块们, 路径们: r.已载}
+  return {ok: true, 错: "", 模块族: 模块族, 路径们: r.已载}
 }
 
 // 只解析、不求值，交回声明树。
@@ -513,11 +513,11 @@ fn 选函数(们: Int, 名: String) -> Int {
 // 于是报「不认识的运算符：...」—— 报出来的东西是引号里的路径，
 // 看着像是在别处出的错。引号里 只在「这一行是 import」时才交回路径，
 // 所以用它判断既准又省一个函数。
-fn 去导入从(行们: Int, i: Int, acc: String) -> String {
-  if i >= len(行们) { return acc }
-  let 路 = 引号里(行们[i])
-  if 路 == "" { return 去导入从(行们, i + 1, acc + 行们[i] + chr(10)) }
-  return 去导入从(行们, i + 1, acc)
+fn 去导入从(行批: Int, i: Int, acc: String) -> String {
+  if i >= len(行批) { return acc }
+  let 路 = 引号里(行批[i])
+  if 路 == "" { return 去导入从(行批, i + 1, acc + 行批[i] + chr(10)) }
+  return 去导入从(行批, i + 1, acc)
 }
 
 fn 去导入(源码: String) -> String {
@@ -601,11 +601,11 @@ fn 找引号(文本: String, 起: Int) -> Int {
   return i
 }
 
-fn 导入们从(行们: Int, i: Int, acc: Int) -> Int {
-  if i >= len(行们) { return acc }
-  let 路 = 引号里(行们[i])
-  if 路 == "" { return 导入们从(行们, i + 1, acc) }
-  return 导入们从(行们, i + 1, acc + (路,))
+fn 导入们从(行批: Int, i: Int, acc: Int) -> Int {
+  if i >= len(行批) { return acc }
+  let 路 = 引号里(行批[i])
+  if 路 == "" { return 导入们从(行批, i + 1, acc) }
+  return 导入们从(行批, i + 1, acc + (路,))
 }
 
 // 一段源码里引了哪些路径，按出现的顺序。
@@ -613,7 +613,7 @@ fn 找导入们(源码: String) -> Int {
   return 导入们从(拆行(源码), 0, ())
 }
 
-fn 跑模块们(源码们: Int, 参们: Int) -> String {
+fn 跑模块族(源码们: Int, 参们: Int) -> String {
   let 函数族 = 合并从((), 源码们, 0)
   if len(函数族) == 0 {
     // 一个声明也没有：那它可能是裸语句（老用法）。交回那条路，而不是报「没有 fn」。
@@ -782,7 +782,7 @@ fn 跑文件入口(目录: String, 目标: String, 参们: Int) effects(file, pr
   if len(读.源码们) == 0 {
     return {ok: false, 文字: "HMYR-內-011 nothing read from '" + 全 + "'"}
   }
-  return {ok: true, 文字: 跑模块们(读.源码们, 参们)}
+  return {ok: true, 文字: 跑模块族(读.源码们, 参们)}
 }
 
 // ---- 命令行入口：第三步的第一半 ----

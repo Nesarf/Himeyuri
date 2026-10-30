@@ -19,13 +19,13 @@ fn 取位(状: Int) {
   var 已 = 状.已
   var at = 状.位置
   if 已 == 0 {
-    if at >= len(状.字节们) { return {位: 0, 状: 状} }
-    当前 = to_int(状.字节们[at])
+    if at >= len(状.字节串) { return {位: 0, 状: 状} }
+    当前 = to_int(状.字节串[at])
     at = at + 1
     已 = 8
   }
   let 位 = 当前 % 2
-  return {位: 位, 状: {字节们: 状.字节们, 位置: at, 当前: (当前 - 位) / 2, 已: 已 - 1}}
+  return {位: 位, 状: {字节串: 状.字节串, 位置: at, 当前: (当前 - 位) / 2, 已: 已 - 1}}
 }
 
 // 高位先读：第一个位进最高位。
@@ -103,8 +103,8 @@ fn 解距(状: Int) {
 }
 
 // 折半拼接：元组的 + 是复制，逐块拼是平方级。
-fn 拼平(块们: Int, 起: Int, 止: Int) -> Int {
-  if 止 - 起 <= 1 { return 块们[起] }
+fn 拼平(块堆: Int, 起: Int, 止: Int) -> Int {
+  if 止 - 起 <= 1 { return 块堆[起] }
   var 左 = 起
   var 右 = 止
   while 右 - 左 > 2 {
@@ -112,15 +112,15 @@ fn 拼平(块们: Int, 起: Int, 止: Int) -> Int {
     右 = 右 - 1
   }
   let 中 = 左 + 1
-  return 拼平(块们, 起, 中) + 拼平(块们, 中, 止)
+  return 拼平(块堆, 起, 中) + 拼平(块堆, 中, 止)
 }
 
 // 按逻辑下标取一个已经输出的字节：先看已封的块，再看当前那一块。
-fn 取出(块们: Int, 出: Int, i: Int) -> Int {
+fn 取出(块堆: Int, 出: Int, i: Int) -> Int {
   let 块大 = 1024
   let 块号 = (i - i % 块大) / 块大
-  if 块号 < len(块们) { return to_int(块们[块号][i % 块大]) }
-  return to_int(出[i - len(块们) * 块大])
+  if 块号 < len(块堆) { return to_int(块堆[块号][i % 块大]) }
+  return to_int(出[i - len(块堆) * 块大])
 }
 
 // ---- 动态 Huffman（BTYPE=10）：码表在流里 ----
@@ -276,7 +276,7 @@ fn 读码长簇(状: Int, 长簇19: Int, 总数: Int) {
 }
 
 // 一个动态块：码表在流里，解完码表再解数据。
-fn 解动块(状: Int, 块们: Int, 出: Int) {
+fn 解动块(状: Int, 块堆: Int, 出: Int) {
   let 计 = 读计数(状)
   let 码长 = 读码长码(计.状, 计.码长码数)
   let 总 = 计.字长数 + 计.距长数
@@ -288,7 +288,7 @@ fn 解动块(状: Int, 块们: Int, 出: Int) {
   let 距数 = 计数(距长)
   let 距首 = 首码们(距数)
   var s = 读.状
-  var 块 = 块们
+  var 块 = 块堆
   var 当前 = 出
   var 完 = false
   while !完 {
@@ -325,14 +325,14 @@ fn 解动块(状: Int, 块们: Int, 出: Int) {
       }
     }
   }
-  return {状: s, 块们: 块, 出: 当前}
+  return {状: s, 块堆: 块, 出: 当前}
 }
 
 
 // 一个 Huffman 块：解到结束码 256 为止。
-fn 解一块(状: Int, 块们: Int, 出: Int) {
+fn 解一块(状: Int, 块堆: Int, 出: Int) {
   var s = 状
-  var 块 = 块们
+  var 块 = 块堆
   var 当前 = 出
   var 完 = false
   while !完 {
@@ -366,21 +366,21 @@ fn 解一块(状: Int, 块们: Int, 出: Int) {
       }
     }
   }
-  return {状: s, 块们: 块, 出: 当前}
+  return {状: s, 块堆: 块, 出: 当前}
 }
 
 // 一个 stored 块：先对齐到字节边界，再读 LEN / NLEN / 数据。
-fn 解存块(状: Int, 块们: Int, 出: Int) {
-  var 字节们 = 状.字节们
+fn 解存块(状: Int, 块堆: Int, 出: Int) {
+  var 字节串 = 状.字节串
   var at = 状.位置
-  var 块 = 块们
+  var 块 = 块堆
   var 当前 = 出
-  if at + 4 <= len(字节们) {
-    let 长 = to_int(字节们[at]) + to_int(字节们[at + 1]) * 256
+  if at + 4 <= len(字节串) {
+    let 长 = to_int(字节串[at]) + to_int(字节串[at + 1]) * 256
     at = at + 4
     var i = 0
-    while i < 长 && at < len(字节们) {
-      当前 = 当前 + (to_int(字节们[at]),)
+    while i < 长 && at < len(字节串) {
+      当前 = 当前 + (to_int(字节串[at]),)
       if len(当前) >= 1024 {
         块 = 块 + (当前,)
         当前 = ()
@@ -389,12 +389,12 @@ fn 解存块(状: Int, 块们: Int, 出: Int) {
       i = i + 1
     }
   }
-  return {状: {字节们: 字节们, 位置: at, 当前: 0, 已: 0}, 块们: 块, 出: 当前}
+  return {状: {字节串: 字节串, 位置: at, 当前: 0, 已: 0}, 块堆: 块, 出: 当前}
 }
 
 // 只看码长：读头、读计数、读码长表，打印前几个就停 —— 查码表层的事用它。
-fn 打码长(字节们: Int) {
-  var 状 = {字节们: 字节们, 位置: 0, 当前: 0, 已: 0}
+fn 打码长(字节串: Int) {
+  var 状 = {字节串: 字节串, 位置: 0, 当前: 0, 已: 0}
   let 头 = 读lsb(状, 3)
   状 = 头.状
   let 末 = 头.值 % 2
@@ -420,9 +420,9 @@ fn 打码长(字节们: Int) {
 
 
 // 主循环：一块一块读，BFINAL=1 才停。
-fn 解固定(字节们: Int) {
-  var 状 = {字节们: 字节们, 位置: 0, 当前: 0, 已: 0}
-  var 块们 = ()
+fn 解固定(字节串: Int) {
+  var 状 = {字节串: 字节串, 位置: 0, 当前: 0, 已: 0}
+  var 块堆 = ()
   var 出 = ()
   var 全完 = false
   while !全完 {
@@ -431,21 +431,21 @@ fn 解固定(字节们: Int) {
     let 末 = 头.值 % 2
     let 型 = (头.值 - 末) / 2 % 4
     if 型 == 0 {
-      let r = 解存块(状, 块们, 出)
+      let r = 解存块(状, 块堆, 出)
       状 = r.状
-      块们 = r.块们
+      块堆 = r.块堆
       出 = r.出
       if 末 == 1 { 全完 = true }
     } else if 型 == 1 {
-      let r = 解一块(状, 块们, 出)
+      let r = 解一块(状, 块堆, 出)
       状 = r.状
-      块们 = r.块们
+      块堆 = r.块堆
       出 = r.出
       if 末 == 1 { 全完 = true }
     } else if 型 == 2 {
-      let r = 解动块(状, 块们, 出)
+      let r = 解动块(状, 块堆, 出)
       状 = r.状
-      块们 = r.块们
+      块堆 = r.块堆
       出 = r.出
       if 末 == 1 { 全完 = true }
     } else {
@@ -453,9 +453,9 @@ fn 解固定(字节们: Int) {
       全完 = true
     }
   }
-  if len(出) > 0 { 块们 = 块们 + (出,) }
-  if len(块们) == 0 { return () }
-  return 拼平(块们, 0, len(块们))
+  if len(出) > 0 { 块堆 = 块堆 + (出,) }
+  if len(块堆) == 0 { return () }
+  return 拼平(块堆, 0, len(块堆))
 }
 
 fn main() -> Int effects(file) {
@@ -464,16 +464,16 @@ fn main() -> Int effects(file) {
     print("用法：hmyr self/inflate.hmyr <deflate 流> <输出>" + chr(10))
     return 2
   }
-  let 字节们 = read_bytes(参[1])
+  let 字节串 = read_bytes(参[1])
   var 看码长 = false
   var i = 0
   while i < len(参) {
     if 参[i] == "--码长" { 看码长 = true }
     i = i + 1
   }
-  if 看码长 { return 打码长(字节们) }
-  let 出 = 解固定(字节们)
+  if 看码长 { return 打码长(字节串) }
+  let 出 = 解固定(字节串)
   write_bytes(参[2], 出)
-  print(str(len(字节们)) + " → " + str(len(出)) + chr(10))
+  print(str(len(字节串)) + " → " + str(len(出)) + chr(10))
   return 0
 }

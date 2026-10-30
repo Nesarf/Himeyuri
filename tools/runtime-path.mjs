@@ -78,19 +78,19 @@ export const 入口们 = ["bin/hmyr.mjs", "bin/run-eval.mjs", "src/eval.mjs", "s
 const 直接运行 = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (直接运行) {
   let 越界总数 = 0;
-  const 行们 = [];
+  const 行批 = [];
   for (const 入口 of 入口们) {
     const 见 = 闭包(入口);
     const 越界 = [...见].filter((f) => 工具们.has(f)).sort();
     越界总数 += 越界.length;
-    行们.push(入口 + "：闭包 " + 见.size + " 个文件" + (越界.length ? "，碰到工具 " + 越界.join(" ") : "，一个工具都没碰"));
+    行批.push(入口 + "：闭包 " + 见.size + " 个文件" + (越界.length ? "，碰到工具 " + 越界.join(" ") : "，一个工具都没碰"));
   }
 
   if (process.argv.includes("--check")) {
-    for (const 行 of 行们) console.log("  " + 行);
+    for (const 行 of 行批) console.log("  " + 行);
     if (越界总数 === 0) console.log("  运行时路径上没有工具模块");
     process.exit(越界总数 === 0 ? 0 : 1);
   }
-  for (const 行 of 行们) console.log(行);
+  for (const 行 of 行批) console.log(行);
   console.log("工具模块 " + 工具们.size + " 个；越界 " + 越界总数 + " 处");
 }

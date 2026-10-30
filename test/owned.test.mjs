@@ -23,14 +23,14 @@ const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
-const 行们 = (v) => v.join("\n") + "\n";
+const 行批 = (v) => v.join("\n") + "\n";
 const 投 = (内容, 名) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
 const 跑 = (参) => spawnSync(process.execPath, [具, ...参], { encoding: "utf8", cwd: 临, timeout: 300000 });
 const 行 = (s) => String(s || "").split("\n").map((x) => x.trimEnd()).filter((x) => x.length > 0);
 
 console.log("一、放 / 取 / 有 的基本流程");
 {
-  const p = 投(行们([
+  const p = 投(行批([
     "fn main() -> Int effects(process) {",
     "  let 格 = owned()",
     "  print(\"空=\" + str(格.有()) + chr(10))",
@@ -53,7 +53,7 @@ console.log("一、放 / 取 / 有 的基本流程");
 
 console.log("二、三条走错各有编号");
 {
-  const 两次 = 投(行们([
+  const 两次 = 投(行批([
     "fn main() -> Int effects(process) {",
     "  let 格 = owned()",
     "  格.放(1)",
@@ -68,7 +68,7 @@ console.log("二、三条走错各有编号");
     (出1.includes("HMYR-碼-005") || 出1.includes("HMYR-載-021")) && !出1.includes("没有拦住"),
     JSON.stringify(出1.slice(0, 160)));
 
-  const 取空 = 投(行们([
+  const 取空 = 投(行批([
     "fn main() -> Int effects(process) {",
     "  let 格 = owned()",
     "  let v = 格.取()",
@@ -82,7 +82,7 @@ console.log("二、三条走错各有编号");
     (出2.includes("HMYR-碼-006") || 出2.includes("HMYR-載-021")) && !出2.includes("没有拦住"),
     JSON.stringify(出2.slice(0, 160)));
 
-  const 关后放 = 投(行们([
+  const 关后放 = 投(行批([
     "fn main() -> Int effects(process) {",
     "  let 格 = owned()",
     "  格.关()",
@@ -100,7 +100,7 @@ console.log("二、三条走错各有编号");
 
 console.log("三、四台同一段");
 {
-  const 源 = 行们([
+  const 源 = 行批([
     "fn main() -> Int effects(process) {",
     "  let 格 = owned()",
     "  格.放(7)",
@@ -150,7 +150,7 @@ console.log("四、作用域结束释放（四台同一段）");
   //
   // 这一条是实测撞到的冲突：先只做了「帧退出一律关」，于是 盒.取() 拿到的是一条
   // 关掉的格子，再取就吃 HMYR-碼-005。判据留在这里，免得那一步被后来的改动抹回去。
-  const 源 = 行们([
+  const 源 = 行批([
     "fn 造(盒: Int) -> Int {",
     "  let 格 = owned()",
     "  格.放(7)",

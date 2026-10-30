@@ -26,14 +26,14 @@ const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
-const 行们 = (v) => v.join("\n") + "\n";
+const 行批 = (v) => v.join("\n") + "\n";
 const 投 = (内容, 名) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
 const 跑 = (参) => spawnSync(process.execPath, [具, ...参], { encoding: "utf8", cwd: 临, timeout: 300000 });
 const 行 = (s) => String(s || "").split("\n").map((x) => x.trimEnd()).filter((x) => x.length > 0);
 
 console.log("一、区在自举层是真的：建、分、数");
 {
-  const p = 投(行们([
+  const p = 投(行批([
     "fn main() -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(16)",
@@ -53,7 +53,7 @@ console.log("一、区在自举层是真的：建、分、数");
 
 console.log("二、freeze 交出去：区名换、账减一，而 close 不再带走它");
 {
-  const p = 投(行们([
+  const p = 投(行批([
     "fn main() -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(8)",
@@ -75,7 +75,7 @@ console.log("二、freeze 交出去：区名换、账减一，而 close 不再�
 console.log("三、close 带走没交出去的那些 —— 而这件事只在放行时才看得见");
 {
   // 同一个程序，两种跑法：带检查时被 NODE 之前那一层拦住；放行之后运行期读数才对。
-  const 源 = 行们([
+  const 源 = 行批([
     "fn main() -> Int {",
     "  let a = arena()",
     "  let c = a.alloc(8)",
@@ -99,7 +99,7 @@ console.log("三、close 带走没交出去的那些 —— 而这件事只在�
 
 console.log("四、走错的两个编号，在自举层也说得出");
 {
-  const 关后分 = 投(行们([
+  const 关后分 = 投(行批([
     "fn main() -> Int {",
     "  let a = arena()",
     "  a.close()",
@@ -111,7 +111,7 @@ console.log("四、走错的两个编号，在自举层也说得出");
   const r = 跑([关后分]);
   ok("关掉的区再分配给 HMYR-碼-002", (r.stdout || "").includes("HMYR-碼-002"), JSON.stringify((r.stdout || "").slice(0, 140)));
 
-  const 交两次 = 投(行们([
+  const 交两次 = 投(行批([
     "fn main() -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(8)",
@@ -123,7 +123,7 @@ console.log("四、走错的两个编号，在自举层也说得出");
   const r2 = 跑([交两次]);
   ok("交出去两次给 HMYR-碼-002", (r2.stdout || "").includes("HMYR-碼-002"), JSON.stringify((r2.stdout || "").slice(0, 140)));
 
-  const 收回没交出 = 投(行们([
+  const 收回没交出 = 投(行批([
     "fn main() -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(8)",
@@ -137,7 +137,7 @@ console.log("四、走错的两个编号，在自举层也说得出");
 
 console.log("五、两台机器（默认与 --host-eval）跑出同一段");
 {
-  const p = 投(行们([
+  const p = 投(行批([
     "fn main() -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(16)",
@@ -168,7 +168,7 @@ console.log("六、字节码那台也跑得动（--compile），与解释那台�
   // 于是区只有解释那两条路能跑。CALLM 接上之后，这里验的是第三台机器。
   // 比的是「解释那台的前若干行」：解释面会把 main 的返回值也打出来，而 --compile 面不打，
   // 那是两条面一直以来的显示差别，不是这一轮的东西。
-  const p = 投(行们([
+  const p = 投(行批([
     "fn main() -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(16)",
@@ -204,7 +204,7 @@ console.log("七、C 那台也认得区（要 gcc 编一次）");
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得出来", 编.status === 0, String(编.stderr || "").slice(0, 160));
 
-    const p = 投(行们([
+    const p = 投(行批([
       "fn main() -> Int {",
       "  let a = arena()",
       "  let b = a.alloc(16)",
@@ -326,7 +326,7 @@ console.log("十、块能存内容（区不只会记账）");
   //
   // 这一节只比存过的格子与越界；「未写的格子」不比 —— nil 在自举层与字节码那台
   // 的字符串化本来就不一样（[] 与 nil），那是既有的差异，不该由这一节来抓。
-  const 源 = 行们([
+  const 源 = 行批([
     "fn main() -> Int effects(process) {",
     "  let a = arena()",
     "  let b = a.alloc(4)",
@@ -364,7 +364,7 @@ console.log("十、块能存内容（区不只会记账）");
   }
 
   // 越界：编得过去，跑起来要有一句编号，而不是把值写到别处。
-  const 越界 = 投(行们([
+  const 越界 = 投(行批([
     "fn main() -> Int effects(process) {",
     "  let a = arena()",
     "  let b = a.alloc(2)",
@@ -387,7 +387,7 @@ console.log("十一、nil 在四台是同一个说法");
   // 现在四台都写 "[]"。取 nil 的办法就是那个字面量本身：在这门语言里 nil 与空元组
   // 是同一个东西，所以 `()` 既是空元组也是 nil。早先这一条判不了，正是因为它没有
   // 一个独立的写法可抓；现在「同一个说法」让这一条变成了「两边写出来一样」。
-  const 源 = 行们([
+  const 源 = 行批([
     "fn main() -> Int effects(process) {",
     "  print(\"nil=\" + str(()) + chr(10))",
     "  print(\"长度=\" + str(len(())) + chr(10))",

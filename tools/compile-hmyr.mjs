@@ -85,17 +85,17 @@ if (用JS落盘) {
   }
   字节 = 写程序({ 函数族, 全局们: [] });
 } else {
-  // 落盘：把编出来的函数表直接交给自举层的打包者。它交回的是「块们」——
+  // 落盘：把编出来的函数表直接交给自举层的打包者。它交回的是「块堆」——
   // 攒够 512 字节封一块，于是那一层不必每一步都复制已累积的全部内容。
   const 装 = runUnit(loadUnit(path.join(根, "self/pack.hmoca")), { stage0: true, stepLimit: 300000000 });
-  const 块们 = 装.callFunction(装.functions.get("打包"), [r.函数族], null);
-  if (!块们) {
+  const 块堆 = 装.callFunction(装.functions.get("打包"), [r.函数族], null);
+  if (!块堆) {
     console.error("HMYR 打包者：没有交回字节");
     process.exit(2);
   }
-  const 字节们 = [];
-  for (const 块 of 块们) for (const b of 块) 字节们.push(b & 0xff);
-  字节 = Uint8Array.from(字节们);
+  const 字节串 = [];
+  for (const 块 of 块堆) for (const b of 块) 字节串.push(b & 0xff);
+  字节 = Uint8Array.from(字节串);
 }
 
 fs.writeFileSync(path.resolve(输出), 字节);

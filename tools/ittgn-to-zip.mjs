@@ -56,8 +56,8 @@ for (const 档 of ["hmsnp", "hmhsr"]) {
 // 容器基名要记，因为根目录那两个入口是按容器名命名的（演示.hmsnp），
 // 而 zip 自己可能叫别的（中.zip）—— 反方向只拿 zip 名去猜会找不到入口。
 // 它是明文，因为拿到包的人该能一眼看出这个包原本长什么样。
-const 行们 = ["1", 包名, 入口名, ...r.成员们.map((m) => m.名)];
-fs.writeFileSync(path.join(目录, 成员表名), 行们.join("\n") + "\n", "utf8");
+const 行批 = ["1", 包名, 入口名, ...r.成员们.map((m) => m.名)];
+fs.writeFileSync(path.join(目录, 成员表名), 行批.join("\n") + "\n", "utf8");
 
 const 压 = spawnSync("powershell", ["-NoProfile", "-Command",
   "Compress-Archive -Path '" + path.join(目录, "*") + "' -DestinationPath '" + 出 + "' -Force"],

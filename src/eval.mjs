@@ -1189,22 +1189,22 @@ const BUILTINS = {
   // 两格之间需要这一格。不猜编码：给的就是 UTF-8。
   bytes_to_text: (rt, args) => {
     const 项们 = Array.isArray(args[0]) ? args[0] : [];
-    const 字节们 = [];
-    for (let i = 0; i < 项们.length; i++) 字节们.push(Number(项们[i]) & 0xFF);
-    return Buffer.from(字节们).toString("utf8");
+    const 字节串 = [];
+    for (let i = 0; i < 项们.length; i++) 字节串.push(Number(项们[i]) & 0xFF);
+    return Buffer.from(字节串).toString("utf8");
   },
-  // 从标准输入读 N 个字节：交回 {字节们, 结束}。结束表示没读满（EOF 先到了）。
+  // 从标准输入读 N 个字节：交回 {字节串, 结束}。结束表示没读满（EOF 先到了）。
   // 与 read_stdin_line 分开，是因为请求体未必只有一行：先读头拿长度，再按长度读。
   read_stdin_bytes: (rt, args) => {
     const n = Math.max(0, Math.floor(rt.asNumber(args[0])));
-    const 字节们 = [];
-    while (字节们.length < n) {
+    const 字节串 = [];
+    while (字节串.length < n) {
       let b;
-      try { b = rt.cap.terminal.readSync(n - 字节们.length); } catch (err) { b = null; }
+      try { b = rt.cap.terminal.readSync(n - 字节串.length); } catch (err) { b = null; }
       if (!b || b.length === 0) break;
-      for (let i = 0; i < b.length; i++) 字节们.push(b[i]);
+      for (let i = 0; i < b.length; i++) 字节串.push(b[i]);
     }
-    return { 字节们, 结束: 字节们.length < n };
+    return { 字节串, 结束: 字节串.length < n };
   },
   // 从标准输入读一行：交回 {行, 结束}。结束是 EOF —— 与空行是两件事，
   // 「读到没有为止」的循环要能分清它们。行尾的 \r 去掉，别的空白不动。

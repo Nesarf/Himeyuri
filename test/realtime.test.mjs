@@ -27,13 +27,13 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 const 查 = (源码) => 实时检查(子集解(切(源码)).ast);
-const 行们 = (v) => v.join("\n") + "\n";
+const 行批 = (v) => v.join("\n") + "\n";
 const 投 = (内容, 名) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
 const 有 = (出, 词) => 出.some((d) => d.code === "HMYR-載-020" && d.message.includes(词));
 
 console.log("一、四条反例各自被拒");
 {
-  const 分配 = 行们([
+  const 分配 = 行批([
     "fn 回调() -> Int effects(realtime) {",
     "  let a = arena()",
     "  return 0",
@@ -41,7 +41,7 @@ console.log("一、四条反例各自被拒");
   ]);
   ok("托管分配被拒", 有(查(分配), "arena()"), JSON.stringify(查(分配)));
 
-  const 读文件 = 行们([
+  const 读文件 = 行批([
     "fn 回调() -> Int effects(realtime) {",
     "  let s = read_text(\"a.txt\")",
     "  return 0",
@@ -49,7 +49,7 @@ console.log("一、四条反例各自被拒");
   ]);
   ok("读文件被拒", 有(查(读文件), "file"), JSON.stringify(查(读文件)));
 
-  const 无界 = 行们([
+  const 无界 = 行批([
     "fn 回调() -> Int effects(realtime) {",
     "  var i = 0",
     "  while true {",
@@ -60,7 +60,7 @@ console.log("一、四条反例各自被拒");
   ]);
   ok("常量真值的循环被拒", 有(查(无界), "constant true"), JSON.stringify(查(无界)));
 
-  const 没闭合 = 行们([
+  const 没闭合 = 行批([
     "fn 普通() -> Int {",
     "  return 1",
     "}",
@@ -74,7 +74,7 @@ console.log("一、四条反例各自被拒");
 
 console.log("二、正例一条都不报");
 {
-  const 正例 = 行们([
+  const 正例 = 行批([
     "fn 内部(n: Int) -> Int effects(realtime) {",
     "  var s = 0",
     "  var i = 0",
@@ -92,7 +92,7 @@ console.log("二、正例一条都不报");
   ok("实时函数之间可以互调", 查(正例).length === 0, JSON.stringify(查(正例)));
 
   // 没有 realtime 声明的函数不受这四条约束 —— 门只对实时开。
-  const 平常 = 行们([
+  const 平常 = 行批([
     "fn 普通() -> Int effects(process) {",
     "  let a = arena()",
     "  var i = 0",
@@ -107,7 +107,7 @@ console.log("二、正例一条都不报");
 
 console.log("三、装载器真的拦");
 {
-  const 坏 = 投(行们([
+  const 坏 = 投(行批([
     "fn 回调() -> Int effects(realtime) {",
     "  let a = arena()",
     "  return 0",
@@ -118,7 +118,7 @@ console.log("三、装载器真的拦");
   ok("诊断里有 HMYR-載-020", 单.diagnostics.errors.some((e) => e.code === "HMYR-載-020"),
     JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
 
-  const 好 = 投(行们([
+  const 好 = 投(行批([
     "fn 回调(n: Int) -> Int effects(realtime) {",
     "  return n + 1",
     "}",
@@ -166,7 +166,7 @@ console.log("六、真语法：fn f() realtime");
 {
   // 档位原来借 effects(realtime) 写在权限位上。现在它有自己的位置 ——
   // 而旧写法仍然认，因为仓库里还有按那个写的文档与程序。
-  const 反例 = 行们([
+  const 反例 = 行批([
     "fn 回调() -> Int realtime {",
     "  let a = arena()",
     "  return 0",
@@ -174,7 +174,7 @@ console.log("六、真语法：fn f() realtime");
   ]);
   ok("真语法也认得（托管分配被拒）", 有(查(反例), "arena()"), JSON.stringify(查(反例)));
 
-  const 正例 = 行们([
+  const 正例 = 行批([
     "fn 回调(n: Int) -> Int realtime {",
     "  return n + 1",
     "}",
@@ -185,7 +185,7 @@ console.log("六、真语法：fn f() realtime");
   ]);
   ok("真语法的正例不报", 查(正例).length === 0, JSON.stringify(查(正例)));
 
-  const 旧写法 = 行们([
+  const 旧写法 = 行批([
     "fn 回调() -> Int effects(realtime) {",
     "  let a = arena()",
     "  return 0",
@@ -239,21 +239,21 @@ console.log("八、禁 panic：除法与取模的分母");
 {
   // 分母是零的时候机器会停下来，而实时回调里没有地方可以展开栈。
   // 这一层只认一种证据：字面量且为正。变量、字段、表达式都不算 —— 宁可拒。
-  const 除变量 = 行们([
+  const 除变量 = 行批([
     "fn 回调(n: Int) -> Int realtime {",
     "  return 10 / n",
     "}",
   ]);
   ok("除以变量被拒", 有(查(除变量), "cannot prove positive"), JSON.stringify(查(除变量)));
 
-  const 取模变量 = 行们([
+  const 取模变量 = 行批([
     "fn 回调(n: Int) -> Int realtime {",
     "  return 10 % n",
     "}",
   ]);
   ok("对变量取模被拒", 有(查(取模变量), "cannot prove positive"), JSON.stringify(查(取模变量)));
 
-  const 除零 = 行们([
+  const 除零 = 行批([
     "fn 回调() -> Int realtime {",
     "  return 10 / 0",
     "}",
@@ -261,7 +261,7 @@ console.log("八、禁 panic：除法与取模的分母");
   ok("除以字面量零也被拒", 有(查(除零), "cannot prove positive"), JSON.stringify(查(除零)));
 
   // 正例：字面量正数分母，这一层证得了。
-  const 除正数 = 行们([
+  const 除正数 = 行批([
     "fn 回调(n: Int) -> Int realtime {",
     "  return n / 2",
     "}",
@@ -269,7 +269,7 @@ console.log("八、禁 panic：除法与取模的分母");
   ok("除以字面量正数不报", 查(除正数).length === 0, JSON.stringify(查(除正数)));
 
   // 而没声明 realtime 的普通函数不受这一条约束 —— 门只对实时开。
-  const 普通函数 = 行们([
+  const 普通函数 = 行批([
     "fn 普通(n: Int) -> Int {",
     "  return 10 / n",
     "}",

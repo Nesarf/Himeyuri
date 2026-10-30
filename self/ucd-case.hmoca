@@ -172,7 +172,7 @@ fn 只改(t: Int, 位: Int, 值: Int) -> Int {
 }
 
 fn 写映射(名: String, 列: Int, 说明: String) -> String {
-  var 行们 = ""
+  var 行批 = ""
   var i = 0
   while i < len(列) {
     let 条 = 列[i]
@@ -187,17 +187,17 @@ fn 写映射(名: String, 列: Int, 说明: String) -> String {
     // 这门语言没有跨行的 + 续行：一个表达式写完，长的就分几步接。
     var 行 = "  {0x" + 十六进制写法(cp) + "u, " + str(len(单元)) + "u, {0x" + 十六进制写法(填0)
     行 = 行 + "u, 0x" + 十六进制写法(填1) + "u, 0x" + 十六进制写法(填2) + "u}},"
-    if i == 0 { 行们 = 行 } else { 行们 = 行们 + chr(10) + 行 }
+    if i == 0 { 行批 = 行 } else { 行批 = 行批 + chr(10) + 行 }
     i = i + 1
   }
   var 头 = "/* " + 说明 + chr(10) + " *" + chr(10) + " * 按码点升序，二分查找。" + str(len(列)) + " 条。" + chr(10)
-  头 = 头 + " */" + chr(10) + "static const HmyrCaseEntry " + 名 + "[] = {" + chr(10) + 行们 + chr(10)
+  头 = 头 + " */" + chr(10) + "static const HmyrCaseEntry " + 名 + "[] = {" + chr(10) + 行批 + chr(10)
   头 = 头 + "};" + chr(10) + chr(10) + "static const size_t " + 名 + "_count = " + str(len(列)) + ";" + chr(10)
   return 头
 }
 
 fn 写区间(名: String, 列: Int, 说明: String) -> String {
-  var 行们 = ""
+  var 行批 = ""
   var 平 = ()
   var i = 0
   while i < len(列) {
@@ -215,11 +215,11 @@ fn 写区间(名: String, 列: Int, 说明: String) -> String {
       k = k + 1
     }
     行 = 行 + ","
-    if p == 0 { 行们 = 行 } else { 行们 = 行们 + chr(10) + 行 }
+    if p == 0 { 行批 = 行 } else { 行批 = 行批 + chr(10) + 行 }
     p = p + 8
   }
   var 头 = "/* " + 说明 + chr(10) + " *" + chr(10) + " * 每两个数一段：起、止，两端都含。" + str(len(列)) + " 段。" + chr(10)
-  头 = 头 + " */" + chr(10) + "static const uint32_t " + 名 + "[] = {" + chr(10) + 行们 + chr(10)
+  头 = 头 + " */" + chr(10) + "static const uint32_t " + 名 + "[] = {" + chr(10) + 行批 + chr(10)
   头 = 头 + "};" + chr(10) + chr(10) + "static const size_t " + 名 + "_count = " + str(len(列)) + ";" + chr(10)
   return 头
 }
@@ -227,10 +227,10 @@ fn 写区间(名: String, 列: Int, 说明: String) -> String {
 fn 收区间(数据目录: String, 名字: String) -> Int effects(file) {
   var 列 = ()
   let 文 = read_text(数据目录 + "/DerivedCoreProperties.txt")
-  let 行们 = split(文, chr(10))
+  let 行批 = split(文, chr(10))
   var i = 0
-  while i < len(行们) {
-    let 净行 = split(行们[i], "#")
+  while i < len(行批) {
+    let 净行 = split(行批[i], "#")
     var 净 = ""
     if len(净行) > 0 { 净 = 修剪(净行[0]) }
     if len(净) > 0 {
@@ -278,10 +278,10 @@ fn main() -> Int effects(file, process) {
   var 简单上 = index_new()
   var 简单下 = index_new()
   let 文 = read_text(数据目录 + "/UnicodeData.txt")
-  let 行们 = split(文, chr(10))
+  let 行批 = split(文, chr(10))
   var i = 0
-  while i < len(行们) {
-    let 行 = 行们[i]
+  while i < len(行批) {
+    let 行 = 行批[i]
     if len(行) > 0 {
       let 段 = split(行, ";")
       if len(段) >= 15 {
@@ -310,10 +310,10 @@ fn main() -> Int effects(file, process) {
   var 完整上 = index_new()
   var 完整下 = index_new()
   let 特文 = read_text(数据目录 + "/SpecialCasing.txt")
-  let 特行们 = split(特文, chr(10))
+  let 特行批 = split(特文, chr(10))
   var j = 0
-  while j < len(特行们) {
-    let 井 = split(特行们[j], "#")
+  while j < len(特行批) {
+    let 井 = split(特行批[j], "#")
     var 净 = ""
     if len(井) > 0 { 净 = 修剪(井[0]) }
     if len(净) > 0 {

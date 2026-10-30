@@ -77,10 +77,10 @@ console.log("三、整棵 import 树：两个文件，一个 Runtime");
     if (!树.ok) {
       错误 = "加载失败：" + String(树.错);
     } else {
-      const 模块们 = Array.from(树.模块们);
-      模块数 = 模块们.length;
+      const 模块族 = Array.from(树.模块族);
+      模块数 = 模块族.length;
       const 宿主 = new Runtime({});
-      for (const m of 模块们) 宿主.registerModule(m);
+      for (const m of 模块族) 宿主.registerModule(m);
       结果 = 宿主.callFunction(宿主.functions.get("main"), [], null);
     }
   } catch (e) {

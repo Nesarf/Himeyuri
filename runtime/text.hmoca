@@ -89,13 +89,13 @@ fn 拆行(文本: String) -> Int {
 
 // 拼行：每行之后加一个换行。与拆行是（近似）的逆——
 // 差在「末尾那一个空段」，而那是约定，不是漏洞。
-fn 拼行从(行们: Int, i: Int, acc: String) -> String {
-  if i >= len(行们) { return acc }
-  return 拼行从(行们, i + 1, acc + 行们[i] + chr(10))
+fn 拼行从(行批: Int, i: Int, acc: String) -> String {
+  if i >= len(行批) { return acc }
+  return 拼行从(行批, i + 1, acc + 行批[i] + chr(10))
 }
 
-fn 拼行(行们: Int) -> String {
-  return 拼行从(行们, 0, "")
+fn 拼行(行批: Int) -> String {
+  return 拼行从(行批, 0, "")
 }
 
 // 子串出现的位置；没有就交回 -1。朴素匹配——这一层不追求算法，追求说得清。

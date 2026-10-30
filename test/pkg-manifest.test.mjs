@@ -23,7 +23,7 @@ const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
-const 行们 = (v) => v.join("\n") + "\n";
+const 行批 = (v) => v.join("\n") + "\n";
 const 好哈希 = "sha256:" + "0".repeat(64);
 
 // 造一个包根：根上有 hmyr.hmkit（那是「这里是一个包」的记号），
@@ -35,7 +35,7 @@ const 造 = (名, 入口, 清单) => {
   fs.writeFileSync(path.join(根, 名, "index.hmoca"), 入口, "utf8");
   if (清单 !== null) fs.writeFileSync(path.join(根, 名, "hmyr.hmkit"), typeof 清单 === "string" ? 清单 : JSON.stringify(清单), "utf8");
   const 入口路 = path.join(根, "main.hmoca");
-  fs.writeFileSync(入口路, 行们([
+  fs.writeFileSync(入口路, 行批([
     "import \"" + 名 + "\"",
     "",
     "fn main() -> Int {",
@@ -47,7 +47,7 @@ const 造 = (名, 入口, 清单) => {
 
 console.log("一、四项齐的清单：装得进去");
 {
-  const 入口 = 造("甲包", 行们(["fn 甲() -> Int {", "  return 1", "}"]),
+  const 入口 = 造("甲包", 行批(["fn 甲() -> Int {", "  return 1", "}"]),
     { 名字: "甲包", 版本: 1, 许可: "CZGD-PL-1.1", 哈希: 好哈希 });
   const 单 = loadUnit(入口);
   ok("没有 HMYR-載-007", !单.diagnostics.errors.some((e) => e.code === "HMYR-載-007"),
@@ -57,7 +57,7 @@ console.log("一、四项齐的清单：装得进去");
 
 console.log("二、没有清单");
 {
-  const 入口 = 造("乙包", 行们(["fn 乙() -> Int {", "  return 2", "}"]), null);
+  const 入口 = 造("乙包", 行批(["fn 乙() -> Int {", "  return 2", "}"]), null);
   const 单 = loadUnit(入口);
   ok("缺清单给 HMYR-載-007", 单.diagnostics.errors.some((e) => e.code === "HMYR-載-007"),
     JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
@@ -65,7 +65,7 @@ console.log("二、没有清单");
 
 console.log("三、名字与目录不一致");
 {
-  const 入口 = 造("丙包", 行们(["fn 丙() -> Int {", "  return 3", "}"]),
+  const 入口 = 造("丙包", 行批(["fn 丙() -> Int {", "  return 3", "}"]),
     { 名字: "不是丙包", 版本: 1, 许可: "CZGD-PL-1.1", 哈希: 好哈希 });
   const 单 = loadUnit(入口);
   const 那句 = 单.diagnostics.errors.find((e) => e.code === "HMYR-載-007");
@@ -74,7 +74,7 @@ console.log("三、名字与目录不一致");
 
 console.log("四、版本不是整数");
 {
-  const 入口 = 造("丁包", 行们(["fn 丁() -> Int {", "  return 4", "}"]),
+  const 入口 = 造("丁包", 行批(["fn 丁() -> Int {", "  return 4", "}"]),
     { 名字: "丁包", 版本: "一", 许可: "CZGD-PL-1.1", 哈希: 好哈希 });
   const 单 = loadUnit(入口);
   ok("版本不是整数给 HMYR-載-007", 单.diagnostics.errors.some((e) => e.code === "HMYR-載-007"),
@@ -84,14 +84,14 @@ console.log("四、版本不是整数");
 console.log("五、清单的版本与入口的 rev 不一致");
 {
   // 两处写同一件事看着冗余，但读者不同：清单给包管理看，rev 给装载器看。
-  const 入口 = 造("戊包", 行们(["rev 2", "", "fn 戊() -> Int {", "  return 5", "}"]),
+  const 入口 = 造("戊包", 行批(["rev 2", "", "fn 戊() -> Int {", "  return 5", "}"]),
     { 名字: "戊包", 版本: 3, 许可: "CZGD-PL-1.1", 哈希: 好哈希 });
   const 单 = loadUnit(入口);
   const 那句 = 单.diagnostics.errors.find((e) => e.code === "HMYR-載-007" && /rev/.test(e.message));
   ok("两处不一致给 HMYR-載-007", !!那句, JSON.stringify(单.diagnostics.errors.map((e) => e.message.slice(0, 50))));
 
   // 一致的：不该报。
-  const 平 = 造("己包", 行们(["rev 3", "", "fn 己() -> Int {", "  return 6", "}"]),
+  const 平 = 造("己包", 行批(["rev 3", "", "fn 己() -> Int {", "  return 6", "}"]),
     { 名字: "己包", 版本: 3, 许可: "CZGD-PL-1.1", 哈希: 好哈希 });
   const 单平 = loadUnit(平);
   ok("一致就不报", !单平.diagnostics.errors.some((e) => e.code === "HMYR-載-007"),
@@ -106,7 +106,7 @@ console.log("六、哈希那一半由工具算");
   fs.mkdirSync(path.join(根, "庚包"), { recursive: true });
   fs.writeFileSync(path.join(根, "hmyr.hmkit"), "[]", "utf8");
   const 入口路 = path.join(根, "庚包", "index.hmoca");
-  fs.writeFileSync(入口路, 行们(["fn 庚() -> Int {", "  return 7", "}"]), "utf8");
+  fs.writeFileSync(入口路, 行批(["fn 庚() -> Int {", "  return 7", "}"]), "utf8");
   const 真 = "sha256:" + createHash("sha256").update(fs.readFileSync(入口路)).digest("hex");
   const 工具 = path.join(ROOT, "tools", "hmkit-check.mjs");
   const 清单路 = path.join(根, "庚包", "hmyr.hmkit");
@@ -137,7 +137,7 @@ console.log("七、依赖：缺包与版本不够各有一个编号");
   };
   const 入口 = (名) => {
     const p = path.join(根, "用" + 名 + ".hmoca");
-    fs.writeFileSync(p, 行们(["import \"" + 名 + "\"", "", "fn main() -> Int {", "  return 0", "}"]), "utf8");
+    fs.writeFileSync(p, 行批(["import \"" + 名 + "\"", "", "fn main() -> Int {", "  return 0", "}"]), "utf8");
     return p;
   };
 
@@ -217,7 +217,7 @@ console.log("九、签名：谁担保它是");
   const 入口哈希 = "sha256:" + 算2("sha256").update(fs.readFileSync(入口路)).digest("hex");
   // 装载层的判据要一个真的入口去 import 那个包 —— 工具那两条不需要它。
   const 用签 = path.join(根, "用签.hmoca");
-  fs.writeFileSync(用签, 行们(["import \"签包\"", "", "fn main() -> Int {", "  return 0", "}"]), "utf8");
+  fs.writeFileSync(用签, 行批(["import \"签包\"", "", "fn main() -> Int {", "  return 0", "}"]), "utf8");
 
   // 与工具里那条规范化同一套规则（四条：去签名、键排序、无空格、UTF-8）。
   const 规范化 = (清单) => {

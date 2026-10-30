@@ -42,7 +42,7 @@ fs.writeFileSync(程序路, 程序, "utf8");
 // 期望值全部由 node 算：文件本身的 CRC、空串的 0、四个字节的 CRC。
 const 应文件 = zlib.crc32(fs.readFileSync(样本));
 const 应四字节 = zlib.crc32(Buffer.from([1, 2, 3, 4]));
-const 期望行们 = [String(应文件), "0", String(应四字节), String(应四字节)];
+const 期望行批 = [String(应文件), "0", String(应四字节), String(应四字节)];
 
 console.log("一、宿主解释器");
 const 层 = loadUnit(程序路);
@@ -53,10 +53,10 @@ rt.argv = ["hmyr", 样本];
 const 码A = rt.callFunction(rt.functions.get("main"), [], null);
 ok("退出码 0", 码A === 0, String(码A));
 {
-  const 行们 = 出A.trim().split("\n");
-  ok("文件的 CRC 与 node 一致", 行们[0] === 期望行们[0], 行们[0] + " 对 " + 期望行们[0]);
-  ok("空元组的 CRC 是 0", 行们[1] === "0", 行们[1]);
-  ok("分块与平铺给出同一个值", 行们[2] === 行们[3] && 行们[2] === 期望行们[2], 行们[2] + " / " + 行们[3]);
+  const 行批 = 出A.trim().split("\n");
+  ok("文件的 CRC 与 node 一致", 行批[0] === 期望行批[0], 行批[0] + " 对 " + 期望行批[0]);
+  ok("空元组的 CRC 是 0", 行批[1] === "0", 行批[1]);
+  ok("分块与平铺给出同一个值", 行批[2] === 行批[3] && 行批[2] === 期望行批[2], 行批[2] + " / " + 行批[3]);
 }
 
 console.log("二、字节码机器");
@@ -105,9 +105,9 @@ console.log("四、最小求值器（默认跑法走的那一台）");
   ok("最小求值器退出码 0", r.status === 0, String(r.stderr || "").slice(0, 160));
   // 那一台会把 main 的返回值也打出来（启动器顺手写了一行），而另三台不会 ——
   // 所以比之前先剥掉末尾那一行。它不是程序的输出，是启动器的。
-  const 行们 = String(r.stdout || "").trim().split("\n");
-  if (行们.length > 1) 行们.pop();
-  ok("与另三台逐字相同", 行们.join("\n").trim() === 出A.trim(), JSON.stringify(行们.join("\n").slice(0, 120)));
+  const 行批 = String(r.stdout || "").trim().split("\n");
+  if (行批.length > 1) 行批.pop();
+  ok("与另三台逐字相同", 行批.join("\n").trim() === 出A.trim(), JSON.stringify(行批.join("\n").slice(0, 120)));
 }
 
 fs.rmSync(临, { recursive: true, force: true });

@@ -66,13 +66,13 @@ if (!有编译器) {
     ok("嵌入器跑完了", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 160));
     if (fs.existsSync(出)) {
       const 文 = fs.readFileSync(出, "utf8");
-      const 行们 = 文.split("\n");
+      const 行批 = 文.split("\n");
       const 字节 = fs.statSync(path.join(ROOT, "bootstrap/pack.hmtn")).size;
-      ok("生成的行数在四千上下", 行们.length > 3000 && 行们.length < 6000, String(行们.length));
-      ok("首行写着字节数", 行们[0].includes(String(字节) + " 字节"), JSON.stringify(行们[0]));
-      ok("数组从 HMYRB 的魔数开始", (行们[2] || "").trim().startsWith("0x48, 0x4d, 0x59, 0x52, 0x42"), JSON.stringify((行们[2] || "").slice(0, 60)));
+      ok("生成的行数在四千上下", 行批.length > 3000 && 行批.length < 6000, String(行批.length));
+      ok("首行写着字节数", 行批[0].includes(String(字节) + " 字节"), JSON.stringify(行批[0]));
+      ok("数组从 HMYRB 的魔数开始", (行批[2] || "").trim().startsWith("0x48, 0x4d, 0x59, 0x52, 0x42"), JSON.stringify((行批[2] || "").slice(0, 60)));
       ok("末行给出长度", 文.includes("pack_hmyrb_len = " + 字节 + ";"), "");
-      ok("没有一行长到离谱", 行们.every((l) => l.length < 400), String(Math.max(...行们.map((l) => l.length))));
+      ok("没有一行长到离谱", 行批.every((l) => l.length < 400), String(Math.max(...行批.map((l) => l.length))));
     } else {
       ok("生成的行数在四千上下", false, "没有产物");
     }

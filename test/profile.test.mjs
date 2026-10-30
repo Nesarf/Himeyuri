@@ -114,7 +114,7 @@ console.log("六、线程池那一项在 C 那台上真的拦");
   if (!fs.existsSync(exe)) {
     console.log("  跳过  C 那台没编出来 —— 线程池那一侧不验");
   } else {
-    const 行们 = [
+    const 行批 = [
       "fn main() -> Int effects(thread) {",
       '  let 库 = "fn main() -> Int {" + chr(10) + "  return 0" + chr(10) + "}" + chr(10)',
       '  let 甲 = thr_spawn(库, "main")',
@@ -124,7 +124,7 @@ console.log("六、线程池那一项在 C 那台上真的拦");
       "  return 0",
       "}",
     ].join("\n") + "\n";
-    for (const 名 of ["t.hmsnp", "t.hmhsr"]) fs.writeFileSync(path.join(临, 名), 行们, "utf8");
+    for (const 名 of ["t.hmsnp", "t.hmhsr"]) fs.writeFileSync(path.join(临, 名), 行批, "utf8");
     const 跑C = (名) => spawnSync(exe, [path.join(临, 名)], {
       encoding: "utf8", cwd: 临, timeout: 300000,
       env: { ...process.env, HMYR_MEM_LIMIT: "0", HMYR_STEPS: "4000000000" },
@@ -143,7 +143,7 @@ console.log("七、JS 侧也真的会起线程（最小求值器）");
   // 在那之前最小求值器的 thr_spawn 是个桩（恒返回 -1），于是「线程」在默认跑法里
   // 只是一个名字。现在它起的是自己的工人（thr-worker-min.mjs），判据两条：
   // 交回来的值是 42，以及 steady 档下第二个线程撞池。
-  const 行们 = [
+  const 行批 = [
     "fn main() -> Int effects(thread) {",
     '  let 库 = "fn main() -> Int {" + chr(10) + "  return 42" + chr(10) + "}" + chr(10)',
     '  let 手 = thr_spawn(库, "main")',
@@ -152,7 +152,7 @@ console.log("七、JS 侧也真的会起线程（最小求值器）");
     "  return 0",
     "}",
   ].join("\n") + "\n";
-  fs.writeFileSync(path.join(临, "js.hmoca"), 行们, "utf8");
+  fs.writeFileSync(path.join(临, "js.hmoca"), 行批, "utf8");
   const 甲 = 跑文件(["js.hmoca"]);
   ok("线程起得来", (甲.stdout || "").includes("果=42"), JSON.stringify((甲.stdout || "").slice(0, 80)) + JSON.stringify((甲.stderr || "").slice(0, 80)));
 

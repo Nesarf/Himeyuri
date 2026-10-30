@@ -23,11 +23,11 @@ const ok = (label, condition, detail = "") => {
 
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-pack-"));
 
-// 打包交回的是「块们的元组」（语言那边按块累积，省掉平方复制），
+// 打包交回的是「块堆的元组」（语言那边按块累积，省掉平方复制），
 // 所以在测试这一侧要先拍平 —— 与 write_bytes 在宿主里做的是同一件事。
-const 拍平 = (块们) => {
+const 拍平 = (块堆) => {
   const 平 = [];
-  for (const x of 块们) {
+  for (const x of 块堆) {
     if (Array.isArray(x)) { for (const y of x) 平.push(y & 0xff); }
     else 平.push(x & 0xff);
   }

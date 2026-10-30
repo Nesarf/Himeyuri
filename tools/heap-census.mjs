@@ -53,15 +53,15 @@ if (!exe) {
 }
 
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-heap-"));
-const 行们 = [];
+const 行批 = [];
 
 for (const 相 of 程序们) {
   const 源 = path.isAbsolute(相) ? 相 : path.join(ROOT, 相);
-  if (!fs.existsSync(源)) { 行们.push({ 程序: 相, 备注: "没有这个文件" }); continue; }
+  if (!fs.existsSync(源)) { 行批.push({ 程序: 相, 备注: "没有这个文件" }); continue; }
   const 码 = path.join(临, path.basename(相).replace(/\.hmoca$/, "") + ".hmoks");
   const 编 = spawnSync(process.execPath, [path.join(ROOT, "tools", "emit-code.mjs"), 源, 码], { encoding: "utf8" });
   if (编.status !== 0 || !fs.existsSync(码)) {
-    行们.push({ 程序: 相, 备注: "编不出来" });
+    行批.push({ 程序: 相, 备注: "编不出来" });
     continue;
   }
   const 跑 = spawnSync(exe, [码], {
@@ -71,10 +71,10 @@ for (const 相 of 程序们) {
   });
   const 出 = String(跑.stdout || "") + String(跑.stderr || "");
   const m = /heap live (\d+) bytes, peak (\d+) bytes/.exec(出);
-  if (!m) { 行们.push({ 程序: 相, 备注: "它没打印堆账" }); continue; }
+  if (!m) { 行批.push({ 程序: 相, 备注: "它没打印堆账" }); continue; }
   const 堆 = Number(m[2]);
   const 需要 = 堆 + STACK + STATIC_BYTES;
-  行们.push({ 程序: 相, 堆, 需要, 装得下: 需要 <= SRAM, 字节码: fs.statSync(码).size });
+  行批.push({ 程序: 相, 堆, 需要, 装得下: 需要 <= SRAM, 字节码: fs.statSync(码).size });
 }
 
 fs.rmSync(临, { recursive: true, force: true });
@@ -83,7 +83,7 @@ const 宽 = (s, n) => String(s).padEnd(n);
 console.log("板子：SRAM " + (SRAM / 1024) + " KB · 栈 " + (STACK / 1024) + " KB · 静态段 " + STATIC_BYTES + " 字节");
 console.log("");
 console.log(宽("程序", 26) + 宽("字节码", 10) + 宽("堆峰值", 10) + 宽("合计需要", 12) + "装得下");
-for (const r of 行们) {
+for (const r of 行批) {
   if (r.备注) { console.log(宽(r.程序, 26) + r.备注); continue; }
   console.log(
     宽(path.basename(r.程序), 26) +
@@ -94,7 +94,7 @@ for (const r of 行们) {
   );
 }
 
-const 装得下 = 行们.filter((r) => r.装得下 === true).length;
-const 量了 = 行们.filter((r) => r.装得下 !== undefined).length;
+const 装得下 = 行批.filter((r) => r.装得下 === true).length;
+const 量了 = 行批.filter((r) => r.装得下 !== undefined).length;
 console.log("");
 console.log(量了 + " 个程序里，装得下的有 " + 装得下 + " 个");

@@ -31,11 +31,11 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 const 查 = (源码) => 区检查(子集解(切(源码)).ast);
-const 行们 = (v) => v.join("\n") + "\n";
+const 行批 = (v) => v.join("\n") + "\n";
 
 console.log("一、逃逸报出来，而且说得出怎么办");
 {
-  const 源 = 行们([
+  const 源 = 行批([
     "fn make() -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(16)",
@@ -54,7 +54,7 @@ console.log("一、逃逸报出来，而且说得出怎么办");
 
 console.log("二、直接返回一块新分配也算逃逸");
 {
-  const 出 = 查(行们(["fn make() -> Int {", "  let a = arena()", "  return a.alloc(16)", "}"]));
+  const 出 = 查(行批(["fn make() -> Int {", "  let a = arena()", "  return a.alloc(16)", "}"]));
   ok("一条错", 出.filter((d) => d.severity === "error" && d.code === "HMYR-碼-001").length === 1, JSON.stringify(出));
 }
 
@@ -68,14 +68,14 @@ console.log("三、来回都合法的写法，一条都不报");
     ["压根不用 arena", ["fn f() -> Int {", "  return 7", "}"]],
   ];
   for (const [标, 源] of 例) {
-    const 出 = 查(行们(源));
+    const 出 = 查(行批(源));
     ok(标 + "：零诊断", 出.length === 0, JSON.stringify(出));
   }
 }
 
 console.log("四、循环里新建 arena：警告，不是错（§4.4）");
 {
-  const 源 = 行们([
+  const 源 = 行批([
     "fn f() -> Int {",
     "  var i = 0",
     "  while i < 3 {",
@@ -91,14 +91,14 @@ console.log("四、循环里新建 arena：警告，不是错（§4.4）");
   ok("编号是 HMYR-載-016", 出[0] && 出[0].code === "HMYR-載-016", String(出[0] && 出[0].code));
   ok("说的是「每轮新建一个」", /loop/.test(出[0] ? 出[0].message : ""), 出[0] ? 出[0].message : "");
 
-  const 外 = 查(行们(["fn f() -> Int {", "  let a = arena()", "  a.close()", "  return 0", "}"]));
+  const 外 = 查(行批(["fn f() -> Int {", "  let a = arena()", "  a.close()", "  return 0", "}"]));
   ok("循环外不报", 外.length === 0, JSON.stringify(外));
 }
 
 console.log("五、装载器真的拦：这条路走不过去");
 {
   const 逃 = path.join(临, "逃逸.hmoca");
-  fs.writeFileSync(逃, 行们(["fn make() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return b", "}"]), "utf8");
+  fs.writeFileSync(逃, 行批(["fn make() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return b", "}"]), "utf8");
   const 单 = loadUnit(逃);
   ok("装载结果是失败", 单.ok === false, JSON.stringify({ ok: 单.ok, errors: 单.diagnostics.errors.map((e) => e.code) }));
   ok("诊断里有 HMYR-碼-001", 单.diagnostics.errors.some((e) => e.code === "HMYR-碼-001"),
@@ -109,7 +109,7 @@ console.log("五、装载器真的拦：这条路走不过去");
     JSON.stringify(单.diagnostics.errors.map((e) => e.code)));
 
   const 好 = path.join(临, "好.hmoca");
-  fs.writeFileSync(好, 行们(["fn make() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  a.freeze(b)", "  return b", "}"]), "utf8");
+  fs.writeFileSync(好, 行批(["fn make() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  a.freeze(b)", "  return b", "}"]), "utf8");
   const 单好 = loadUnit(好);
   ok("交出去的那一份装得进来", 单好.ok === true, JSON.stringify(单好.diagnostics.errors.map((e) => e.code)));
 }
@@ -159,7 +159,7 @@ console.log("八、检查器自己不抛");
 {
   ok("null 交回空表", Array.isArray(区检查(null)) && 区检查(null).length === 0);
   ok("没有 decls 的树交回空表", 区检查({ kind: "模块" }).length === 0);
-  ok("空函数体不抛", 查(行们(["fn f() -> Int {", "  return 0", "}"])).length === 0);
+  ok("空函数体不抛", 查(行批(["fn f() -> Int {", "  return 0", "}"])).length === 0);
 }
 
 console.log("九、启动器：默认这条路也拦，而它不挡别人");
@@ -170,7 +170,7 @@ console.log("九、启动器：默认这条路也拦，而它不挡别人");
   const 投 = (内容, 名) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
   const 跑 = (参) => spawnSync(process.execPath, [具, ...参], { encoding: "utf8", cwd: 临, timeout: 180000 });
 
-  const 逃 = 投(行们(["fn main() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return b", "}"]), "主逃.hmoca");
+  const 逃 = 投(行批(["fn main() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return b", "}"]), "主逃.hmoca");
   const 甲 = 跑([逃]);
   ok("默认路径拒绝它", 甲.status !== 0, JSON.stringify({ status: 甲.status }));
   ok("说的是 HMYR-碼-001", (甲.stderr || "").includes("HMYR-碼-001"), JSON.stringify((甲.stderr || "").slice(0, 100)));
@@ -186,7 +186,7 @@ console.log("九、启动器：默认这条路也拦，而它不挡别人");
   ok("开关能把它放过去", 乙.status === 0 && !((乙.stdout || "") + (乙.stderr || "")).includes("HMYR-碼-001"),
     JSON.stringify({ status: 乙.status, out: ((乙.stdout || "") + (乙.stderr || "")).slice(0, 120) }));
 
-  const 普 = 投(行们(["fn main() -> Int {", '  print("照跑" + chr(10))', "  return 0", "}"]), "主普.hmoca");
+  const 普 = 投(行批(["fn main() -> Int {", '  print("照跑" + chr(10))', "  return 0", "}"]), "主普.hmoca");
   const 丙 = 跑([普]);
   ok("普通程序照跑", (丙.stdout || "").includes("照跑"), JSON.stringify((丙.stdout || "").slice(0, 80)));
 
@@ -196,7 +196,7 @@ console.log("九、启动器：默认这条路也拦，而它不挡别人");
   // 留着就成了「修好了反而红」，所以它跟着事实走。
   // 程序返回 0：--compile 那一面把 main 的返回值当退出码，返回 7 就会得到 status 7 ——
   // 那是它在跑通，不是它失败。判据要能在「退出码」与「拒绝」之间分清。
-  const 编 = 跑(["--compile", 投(行们(["fn main() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return 0", "}"]), "主编.hmoca")]);
+  const 编 = 跑(["--compile", 投(行批(["fn main() -> Int {", "  let a = arena()", "  let b = a.alloc(16)", "  return 0", "}"]), "主编.hmoca")]);
   ok("--compile 认得方法调用了", 编.status === 0, JSON.stringify({ status: 编.status, err: (编.stderr || "").slice(0, 120) }));
   ok("而且没有栈帧", !/(^|\n)\s+at /.test(编.stderr || ""), JSON.stringify((编.stderr || "").slice(0, 120)));
 }
@@ -205,7 +205,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
 {
   // 4.1 的原例里，close 之后接的是 b.size —— 「读它的字段」与「返回它」一样是碰了死内存，
   // 而运行期对那一下是不吭声的（块的 size 字段还在）。所以这条只能在装载时看。
-  const 关后用 = 行们([
+  const 关后用 = 行批([
     "fn f() -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(8)",
@@ -216,7 +216,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
   ok("close 之后读字段给 HMYR-碼-001", 查(关后用).some((d) => d.code === "HMYR-碼-001" && d.severity === "error"), JSON.stringify(查(关后用)));
 
   // 交出去之后那块归托管，close 不带走它 —— 那正是 freeze 的意义，所以不该报。
-  const 先交 = 行们([
+  const 先交 = 行批([
     "fn f() -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(8)",
@@ -228,7 +228,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
   ok("交出去之后 close 再用，不报", 查(先交).length === 0, JSON.stringify(查(先交)));
 
   // close 写在 if 里面时它可能没执行过，所以不算「上面已经关了」。漏报一种，比误报一种好。
-  const 分支里 = 行们([
+  const 分支里 = 行批([
     "fn f(c: Int) -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(8)",
@@ -243,7 +243,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
   // 4.2 的原例要一个模块级的可变变量，而语言里没有那种声明（顶层只有 fn / type / const /
   // effect / macro）。今天写得出来的近似是「把块交给别的函数」：那个函数的函数体不在这份
   // 源码里，没人保证它不把块留下。近似是保守的，所以它说警告，不说错误。
-  const 交块 = 行们([
+  const 交块 = 行批([
     "fn keep(x: Int) -> Int {",
     "  return x",
     "}",
@@ -255,7 +255,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
   ]);
   ok("块交给别的函数给 HMYR-載-018", 查(交块).some((d) => d.code === "HMYR-載-018" && d.severity === "warning"), JSON.stringify(查(交块)));
 
-  const 传字段 = 行们([
+  const 传字段 = 行批([
     "fn keep(x: Int) -> Int {",
     "  return x",
     "}",
@@ -271,7 +271,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
 
   // 4.2 的另一半：块被存进一条记录。记录可以交出去、可以返回，而区留在原地 ——
   // 那块就活过了它的区。这是原例（存到模块级变量）在今天写法里最近的形状。
-  const 存记录 = 行们([
+  const 存记录 = 行批([
     "fn f() -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(8)",
@@ -282,7 +282,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
   ]);
   ok("块存进记录给 HMYR-碼-004", 查(存记录).some((d) => d.code === "HMYR-碼-004" && d.severity === "error"), JSON.stringify(查(存记录)));
 
-  const 存大小 = 行们([
+  const 存大小 = 行批([
     "fn f() -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(8)",
@@ -293,7 +293,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
   ]);
   ok("记录里存的是字段值就不报", 查(存大小).length === 0, JSON.stringify(查(存大小)));
 
-  const 先交出 = 行们([
+  const 先交出 = 行批([
     "fn f() -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(8)",
@@ -306,7 +306,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
 
   // §4.2 的第二个形态，而且它比记录字面量更贴原例（kept = b）：块被写进一条索引。
   // 索引可变，所以它活得比这个函数久；而区不会 —— close 一到块就没了，索引里剩下一个死引用。
-  const 存索引 = 行们([
+  const 存索引 = 行批([
     "fn f(表: Int) -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(8)",
@@ -317,7 +317,7 @@ console.log("十、关掉之后那块不再可用，而借出去要看住");
   ]);
   ok("块存进索引给 HMYR-碼-004", 查(存索引).some((d) => d.code === "HMYR-碼-004"), JSON.stringify(查(存索引)));
 
-  const 存索引值 = 行们([
+  const 存索引值 = 行批([
     "fn f(表: Int) -> Int {",
     "  let a = arena()",
     "  let b = a.alloc(8)",

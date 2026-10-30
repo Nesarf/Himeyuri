@@ -22,12 +22,12 @@ const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
-const 行们 = (v) => v.join("\n") + "\n";
+const 行批 = (v) => v.join("\n") + "\n";
 const 投 = (内容, 名) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
 const 跑 = (参) => spawnSync(process.execPath, [具, ...参], { encoding: "utf8", cwd: 临, timeout: 300000 });
 const 行 = (s) => String(s || "").split("\n").map((x) => x.trimEnd()).filter((x) => x.length > 0);
 
-const 计数程序 = 行们([
+const 计数程序 = 行批([
   "var 计数 = 0",
   "",
   "fn 加一() -> Int {",
@@ -54,7 +54,7 @@ console.log("一、默认路径：读得到、写得上");
 
 console.log("二、const 不能重绑");
 {
-  const p = 投(行们([
+  const p = 投(行批([
     "const 上限 = 10",
     "",
     "fn main() -> Int effects(process) {",

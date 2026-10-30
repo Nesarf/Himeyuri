@@ -98,33 +98,33 @@ export const 字符表 = new Map(解析字符数据().map((c) => [c.码点, c]))
 // 十六进制在这里读起来更好看，可它会让这张表在自举那条路上读不进来 ——
 // 一张只有宿主读得动的表，等于没有这张表。十六进制放在行尾的注释里，两边都留着。
 const 生成块函数 = () => {
-  const 块们 = 块表();
-  const 行们 = [];
+  const 块堆 = 块表();
+  const 行批 = [];
   const 十六 = (n) => "0x" + n.toString(16).toUpperCase();
-  行们.push("// 这张表是从 data/ucd/Blocks.txt 生成的：码点 → 块名。");
-  行们.push("// 生成器是 tools/ucd.mjs，验收在 test/ucd.test.mjs。手改这里会被下一次生成覆盖。");
-  行们.push("// 边界写十进制：自举那一层的 to_int 只认十进制，十六进制会让它在那边读不进来。");
-  行们.push("fn 块名(码点: Int) -> String {");
-  for (const b of 块们) {
+  行批.push("// 这张表是从 data/ucd/Blocks.txt 生成的：码点 → 块名。");
+  行批.push("// 生成器是 tools/ucd.mjs，验收在 test/ucd.test.mjs。手改这里会被下一次生成覆盖。");
+  行批.push("// 边界写十进制：自举那一层的 to_int 只认十进制，十六进制会让它在那边读不进来。");
+  行批.push("fn 块名(码点: Int) -> String {");
+  for (const b of 块堆) {
     const 注 = b.起 === b.止 ? "  // " + 十六(b.起) : "  // " + 十六(b.起) + ".." + 十六(b.止);
     if (b.止 === b.起) {
-      行们.push("  if 码点 == " + b.起 + " {" + 注);
-      行们.push("    return \"" + b.名 + "\"");
-      行们.push("  }");
+      行批.push("  if 码点 == " + b.起 + " {" + 注);
+      行批.push("    return \"" + b.名 + "\"");
+      行批.push("  }");
     } else {
       // 两层嵌套，不写复合条件：自举那一层的 parser 读不进 `&&`，也读不进 `and`——
       // 两个比较写在一起，它会在 if 那一行报语法错。嵌套是它读得动的写法。
-      行们.push("  if 码点 >= " + b.起 + " {" + 注);
-      行们.push("    if 码点 <= " + b.止 + " {");
-      行们.push("      return \"" + b.名 + "\"");
-      行们.push("    }");
-      行们.push("  }");
+      行批.push("  if 码点 >= " + b.起 + " {" + 注);
+      行批.push("    if 码点 <= " + b.止 + " {");
+      行批.push("      return \"" + b.名 + "\"");
+      行批.push("    }");
+      行批.push("  }");
     }
   }
-  行们.push("  return \"No_Block\"");
-  行们.push("}");
-  行们.push("");
-  return 行们.join("\n");
+  行批.push("  return \"No_Block\"");
+  行批.push("}");
+  行批.push("");
+  return 行批.join("\n");
 };
 
 // 全码点表：一百一十一个码点各一行，属性全部摊平。
@@ -136,7 +136,7 @@ const 生成块函数 = () => {
 //
 // 分批写：一百一十万行如果先拼成一个大字符串再落盘，会先吃掉几百兆内存。
 export const 生成全码点表 = () => {
-  const 块们 = 块表();
+  const 块堆 = 块表();
   const 脚本们 = 脚本表();
   const 出 = path.join(产物目录, "codepoints.txt");
   const fd = fs.openSync(出, "w");
@@ -149,7 +149,7 @@ export const 生成全码点表 = () => {
     批.push(
       "U+" + cp.toString(16).toUpperCase().padStart(4, "0") + ";" +
       名 + ";" + 类 + ";" +
-      (二分查(块们, cp) || "No_Block") + ";" +
+      (二分查(块堆, cp) || "No_Block") + ";" +
       (二分查(脚本们, cp) || "Unknown")
     );
     行数++;
@@ -167,7 +167,7 @@ export const 主 = () => {
   // 以前这里又调一次 解析字符数据()，于是同一张表在内存里存了两份（各二十九万个对象），
   // 跑一次生成器要吃掉两百多兆 —— 而那一份重复的数据从头到尾只在算类别分布。
   const 字符 = [...字符表.values()];
-  const 块们 = 块表();
+  const 块堆 = 块表();
   const 脚本们 = 脚本表();
   const 类别 = new Map();
   for (const c of 字符) 类别.set(c.类别, (类别.get(c.类别) || 0) + 1);
@@ -177,7 +177,7 @@ export const 主 = () => {
   const 摘要 = {
     版本: "Unicode 16.0.0",
     字符数据行数: 字符.length,
-    块数: 块们.length,
+    块数: 块堆.length,
     脚本数: 脚本名册.size,
     类别分布: Object.fromEntries([...类别].sort((a, b) => b[1] - a[1])),
     抽查: [

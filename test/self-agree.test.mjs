@@ -43,7 +43,7 @@ const 那边的 = (源) => {
     return { err: (e.code || e.message || "抛了").toString().slice(0, 60) };
   }
 };
-const 写 = (行们) => 行们.join("\n") + "\n";
+const 写 = (行批) => 行批.join("\n") + "\n";
 
 // 每一例：标签 · 程序的行 · 期望的数
 const 例们 = [
@@ -61,8 +61,8 @@ const 例们 = [
 ];
 
 console.log("一、两边同一个答案");
-for (const [标签, 行们, 答] of 例们) {
-  const 源 = 写(行们);
+for (const [标签, 行批, 答] of 例们) {
+  const 源 = 写(行批);
   const 甲 = 宿主的(源);
   const 乙 = 那边的(源);
   ok(标签.padEnd(18) + " → " + 答, 甲.value === 答 && 乙.value === 答,
@@ -103,8 +103,8 @@ console.log("三、两边不会一边成功一边失败");
     ["未知名字", ["fn main() -> Int {", "  return nope", "}"]],
     ["调用不存在的函数", ["fn main() -> Int {", "  return 不存在()", "}"]],
   ];
-  for (const [标签, 行们] of 坏们) {
-    const 源 = 写(行们);
+  for (const [标签, 行批] of 坏们) {
+    const 源 = 写(行批);
     const 甲 = 宿主的(源);
     const 乙 = 那边的(源);
     const 甲失败 = 甲.err !== undefined;

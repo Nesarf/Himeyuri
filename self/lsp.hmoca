@@ -50,7 +50,7 @@ fn 读消息() {
   if 完 { return {体: "", 结束: true} }
   if 长 < 0 { return {体: "", 结束: true} }
   let b = read_stdin_bytes(长)
-  return {体: bytes_to_text(b.字节们), 结束: b.结束}
+  return {体: bytes_to_text(b.字节串), 结束: b.结束}
 }
 
 // 从 JSON 对象里取一个键。找不到交回空。
@@ -116,9 +116,9 @@ fn 是词字(c: String) -> Bool {
 
 // 按行列从原文里取出那个词。位置给的是零基行列，与 LSP 一致。
 fn 词在(文本: String, 行: Int, 列: Int) -> String {
-  let 行们 = split(文本, chr(10))
-  if 行 >= len(行们) { return "" }
-  let 该行 = 行们[行]
+  let 行批 = split(文本, chr(10))
+  if 行 >= len(行批) { return "" }
+  let 该行 = 行批[行]
   var 起 = 列
   var 左停 = false
   while 起 > 0 && !左停 {

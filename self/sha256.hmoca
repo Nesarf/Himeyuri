@@ -18,8 +18,8 @@ pub fn 倍(n: Int) -> Int {
 }
 
 // 折半拼接：把几十块并成一条，复制量是「块数乘对数」而不是平方。
-pub fn 拼平(块们: Int, 起: Int, 止: Int) {
-  if 止 - 起 <= 1 { return 块们[起] }
+pub fn 拼平(块堆: Int, 起: Int, 止: Int) {
+  if 止 - 起 <= 1 { return 块堆[起] }
   var 左 = 起
   var 右 = 止
   while 右 - 左 > 2 {
@@ -27,7 +27,7 @@ pub fn 拼平(块们: Int, 起: Int, 止: Int) {
     右 = 右 - 1
   }
   let 中 = 左 + 1
-  return 拼平(块们, 起, 中) + 拼平(块们, 中, 止)
+  return 拼平(块堆, 起, 中) + 拼平(块堆, 中, 止)
 }
 
 // 六十四轮常量。
@@ -125,21 +125,21 @@ fn 一块(哈希们: Int, 块: Int) {
 //
 // 这里用块化 + 折平拼接，不是 出 = 出 + (...)：三十 KB 的文件那样拼是平方级，
 // 而它正是上一版跑十五分钟没结果的真正原因 —— 不是位运算，是这个循环。
-fn 填充(字节们: Int) {
-  let 原长 = len(字节们)
-  var 块们 = ()
+fn 填充(字节串: Int) {
+  let 原长 = len(字节串)
+  var 块堆 = ()
   var 小块 = ()
   var i = 0
   while i < 原长 {
-    小块 = 小块 + (to_int(字节们[i]),)
+    小块 = 小块 + (to_int(字节串[i]),)
     if len(小块) >= 1024 {
-      块们 = 块们 + (小块,)
+      块堆 = 块堆 + (小块,)
       小块 = ()
     }
     i = i + 1
   }
   小块 = 小块 + (128,)
-  while (len(块们) * 1024 + len(小块) + 8) % 64 != 0 {
+  while (len(块堆) * 1024 + len(小块) + 8) % 64 != 0 {
     小块 = 小块 + (0,)
   }
   var 位长 = 原长 * 8
@@ -152,9 +152,9 @@ fn 填充(字节们: Int) {
     倍量 = 倍量 / 256
     k = k + 1
   }
-  if len(小块) > 0 { 块们 = 块们 + (小块,) }
-  if len(块们) == 0 { return () }
-  return 拼平(块们, 0, len(块们))
+  if len(小块) > 0 { 块堆 = 块堆 + (小块,) }
+  if len(块堆) == 0 { return () }
+  return 拼平(块堆, 0, len(块堆))
 }
 
 fn 十六进制(值: Int) -> String {
@@ -171,8 +171,8 @@ fn 十六进制(值: Int) -> String {
   return 出
 }
 
-pub fn sha256(字节们: Int) -> String {
-  let 填 = 填充(字节们)
+pub fn sha256(字节串: Int) -> String {
+  let 填 = 填充(字节串)
   var 哈希们 = 初值()
   var 起 = 0
   while 起 < len(填) {
@@ -200,7 +200,7 @@ fn main() -> Int effects(file, process) {
     print("用法：hmyr self/sha256.hmyr <文件>" + chr(10))
     return 2
   }
-  let 字节们 = read_bytes(参[1])
-  print(sha256(字节们) + chr(10))
+  let 字节串 = read_bytes(参[1])
+  print(sha256(字节串) + chr(10))
   return 0
 }

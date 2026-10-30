@@ -284,8 +284,8 @@ fn 生成二(值: Int) -> String {
 // 写法上有一处必须避开：往元组上一个一个追加是平方级（这个仓库里同一句教训已经出现过四次）。
 // 这里每 1024 字节封一块，最后用两半合并折平。
 
-pub fn 拼平(块们: Int, 起: Int, 止: Int) {
-  if 止 - 起 <= 1 { return 块们[起] }
+pub fn 拼平(块堆: Int, 起: Int, 止: Int) {
+  if 止 - 起 <= 1 { return 块堆[起] }
   var 左 = 起
   var 右 = 止
   while 右 - 左 > 2 {
@@ -293,11 +293,11 @@ pub fn 拼平(块们: Int, 起: Int, 止: Int) {
     右 = 右 - 1
   }
   let 中 = 左 + 1
-  return 拼平(块们, 起, 中) + 拼平(块们, 中, 止)
+  return 拼平(块堆, 起, 中) + 拼平(块堆, 中, 止)
 }
 
 pub fn 从文本(s: String) {
-  var 块们 = ()
+  var 块堆 = ()
   var 块 = ()
   var i = 0
   while i < len(s) {
@@ -313,14 +313,14 @@ pub fn 从文本(s: String) {
       块 = 块 + (224 + 高, 128 + 中, 128 + 低)
     }
     if len(块) >= 1024 {
-      块们 = 块们 + (块,)
+      块堆 = 块堆 + (块,)
       块 = ()
     }
     i = i + 1
   }
-  if len(块) > 0 { 块们 = 块们 + (块,) }
-  if len(块们) == 0 { return () }
-  return 拼平(块们, 0, len(块们))
+  if len(块) > 0 { 块堆 = 块堆 + (块,) }
+  if len(块堆) == 0 { return () }
+  return 拼平(块堆, 0, len(块堆))
 }
 
 fn main() -> Int {

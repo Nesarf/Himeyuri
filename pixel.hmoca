@@ -4,7 +4,7 @@
 // 而这一层也只做纯数据，于是「往某处写一块颜色」可以逐点断言。
 //
 // 表示：颜色码是整数，按 0xRRGGBB 打包（0 就是黑）。
-// 布是 {w, h, 行们}；行们是元组，每行是 w 个颜色码的元组。
+// 布是 {w, h, 行批}；行批是元组，每行是 w 个颜色码的元组。
 // 「导出成 PNG」不在这里：那要动世界，交给一个子进程（与 native 后端同一个做法）。
 
 fn 空行从(列: Int, i: Int, acc: Int) -> Int {
@@ -16,17 +16,17 @@ fn 空行(列: Int) -> Int {
   return 空行从(列, 0, ())
 }
 
-fn 空行们从(行: Int, 列: Int, i: Int, acc: Int) -> Int {
+fn 空行批从(行: Int, 列: Int, i: Int, acc: Int) -> Int {
   if i >= 行 { return acc }
-  return 空行们从(行, 列, i + 1, acc + (空行(列),))
+  return 空行批从(行, 列, i + 1, acc + (空行(列),))
 }
 
-fn 空行们(行: Int, 列: Int) -> Int {
-  return 空行们从(行, 列, 0, ())
+fn 空行批(行: Int, 列: Int) -> Int {
+  return 空行批从(行, 列, 0, ())
 }
 
 fn 新布(宽: Int, 高: Int) -> Int {
-  return {w: 宽, h: 高, 行们: 空行们(高, 宽)}
+  return {w: 宽, h: 高, 行批: 空行批(高, 宽)}
 }
 
 // 换掉一行的第 x 列。深度等于行宽，所以很宽的布会先撞上调用深度上限——
@@ -37,16 +37,16 @@ fn 换点从(行: Int, x: Int, 色: Int, i: Int, acc: Int) -> Int {
   return 换点从(行, x, 色, i + 1, acc + (行[i],))
 }
 
-fn 换行们从(布: Int, y: Int, 新行: Int, i: Int, acc: Int) -> Int {
-  if i >= len(布.行们) { return acc }
-  if i == y { return 换行们从(布, y, 新行, i + 1, acc + (新行,)) }
-  return 换行们从(布, y, 新行, i + 1, acc + (布.行们[i],))
+fn 换行批从(布: Int, y: Int, 新行: Int, i: Int, acc: Int) -> Int {
+  if i >= len(布.行批) { return acc }
+  if i == y { return 换行批从(布, y, 新行, i + 1, acc + (新行,)) }
+  return 换行批从(布, y, 新行, i + 1, acc + (布.行批[i],))
 }
 
 // 写一个点。越界就原样交回——不报错，因为「画到边界外」在绘图里是常态。
 fn 写点(布: Int, x: Int, y: Int, 色: Int) -> Int {
   if x < 0 || x >= 布.w || y < 0 || y >= 布.h { return 布 }
-  return {w: 布.w, h: 布.h, 行们: 换行们从(布, y, 换点从(布.行们[y], x, 色, 0, ()), 0, ())}
+  return {w: 布.w, h: 布.h, 行批: 换行批从(布, y, 换点从(布.行批[y], x, 色, 0, ()), 0, ())}
 }
 
 // 填一条横线。用 while 而不是递归：一条线可能很长，而深度不该跟着长度长。
@@ -73,7 +73,7 @@ fn 填矩形(布: Int, x: Int, y: Int, 宽: Int, 高: Int, 色: Int) -> Int {
 
 fn 取点(布: Int, x: Int, y: Int) -> Int {
   if x < 0 || x >= 布.w || y < 0 || y >= 布.h { return -1 }
-  return 布.行们[y][x]
+  return 布.行批[y][x]
 }
 
 // 导出成文本：一行一行，每行用逗号分开的颜色码。
@@ -89,8 +89,8 @@ fn 行文字(行: Int) -> String {
 }
 
 fn 成文本从(布: Int, i: Int, acc: String) -> String {
-  if i >= len(布.行们) { return acc }
-  return 成文本从(布, i + 1, acc + 行文字(布.行们[i]) + "\n")
+  if i >= len(布.行批) { return acc }
+  return 成文本从(布, i + 1, acc + 行文字(布.行批[i]) + "\n")
 }
 
 fn 成文本(布: Int) -> String {

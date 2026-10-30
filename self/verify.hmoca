@@ -53,10 +53,10 @@ fn 值(s: String) -> String {
 // 找某个顶层键所在的行号（"tools" 与 "documents" 两段的分界）。
 // 同样用键名比：有个套件可能就叫 tools。
 fn 行号(s: String, 名: String) -> Int {
-  let 行们 = split(s, chr(10))
+  let 行批 = split(s, chr(10))
   var i = 0
-  while i < len(行们) {
-    if 键(行们[i]) == 名 { return i }
+  while i < len(行批) {
+    if 键(行批[i]) == 名 { return i }
     i = i + 1
   }
   return 0 - 1
@@ -77,33 +77,33 @@ fn 去尾逗号(s: String) {
 // 换行写在块内（每行后面都带一个），不要在块与块之间去补：折平是用 + 拼字符串，
 // 块边界上没有位置插那个 chr(10)。这一处错过一次，症状很有教育意义 ——
 // 二十几行的小清单只有一块，全对；九百多行分成八块，digest 立刻不对。
-fn 重建文本(行们: Int, dig: Int) {
+fn 重建文本(行批: Int, dig: Int) {
   var 前 = dig - 1
-  while 前 >= 0 && 行们[前] == "" { 前 = 前 - 1 }
-  var 块们 = ()
+  while 前 >= 0 && 行批[前] == "" { 前 = 前 - 1 }
+  var 块堆 = ()
   var 块 = ""
   var 块行数 = 0
   var i = 0
-  while i < len(行们) {
+  while i < len(行批) {
     var 取 = i != dig
-    if i == len(行们) - 1 && 行们[i] == "" { 取 = false }
+    if i == len(行批) - 1 && 行批[i] == "" { 取 = false }
     if 取 {
-      let 原行 = 行们[i]
+      let 原行 = 行批[i]
       var 行 = 原行
       if i == 前 { 行 = 去尾逗号(原行) }
       块 = 块 + 行 + chr(10)
       块行数 = 块行数 + 1
       if 块行数 >= 128 {
-        块们 = 块们 + (块,)
+        块堆 = 块堆 + (块,)
         块 = ""
         块行数 = 0
       }
     }
     i = i + 1
   }
-  if 块行数 > 0 { 块们 = 块们 + (块,) }
-  if len(块们) == 0 { return "" }
-  let 拼 = 拼平(块们, 0, len(块们))
+  if 块行数 > 0 { 块堆 = 块堆 + (块,) }
+  if len(块堆) == 0 { return "" }
+  let 拼 = 拼平(块堆, 0, len(块堆))
   // 每行后面那个换行多出来一个：JSON.stringify 的输出不以换行结尾。
   if len(拼) > 0 { return slice(拼, 0, len(拼) - 1) }
   return 拼
@@ -129,7 +129,7 @@ fn main() -> Int effects(file, process) {
     return 2
   }
   let 文 = read_text(参[1])
-  let 行们 = split(文, chr(10))
+  let 行批 = split(文, chr(10))
   // 两段的分界：name 那几项要补前缀，而补哪一个由「它在哪一段里」决定。
   let 工具起 = 行号(文, "tools")
   let 文档起 = 行号(文, "documents")
@@ -143,8 +143,8 @@ fn main() -> Int effects(file, process) {
   var 已验 = 0
 
   var i = 0
-  while i < len(行们) {
-    let 行 = 行们[i]
+  while i < len(行批) {
+    let 行 = 行批[i]
     let 键名 = 键(行)
     // 只在哈希行上动手：它的上一行给出路径。
     if 键名 == "sha256" {
@@ -186,11 +186,11 @@ fn main() -> Int effects(file, process) {
   if 码 < 0 {
     print("  清单里没有 digest，整份这一步跳过" + chr(10))
   } else {
-    let 写 = 值(行们[码])
+    let 写 = 值(行批[码])
     if 写 == "" {
       print("  digest 是空的，整份这一步跳过" + chr(10))
     } else {
-      let 重建 = 重建文本(行们, 码)
+      let 重建 = 重建文本(行批, 码)
       let 算 = sha256(从文本(重建))
       if 算 == 写 {
         print("  整份的 digest 对得上（重算 " + str(len(重建)) + " 字符）" + chr(10))

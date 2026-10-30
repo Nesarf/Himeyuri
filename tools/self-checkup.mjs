@@ -20,7 +20,7 @@ console.log("自举体检 —— 一条命令跑完三段");
 console.log("");
 let 总过 = 0;
 let 总败 = 0;
-const 行们 = [];
+const 行批 = [];
 for (const [名, 脚本, 说明] of 段们) {
   const t0 = Date.now();
   const r = spawnSync(process.execPath, [path.join(ROOT, 脚本)], { cwd: ROOT, encoding: "utf8", timeout: 600000 });
@@ -31,10 +31,10 @@ for (const [名, 脚本, 说明] of 段们) {
   const 败 = m ? Number(m[2]) : (r.status === 0 ? 0 : 1);
   总过 += 过;
   总败 += 败;
-  行们.push({ 名, 过, 败, 用时, 说明, 状态: r.status });
+  行批.push({ 名, 过, 败, 用时, 说明, 状态: r.status });
 }
 
-for (const 行 of 行们) {
+for (const 行 of 行批) {
   const 判 = 行.败 === 0 ? "通过" : "不通过";
   console.log("  " + 判 + "  " + 行.名.padEnd(26) + 行.过 + " 项过 · " + 行.败 + " 项红 · " + 行.用时 + " 秒");
   console.log("        " + 行.说明);

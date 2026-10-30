@@ -37,11 +37,11 @@ fn 去头空(s: String) -> String {
 }
 
 fn 数fn(文: String) -> Int {
-  let 行们 = split(文, chr(10))
+  let 行批 = split(文, chr(10))
   var n = 0
   var i = 0
-  while i < len(行们) {
-    if 以头(行们[i], "fn ") { n = n + 1 }
+  while i < len(行批) {
+    if 以头(行批[i], "fn ") { n = n + 1 }
     i = i + 1
   }
   return n
@@ -56,17 +56,17 @@ fn 行数(文: String) -> Int { return len(split(文, chr(10))) }
 // 块缝里没有位置插那个 chr(10)。这一处与 self/verify.hmyr 里那一处是同一个形状，
 // 而且已经各错过一次 —— 症状都是「某个键与下一个键挤在同一行」，
 // 于是在逐行扫的人眼里那一项就少了一个字段。
-fn 推(块们: Int, 块: String, 块行数: Int, 行: String) {
-  var 新块们 = 块们
+fn 推(块堆: Int, 块: String, 块行数: Int, 行: String) {
+  var 新块堆 = 块堆
   var 新块 = 块
   if 块行数 == 0 { 新块 = 行 + chr(10) } else { 新块 = 块 + 行 + chr(10) }
   let 新数 = 块行数 + 1
   if 新数 >= 128 {
-    新块们 = 块们 + (新块,)
+    新块堆 = 块堆 + (新块,)
     新块 = ""
-    return {块们: 新块们, 块: 新块, 行数: 0}
+    return {块堆: 新块堆, 块: 新块, 行数: 0}
   }
-  return {块们: 新块们, 块: 新块, 行数: 新数}
+  return {块堆: 新块堆, 块: 新块, 行数: 新数}
 }
 
 // 一行里第 n 对引号之间（n 从 1 数起）。开引号记位置，闭引号算一对。
@@ -179,10 +179,10 @@ fn 含子串(s: String, 片: String) -> Bool {
 }
 
 fn 行号含(s: String, 片: String) -> Int {
-  let 行们 = split(s, chr(10))
+  let 行批 = split(s, chr(10))
   var i = 0
-  while i < len(行们) {
-    if 含子串(行们[i], 片) { return i }
+  while i < len(行批) {
+    if 含子串(行批[i], 片) { return i }
     i = i + 1
   }
   return 0 - 1
@@ -192,12 +192,12 @@ fn 行号含(s: String, 片: String) -> Int {
 // 到缩进为零的 } 结束；块里每个两空格缩进、以名字首字符开头、带冒号的行算一个键。
 // 这不是解析器，是一处「够用的括号配对」——数出来的是声明，不是求值。
 fn 内置数() effects(file) {
-  let 行们 = split(read_text("src/eval.mjs"), chr(10))
+  let 行批 = split(read_text("src/eval.mjs"), chr(10))
   var 在内 = false
   var n = 0
   var i = 0
-  while i < len(行们) {
-    let 行 = 行们[i]
+  while i < len(行批) {
+    let 行 = 行批[i]
     if 在内 {
       if 以头(行, "}") {
         在内 = false
@@ -276,14 +276,14 @@ fn 排好(集: Int) {
 // 四个空格缩进的行里所有标识符（去掉 file / process / thread 三个效果名）。
 fn 最小集() effects(file) {
   let 文 = read_text("design/RUNTIME.txt")
-  let 行们 = split(文, chr(10))
+  let 行批 = split(文, chr(10))
   let 起 = 行号含(文, "最小的内置集")
   if 起 < 0 { return () }
   var 集 = ()
   var i = 起
-  while i < len(行们) {
-    let 行 = 行们[i]
-    if 含子串(行, "小库该有什么") { i = len(行们) } else if 以头(行, "    ") {
+  while i < len(行批) {
+    let 行 = 行批[i]
+    if 含子串(行, "小库该有什么") { i = len(行批) } else if 以头(行, "    ") {
       let 词们 = 抽标识符(行)
       var k = 0
       while k < len(词们) {
@@ -334,7 +334,7 @@ fn 造名项(名: String, 路: String) effects(file) {
 }
 
 pub fn 主(出路: String) effects(file, process) {
-  var 块们 = ()
+  var 块堆 = ()
   var 块 = ""
   var 块行数 = 0
   var i = 0
@@ -348,8 +348,8 @@ pub fn 主(出路: String) effects(file, process) {
   )
   var h = 0
   while h < len(头们) {
-    let r = 推(块们, 块, 块行数, 头们[h])
-    块们 = r.块们
+    let r = 推(块堆, 块, 块行数, 头们[h])
+    块堆 = r.块堆
     块 = r.块
     块行数 = r.行数
     h = h + 1
@@ -357,16 +357,16 @@ pub fn 主(出路: String) effects(file, process) {
 
   // kernel 那一组。minimalSet 展开成多行 —— 与 JSON.stringify(x, null, 2) 的字节
   // 保持一致，因为 digest 的可复算性就建立在这个「同样一份字节」上。
-  let rk0 = 推(块们, 块, 块行数, "  \"kernel\": {")
-  块们 = rk0.块们
+  let rk0 = 推(块堆, 块, 块行数, "  \"kernel\": {")
+  块堆 = rk0.块堆
   块 = rk0.块
   块行数 = rk0.行数
-  let rk1 = 推(块们, 块, 块行数, "    \"builtins\": " + str(内置数()) + ",")
-  块们 = rk1.块们
+  let rk1 = 推(块堆, 块, 块行数, "    \"builtins\": " + str(内置数()) + ",")
+  块堆 = rk1.块堆
   块 = rk1.块
   块行数 = rk1.行数
-  let rk2 = 推(块们, 块, 块行数, "    \"minimalSet\": [")
-  块们 = rk2.块们
+  let rk2 = 推(块堆, 块, 块行数, "    \"minimalSet\": [")
+  块堆 = rk2.块堆
   块 = rk2.块
   块行数 = rk2.行数
   let 集 = 最小集()
@@ -374,24 +374,24 @@ pub fn 主(出路: String) effects(file, process) {
   while 集序 < len(集) {
     var 集行 = "      \"" + 集[集序] + "\""
     if 集序 < len(集) - 1 { 集行 = 集行 + "," }
-    let r = 推(块们, 块, 块行数, 集行)
-    块们 = r.块们
+    let r = 推(块堆, 块, 块行数, 集行)
+    块堆 = r.块堆
     块 = r.块
     块行数 = r.行数
     集序 = 集序 + 1
   }
-  let rk3 = 推(块们, 块, 块行数, "    ]")
-  块们 = rk3.块们
+  let rk3 = 推(块堆, 块, 块行数, "    ]")
+  块堆 = rk3.块堆
   块 = rk3.块
   块行数 = rk3.行数
-  let rk4 = 推(块们, 块, 块行数, "  },")
-  块们 = rk4.块们
+  let rk4 = 推(块堆, 块, 块行数, "  },")
+  块堆 = rk4.块堆
   块 = rk4.块
   块行数 = rk4.行数
 
   // 一、标准库：runtime/ 递归（ucd 里还有一个 .hmyr）
-  let r1 = 推(块们, 块, 块行数, "  \"standardLibrary\": [")
-  块们 = r1.块们
+  let r1 = 推(块堆, 块, 块行数, "  \"standardLibrary\": [")
+  块堆 = r1.块堆
   块 = r1.块
   块行数 = r1.行数
   let 库名册 = 走文件("runtime")
@@ -409,8 +409,8 @@ pub fn 主(出路: String) effects(file, process) {
       while k < len(库项们) {
         var 库行 = 库项们[k]
         if i == 库末 && k == len(库项们) - 1 { 库行 = 去尾逗号(库行) }
-        let r = 推(块们, 块, 块行数, 库行)
-        块们 = r.块们
+        let r = 推(块堆, 块, 块行数, 库行)
+        块堆 = r.块堆
         块 = r.块
         块行数 = r.行数
         k = k + 1
@@ -418,28 +418,28 @@ pub fn 主(出路: String) effects(file, process) {
     }
     i = i + 1
   }
-  let r2 = 推(块们, 块, 块行数, "  ],")
-  块们 = r2.块们
+  let r2 = 推(块堆, 块, 块行数, "  ],")
+  块堆 = r2.块堆
   块 = r2.块
   块行数 = r2.行数
 
   // 二、套件：从 check-all 那份登记表里抽（名字与路径）
-  let r3 = 推(块们, 块, 块行数, "  \"suites\": [")
-  块们 = r3.块们
+  let r3 = 推(块堆, 块, 块行数, "  \"suites\": [")
+  块堆 = r3.块堆
   块 = r3.块
   块行数 = r3.行数
   let 表们 = read_text("tools/check-all.mjs")
-  let 表行们 = split(表们, chr(10))
+  let 表行批 = split(表们, chr(10))
   var 套数 = 0
   i = 0
-  while i < len(表行们) {
-    if 以头(去头空(表行们[i]), "[\"") { 套数 = 套数 + 1 }
+  while i < len(表行批) {
+    if 以头(去头空(表行批[i]), "[\"") { 套数 = 套数 + 1 }
     i = i + 1
   }
   var 套序 = 0
   i = 0
-  while i < len(表行们) {
-    let 这行 = 去头空(表行们[i])
+  while i < len(表行批) {
+    let 这行 = 去头空(表行批[i])
     if 以头(这行, "[\"") {
       let 套名 = 第几对(这行, 1)
       let 套路 = 第几对(这行, 2)
@@ -448,8 +448,8 @@ pub fn 主(出路: String) effects(file, process) {
       while k < len(套项们) {
         var 套行 = 套项们[k]
         if 套序 == 套数 - 1 && k == len(套项们) - 1 { 套行 = 去尾逗号(套行) }
-        let r = 推(块们, 块, 块行数, 套行)
-        块们 = r.块们
+        let r = 推(块堆, 块, 块行数, 套行)
+        块堆 = r.块堆
         块 = r.块
         块行数 = r.行数
         k = k + 1
@@ -458,14 +458,14 @@ pub fn 主(出路: String) effects(file, process) {
     }
     i = i + 1
   }
-  let r4 = 推(块们, 块, 块行数, "  ],")
-  块们 = r4.块们
+  let r4 = 推(块堆, 块, 块行数, "  ],")
+  块堆 = r4.块堆
   块 = r4.块
   块行数 = r4.行数
 
   // 三、工具：tools/ 顶层的 .mjs
-  let r5 = 推(块们, 块, 块行数, "  \"tools\": [")
-  块们 = r5.块们
+  let r5 = 推(块堆, 块, 块行数, "  \"tools\": [")
+  块堆 = r5.块堆
   块 = r5.块
   块行数 = r5.行数
   let 具名册 = read_dir("tools")
@@ -483,8 +483,8 @@ pub fn 主(出路: String) effects(file, process) {
       while k < len(具项们) {
         var 具行 = 具项们[k]
         if i == 具末 && k == len(具项们) - 1 { 具行 = 去尾逗号(具行) }
-        let r = 推(块们, 块, 块行数, 具行)
-        块们 = r.块们
+        let r = 推(块堆, 块, 块行数, 具行)
+        块堆 = r.块堆
         块 = r.块
         块行数 = r.行数
         k = k + 1
@@ -492,14 +492,14 @@ pub fn 主(出路: String) effects(file, process) {
     }
     i = i + 1
   }
-  let r6 = 推(块们, 块, 块行数, "  ],")
-  块们 = r6.块们
+  let r6 = 推(块堆, 块, 块行数, "  ],")
+  块堆 = r6.块堆
   块 = r6.块
   块行数 = r6.行数
 
   // 四、文档：design/ 顶层的 .txt
-  let r7 = 推(块们, 块, 块行数, "  \"documents\": [")
-  块们 = r7.块们
+  let r7 = 推(块堆, 块, 块行数, "  \"documents\": [")
+  块堆 = r7.块堆
   块 = r7.块
   块行数 = r7.行数
   let 档名册 = read_dir("design")
@@ -517,8 +517,8 @@ pub fn 主(出路: String) effects(file, process) {
       while k < len(档项们) {
         var 档行 = 档项们[k]
         if i == 档末 && k == len(档项们) - 1 { 档行 = 去尾逗号(档行) }
-        let r = 推(块们, 块, 块行数, 档行)
-        块们 = r.块们
+        let r = 推(块堆, 块, 块行数, 档行)
+        块堆 = r.块堆
         块 = r.块
         块行数 = r.行数
         k = k + 1
@@ -526,17 +526,17 @@ pub fn 主(出路: String) effects(file, process) {
     }
     i = i + 1
   }
-  let r8 = 推(块们, 块, 块行数, "  ]")
-  块们 = r8.块们
+  let r8 = 推(块堆, 块, 块行数, "  ]")
+  块堆 = r8.块堆
   块 = r8.块
   块行数 = r8.行数
 
   if 块行数 > 0 {
-    块们 = 块们 + (块,)
+    块堆 = 块堆 + (块,)
     块 = ""
     块行数 = 0
   }
-  let 带尾 = 拼平(块们, 0, len(块们))
+  let 带尾 = 拼平(块堆, 0, len(块堆))
   // 每行后面那个换行多出来一个：主体不以换行结尾。
   let 主体 = slice(带尾, 0, len(带尾) - 1)
   // 不含 digest 的那份 = 主体 + 收尾的 }，这是与 self/verify.hmyr 同一条规则。

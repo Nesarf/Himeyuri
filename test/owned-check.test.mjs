@@ -25,13 +25,13 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 const 查 = (源码) => 持有格检查(子集解(切(源码)).ast);
-const 行们 = (v) => v.join("\n") + "\n";
+const 行批 = (v) => v.join("\n") + "\n";
 const 投 = (内容, 名) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
 const 有 = (出, 词) => 出.some((d) => d.code === "HMYR-載-021" && d.message.includes(词));
 
 console.log("一、两条反例被拒");
 {
-  const 放两次 = 行们([
+  const 放两次 = 行批([
     "fn main() -> Int {",
     "  let 格 = owned()",
     "  格.放(1)",
@@ -41,7 +41,7 @@ console.log("一、两条反例被拒");
   ]);
   ok("放两次被拒", 有(查(放两次), "already holds a value"), JSON.stringify(查(放两次)));
 
-  const 取两次 = 行们([
+  const 取两次 = 行批([
     "fn main() -> Int {",
     "  let 格 = owned()",
     "  格.取()",
@@ -55,7 +55,7 @@ console.log("一、两条反例被拒");
 console.log("二、正例一条不报");
 {
   // 放 → 取 → 放 是合法的：取走之后又能放。一条只数「放了几次」的粗判据会误伤它。
-  const 正例 = 行们([
+  const 正例 = 行批([
     "fn main() -> Int {",
     "  let 格 = owned()",
     "  格.放(1)",
@@ -67,7 +67,7 @@ console.log("二、正例一条不报");
   ]);
   ok("放取放取一条不报", 查(正例).length === 0, JSON.stringify(查(正例)));
 
-  const 不碰 = 行们([
+  const 不碰 = 行批([
     "fn main() -> Int {",
     "  let 格 = owned()",
     "  return 0",
@@ -79,7 +79,7 @@ console.log("二、正例一条不报");
 console.log("三、看不透的形状不报（宁可漏，不可误）");
 {
   // 分支里放过：外面再说就是说不清了，不判。
-  const 分支 = 行们([
+  const 分支 = 行批([
     "fn f(n: Int) -> Int {",
     "  let 格 = owned()",
     "  if n > 0 {",
@@ -92,7 +92,7 @@ console.log("三、看不透的形状不报（宁可漏，不可误）");
   ok("分支之后的第二次放不报", 查(分支).length === 0, JSON.stringify(查(分支)));
 
   // 循环体里反复放：一次也不追。
-  const 循环 = 行们([
+  const 循环 = 行批([
     "fn f(n: Int) -> Int {",
     "  let 格 = owned()",
     "  var i = 0",
@@ -106,7 +106,7 @@ console.log("三、看不透的形状不报（宁可漏，不可误）");
   ok("循环体里的放不报", 查(循环).length === 0, JSON.stringify(查(循环)));
 
   // 从参数来的持有格：来源说不清，整条不判。
-  const 参数 = 行们([
+  const 参数 = 行批([
     "fn f(格: Int) -> Int {",
     "  格.放(1)",
     "  格.放(2)",
@@ -118,7 +118,7 @@ console.log("三、看不透的形状不报（宁可漏，不可误）");
 
 console.log("四、装载器真的拦，开关能关");
 {
-  const 坏 = 投(行们([
+  const 坏 = 投(行批([
     "fn main() -> Int {",
     "  let 格 = owned()",
     "  格.放(1)",
@@ -134,7 +134,7 @@ console.log("四、装载器真的拦，开关能关");
   const 关 = loadUnit(坏, { ownedCheck: false });
   ok("关掉之后装得进来", 关.ok === true, JSON.stringify(关.diagnostics.errors.map((e) => e.code)));
 
-  const 好 = 投(行们([
+  const 好 = 投(行批([
     "fn main() -> Int effects(process) {",
     "  let 格 = owned()",
     "  格.放(1)",
@@ -172,7 +172,7 @@ console.log("五、整仓现有 .hmoca 零误报");
 console.log("六、分支合并（数据流那一层）");
 {
   // 两侧都放进去了，所以汇合之后是「满」—— 再放一次就是 HMYR-碼-005，看得见。
-  const 两侧都放 = 行们([
+  const 两侧都放 = 行批([
     "fn f(n: Int) -> Int {",
     "  let 格 = owned()",
     "  if n > 0 {",
@@ -188,7 +188,7 @@ console.log("六、分支合并（数据流那一层）");
 
   // 一侧放一侧不放：汇合之后是「可能满可能空」，所以不判 —— 这一条与上一条成对，
   // 少了它，合并就会往「宁可报」偏，而那份检查活不下来。
-  const 一侧放 = 行们([
+  const 一侧放 = 行批([
     "fn f(n: Int) -> Int {",
     "  let 格 = owned()",
     "  if n > 0 {",
@@ -201,7 +201,7 @@ console.log("六、分支合并（数据流那一层）");
   ok("一侧放一侧不放：汇合后不报", 查(一侧放).length === 0, JSON.stringify(查(一侧放)));
 
   // 先装满，再在两侧都取空 —— 汇合之后是「空」，再取一次就是 HMYR-碼-006。
-  const 两侧都取 = 行们([
+  const 两侧都取 = 行批([
     "fn f(n: Int) -> Int {",
     "  let 格 = owned()",
     "  格.放(9)",
@@ -217,7 +217,7 @@ console.log("六、分支合并（数据流那一层）");
   ok("两侧都取空之后再取被拒", 有(查(两侧都取), "is empty here"), JSON.stringify(查(两侧都取)));
 
   // 循环体里放一次：零次或多次都可能，汇合之后说不清，不判。
-  const 循环放 = 行们([
+  const 循环放 = 行批([
     "fn f(n: Int) -> Int {",
     "  let 格 = owned()",
     "  var i = 0",
@@ -234,7 +234,7 @@ console.log("六、分支合并（数据流那一层）");
 
 console.log("七、关闭之后的使用");
 {
-  const 关后放 = 行们([
+  const 关后放 = 行批([
     "fn f() -> Int {",
     "  let 格 = owned()",
     "  格.关()",
@@ -244,7 +244,7 @@ console.log("七、关闭之后的使用");
   ]);
   ok("关之后放被拒", 有(查(关后放), "was closed before this point"), JSON.stringify(查(关后放)));
 
-  const 关后取 = 行们([
+  const 关后取 = 行批([
     "fn f() -> Int {",
     "  let 格 = owned()",
     "  格.关()",
@@ -255,7 +255,7 @@ console.log("七、关闭之后的使用");
   ok("关之后取被拒", 有(查(关后取), "was closed before this point"), JSON.stringify(查(关后取)));
 
   // 重复关是幂等的，运行期不报，这里也不该报。
-  const 重复关 = 行们([
+  const 重复关 = 行批([
     "fn f() -> Int {",
     "  let 格 = owned()",
     "  格.关()",
@@ -269,7 +269,7 @@ console.log("七、关闭之后的使用");
 console.log("八、跨函数的转移（只看签名上那个 own）");
 {
   // 把持有格交给一个 own 参数的函数，等于交了所有权 —— 之后再动它就是 was moved into。
-  const 转移后用 = 行们([
+  const 转移后用 = 行批([
     "fn 收下(own 格: Int) -> Int {",
     "  return 0",
     "}",
@@ -285,7 +285,7 @@ console.log("八、跨函数的转移（只看签名上那个 own）");
   ok("own 参数传出去之后再用被拒", 有(查(转移后用), "was moved into"), JSON.stringify(查(转移后用)));
 
   // borrow 参数不转移所有权 —— 调用之后源这边仍然归自己，继续用是对的。
-  const 借出后 = 行们([
+  const 借出后 = 行批([
     "fn 看一眼(borrow 格: Int) -> Int {",
     "  return 0",
     "}",
@@ -301,7 +301,7 @@ console.log("八、跨函数的转移（只看签名上那个 own）");
   ok("borrow 参数之后还能用", 查(借出后).length === 0, JSON.stringify(查(借出后)));
 
   // 普通参数（没写 own 也没写 borrow）也不当成转移 —— 这一层不猜。
-  const 普通参 = 行们([
+  const 普通参 = 行批([
     "fn 收下(格: Int) -> Int {",
     "  return 0",
     "}",
@@ -321,7 +321,7 @@ console.log("九、借用的承诺在被调者那一侧兑现");
 {
   // 前三层都在调用者那边看：borrow 之后我还能继续用 —— 那是信任。
   // 这一层走进函数体，看它有没有真的不动那个参数。
-  const 借了又放 = 行们([
+  const 借了又放 = 行批([
     "fn 看(borrow 格: Int) -> Int {",
     "  格.放(1)",
     "  return 0",
@@ -329,7 +329,7 @@ console.log("九、借用的承诺在被调者那一侧兑现");
   ]);
   ok("borrow 参数上放被拒", 有(查(借了又放), "is borrowed"), JSON.stringify(查(借了又放)));
 
-  const 借了又取 = 行们([
+  const 借了又取 = 行批([
     "fn 看(borrow 格: Int) -> Int {",
     "  格.取()",
     "  return 0",
@@ -337,7 +337,7 @@ console.log("九、借用的承诺在被调者那一侧兑现");
   ]);
   ok("borrow 参数上取被拒", 有(查(借了又取), "is borrowed"), JSON.stringify(查(借了又取)));
 
-  const 借了又关 = 行们([
+  const 借了又关 = 行批([
     "fn 看(borrow 格: Int) -> Int {",
     "  格.关()",
     "  return 0",
@@ -346,7 +346,7 @@ console.log("九、借用的承诺在被调者那一侧兑现");
   ok("borrow 参数上关被拒", 有(查(借了又关), "is borrowed"), JSON.stringify(查(借了又关)));
 
   // 借来的东西再交给一个 own 参数，等于把它交出去了 —— 那也是动了它。
-  const 借出再转移 = 行们([
+  const 借出再转移 = 行批([
     "fn 收下(own 格: Int) -> Int {",
     "  return 0",
     "}",
@@ -359,7 +359,7 @@ console.log("九、借用的承诺在被调者那一侧兑现");
   ok("borrow 传进 own 参数被拒", 有(查(借出再转移), "all the way down"), JSON.stringify(查(借出再转移)));
 
   // 正例：借了不动。
-  const 只看 = 行们([
+  const 只看 = 行批([
     "fn 看(borrow 格: Int) -> Int {",
     "  return 0",
     "}",
@@ -367,7 +367,7 @@ console.log("九、借用的承诺在被调者那一侧兑现");
   ok("借了不用不报", 查(只看).length === 0, JSON.stringify(查(只看)));
 
   // 没写 borrow 的参数不受这一条约束 —— 门只对写了那个词的开。
-  const 普通参数动 = 行们([
+  const 普通参数动 = 行批([
     "fn 改(格: Int) -> Int {",
     "  格.放(1)",
     "  return 0",
@@ -379,7 +379,7 @@ console.log("九、借用的承诺在被调者那一侧兑现");
 console.log("十、沿调用链走到底（传递闭包）");
 {
   // 一层深看不出来的那种：甲把借来的东西交给乙，乙又交给丙，而丙改了它。
-  const 三层 = 行们([
+  const 三层 = 行批([
     "fn 丙(格: Int) -> Int {",
     "  格.放(1)",
     "  return 0",
@@ -398,7 +398,7 @@ console.log("十、沿调用链走到底（传递闭包）");
   ok("三层之外被改也报在最初那一侧", 有(查(三层), "all the way down"), JSON.stringify(查(三层)));
 
   // 干净的三层：一路都没动它，就不该报。
-  const 干净三层 = 行们([
+  const 干净三层 = 行批([
     "fn 丙(格: Int) -> Int {",
     "  return 0",
     "}",
@@ -416,7 +416,7 @@ console.log("十、沿调用链走到底（传递闭包）");
   ok("干净的三层不报", 查(干净三层).length === 0, JSON.stringify(查(干净三层)));
 
   // 环：甲传给乙，乙又传回甲。检查器不许转圈，也不许漏掉「环里有人改」。
-  const 环里没改 = 行们([
+  const 环里没改 = 行批([
     "fn 乙(格: Int) -> Int {",
     "  甲(格)",
     "  return 0",
@@ -429,7 +429,7 @@ console.log("十、沿调用链走到底（传递闭包）");
   ]);
   ok("环上没人改就不报（而且不转圈）", 查(环里没改).length === 0, JSON.stringify(查(环里没改)));
 
-  const 环里有改 = 行们([
+  const 环里有改 = 行批([
     "fn 乙(格: Int) -> Int {",
     "  甲(格)",
     "  格.放(1)",
@@ -451,14 +451,14 @@ console.log("十一、跨模块（按装载顺序累积）");
   //
   // 看不见的那一半写在 design/MEMORY.txt 第 2 节：单趟遍历，被调者若在后装载，
   // 检查它的时候还不知道它脏不脏。那不是遗漏，是这一层的方式。
-  const 乙 = 投(行们([
+  const 乙 = 投(行批([
     "fn 改(格: Int) -> Int {",
     "  格.放(1)",
     "  return 0",
     "}",
   ]), "乙.hmoca");
 
-  const 甲 = 投(行们([
+  const 甲 = 投(行批([
     "import \"./乙.hmoca\"",
     "",
     "fn 借(borrow 格: Int) -> Int {",
@@ -473,12 +473,12 @@ console.log("十一、跨模块（按装载顺序累积）");
    JSON.stringify(单.diagnostics.errors.map((e) => e.code + " " + e.message.slice(0, 60))));
 
   // 干净的被调者：同样跨模块，但那边什么都不动 —— 不该报。
-  const 净 = 投(行们([
+  const 净 = 投(行批([
     "fn 看(格: Int) -> Int {",
     "  return 0",
     "}",
   ]), "净.hmoca");
-  const 甲净 = 投(行们([
+  const 甲净 = 投(行批([
     "import \"./净.hmoca\"",
     "",
     "fn 借(borrow 格: Int) -> Int {",
@@ -497,21 +497,21 @@ console.log("十二、被调者在调用者之后装载（两趟补齐的那一�
   // 第十一节那种写法里，被调者总是先装载（import 先走），所以单趟就够。
   // 这一节造的是反过来的顺序：入口先 import 调用者、再 import 被调者 ——
   // 于是调用者被检查的时候，被调者还没进表。单趟在这里会沉默，两趟不会。
-  const 丙 = 投(行们([
+  const 丙 = 投(行批([
     "fn 借(borrow 格: Int) -> Int {",
     "  改(格)",
     "  return 0",
     "}",
   ]), "丙.hmoca");
 
-  const 丁 = 投(行们([
+  const 丁 = 投(行批([
     "fn 改(格: Int) -> Int {",
     "  格.放(1)",
     "  return 0",
     "}",
   ]), "丁.hmoca");
 
-  const 戊 = 投(行们([
+  const 戊 = 投(行批([
     "import \"./丙.hmoca\"",
     "import \"./丁.hmoca\"",
     "",
@@ -544,7 +544,7 @@ console.log("十三、跨包（包名解析 + 同一张表）");
   const 清单 = (名) => JSON.stringify({ 名字: 名, 版本: 1, 许可: "CZGD-PL-1.1", 哈希: "sha256:" + "0".repeat(64) });
   fs.writeFileSync(path.join(根, "甲包", "hmyr.hmkit"), 清单("甲包"), "utf8");
   fs.writeFileSync(path.join(根, "乙包", "hmyr.hmkit"), 清单("乙包"), "utf8");
-  fs.writeFileSync(path.join(根, "甲包", "index.hmoca"), 行们([
+  fs.writeFileSync(path.join(根, "甲包", "index.hmoca"), 行批([
     "import \"乙包\"",
     "",
     "fn 借(borrow 格: Int) -> Int {",
@@ -552,14 +552,14 @@ console.log("十三、跨包（包名解析 + 同一张表）");
     "  return 0",
     "}",
   ]), "utf8");
-  fs.writeFileSync(path.join(根, "乙包", "index.hmoca"), 行们([
+  fs.writeFileSync(path.join(根, "乙包", "index.hmoca"), 行批([
     "fn 脏(格: Int) -> Int {",
     "  格.放(1)",
     "  return 0",
     "}",
   ]), "utf8");
   const 入口 = path.join(根, "main.hmoca");
-  fs.writeFileSync(入口, 行们([
+  fs.writeFileSync(入口, 行批([
     "import \"甲包\"",
     "",
     "fn main() -> Int {",
@@ -578,12 +578,12 @@ console.log("十三、跨包（包名解析 + 同一张表）");
    JSON.stringify(单.diagnostics.errors.map((e) => e.code + " " + e.message.slice(0, 70))));
 
   // 干净的那一对：同样跨包，但乙包的函数什么都不动 —— 不该报。
-  fs.writeFileSync(path.join(根, "乙包", "index.hmoca"), 行们([
+  fs.writeFileSync(path.join(根, "乙包", "index.hmoca"), 行批([
     "fn 看(格: Int) -> Int {",
     "  return 0",
     "}",
   ]), "utf8");
-  fs.writeFileSync(path.join(根, "甲包", "index.hmoca"), 行们([
+  fs.writeFileSync(path.join(根, "甲包", "index.hmoca"), 行批([
     "import \"乙包\"",
     "",
     "fn 借(borrow 格: Int) -> Int {",
@@ -599,7 +599,7 @@ console.log("十三、跨包（包名解析 + 同一张表）");
   // 版本：import "甲包" rev N 与路径形式走同一套检查 —— 因为包名解析成路径之后，
   // 检查就落在 import 循环里那一段，与路径形式没有分叉。
   // 上一版的文档说「版本协商只对路径形式生效」，那是错的；这一条判据就是来钉住它的。
-  fs.writeFileSync(path.join(根, "甲包", "index.hmoca"), 行们([
+  fs.writeFileSync(path.join(根, "甲包", "index.hmoca"), 行批([
     "rev 2",
     "",
     "fn 甲() -> Int {",
@@ -607,7 +607,7 @@ console.log("十三、跨包（包名解析 + 同一张表）");
     "}",
   ]), "utf8");
   const 要三 = path.join(根, "要三.hmoca");
-  fs.writeFileSync(要三, 行们([
+  fs.writeFileSync(要三, 行批([
     "import \"甲包\" rev 3",
     "",
     "fn main() -> Int {",
@@ -620,7 +620,7 @@ console.log("十三、跨包（包名解析 + 同一张表）");
    JSON.stringify(高三.diagnostics.errors.map((e) => e.code)));
 
   const 要二 = path.join(根, "要二.hmoca");
-  fs.writeFileSync(要二, 行们([
+  fs.writeFileSync(要二, 行批([
     "import \"甲包\" rev 2",
     "",
     "fn main() -> Int {",
