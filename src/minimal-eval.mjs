@@ -833,7 +833,7 @@ export class 最小运行时 {
              * 为什么（2026-11-01）：自举层的词法器在某个下标上越界，而报错只有
              * 「index N outside a value of length N」—— 不知道是哪个表达式。
              * 这一行给的是目标、下标与那个 Index 节点本身，足够指到一行源码。 */
-            if (process.env.HMYR_INDEX_TRACE) {
+            if (this.cap.env.get("HMYR_INDEX_TRACE")) {
               console.error("越界现场 目标=" + JSON.stringify(target).slice(0, 120)
                 + " 下标=" + index + " 节点=" + JSON.stringify(node).slice(0, 260));
             }

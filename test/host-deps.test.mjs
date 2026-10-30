@@ -33,29 +33,37 @@ const 全部 = 源们.join("\n");
 
 const 计 = (词) => (全部.match(new RegExp("\\b" + 词 + "\\b", "g")) || []).length;
 
-console.log("一、宿主全局：正好这十二项");
+console.log("一、宿主全局：正好这十三项");
 {
   // Date 与 URL 是线程那一路要的（等超时、把 worker 的路径交给 spawn），
   // 它们不是「偷偷多要」而是被用在了明处，所以列进来而不是删掉。
-  const 应 = ["String", "Error", "Array", "Math", "JSON", "Map", "Set", "Object", "Number", "TextDecoder", "Date", "URL"];
+  // console 同理：求值器里那一段「越界现场」的调试输出（HMYR_INDEX_TRACE）用它，
+  // 而那段代码留着 —— 它是 2026-11-01 为了把一条只有码没有位置的报错指回源码加的。
+  const 应 = ["String", "Error", "Array", "Math", "JSON", "Map", "Set", "Object", "Number", "TextDecoder", "Date", "URL", "console"];
   const 候补 = ["Object", "Array", "String", "Number", "Boolean", "Math", "JSON", "Date", "Map", "Set",
     "WeakMap", "WeakSet", "RegExp", "Error", "TypeError", "RangeError", "Symbol", "Promise", "Buffer",
     "URL", "TextDecoder", "TextEncoder", "Intl", "globalThis", "console", "require"];
   const 实 = 候补.filter((名) => 计(名) > 0).sort();
-  ok("正好十二项", 实.length === 12, 实.join(" "));
-  ok("而它们是那十项", JSON.stringify(实) === JSON.stringify([...应].sort()), 实.join(" "));
+  ok("正好十三项", 实.length === 13, 实.join(" "));
+  ok("而它们是那十三项", JSON.stringify(实) === JSON.stringify([...应].sort()), 实.join(" "));
   // 三项值得各自钉一句，因为它们是「本可以出现而没出现」的那一类。
   ok("没有 Promise（执行器是同步的）", 计("Promise") === 0);
   ok("没有 RegExp（正则只出现在字符串里）", 计("RegExp") === 0);
   ok("没有 Symbol 与 Proxy", 计("Symbol") === 0 && 计("Proxy") === 0);
-  // process 这一处换过一次形状。原先的墓碑是「它只是效果名那个字符串」；
-  // 现在环境与路径那一组要在能力面上问 cwd，于是它以 cap.process 出现 ——
-  // 仍然是能力面，不是宿主全局。所以计数必须等于「点号后那一次」的计数。
+  // process 这一处换过两次形状。原先的墓碑是「它只是效果名那个字符串」；
+  // 之后环境与路径那一组要在能力面上问 cwd，于是它以 cap.process 出现 ——
+  // 仍然是能力面，不是宿主全局。
+  //
+  // 2026-11-01 又多了一种：加载器在模块加载时读 process.env.HMYR_LOADER，然后把它删掉，
+  // 好让这次运行 spawn 出来的子进程读不到它（不加这一条会一层套一层地起 C 机器）。
+  // 那一步是「清除」，而能力面的 env 只有读、没有删 —— 所以它是启动开关，
+  // 与「运行期向世界要东西」是两件事。判据因此认两种形态：能力面与 process.env。
   {
     const 全部次 = (全部.match(/\bprocess\b/g) || []).length;
     const 能力面 = (全部.match(/\.process\b/g) || []).length;
-    ok("process 只作为能力面出现（cap.process）", 全部次 === 能力面,
-      全部次 + " 次里 " + 能力面 + " 次带点号");
+    const 环境开关 = (全部.match(/process\.env\b/g) || []).length;
+    ok("process 只以能力面与启动开关两种形态出现", 全部次 === 能力面 + 环境开关,
+      全部次 + " 次里 " + 能力面 + " 次是能力面、" + 环境开关 + " 次是 process.env");
   }
 }
 

@@ -2728,15 +2728,21 @@ static int values_equal(Value a, Value b) {
   return 0;
 }
 
-/* ---- 全局：顶层 const 的落地 ----
+/* ---- 全局：顶层 const 与顶层 var 的落地 ----
  *
- * 数量很少（一个模块几条常量），所以用线性数组加名字比较，不做哈希。
- * 名字指向常量池，而池在程序生命周期里不释放 —— 所以这里存指针是安全的。
+ * 数量很少（一个模块几条名字），所以用线性数组加名字比较，不做哈希。
+ * 名字存的是字节流里的偏移，不是指针：字节流活到进程结束，所以偏移永远有效。
+ *
+ * 2026-10-31 之前这里存的是一根指针（当时名字住在常量池，池不释放，所以那是对的）。
+ * 池去掉之后名字改成「从字节流当场解到调用方的栈缓冲」，而这一处还存指针 ——
+ * 于是顶层段一返回，那根指针指向的栈帧就被别的栈帧盖掉：写进去的名字与查的时候
+ * 要的名字变成两串不同的码元，找全局就报「没有这个名字」。改存偏移之后不需要
+ * 任何分配，也不存在「谁活得更久」这个问题。
  *
  * 只有一条指令写它：SETGLOBAL，而那条指令只由顶层段发出。用户代码的赋值
  * （ASSIGN）只碰槽，所以这一份没有打开「全局可变」这件事。 */
 typedef struct {
-  const uint16_t *名;
+  uint32_t 名off;
   uint32_t 名长;
   Value 值;
 } 全局项;
@@ -2744,11 +2750,11 @@ typedef struct {
 static 全局项 *g_全局项 = NULL;
 static int g_全局数 = 0, g_全局容 = 0;
 
-static void 全局放(const uint16_t *名, uint32_t 名长, Value 值) {
+static void 全局放(uint32_t 名off, uint32_t 名长, Value 值) {
   for (int i = 0; i < g_全局数; i++) {
     if (g_全局项[i].名长 != 名长) continue;
     uint32_t 同 = 1;
-    for (uint32_t k = 0; k < 名长; k++) if (g_全局项[i].名[k] != 名[k]) { 同 = 0; break; }
+    for (uint32_t k = 0; k < 名长; k++) if (名码(g_全局项[i].名off, k) != 名码(名off, k)) { 同 = 0; break; }
     if (同) { g_全局项[i].值 = 值; return; }
   }
   if (g_全局数 + 1 > g_全局容) {
@@ -2756,7 +2762,7 @@ static void 全局放(const uint16_t *名, uint32_t 名长, Value 值) {
     g_全局项 = (全局项 *)realloc(g_全局项, sizeof(全局项) * (size_t)g_全局容);
     if (!g_全局项) { 分配失败(); }
   }
-  g_全局项[g_全局数].名 = 名;
+  g_全局项[g_全局数].名off = 名off;
   g_全局项[g_全局数].名长 = 名长;
   g_全局项[g_全局数].值 = 值;
   g_全局数++;
@@ -2766,7 +2772,7 @@ static int 全局取(const uint16_t *名, uint32_t 名长, Value *出) {
   for (int i = 0; i < g_全局数; i++) {
     if (g_全局项[i].名长 != 名长) continue;
     uint32_t 同 = 1;
-    for (uint32_t k = 0; k < 名长; k++) if (g_全局项[i].名[k] != 名[k]) { 同 = 0; break; }
+    for (uint32_t k = 0; k < 名长; k++) if (名码(g_全局项[i].名off, k) != 名[k]) { 同 = 0; break; }
     if (同) { *出 = g_全局项[i].值; return 1; }
   }
   return 0;
@@ -5040,12 +5046,12 @@ static Value run_func(Func *f, Value *args, int nargs) {
         }
         push(值); pc++; break;
       }
-      /* 顶层常量的登记：值在栈顶，名字是立即数。只有顶层段发这一条。 */
+      /* 顶层常量与顶层 var 的登记：值在栈顶，名字是立即数。只有顶层段发这一条。
+       * 交给 全局放 的是偏移而不是解出来的码元：全局表照偏移比较，这一处因此
+       * 不必落一份栈缓冲，也就没有「缓冲活得够不够久」这个问题。 */
       case OP_SETGLOBAL: {
         Value 值 = pop();
-        uint16_t 名缓[256];
-        uint32_t 名长 = 池取到((uint32_t)in->a, 名缓, 256);
-        全局放(名缓, 名长, 值);
+        全局放((uint32_t)in->a, 名长((uint32_t)in->a), 值);
         pc++; break;
       }
       case OP_BOOL: { Value v = pop(); push(v_bool(truthy(v))); pc++; break; }

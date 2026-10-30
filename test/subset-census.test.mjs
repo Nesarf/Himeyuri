@@ -66,7 +66,7 @@ for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
 
 console.log("一、语句：六种");
 {
-  const 应 = ["赋值", "块", "表达式语句", "定", "返回", "变"];
+  const 应 = ["变", "块", "定", "表达式语句", "赋值", "返回"];
   const 实 = [...语句.keys()].sort();
   ok("语句种类正好六种", 实.length === 6, 实.join(" "));
   ok("而它们是那六种", JSON.stringify(实) === JSON.stringify(应), 实.join(" "));
