@@ -1,12 +1,18 @@
 // Lexer tests: every lexical rule in SPEC 2.1 gets a case, and every diagnostic gets a case that must
 // fire. Written before the parser on purpose - a lexer that only handles the happy path is the reason
 // parsers later grow special cases.
-import { lex } from "../src/lexer.mjs";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { lex, 关键字别名 } from "../src/lexer.mjs";
+import { 切 } from "../src/subset-lex.mjs";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 let passed = 0, failed = 0;
-const ok = (label, condition) => {
+const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
-  else { failed++; console.log("  不通过  " + label); }
+  else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 const kinds = (r) => r.tokens.filter((t) => t.type !== "eof" && t.type !== "newline").map((t) => t.type + ":" + t.value).join(" ");
 const codes = (r) => r.diagnostics.items.map((d) => d.code);
@@ -113,6 +119,38 @@ console.log("\narrows and the spec's own example");
 {
   const r = lex("\uFEFFlet x = 1\n");
   ok("a BOM is accepted and ignored", r.diagnostics.items.length === 0 && kinds(r) === "keyword:let ident:x punct:= int:1");
+}
+
+// 汉字关键字：三张表要一致，三个词法器的做法要一样（2026-11-02）
+//
+// 表在三个地方各有一份：宿主词法器、子集词法器、自举层的 关键字归一。分开是刻意的 ——
+// 子集那一层不能 import 宿主的（那边拉着 node:path 与文件系统），自举那一层根本不是 JS。
+// 而分开就会漂移，所以这一节把三边钉在一起：加一个词要么三处一起加，要么一处都不加。
+{
+  const 子集源 = fs.readFileSync(path.join(ROOT, "src/subset-lex.mjs"), "utf8");
+  const 自举源 = fs.readFileSync(path.join(ROOT, "self/lex.hmoca"), "utf8");
+  const 子集块 = /const 关键字别名 = \{([^}]*)\}/.exec(子集源);
+  const 自举对 = [...自举源.matchAll(/if 词 == "([^"]+)" \{ return "([^"]+)" \}/g)].map((m) => [m[1], m[2]]);
+  ok("子集那一份关键字别名表在", !!子集块, "");
+  ok("自举那一份关键字归一表在", 自举对.length > 0, String(自举对.length));
+  const 归 = (对) => JSON.stringify(Object.entries(对).sort());
+  if (子集块) {
+    const 子集 = {};
+    for (const 段 of 子集块[1].split(",")) {
+      const m = /([^\s:]+)\s*:\s*"([^"]+)"/.exec(段);
+      if (m) 子集[m[1]] = m[2];
+    }
+    ok("子集那张表与宿主相同", 归(子集) === 归(关键字别名), 归(子集) + " 对 " + 归(关键字别名));
+  }
+  if (自举对.length) {
+    const 自举 = Object.fromEntries(自举对);
+    ok("自举那张表与宿主相同", 归(自举) === 归(关键字别名), 归(自举) + " 对 " + 归(关键字别名));
+  }
+  // 同一个词，三个词法器交回同一个英文关键字
+  const 源 = "定 x = 1\n";
+  ok("宿主词法器把它归一成 let", kinds(lex(源)).startsWith("keyword:let"), kinds(lex(源)));
+  const 子 = 切(源).filter((t) => t.type !== "eof" && t.type !== "newline").map((t) => t.type + ":" + t.value).join(" ");
+  ok("子集词法器把它归一成 let", 子.startsWith("keyword:let"), 子);
 }
 
 console.log("\n" + passed + " passed, " + failed + " failed");

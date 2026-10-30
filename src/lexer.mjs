@@ -23,6 +23,19 @@ export const KEYWORDS = new Set([
   "if", "else", "match", "true", "false", "nil", "arena", "managed",
 ]);
 
+// 汉字关键字（第一批四个）：源码里可以写这些字，词法把它们归一成英文那一套。
+//
+// 为什么归一放在词法层，而不是让每一层都认两套：自举层按文本判关键字的地方有十五处
+// （stmt.hmoca 的 is_word 与 body.hmoca 的 t.text ==），归一在这里只需改三份词法器。
+// 这与上面的 ALIASES 是同一个做法：中文标点进得来，规范输出仍是 ASCII。
+//
+// 一次只放四个，理由是量出来的：返回 若 定 当 在全部 .hmoca 源码里作为独立标识符
+// 出现了零次，所以不会与任何既有名字撞。其余二十一个词里有一批已经在当标识符用
+// （区 四十六次、真 十次、函数 八次……），要先处理完那些再往这张表里加。
+export const 关键字别名 = {
+  返回: "return", 若: "if", 定: "let", 当: "while",
+};
+
 // Longest first, so that -> is not read as - followed by >.
 // Unicode 别名：中文输入法下 ( 打出来就是 （，而 <= 在手感上就是 ≤。
 // 与其报错让人天天撞墙，不如在词法里归一——于是源码接受得宽，而规范输出仍是 ASCII
@@ -232,8 +245,11 @@ export function lex(source, options = {}) {
       if (scripts.size > 1) {
         diagnostics.warn("HMYR-詞-002", "identifier mixes scripts (" + [...scripts].join(" + ") + "): " + normalized, startLine, startColumn);
       }
-      if (KEYWORDS.has(normalized)) push("keyword", normalized, startLine, startColumn);
-      else push("ident", normalized, startLine, startColumn, { wasNormalised: normalized !== name });
+      const asKeyword = KEYWORDS.has(normalized) ? normalized : 关键字别名[normalized];
+      if (asKeyword) {
+        // 汉字写法进来、英文 token 出去 —— written 留着原文，诊断要指回去时有东西可指。
+        push("keyword", asKeyword, startLine, startColumn, asKeyword === normalized ? {} : { written: name });
+      } else push("ident", normalized, startLine, startColumn, { wasNormalised: normalized !== name });
       continue;
     }
 

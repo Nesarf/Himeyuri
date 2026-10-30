@@ -107,6 +107,21 @@ fn is_hex_char(c: String) -> Bool {
   return is_digit(c) || in_set(c, "abcdefABCDEF", 0)
 }
 
+// 汉字关键字归一成英文那一套 —— 与 src/lexer.mjs 的 关键字别名 是同一张表。
+//
+// 为什么放在这里：这一层把关键字一律当 ident（文件头第三行写着那条边界），
+// 而上面按文本判关键字（stmt 的 is_word、body 的 t.text ==）。归一放在产出
+// token 的这一步，那些地方一行都不用改，也就不必让每一处都写两遍。
+// 一次只收四个词，与 JS 那两张表同步：返回 若 定 当 在全部 .hmoca 里作为
+// 独立标识符出现零次，所以不会与既有名字撞。
+fn 关键字归一(词: String) -> String {
+  if 词 == "返回" { return "return" }
+  if 词 == "若" { return "if" }
+  if 词 == "定" { return "let" }
+  if 词 == "当" { return "while" }
+  return 词
+}
+
 // 进制字面量：0x / 0b / 0o 之后一律按十六进制字符集读下去。
 fn read_based(s: String, i: Int, acc: String) -> {next: Int, text: String} {
   if i >= len(s) { return {next: i, text: acc} }
@@ -246,7 +261,7 @@ fn tokenize(s: String, at: Int, 们: Int, 段: Int, keep_lines: Bool) {
   }
   if is_ident_start(s[i]) {
     let got = read_ident(s, i, "")
-    let 下 = 攒(们, 段, {kind: "ident", text: nfc(got.text), at: i})
+    let 下 = 攒(们, 段, {kind: "ident", text: 关键字归一(nfc(got.text)), at: i})
     return tokenize(s, got.next, 下.们, 下.段, keep_lines)
   }
   if is_digit(s[i]) {
