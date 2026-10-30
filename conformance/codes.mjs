@@ -104,5 +104,5 @@ export const CODES = [
   { code: "HMYR-碼-002", stage: "run", checkedBy: "test/zone.test.mjs", meaning: "a zone conversion was handed something that is not a live block of that arena: the block belongs elsewhere, or its arena is already closed" },
   { code: "HMYR-碼-003", stage: "run", checkedBy: "test/zone.test.mjs", meaning: "a block was adopted into a second arena that is still open: its lifetime would be owned in two places" },
   { code: "HMYR-形-007", stage: "tool", checkedBy: "test/format.test.mjs", meaning: "the formatter found something it cannot write back" },
-  { code: "HMYR-載-023", stage: "link", meaning: "rev is not followed by a revision number" },
+  { code: "HMYR-載-023", stage: "link", internal: true, meaning: "rev is not followed by a revision number" },
 ];

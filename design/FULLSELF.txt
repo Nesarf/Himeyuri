@@ -1875,6 +1875,25 @@ selfloa 的 27/27）。
     这一轮留下的代码改动：cases.mjs 九条 expect、conformance.mjs 一条正则、两张表各
     加两条。
 
+自立：conform 全绿了（2026-11-02，新一段第 17 轮）
+
+    上一轮剥到「84 登记、84 发出」，而退出码仍是 1 —— 差别在 bad 里还有一项没打印。
+    这一轮先找到了那个开关：why 那一段要 HMYR_CONFORMANCE_WHY 才出声（默认不唠叨），
+    打开之后一眼就见到：
+
+      why: failed=0 xpassed=0 unregistered=0 dead=0 duplicated=0 unexplained=0
+           unexercised=1 outside=0 odd=0 grammar=0
+
+    那一项是 unexercised=1：HMYR-載-023（rev 后面没跟版本号）。它只在桥那条路上报，
+    宿主 loader 不报它，所以没有用例覆盖，而它又不是 planned。
+
+    处理是给它 internal: true。这个分类是诚实的：它不是「程序能主动触发的错」，
+    而是桥那条路上装载器自己的检查；宿主那一路对这个形状有自己的说法。分类对了，
+    unexercised 归零，退出码 0。
+
+    读数：conform、docs、helper 三套全绿。错误码这一件从头到尾都通了 ——
+    99 个码、两张表 84 条、484 处裸码、conform 的九项判据全过。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 HMYR-載-001；
 另外引的文件不在就报 HMYR-載-003（宿主也是这个码）。顺序取后序，于是 order 逐项相同。
