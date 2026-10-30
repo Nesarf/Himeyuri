@@ -439,19 +439,19 @@ fn 编实参(们: Int, 状态: Int, i: Int) {  if i >= len(们) { return {ok: tr
 // 一条语句。交回 {ok, 状态, 结束}；结束表示这一支已经 return 过，后面的不该再编。
 fn 语句(节点: Int, 状态: Int) {
   let 种 = 节点.kind
-  if 种 == "Return" {
+  if 种 == "返回" {
     let v = 表达(节点.value, 状态)
     if v.ok == false { return v }
     return {ok: true, 状态: 发(v.状态, {op: "RET"}), 结束: true}
   }
-  if 种 == "Let" || 种 == "Var" {
+  if 种 == "定" || 种 == "变" {
     let v = 表达(节点.value, 状态)
     if v.ok == false { return v }
     let 号 = v.状态.槽
     let 记过 = 状态(v.状态.块, v.状态.小, 号 + 1, v.状态.名表 + ((节点.name, 号),))
-    return {ok: true, 状态: 发(记过, {op: "STORE", a: 号, b: 种 == "Var"}), 结束: false}
+    return {ok: true, 状态: 发(记过, {op: "STORE", a: 号, b: 种 == "变"}), 结束: false}
   }
-  if 种 == "Assign" {
+  if 种 == "赋值" {
     let 号 = 找槽(状态.名表, 节点.name)
     // 槽里没有就是模块级的名字：写它走 SETGLOBAL，与读它走 GLOBAL 对称。
     // 宿主那一份（src/bytecode.mjs）也是这么做的 —— 两台编译器给同一份字节流。
@@ -464,14 +464,14 @@ fn 语句(节点: Int, 状态: Int) {
     if v.ok == false { return v }
     return {ok: true, 状态: 发(v.状态, {op: "ASSIGN", a: 号}), 结束: false}
   }
-  if 种 == "ExprStmt" {
+  if 种 == "表达式语句" {
     // 表达式语句：只编表达式，丢不丢值由 编块 决定 —— 它知道这是不是最后一条。
     // 早先在这里无条件发 POP，于是 if 的真支里多出一条，字节流与 JS 那侧对不上。
     let v = 表达(节点.value, 状态)
     if v.ok == false { return v }
     return {ok: true, 状态: v.状态, 结束: false}
   }
-  if 种 == "If" {
+  if 种 == "若" {
     return 编如果(节点, 状态)
   }
   if 种 == "当" {
@@ -546,7 +546,7 @@ fn 编块不留值(语句们: Int, 状态: Int, i: Int) {
   if r.ok == false { return r }
   if r.结束 { return {ok: true, 状态: r.状态, 结束: true} }
   var 下 = r.状态
-  if 语句们[i].kind == "ExprStmt" {
+  if 语句们[i].kind == "表达式语句" {
     下 = 发(下, {op: "POP"})
   }
   return 编块不留值(语句们, 下, i + 1)
@@ -563,7 +563,7 @@ fn 编块(语句们: Int, 状态: Int, i: Int) {
   if r.ok == false { return r }
   if r.结束 { return {ok: true, 状态: r.状态, 结束: true} }
   var 下 = r.状态
-  if i + 1 < len(语句们) && 语句们[i].kind == "ExprStmt" {
+  if i + 1 < len(语句们) && 语句们[i].kind == "表达式语句" {
     下 = 发(下, {op: "POP"})
   }
   return 编块(语句们, 下, i + 1)

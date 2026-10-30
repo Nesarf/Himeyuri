@@ -124,7 +124,7 @@ function 走块(语句们, 状态, 报, 签名表) {
     if (!句) continue;
 
     // let X = … —— 先看右值里有没有 放 / 取，再决定 X 自己是什么状态。
-    if ((句.kind === "Let" || 句.kind === "Var") && 句.value) {
+    if ((句.kind === "定" || 句.kind === "变") && 句.value) {
       if (句.value.kind === "调用" && 句.value.callee &&
           句.value.callee.kind === "名" && 句.value.callee.name === "owned") {
         状态.set(句.name, 空);
@@ -136,7 +136,7 @@ function 走块(语句们, 状态, 报, 签名表) {
     }
 
     // 方法调用：X.放(v) / X.取()。
-    const 调 = 句.kind === "ExprStmt" ? 句.expr : (句.kind === "Assign" ? 句.value : null);
+    const 调 = 句.kind === "表达式语句" ? 句.expr : (句.kind === "赋值" ? 句.value : null);
     if (处理方法调用(调, 状态, 报)) continue;
 
     // 跨函数的转移：调用一个把某参数标成 own 的函数，而实参是一条被追踪的持有格时，
@@ -164,11 +164,11 @@ function 走块(语句们, 状态, 报, 签名表) {
     // 分支与循环。两只形状都要认：宿主那一层的 parser 给的是语句（kind 就是 If / While），
     // 而子集那一层给的是表达式（ExprStmt 的 expr 是 If / While）。
     // 只认一只的话，另一只上这一节等于没跑 —— 而它会「碰巧」通过，因为走到降级那条路。
-    const 控制 = (句.kind === "If" || 句.kind === "当")
+    const 控制 = (句.kind === "若" || 句.kind === "当")
       ? 句
-      : (调 && (调.kind === "If" || 调.kind === "当") ? 调 : null);
+      : (调 && (调.kind === "若" || 调.kind === "当") ? 调 : null);
 
-    if (控制 && 控制.kind === "If") {
+    if (控制 && 控制.kind === "若") {
       // 两条路径各走一遍（用的是同一份状态的拷贝），再按「都一样才保得住」汇合。
       // 没有 else 的那一支，另一侧就是原状态 —— 那是「可能没走」的意思。
       const 甲 = 走块(控制.then ? (控制.then.statements || []) : [], new Map(状态), 报, 签名表);

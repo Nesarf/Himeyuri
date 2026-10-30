@@ -135,7 +135,7 @@ const 深转 = (v) => {
     // 无 else 的 if：这一侧包成「空 Block」，而宿主的编译按「有没有 otherwise」决定
     // 要不要在假分支补 CONST。空 Block 是真值，会被当成「有」，于是少一条指令；
     // 折成 null 才是宿主自己的说法。
-    if (o.kind === "If" && o.otherwise && Array.isArray(o.otherwise.statements) && o.otherwise.statements.length === 0) {
+    if (o.kind === "若" && o.otherwise && Array.isArray(o.otherwise.statements) && o.otherwise.statements.length === 0) {
       o.otherwise = null;
     }
     // rev 0 在这一侧表示「没写」；宿主用 null 表示不提要求。

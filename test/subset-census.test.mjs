@@ -29,7 +29,7 @@ const 走表达式 = (n) => {
   if (n.kind === "字") 计(字面量, String(n.type));
   if (n.kind === "二元" || n.kind === "Unary") 计(运算符, String(n.op));
   switch (n.kind) {
-    case "If": 走表达式(n.condition); 走语句(n.then); 走语句(n.otherwise); break;
+    case "若": 走表达式(n.condition); 走语句(n.then); 走语句(n.otherwise); break;
     case "当": 走表达式(n.condition); 走语句(n.body); break;
     case "二元": 走表达式(n.left); 走表达式(n.right); break;
     case "Unary": 走表达式(n.operand); break;
@@ -44,12 +44,12 @@ const 走语句 = (s) => {
   if (!s || typeof s !== "object") return;
   计(语句, s.kind);
   switch (s.kind) {
-    case "Let": case "Var": 走表达式(s.value); break;
-    case "Assign": 走表达式(s.value); break;
-    case "Return": if (s.value) 走表达式(s.value); break;
-    case "ExprStmt": 走表达式(s.expr); break;
+    case "定": case "变": 走表达式(s.value); break;
+    case "赋值": 走表达式(s.value); break;
+    case "返回": if (s.value) 走表达式(s.value); break;
+    case "表达式语句": 走表达式(s.expr); break;
     case "Block": (s.statements || []).forEach(走语句); break;
-    case "If": 走表达式(s.condition); 走语句(s.then); 走语句(s.otherwise); break;
+    case "若": 走表达式(s.condition); 走语句(s.then); 走语句(s.otherwise); break;
     case "当": 走表达式(s.condition); 走语句(s.body); break;
   }
 };
@@ -66,7 +66,7 @@ for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
 
 console.log("一、语句：六种");
 {
-  const 应 = ["Assign", "Block", "ExprStmt", "Let", "Return", "Var"];
+  const 应 = ["赋值", "Block", "表达式语句", "定", "返回", "变"];
   const 实 = [...语句.keys()].sort();
   ok("语句种类正好六种", 实.length === 6, 实.join(" "));
   ok("而它们是那六种", JSON.stringify(实) === JSON.stringify(应), 实.join(" "));
@@ -76,7 +76,7 @@ console.log("二、表达式：十一种");
 {
   const 实 = [...表达式.keys()].sort();
   ok("表达式种类正好十一种", 实.length === 11, 实.join(" "));
-  ok("含 If（它在这一门语言里也是表达式）", 实.includes("If"), 实.join(" "));
+  ok("含 If（它在这一门语言里也是表达式）", 实.includes("若"), 实.join(" "));
   ok("含 While", 实.includes("当"), 实.join(" "));
 }
 

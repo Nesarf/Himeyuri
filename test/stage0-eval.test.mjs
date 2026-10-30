@@ -99,14 +99,14 @@ try {
   ok("import 那个给四十二", 引.码 === 0 && 引.出.trim() === "42", 引.码 + " / " + JSON.stringify(引.出.trim()));
 
   console.log("二、表达式：十一种（宿主有十八种，用不到的那几种不在表里）");
-  const 应表达式 = ["二元", "调用", "Field", "名", "If", "Index", "字", "Record", "Tuple", "Unary", "当"];
+  const 应表达式 = ["二元", "调用", "Field", "名", "若", "Index", "字", "Record", "Tuple", "Unary", "当"];
   const 实表达式 = [...全部表达式].sort();
   ok("正好十一种", 实表达式.length === 11, 实表达式.join(" "));
   ok("而它们是那十一种", JSON.stringify(实表达式) === JSON.stringify(应表达式), 实表达式.join(" "));
   ok("Match 一次都没用到（这一条是这张表的价值所在）", !全部表达式.has("Match"), 实表达式.join(" "));
 
   console.log("三、语句：五种");
-  const 应语句 = ["Assign", "ExprStmt", "Let", "Return", "Var"];
+  const 应语句 = ["赋值", "表达式语句", "定", "返回", "变"];
   const 实语句 = [...全部语句].sort();
   ok("正好五种", 实语句.length === 5, 实语句.join(" "));
   ok("而它们是那五种", JSON.stringify(实语句) === JSON.stringify(应语句), 实语句.join(" "));

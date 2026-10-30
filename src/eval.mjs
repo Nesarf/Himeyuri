@@ -57,8 +57,8 @@ class Return extends Error { constructor(value) { super("return"); this.value = 
 // 只卖一个布尔，不卖整张表：表是实现的细节，而「这个名字算不算内置」是可问的事实。
 export const isBuiltin = (name) => Object.prototype.hasOwnProperty.call(BUILTINS, name);
 
-const STAGE0_EXPR = new Set(["二元", "调用", "Field", "名", "If", "Index", "字", "Record", "Tuple", "Unary", "当"]);
-const STAGE0_STMT = new Set(["Assign", "ExprStmt", "Let", "Return", "Var"]);
+const STAGE0_EXPR = new Set(["二元", "调用", "Field", "名", "若", "Index", "字", "Record", "Tuple", "Unary", "当"]);
+const STAGE0_STMT = new Set(["赋值", "表达式语句", "定", "返回", "变"]);
 // 跑 self/ 那六份真正需要的内置。stage0 模式下只放这几个过去。
 // field_names 不在这一张里：自举层现在还不用它，而这张表的意思是「已经量过的必须项」，
 // 多写一个就把闸门放宽了一格。
@@ -297,20 +297,20 @@ export class Runtime {
       throw new Error("stage 0 does not need the statement kind '" + stmt.kind + "'");
     }
     switch (stmt.kind) {
-      case "Let": case "Var": {
+      case "定": case "变": {
         const value = this.evalExpr(stmt.value, scope, effects);
         // let is immutable, var is not. The distinction is a rule with a code, not a convention.
-        scope.set(stmt.name, value, stmt.kind === "Var");
+        scope.set(stmt.name, value, stmt.kind === "变");
         return value;
       }
-      case "Assign": {
+      case "赋值": {
         const value = this.evalExpr(stmt.value, scope, effects);
         if (!scope.assign(stmt.name, value)) {
           this.fail("HMYR-行-017", "cannot assign to '" + stmt.name + "': it is not a variable declared with var, or it is not in scope");
         }
         return value;
       }
-      case "Return": {
+      case "返回": {
         // 尾位置：return f(...) 里的那个调用不必保留这一层。
         // 于是把它包成 TailCall 抛上去，由 callFunction 的循环接手。
         //
@@ -325,7 +325,7 @@ export class Runtime {
         }
         throw new Return(v ? this.evalExpr(v, scope, effects) : null);
       }
-      case "ExprStmt": return this.evalExpr(stmt.expr, scope, effects);
+      case "表达式语句": return this.evalExpr(stmt.expr, scope, effects);
       case "DeclStmt":
         if (stmt.decl.kind === "Fn") { this.functions.set(stmt.decl.name, stmt.decl); return null; }
         if (stmt.decl.kind === "Const") { const v = this.evalExpr(stmt.decl.value, scope, effects); scope.set(stmt.decl.name, v, false); return v; }
@@ -377,7 +377,7 @@ export class Runtime {
 
       }
 
-      case "If": {
+      case "若": {
         const condition = this.evalExpr(node.condition, scope, effects);
         if (this.truthy(condition)) return node.then ? this.execBlock(node.then, scope, effects) : null;
         if (!node.otherwise) return null;

@@ -101,7 +101,7 @@ console.log("三、If 与 While 在表达式层（它们在这一门语言里有
 {
   const 树 = 子集解(切("fn f(a: Int) -> Int {\n  let b = if a > 1 { 2 } else { 3 }\n  return b\n}\n")).ast;
   const 语句 = 树.decls[0].body.statements;
-  ok("let 的值是 If 节点", 语句[0].value && 语句[0].value.kind === "If", JSON.stringify(语句[0].value && 语句[0].value.kind));
+  ok("let 的值是 If 节点", 语句[0].value && 语句[0].value.kind === "若", JSON.stringify(语句[0].value && 语句[0].value.kind));
   const 树2 = 子集解(切("fn f(a: Int) { while a < 3 { a = a + 1 } }\n")).ast;
   ok("while 作为表达式语句出现", 树2.decls[0].body.statements[0].expr.kind === "当", 树2.decls[0].body.statements[0].expr.kind);
 }

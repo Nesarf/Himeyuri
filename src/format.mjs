@@ -109,11 +109,11 @@ class Printer {
 
   statement(node, level) {
     switch (node.kind) {
-      case "Let": return "let " + node.name + (node.type ? ": " + this.type(node.type) : "") + " = " + this.expr(node.value, level, 0);
-      case "Var": return "var " + node.name + (node.type ? ": " + this.type(node.type) : "") + " = " + this.expr(node.value, level, 0);
-      case "Assign": return node.name + " = " + this.expr(node.value, level, 0);
-      case "Return": return "return" + (node.value ? " " + this.expr(node.value, level, 0) : "");
-      case "ExprStmt": return this.expr(node.expr, level, 0);
+      case "定": return "let " + node.name + (node.type ? ": " + this.type(node.type) : "") + " = " + this.expr(node.value, level, 0);
+      case "变": return "var " + node.name + (node.type ? ": " + this.type(node.type) : "") + " = " + this.expr(node.value, level, 0);
+      case "赋值": return node.name + " = " + this.expr(node.value, level, 0);
+      case "返回": return "return" + (node.value ? " " + this.expr(node.value, level, 0) : "");
+      case "表达式语句": return this.expr(node.expr, level, 0);
       case "DeclStmt": return this.decl(node.decl);
       default: return "// (unprintable statement: " + node.kind + ")";
     }
@@ -143,7 +143,7 @@ class Printer {
       case "Tuple": return this.sequence("(", ")", node.items, level, col);
       case "Record": return this.record(node, level, col);
       case "Block": return this.block(node, level);
-      case "If": return this.ifExpr(node, level, col);
+      case "若": return this.ifExpr(node, level, col);
       case "Match": return this.matchExpr(node, level, col);
       default: return "/* unprintable expression: " + node.kind + " */";
     }

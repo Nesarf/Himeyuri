@@ -89,7 +89,7 @@ export function 区检查(ast, 选项 = {}) {
         return;
       }
 
-      if (n.kind === "If") {
+      if (n.kind === "若") {
         走(n.condition, 在循环里, 直行);
         走(n.then, 在循环里, false);
         走(n.otherwise, 在循环里, false);
@@ -130,7 +130,7 @@ export function 区检查(ast, 选项 = {}) {
         return;
       }
 
-      if (n.kind === "Let" || n.kind === "Var") {
+      if (n.kind === "定" || n.kind === "变") {
         if (是arena调用(n.value)) 建场(n.name);
         else {
           const 调 = 方法调用(n.value);
@@ -142,14 +142,14 @@ export function 区检查(ast, 选项 = {}) {
         return;
       }
 
-      if (n.kind === "Assign") {
+      if (n.kind === "赋值") {
         const 调 = 方法调用(n.value);
         if (调 && 场.has(调.目标) && 分配方法.has(调.方法)) 场.get(调.目标).块.add(n.name);
         走(n.value, 在循环里, 直行);
         return;
       }
 
-      if (n.kind === "Return") {
+      if (n.kind === "返回") {
         const 名 = 名字(n.value);
         if (名) {
           const 命中 = 块属于谁(名);

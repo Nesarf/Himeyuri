@@ -54,7 +54,7 @@ console.log("\nstatements");
 {
   const r = clean("fn f() {\n  let a = 1\n  var b: Int = 2\n  a + b\n  return a\n}\n");
   const kinds = r.ast.decls[0].body.statements.map((s) => s.kind);
-  ok("let, var, expression and return", kinds.join(",") === "Let,Var,ExprStmt,Return");
+  ok("let, var, expression and return", kinds.join(",") === "定,变,表达式语句,返回");
   ok("the type annotation is kept", r.ast.decls[0].body.statements[1].type.name === "Int");
 }
 {
@@ -94,7 +94,7 @@ console.log("\nif and match");
 {
   const r = clean("fn f() {\n  if a { 1 } else if b { 2 } else { 3 }\n}\n");
   const e = r.ast.decls[0].body.statements[0].expr;
-  ok("if / else if / else", e.kind === "If" && e.otherwise.kind === "If" && e.otherwise.otherwise.kind === "Block");
+  ok("if / else if / else", e.kind === "若" && e.otherwise.kind === "若" && e.otherwise.otherwise.kind === "Block");
 }
 {
   const r = clean("fn f() {\n  match x {\n    1 => \"one\",\n    _ => \"other\"\n  }\n}\n");
@@ -110,7 +110,7 @@ console.log("\nrecovery: one mistake does not become a cascade");
   const codes = errorsOf("fn f() {\n  let a = 1 +\n  let b = 2\n  let c = 3\n}\n");
   ok("a single error is reported", codes.length <= 2);
   const r = run("fn f() {\n  let a = 1 +\n  let b = 2\n  let c = 3\n}\n");
-  const lets = r.ast.decls[0].body.statements.filter((s) => s.kind === "Let").length;
+  const lets = r.ast.decls[0].body.statements.filter((s) => s.kind === "定").length;
   ok("statements after the error are still parsed", lets >= 2);
 }
 {

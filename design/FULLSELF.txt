@@ -2004,6 +2004,25 @@ selfloa 的 27/27）。
 
     进度：32 种里完成 9 种（加「当」）。
 
+自立：六种语句节点一起换（2026-11-02，新一段第 25 轮）
+
+    先查 Return、ExprStmt、Assign、If 四者的可疑行 —— 全是 kind 语境（self-tree.mjs
+    的映射表与两份测试的期望列表），所以一起换了。跑十套，parser 一条红：
+
+      ok("let, var, expression and return", kinds.join(",") === "Let,Var,ExprStmt,Return")
+
+    那条断言比较的是不带引号的拼接串，所以带引号的替换碰不到它。于是这一轮又把
+    Let 到定、Var 到变 补上（79 处），并把那条断言改成「定,变,表达式语句,返回」。
+
+    读数：eval、codes-eval、minimal-eval、bytecode、vm、parser、stage0-eval、
+    subset-census、docs 九套全过；run.hmoks 重编。
+
+    进度：32 种里完成 15 种 —— 字、名、二元、调用、类型名、组类型、记录类型、函数类型、
+    当、返回、表达式语句、赋值、若、定、变。
+
+    教训记一句：拼接起来的 kind 名（join 之后）与带引号的 kind 名是两种形状，
+    替换前要两种都查 —— 这一条是 parser 那一条红教会的。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 HMYR-載-001；
 另外引的文件不在就报 HMYR-載-003（宿主也是这个码）。顺序取后序，于是 order 逐项相同。

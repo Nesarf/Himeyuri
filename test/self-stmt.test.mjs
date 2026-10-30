@@ -63,11 +63,11 @@ function jsStatement(source) {
     if (node.kind === "名") return { kind: "名", text: node.name };
     return { kind: "other:" + node.kind };
   };
-  if (stmt.kind === "Let") return { kind: "Let", name: stmt.name, value: shape(stmt.value) };
-  if (stmt.kind === "Var") return { kind: "Var", name: stmt.name, value: shape(stmt.value) };
+  if (stmt.kind === "定") return { kind: "定", name: stmt.name, value: shape(stmt.value) };
+  if (stmt.kind === "变") return { kind: "变", name: stmt.name, value: shape(stmt.value) };
   // 无值的 return 用 nil 节点：空元组是一个值，而「没有值」不是值，两者不能混。
-  if (stmt.kind === "Return") return { kind: "Return", value: stmt.value ? shape(stmt.value) : { kind: "nil" } };
-  if (stmt.kind === "ExprStmt") return { kind: "ExprStmt", value: shape(stmt.expr) };
+  if (stmt.kind === "返回") return { kind: "返回", value: stmt.value ? shape(stmt.value) : { kind: "nil" } };
+  if (stmt.kind === "表达式语句") return { kind: "表达式语句", value: shape(stmt.expr) };
   return { kind: "other:" + stmt.kind };
 }
 
@@ -99,11 +99,11 @@ console.log("\nthe parts of a statement");
 {
   const node = readStatement("return");
   // 无值的 return 带一个 nil 节点：空元组是一个值，而「没有值」不是值。
-  ok("a bare return carries no value", node.kind === "Return" && node.value && node.value.kind === "nil", JSON.stringify(node));
+  ok("a bare return carries no value", node.kind === "返回" && node.value && node.value.kind === "nil", JSON.stringify(node));
 }
 {
   const node = readStatement("a + b");
-  ok("a bare expression is an expression statement", node.kind === "ExprStmt" && node.value.kind === "二元");
+  ok("a bare expression is an expression statement", node.kind === "表达式语句" && node.value.kind === "二元");
 }
 
 console.log("\nwhat it refuses to guess");
@@ -111,7 +111,7 @@ console.log("\nwhat it refuses to guess");
   // A call is not in this subset yet: the chain knows + - * / % and brackets, nothing else. The
   // statement reader reads the name and stops at the bracket, which is honest rather than clever.
   const node = readStatement("f(1)");
-  ok("a call is now read as a call", node.kind === "ExprStmt" && node.value.kind === "调用" && node.value.args.length === 1, JSON.stringify(node));
+  ok("a call is now read as a call", node.kind === "表达式语句" && node.value.kind === "调用" && node.value.args.length === 1, JSON.stringify(node));
 }
 {
   const node = attempt(() => readStatement(""));

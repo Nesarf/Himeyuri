@@ -3,13 +3,13 @@ import "./chain.hmoca"
 // 用 Himeyuri 写的第六件：语句级解析。
 //
 // 前一件（chain.hmyr）只把**一个表达式**读成树；这一件把它抬到**一行语句**：
-//   let x = <表达式>   -> {kind: "Let", name, value}
-//   var x = <表达式>   -> {kind: "Var", name, value}
-//   return <表达式>    -> {kind: "Return", value}
-//   return（不带值）    -> {kind: "Return", value: {kind: "nil"}}
+//   let x = <表达式>   -> {kind: "定", name, value}
+//   var x = <表达式>   -> {kind: "变", name, value}
+//   return <表达式>    -> {kind: "返回", value}
+//   return（不带值）    -> {kind: "返回", value: {kind: "nil"}}
 //     用 nil 节点而不是空元组：空元组是一个**值**，而「没有值」不是值。两者混在一起，
 //     求值器就分不清 len 该不该收它。
-//   <表达式>           -> {kind: "ExprStmt", value}
+//   <表达式>           -> {kind: "表达式语句", value}
 // 认不出来时给 {kind: "Error", text}，不猜。
 //
 // 依赖是明写的：表达式那一层在 chain.hmyr 里，加载器会顺着它把 lex.hmyr 也带进来。
@@ -38,9 +38,9 @@ fn binding(tokens: Int, i: Int, keyword: String) {
   }
   let got = from_here(tokens, i + 3)
   if keyword == "let" {
-    return {node: {kind: "Let", name: name.text, value: got.node, line: 位.line, column: 位.column}, next: got.next}
+    return {node: {kind: "定", name: name.text, value: got.node, line: 位.line, column: 位.column}, next: got.next}
   }
-  return {node: {kind: "Var", name: name.text, value: got.node, line: 位.line, column: 位.column}, next: got.next}
+  return {node: {kind: "变", name: name.text, value: got.node, line: 位.line, column: 位.column}, next: got.next}
 }
 
 fn statement(tokens: Int, i: Int) {
@@ -55,20 +55,20 @@ fn statement(tokens: Int, i: Int) {
   if is_word(t, "while") { return parse_while(tokens, i + 1) }
   if is_word(t, "return") {
     if i + 1 >= len(tokens) {
-      return {node: {kind: "Return", value: {kind: "nil"}, line: t.line, column: t.column}, next: i + 1}
+      return {node: {kind: "返回", value: {kind: "nil"}, line: t.line, column: t.column}, next: i + 1}
     }
     // return 之后可能先有一个换行，然后是跨行的表达式（return ( 换行 元素... ））。
     let got = from_here(tokens, skip_newlines(tokens, i + 1))
-    return {node: {kind: "Return", value: got.node, line: t.line, column: t.column}, next: got.next}
+    return {node: {kind: "返回", value: got.node, line: t.line, column: t.column}, next: got.next}
   }
   let got = from_here(tokens, i)
   // 赋值是语句而不是表达式：形状是「裸名字 = 表达式」。
   // 词法把 = 与 == 留成不同的 token，所以比较不会被误读成赋值。
   if got.node.kind == "名" && got.next < len(tokens) && is_punct(tokens[got.next], "=") {
     let value = from_here(tokens, got.next + 1)
-    return {node: {kind: "Assign", name: got.node.text, value: value.node, line: got.node.line, column: got.node.column}, next: value.next}
+    return {node: {kind: "赋值", name: got.node.text, value: value.node, line: got.node.line, column: got.node.column}, next: value.next}
   }
-  return {node: {kind: "ExprStmt", value: got.node, line: t.line, column: t.column}, next: got.next}
+  return {node: {kind: "表达式语句", value: got.node, line: t.line, column: t.column}, next: got.next}
 }
 
 // 跳过换行：块内的语句之间有换行，它们只是分隔，不是内容。
@@ -114,7 +114,7 @@ fn parse_if(tokens: Int, i: Int) {
       next = one.next
     }
   }
-  return {node: {kind: "If", cond: cond.node, then: then.list, otherwise: otherwise, line: 位.line, column: 位.column}, next: next}
+  return {node: {kind: "若", cond: cond.node, then: then.list, otherwise: otherwise, line: 位.line, column: 位.column}, next: next}
 }
 
 // while：条件是一个表达式，然后是一个块。

@@ -29,8 +29,8 @@ const 映射 = {
   num: "字", str: "字", name: "名",
   bin: "二元", unary: "Unary", call: "调用", field: "Field", index: "Index",
   tuple: "Tuple", record: "Record", err: "Error",
-  let: "Let", var: "Var", return: "Return", assign: "Assign", expr: "ExprStmt",
-  if: "If", while: "当",
+  let: "定", var: "变", return: "返回", assign: "赋值", expr: "表达式语句",
+  if: "若", while: "当",
   Fn: "Fn", Block: "Block", Module: "Module", Import: "Import",
 };
 
@@ -47,10 +47,10 @@ const 子对们 = (s, h) => {
     case "Module": return [...列(s.imports).map((x, i) => [x, 列(h.imports)[i]]), ...列(s.decls).map((x, i) => [x, 列(h.decls)[i]])];
     case "Fn": return [[s.body, h.body]];
     case "Block": return 列(s.statements).map((x, i) => [x, 列(h.statements)[i]]);
-    case "Let": case "Var": case "Assign": case "Return":
+    case "定": case "变": case "赋值": case "返回":
       return [[s.value, h.value]];
-    case "ExprStmt": return [[s.expr, h.expr]];
-    case "If": return [[s.condition, h.condition]];
+    case "表达式语句": return [[s.expr, h.expr]];
+    case "若": return [[s.condition, h.condition]];
     case "当": return [[s.condition, h.condition]];
     case "二元": return [[s.left, h.left], [s.right, h.right]];
     case "Unary": return [[s.operand, h.operand]];
@@ -122,7 +122,7 @@ const 走 = (s, h, 路, 计) => {
     if (typeof x === "object") return Object.keys(x).length;   // self 的元组在 JS 侧是类数组对象
     return -1;
   };
-  if (s.kind === "If") {
+  if (s.kind === "若") {
     if (数(s.then) !== 数(h.then)) return { 路: 路 + "/then", 因: "语句数 self=" + 数(s.then) + " 宿主=" + 数(h.then) };
     if (数(s.otherwise) !== 数(h.otherwise)) return { 路: 路 + "/otherwise", 因: "语句数 self=" + 数(s.otherwise) + " 宿主=" + 数(h.otherwise) };
   }

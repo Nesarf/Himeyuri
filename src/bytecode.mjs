@@ -155,7 +155,7 @@ const 核对 = (类型, 形, 深度 = 0) => {
 const 收集返回 = (node, acc) => {
   if (!node || typeof node !== "object") return acc;
   if (Array.isArray(node)) { for (const x of node) 收集返回(x, acc); return acc; }
-  if (node.kind === "Return") acc.push(node);
+  if (node.kind === "返回") acc.push(node);
   for (const k of Object.keys(node)) {
     if (k === "line" || k === "column") continue;
     const v = node[k];
@@ -289,7 +289,7 @@ const 编译函数 = (decl) => {
         else 发("CALLF", n.callee.name, n.args.length);
         return;
       }
-      case "If": {
+      case "若": {
         // 形状：条件 → JMPF 假 → then 的值 → JMP 完 → 假: otherwise 的值 → 完:
         // 「没有 otherwise」时把 CONST null 放在假分支上，而不是放在 then 之后——
         // 放在 then 之后会让两个分支各留一个值，栈就错位了。
@@ -329,15 +329,15 @@ const 编译函数 = (decl) => {
   // 这里靠「最后一条表达式语句不 POP」来表示。
   const 语句 = (s, 留值) => {
     switch (s.kind) {
-      case "Let": case "Var": {
+      case "定": case "变": {
         表达(s.value);
-        const 槽 = 分配(s.name, s.kind === "Var");
+        const 槽 = 分配(s.name, s.kind === "变");
         // 可变性放在指令上：执行时 STORE 把它记进槽，ASSIGN 读它。
         // 宿主那边这件事由作用域链在运行时判（HMYR-行-017），这里同样在运行时判。
-        发("STORE", 槽, s.kind === "Var");
+        发("STORE", 槽, s.kind === "变");
         return;
       }
-      case "Assign": {
+      case "赋值": {
         const 有 = 查(s.name);
         // 槽里没有就是模块级的名字：写它要 SETGLOBAL，与读它走 GLOBAL 是对称的。
         // 顶层的 var 才落在这一条上；函数里的 var 在槽里，走 ASSIGN（那条会验「可写」）。
@@ -346,12 +346,12 @@ const 编译函数 = (decl) => {
         发("ASSIGN", 有.槽);
         return;
       }
-      case "Return": {
+      case "返回": {
         if (s.value) 表达(s.value); else 发("CONST", null);
         发("RET");
         return;
       }
-      case "ExprStmt":
+      case "表达式语句":
         表达(s.expr);
         if (!留值) 发("POP");
         return;

@@ -345,7 +345,7 @@ export function parse(tokens, options = {}) {
       advance();
       const value = parseExpr();
       endStatement();
-      return { kind: "Assign", name: name.value, value, line: name.line, column: name.column };
+      return { kind: "赋值", name: name.value, value, line: name.line, column: name.column };
     }
     if (at("keyword", "let") || at("keyword", "var")) {
       const kw = advance();
@@ -355,13 +355,13 @@ export function parse(tokens, options = {}) {
       expectPunct("=", "before the value");
       const value = parseExpr();
       endStatement();
-      return { kind: kw.value === "let" ? "Let" : "Var", name: name ? name.value : "<error>", type, value, line: kw.line, column: kw.column };
+      return { kind: kw.value === "let" ? "定" : "变", name: name ? name.value : "<error>", type, value, line: kw.line, column: kw.column };
     }
     if (at("keyword", "return")) {
       const kw = advance();
       const value = at("newline") || atPunct("}") || at("eof") ? null : parseExpr();
       endStatement();
-      return { kind: "Return", value, line: kw.line, column: kw.column };
+      return { kind: "返回", value, line: kw.line, column: kw.column };
     }
     // A nested declaration inside a block is allowed (a local function, say).
     if (at("keyword", "fn") || at("keyword", "pub") || at("keyword", "type") || at("keyword", "const")) {
@@ -370,7 +370,7 @@ export function parse(tokens, options = {}) {
     }
     const expr = parseExpr();
     endStatement();
-    return { kind: "ExprStmt", expr, line: t.line, column: t.column };
+    return { kind: "表达式语句", expr, line: t.line, column: t.column };
   }
 
   function parseExpr() {
@@ -461,7 +461,7 @@ export function parse(tokens, options = {}) {
         advance();
         otherwise = at("keyword", "if") ? parsePrimary() : parseBlock();
       }
-      return { kind: "If", condition, then, otherwise, line: t.line, column: t.column };
+      return { kind: "若", condition, then, otherwise, line: t.line, column: t.column };
     }
 
     if (at("keyword", "match")) {

@@ -1168,12 +1168,12 @@ fn 坏执行(原因: String) {
 
 fn 执行(节点: Int, 环境: Int) -> Int {
   let 种 = 节点.kind
-  if 种 == "Let" || 种 == "Var" {
+  if 种 == "定" || 种 == "变" {
     let v = 求值(节点.value, 环境)
     if v.ok == false { return 坏执行(v.text) }
     return 好执行(更新(环境, 节点.name, v.value), false, ())
   }
-  if 种 == "Assign" {
+  if 种 == "赋值" {
     // 模块级 const 在装进环境时留了一条只读标记（见 装常量从）。
     let 只读 = 查找(环境, "只读:" + 节点.name)
     if 只读.found { return 坏执行("不能给 const 重新绑定：" + 节点.name) }
@@ -1194,12 +1194,12 @@ fn 执行(节点: Int, 环境: Int) -> Int {
     // 改那一条，而不是追加一条 —— 见 改在 的注释。
     return 好执行(改在(环境, 位, v.value), false, ())
   }
-  if 种 == "ExprStmt" {
+  if 种 == "表达式语句" {
     let v = 求值(节点.value, 环境)
     if v.ok == false { return 坏执行(v.text) }
     return 好执行(环境, false, ())
   }
-  if 种 == "Return" {
+  if 种 == "返回" {
     // 无值时那个位置是 {kind: "nil"}，于是这一层只看 kind——不用 len 去探，
     // 因为值也可能是一个记录，而 len 只收字符串与元组。
     if 节点.value.kind == "nil" { return 好执行(环境, true, ()) }
@@ -1207,7 +1207,7 @@ fn 执行(节点: Int, 环境: Int) -> Int {
     if v.ok == false { return 坏执行(v.text) }
     return 好执行(环境, true, v.value)
   }
-  if 种 == "If" {
+  if 种 == "若" {
     let c = 求值(节点.cond, 环境)
     if c.ok == false { return 坏执行(c.text) }
     if c.value != false {

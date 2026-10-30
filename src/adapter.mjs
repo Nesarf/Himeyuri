@@ -74,7 +74,7 @@ export const expression = (源码) => {
   // 取第一个 return 的表达式——这一版只转表达式，于是不必假装能跑整个文件。
   const 找 = (列表) => {
     for (const s of 列表 || []) {
-      if (s.kind === "Return" && s.value) return s.value;
+      if (s.kind === "返回" && s.value) return s.value;
     }
     return null;
   };
@@ -109,31 +109,31 @@ const 语句 = (节点) => {
   if (!节点 || typeof 节点 !== "object") return { kind: "Error", text: "空语句" };
 
   switch (节点.kind) {
-    case "Let":
-    case "Var":
-      return { kind: 节点.kind === "Var" ? "Var" : "Let", name: String(节点.name), value: 转(节点.value) };
+    case "定":
+    case "变":
+      return { kind: 节点.kind === "变" ? "变" : "定", name: String(节点.name), value: 转(节点.value) };
 
-    case "Assign":
-      return { kind: "Assign", name: String(节点.name), value: 转(节点.value) };
+    case "赋值":
+      return { kind: "赋值", name: String(节点.name), value: 转(节点.value) };
 
-    case "ExprStmt":
+    case "表达式语句":
       // 宿主把 if 解成了表达式语句——于是这里的 expr 可能就是 If。
       // 那是一个「语句装成表达式」的怪形状：它在宿主那边是自洽的（if 后面还能接东西），
       // 而自举那边 If 就是语句。于是这里把它剥出来，而不是包进 expr 里。
       //
       // 这个差别不是错，是两种理解；而把它在这里说清，比在求值时才炸开好。
-      if (节点.expr && (节点.expr.kind === "If" || 节点.expr.kind === "当")) return 语句(节点.expr);
-      return { kind: "ExprStmt", value: 转(节点.expr) };
+      if (节点.expr && (节点.expr.kind === "若" || 节点.expr.kind === "当")) return 语句(节点.expr);
+      return { kind: "表达式语句", value: 转(节点.expr) };
 
-    case "Return":
+    case "返回":
       // 无值的 return 在自举那边是 {kind:"nil"} 而不是 null——
       // 一个空的元组是值，而「没有值」不是一个值。那条规矩在那边守着，于是这里也守。
-      return { kind: "Return", value: 节点.value ? 转(节点.value) : { kind: "nil" } };
+      return { kind: "返回", value: 节点.value ? 转(节点.value) : { kind: "nil" } };
 
-    case "If":
+    case "若":
       // 宿主的字段叫 condition 而不是 cond，而 otherwise 又恰好同名——
       // 猜对一半的代价是：猜对的那一半不会告诉你猜错的那一半。
-      return { kind: "If", cond: 转(节点.condition), then: 块(节点.then), otherwise: 块(节点.otherwise) };
+      return { kind: "若", cond: 转(节点.condition), then: 块(节点.then), otherwise: 块(节点.otherwise) };
 
     case "当":
       // 与 If 一样，条件在 condition 里（而 If 我一开始猜成 cond，踩过一次）。

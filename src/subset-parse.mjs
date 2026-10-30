@@ -336,7 +336,7 @@ export const 子集解 = (tokens, options = {}) => {
       进();
       const value = 解析表达式();
       收句();
-      return { kind: "Assign", name: 名.value, value, line: 名.line, column: 名.column };
+      return { kind: "赋值", name: 名.value, value, line: 名.line, column: 名.column };
     }
     if (是("keyword", "let") || 是("keyword", "var")) {
       const kw = 进();
@@ -345,17 +345,17 @@ export const 子集解 = (tokens, options = {}) => {
       要标("=", "赋值号");
       const value = 解析表达式();
       收句();
-      return { kind: kw.value === "let" ? "Let" : "Var", name: 名 ? 名.value : "<error>", type: null, value, line: kw.line, column: kw.column };
+      return { kind: kw.value === "let" ? "定" : "变", name: 名 ? 名.value : "<error>", type: null, value, line: kw.line, column: kw.column };
     }
     if (是("keyword", "return")) {
       const kw = 进();
       const value = (是("newline") || 是标("}") || 是("eof")) ? null : 解析表达式();
       收句();
-      return { kind: "Return", value, line: kw.line, column: kw.column };
+      return { kind: "返回", value, line: kw.line, column: kw.column };
     }
     const expr = 解析表达式();
     收句();
-    return { kind: "ExprStmt", expr, line: t.line, column: t.column };
+    return { kind: "表达式语句", expr, line: t.line, column: t.column };
   }
 
   const 解析表达式 = () => 解析二元(0);
@@ -449,7 +449,7 @@ export const 子集解 = (tokens, options = {}) => {
           otherwise = 是("keyword", "if") ? 解析首项() : 解析块();
         }
       }
-      return { kind: "If", condition, then, otherwise, line: t.line, column: t.column };
+      return { kind: "若", condition, then, otherwise, line: t.line, column: t.column };
     }
     if (是("keyword", "match")) 不认("子集不含 match", t);
 

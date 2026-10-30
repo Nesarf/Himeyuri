@@ -58,26 +58,26 @@ function jsShape(node) {
     const name = node.name !== undefined ? node.name : node.field;
     return { kind: "Field", target: jsShape(target), name: name };
   }
-  if (node.kind === "If") {
+  if (node.kind === "若") {
     const list = (b) => (b && b.statements ? b.statements.map(jsStatement) : []);
-    return { kind: "If", cond: jsShape(node.condition), then: list(node.then), otherwise: list(node.otherwise) };
+    return { kind: "若", cond: jsShape(node.condition), then: list(node.then), otherwise: list(node.otherwise) };
   }
   return { kind: "other:" + node.kind };
 }
 function jsStatement(s) {
-  if (s.kind === "Let") return { kind: "Let", name: s.name, value: jsShape(s.value) };
-  if (s.kind === "Var") return { kind: "Var", name: s.name, value: jsShape(s.value) };
-  if (s.kind === "Return") return { kind: "Return", value: s.value ? jsShape(s.value) : [] };
-  if (s.kind === "Assign") {
+  if (s.kind === "定") return { kind: "定", name: s.name, value: jsShape(s.value) };
+  if (s.kind === "变") return { kind: "变", name: s.name, value: jsShape(s.value) };
+  if (s.kind === "返回") return { kind: "返回", value: s.value ? jsShape(s.value) : [] };
+  if (s.kind === "赋值") {
     const target = s.target !== undefined ? s.target : (s.name !== undefined ? s.name : s.left);
     const name = typeof target === "string" ? target : (target && (target.name !== undefined ? target.name : target.text));
-    return { kind: "Assign", name: name, value: jsShape(s.value) };
+    return { kind: "赋值", name: name, value: jsShape(s.value) };
   }
-  if (s.kind === "ExprStmt") {
+  if (s.kind === "表达式语句") {
     // 宿主把独立成句的 if 包成 ExprStmt；语句级的读取器直接给出 if 节点，所以这里展开那一层，
     // 让两边的形状对得上（包的是宿主，不是语言）。
-    if (s.expr.kind === "If") return jsShape(s.expr);
-    return { kind: "ExprStmt", value: jsShape(s.expr) };
+    if (s.expr.kind === "若") return jsShape(s.expr);
+    return { kind: "表达式语句", value: jsShape(s.expr) };
   }
   return { kind: "other:" + s.kind };
 }
@@ -107,8 +107,8 @@ for (const source of CASES) {
 console.log("\nthe parts, spelled out");
 {
   const node = readStatement("if a { return 1 }");
-  ok("the condition is kept", node.kind === "If" && node.cond.kind === "名" && node.cond.text === "a", JSON.stringify(node));
-  ok("the then block is a list of statements", Array.isArray(node.then) && node.then.length === 1 && node.then[0].kind === "Return");
+  ok("the condition is kept", node.kind === "若" && node.cond.kind === "名" && node.cond.text === "a", JSON.stringify(node));
+  ok("the then block is a list of statements", Array.isArray(node.then) && node.then.length === 1 && node.then[0].kind === "返回");
   ok("no else means an empty list", Array.isArray(node.otherwise) && node.otherwise.length === 0);
 }
 {
@@ -117,7 +117,7 @@ console.log("\nthe parts, spelled out");
 }
 {
   const node = readStatement("if a { if b { return 1 } else { return 2 } } else { return 3 }");
-  ok("an if can contain an if", node.then.length === 1 && node.then[0].kind === "If" && node.then[0].otherwise.length === 1, JSON.stringify(node.then));
+  ok("an if can contain an if", node.then.length === 1 && node.then[0].kind === "若" && node.then[0].otherwise.length === 1, JSON.stringify(node.then));
 }
 {
   const node = readStatement("if a {\n  return 1\n  return 2\n}");
@@ -129,7 +129,7 @@ console.log("\nwhat it refuses to guess");
   // 比较运算符不在链里（它只有 + - * / % 与括号、调用、下标、字段），所以条件读不出来时不硬猜。
   const node = attempt(() => readStatement("if a == b { return 1 }"));
   ok("a comparison in the condition is now read",
-    !node.error && node.value.kind === "If" && node.value.cond.op === "==", node.error || JSON.stringify(node.value));
+    !node.error && node.value.kind === "若" && node.value.cond.op === "==", node.error || JSON.stringify(node.value));
 }
 {
   const node = attempt(() => readStatement("if a return 1"));

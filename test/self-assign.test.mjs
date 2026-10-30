@@ -62,17 +62,17 @@ function jsStatement(source) {
   const { ast } = parse(lex("fn t() {\n  " + source + "\n}\n", {}).tokens, { diagnostics });
   if (diagnostics.errors.length) throw new Error("the JavaScript parser refused: " + diagnostics.errors[0].code);
   const s = ast.decls[0].body.statements[0];
-  if (s.kind === "Assign") {
+  if (s.kind === "赋值") {
     // the JavaScript node names its target differently from ours, so accept the spellings rather than
     // guessing once and being wrong once (which is what happened the first time)
     const target = s.target !== undefined ? s.target : (s.name !== undefined ? s.name : s.left);
     const name = typeof target === "string" ? target : (target && (target.name !== undefined ? target.name : target.text));
-    return { kind: "Assign", name: name, value: jsShape(s.value) };
+    return { kind: "赋值", name: name, value: jsShape(s.value) };
   }
-  if (s.kind === "Let") return { kind: "Let", name: s.name, value: jsShape(s.value) };
-  if (s.kind === "Var") return { kind: "Var", name: s.name, value: jsShape(s.value) };
-  if (s.kind === "Return") return { kind: "Return", value: s.value ? jsShape(s.value) : [] };
-  if (s.kind === "ExprStmt") return { kind: "ExprStmt", value: jsShape(s.expr) };
+  if (s.kind === "定") return { kind: "定", name: s.name, value: jsShape(s.value) };
+  if (s.kind === "变") return { kind: "变", name: s.name, value: jsShape(s.value) };
+  if (s.kind === "返回") return { kind: "返回", value: s.value ? jsShape(s.value) : [] };
+  if (s.kind === "表达式语句") return { kind: "表达式语句", value: jsShape(s.expr) };
   return { kind: "other:" + s.kind };
 }
 
@@ -95,7 +95,7 @@ for (const source of CASES) {
 console.log("\nthe parts, spelled out");
 {
   const node = readStatement("n = n + 1");
-  ok("an assignment keeps the name on the left", node.kind === "Assign" && node.name === "n", JSON.stringify(node));
+  ok("an assignment keeps the name on the left", node.kind === "赋值" && node.name === "n", JSON.stringify(node));
   ok("and a tree on the right", node.value.kind === "二元" && node.value.op === "+", JSON.stringify(node.value));
 }
 {
@@ -105,21 +105,21 @@ console.log("\nthe parts, spelled out");
 {
   // "=" and "==" must not be confused: the tokenizer keeps them as different tokens
   const node = readStatement("x == y");
-  ok("comparison is not read as an assignment", node.kind === "ExprStmt", JSON.stringify(node));
+  ok("comparison is not read as an assignment", node.kind === "表达式语句", JSON.stringify(node));
 }
 {
   const node = readStatement("let x = 1");
-  ok("a binding is still a binding, not an assignment", node.kind === "Let", JSON.stringify(node));
+  ok("a binding is still a binding, not an assignment", node.kind === "定", JSON.stringify(node));
 }
 
 console.log("\nwhat it still cannot read");
 {
   const node = attempt(() => readStatement("r.x = 2"));
-  ok("assigning to a field is not there yet: it reads as an expression statement", !node.error && node.value.kind === "ExprStmt", node.error || JSON.stringify(node.value));
+  ok("assigning to a field is not there yet: it reads as an expression statement", !node.error && node.value.kind === "表达式语句", node.error || JSON.stringify(node.value));
 }
 {
   const node = attempt(() => readStatement("t[0] = 1"));
-  ok("assigning through a subscript is not there yet either", !node.error && node.value.kind === "ExprStmt", node.error || JSON.stringify(node.value));
+  ok("assigning through a subscript is not there yet either", !node.error && node.value.kind === "表达式语句", node.error || JSON.stringify(node.value));
 }
 
 console.log("\n" + passed + " passed, " + failed + " failed");

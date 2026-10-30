@@ -747,19 +747,19 @@ export class 最小运行时 {
 
   执行语句(stmt, scope, effects) {
     switch (stmt.kind) {
-      case "Let": case "Var": {
+      case "定": case "变": {
         const value = this.求值(stmt.value, scope, effects);
-        scope.set(stmt.name, value, stmt.kind === "Var");
+        scope.set(stmt.name, value, stmt.kind === "变");
         return value;
       }
-      case "Assign": {
+      case "赋值": {
         const value = this.求值(stmt.value, scope, effects);
         if (!scope.assign(stmt.name, value)) {
           this.坏("HMYR-行-017", "cannot assign to '" + stmt.name + "': it is not a variable declared with var, or it is not in scope");
         }
         return value;
       }
-      case "Return": {
+      case "返回": {
         const v = stmt.value;
         // 尾位置：return f(...) 里那个调用不必保留这一层。只对被调的是这门语言的函数成立——
         // 内置不经过这条环，而 return 一个内置调用的结果本来也不占栈。
@@ -769,7 +769,7 @@ export class 最小运行时 {
         }
         throw new 返回(v ? this.求值(v, scope, effects) : null);
       }
-      case "ExprStmt": return this.求值(stmt.expr, scope, effects);
+      case "表达式语句": return this.求值(stmt.expr, scope, effects);
       default:
         throw new Error("最小求值器不认这种语句：'" + stmt.kind + "'");
     }
@@ -803,7 +803,7 @@ export class 最小运行时 {
         }
         return null;
       }
-      case "If": {
+      case "若": {
         const condition = this.求值(node.condition, scope, effects);
         if (this.真(condition)) return node.then ? this.执行块(node.then, scope, effects) : null;
         if (!node.otherwise) return null;

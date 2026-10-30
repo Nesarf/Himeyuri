@@ -67,11 +67,11 @@ function jsBody(source) {
   const body = ast.decls[0].body;
   if (!body) return [];
   return body.statements.map((s) => {
-    if (s.kind === "Let") return { kind: "Let", name: s.name, value: jsShape(s.value) };
-    if (s.kind === "Var") return { kind: "Var", name: s.name, value: jsShape(s.value) };
+    if (s.kind === "定") return { kind: "定", name: s.name, value: jsShape(s.value) };
+    if (s.kind === "变") return { kind: "变", name: s.name, value: jsShape(s.value) };
     // 无值的 return 用 nil 节点（与自举那一侧一致）。
-    if (s.kind === "Return") return { kind: "Return", value: s.value ? jsShape(s.value) : { kind: "nil" } };
-    if (s.kind === "ExprStmt") return { kind: "ExprStmt", value: jsShape(s.expr) };
+    if (s.kind === "返回") return { kind: "返回", value: s.value ? jsShape(s.value) : { kind: "nil" } };
+    if (s.kind === "表达式语句") return { kind: "表达式语句", value: jsShape(s.expr) };
     return { kind: "other:" + s.kind };
   });
 }
@@ -98,7 +98,7 @@ console.log("\nwhat it still cannot read, said plainly");
   // 这些不是脚手架的毛病，而是链的子集边界：self/chain.hmoca 眼下只认 + - * / % 与括号。
   // 每一条都把“当前会读成什么”写下来，于是补链的时候有对照。
   const assign = readBody("fn f() {\n  var n = 7\n  n = n + 1\n  return n\n}\n");
-  ok("an assignment now comes through as an assignment", assign.list.length === 3 && assign.list[1].kind === "Assign" && assign.list[1].name === "n",
+  ok("an assignment now comes through as an assignment", assign.list.length === 3 && assign.list[1].kind === "赋值" && assign.list[1].name === "n",
     JSON.stringify(assign.list));
 
   const record = readBody("fn f() {\n  let r = {name: \"x\", gain: -3}\n  return r\n}\n");
@@ -111,15 +111,15 @@ console.log("\nwhat it still cannot read, said plainly");
   ok("a call now comes through as a call whose argument is a subscript", call.list[0].value.kind === "调用" && call.list[0].value.args[0].kind === "Index", JSON.stringify(call.list[0]));
 
   const branch = readBody("fn f() {\n  if a { return 1 }\n  return 2\n}\n");
-  ok("if now comes through as an if", branch.list[0].kind === "If" && branch.list[0].then.length === 1, JSON.stringify(branch.list[0]));
+  ok("if now comes through as an if", branch.list[0].kind === "若" && branch.list[0].then.length === 1, JSON.stringify(branch.list[0]));
 }
 
 console.log("\nthe parts of a body");
 {
   const body = readBody("fn f() {\n  let x = 1\n  return x\n}\n");
   ok("two statements come out", body.list.length === 2, JSON.stringify(body.list));
-  ok("the first is a binding with its name", body.list[0].kind === "Let" && body.list[0].name === "x");
-  ok("the second is a return carrying the name", body.list[1].kind === "Return" && body.list[1].value.kind === "名");
+  ok("the first is a binding with its name", body.list[0].kind === "定" && body.list[0].name === "x");
+  ok("the second is a return carrying the name", body.list[1].kind === "返回" && body.list[1].value.kind === "名");
   ok("and the body is marked as found", body.found === true);
 }
 {
