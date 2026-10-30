@@ -158,7 +158,7 @@ console.log("七、整仓源码零诊断");
 console.log("八、检查器自己不抛");
 {
   ok("null 交回空表", Array.isArray(区检查(null)) && 区检查(null).length === 0);
-  ok("没有 decls 的树交回空表", 区检查({ kind: "Module" }).length === 0);
+  ok("没有 decls 的树交回空表", 区检查({ kind: "模块" }).length === 0);
   ok("空函数体不抛", 查(行们(["fn f() -> Int {", "  return 0", "}"])).length === 0);
 }
 

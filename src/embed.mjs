@@ -26,7 +26,7 @@ export function runEmbedded(source, granted = []) {
   const parsed = parse(lexed.tokens, { diagnostics });
   if (diagnostics.errors.length) return { ok: false, stage: "parse", output: [], value: null, diagnostics };
 
-  const main = parsed.ast.decls.find((d) => d.kind === "Fn" && d.name === "main");
+  const main = parsed.ast.decls.find((d) => d.kind === "函数" && d.name === "main");
   if (!main) return { ok: false, stage: "link", output: [], value: null, diagnostics, reason: "no main function" };
 
   // The envelope: what the script asks for must fit inside what the host grants.

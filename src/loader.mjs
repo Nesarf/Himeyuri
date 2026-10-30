@@ -366,7 +366,7 @@ export function loadUnit(entry, options = {}) {
   const declared = new Map();
   for (const file of order) {
     for (const decl of modules.get(file).decls) {
-      if (decl.kind !== "Fn" && decl.kind !== "Const" && decl.kind !== "类型别名") continue;
+      if (decl.kind !== "函数" && decl.kind !== "常量" && decl.kind !== "类型别名") continue;
       if (declared.has(decl.name)) {
         diagnostics.warn("HMYR-載-004",
           "two modules declare '" + decl.name + "' (" + short(declared.get(decl.name)) + " and " + short(file) +
@@ -389,7 +389,7 @@ export function loadUnit(entry, options = {}) {
     const 非公开 = new Map();     // 名字 -> 它所在的文件
     for (const file of order) {
       for (const decl of modules.get(file).decls) {
-        if (decl.kind !== "Fn" && decl.kind !== "Const" && decl.kind !== "类型别名") continue;
+        if (decl.kind !== "函数" && decl.kind !== "常量" && decl.kind !== "类型别名") continue;
         if (decl.pub) continue;
         非公开.set(decl.name, file);
       }

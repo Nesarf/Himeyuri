@@ -104,7 +104,7 @@ export function parse(tokens, options = {}) {
       if (i === before) { error("HMYR-形-003", "cannot start a declaration with " + describe(peek())); recover(); }
       skipNewlines();
     }
-    return { kind: "Module", imports, decls, rev };
+    return { kind: "模块", imports, decls, rev };
   }
 
   function parseImport() {
@@ -169,7 +169,7 @@ export function parse(tokens, options = {}) {
       if (at("newline")) skipNewlines();
     }
     const body = atPunct("{") ? parseBlock() : null;
-    return { kind: "Fn", name: name ? name.value : "<error>", typeParams, params, returns, effects, realtime, contracts, body, pub: false, line: kw.line, column: kw.column };
+    return { kind: "函数", name: name ? name.value : "<error>", typeParams, params, returns, effects, realtime, contracts, body, pub: false, line: kw.line, column: kw.column };
   }
 
   function parseTypeParams() {
@@ -275,7 +275,7 @@ export function parse(tokens, options = {}) {
     expectPunct("=", "before the value");
     const value = parseExpr();
     endStatement();
-    return { kind: "Const", name: name ? name.value : "<error>", value, line: kw.line, column: kw.column };
+    return { kind: "常量", name: name ? name.value : "<error>", value, line: kw.line, column: kw.column };
   }
 
   // 顶层 var 与 parseConst 只差一个 kind。为什么分成两个 kind 而不是加一个可写标记：
@@ -334,7 +334,7 @@ export function parse(tokens, options = {}) {
       skipNewlines();
     }
     expectPunct("}", "to close the block");
-    return { kind: "Block", statements, line: open ? open.line : peek().line };
+    return { kind: "块", statements, line: open ? open.line : peek().line };
   }
 
   function parseStatement() {
@@ -554,7 +554,7 @@ if (isMain) {
   const { ast, diagnostics } = parse(lexed.tokens, { diagnostics: lexed.diagnostics });
   console.log(file.split(/[\\/]/).pop() + ": " + ast.decls.length + " declaration(s), " + ast.imports.length + " import(s)");
   for (const decl of ast.decls) {
-    const detail = decl.kind === "Fn"
+    const detail = decl.kind === "函数"
       ? decl.params.map((p) => p.name + ": " + p.type.name + (p.type.nullable ? "?" : "")).join(", ")
       : "";
     console.log("  " + decl.kind + " " + (decl.name || "") + (detail ? " (" + detail + ")" : ""));

@@ -31,7 +31,7 @@ const 映射 = {
   tuple: "组", record: "记录", err: "Error",
   let: "定", var: "变", return: "返回", assign: "赋值", expr: "表达式语句",
   if: "若", while: "当",
-  Fn: "Fn", Block: "Block", Module: "Module", Import: "引入",
+  Fn: "函数", Block: "块", Module: "模块", Import: "引入",
 };
 
 // self 侧的元组在 JS 里是类数组对象，宿主侧是数组 —— 统一成数组再用。
@@ -44,9 +44,9 @@ const 列 = (x) => {
 // 子节点怎么对：给同一层的两个节点，交回若干 [self 子, 宿主子] 对。
 const 子对们 = (s, h) => {
   switch (s.kind) {
-    case "Module": return [...列(s.imports).map((x, i) => [x, 列(h.imports)[i]]), ...列(s.decls).map((x, i) => [x, 列(h.decls)[i]])];
-    case "Fn": return [[s.body, h.body]];
-    case "Block": return 列(s.statements).map((x, i) => [x, 列(h.statements)[i]]);
+    case "模块": return [...列(s.imports).map((x, i) => [x, 列(h.imports)[i]]), ...列(s.decls).map((x, i) => [x, 列(h.decls)[i]])];
+    case "函数": return [[s.body, h.body]];
+    case "块": return 列(s.statements).map((x, i) => [x, 列(h.statements)[i]]);
     case "定": case "变": case "赋值": case "返回":
       return [[s.value, h.value]];
     case "表达式语句": return [[s.expr, h.expr]];
@@ -154,7 +154,7 @@ for (const [名, 源] of 样本) {
   const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
   const { ast } = parse(lex(源, { diagnostics: d }).tokens, { diagnostics: d });
   const 计 = { n: 0 };
-  const r = 走(己, ast, "Module", 计);
+  const r = 走(己, ast, "模块", 计);
   if (r) {
     差异.push({ 名, 路: r.路, 因: r.因 });
     console.log("  " + 名.padEnd(10) + " 走了 " + 计.n + " 个节点，在第一处停下：" + r.路 + "  " + r.因);

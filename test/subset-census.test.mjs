@@ -48,7 +48,7 @@ const 走语句 = (s) => {
     case "赋值": 走表达式(s.value); break;
     case "返回": if (s.value) 走表达式(s.value); break;
     case "表达式语句": 走表达式(s.expr); break;
-    case "Block": (s.statements || []).forEach(走语句); break;
+    case "块": (s.statements || []).forEach(走语句); break;
     case "若": 走表达式(s.condition); 走语句(s.then); 走语句(s.otherwise); break;
     case "当": 走表达式(s.condition); 走语句(s.body); break;
   }
@@ -59,14 +59,14 @@ for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
   const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
   const { ast } = parse(lex(源, { diagnostics: d }).tokens, { diagnostics: d });
   for (const decl of ast.decls) {
-    if (decl.kind === "Fn") { for (const p of decl.params) if (p.fallback) 走表达式(p.fallback); 走语句(decl.body); }
-    if (decl.kind === "Const") 走表达式(decl.value);
+    if (decl.kind === "函数") { for (const p of decl.params) if (p.fallback) 走表达式(p.fallback); 走语句(decl.body); }
+    if (decl.kind === "常量") 走表达式(decl.value);
   }
 }
 
 console.log("一、语句：六种");
 {
-  const 应 = ["赋值", "Block", "表达式语句", "定", "返回", "变"];
+  const 应 = ["赋值", "块", "表达式语句", "定", "返回", "变"];
   const 实 = [...语句.keys()].sort();
   ok("语句种类正好六种", 实.length === 6, 实.join(" "));
   ok("而它们是那六种", JSON.stringify(实) === JSON.stringify(应), 实.join(" "));

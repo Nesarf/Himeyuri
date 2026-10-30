@@ -78,7 +78,7 @@ for (const [名, 源] of 样本) {
   const 己描 = Array.from(己.decls).map(描);
   const 彼描 = ast.decls.map(描);
   ok(名 + "（" + 己.kind + "，" + 己描.length + " 个声明）",
-    己.kind === "Module" && JSON.stringify(己描) === JSON.stringify(彼描),
+    己.kind === "模块" && JSON.stringify(己描) === JSON.stringify(彼描),
     己描.length === 彼描.length && 己描.every((x, i) => x === 彼描[i]) ? "" : "self=" + JSON.stringify(己描) + " 宿主=" + JSON.stringify(彼描));
 }
 

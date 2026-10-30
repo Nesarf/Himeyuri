@@ -137,7 +137,7 @@ export const 子集解 = (tokens, options = {}) => {
       if (i === 先) 恢复();
       过空行();
     }
-    return { kind: "Module", imports, decls, rev };
+    return { kind: "模块", imports, decls, rev };
   }
 
   // 版本号只认整数：int 就是它。写成 2.5 之类的不该被当成一个版本。
@@ -175,7 +175,7 @@ export const 子集解 = (tokens, options = {}) => {
     }
     if (是("keyword", "fn")) return 解析函数();
     if (是("ident", "macro")) return 解析宏();
-    if (是("keyword", "const")) return 解析常量("Const");
+    if (是("keyword", "const")) return 解析常量("常量");
     if (是("keyword", "var")) return 解析常量("顶层变");
     // 这两样宿主读得动，而这一份还不认——边界，抛。
     if (是("keyword", "type") || 是("keyword", "effect")) {
@@ -238,7 +238,7 @@ export const 子集解 = (tokens, options = {}) => {
     if (是("ident", "realtime")) { 进(); realtime = true; }
     if (!是标("{")) 不认("子集的函数必须有函数体：" + (名 ? 名.value : "?"));
     const body = 解析块();
-    return { kind: "Fn", name: 名 ? 名.value : "<error>", typeParams: [], params, returns, effects, realtime, contracts: { requires: [], ensures: [] }, body, pub: false, line: kw.line, column: kw.column };
+    return { kind: "函数", name: 名 ? 名.value : "<error>", typeParams: [], params, returns, effects, realtime, contracts: { requires: [], ensures: [] }, body, pub: false, line: kw.line, column: kw.column };
   }
 
   function 解析参数们() {
@@ -325,7 +325,7 @@ export const 子集解 = (tokens, options = {}) => {
       过空行();
     }
     要标("}", "关块");
-    return { kind: "Block", statements, line: 开 ? 开.line : 看().line };
+    return { kind: "块", statements, line: 开 ? 开.line : 看().line };
   }
 
   function 解析语句() {

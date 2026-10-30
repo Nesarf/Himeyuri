@@ -168,7 +168,7 @@ const 收集返回 = (node, acc) => {
 // 交回问题列表（空的表示都对）。
 export const 核对返回类型 = (声明们) => {
   const 声明表 = new Map();
-  for (const d of 声明们) if (d.kind === "Fn") 声明表.set(d.name, d);
+  for (const d of 声明们) if (d.kind === "函数") 声明表.set(d.name, d);
   const 问题们 = [];
   const 查调用形状 = (n) => {
     const 被 = 声明表.get(n.callee && n.callee.name);
@@ -181,7 +181,7 @@ export const 核对返回类型 = (声明们) => {
     return 表达式形状(n);
   };
   for (const d of 声明们) {
-    if (d.kind !== "Fn" || !d.returns || !d.body) continue;
+    if (d.kind !== "函数" || !d.returns || !d.body) continue;
     const 类型 = 类型形状(d.returns);
     if (!类型 || 类型.k === "?") continue;
     for (const 返 of 收集返回(d.body, [])) {
@@ -299,7 +299,7 @@ const 编译函数 = (decl) => {
         const 完 = 发("JMP", -1);
         码[假].a = 码.length;
         if (n.otherwise) {
-          if (n.otherwise.kind === "Block") { 进层(); 语句们(n.otherwise.statements, true); 出层(); }
+          if (n.otherwise.kind === "块") { 进层(); 语句们(n.otherwise.statements, true); 出层(); }
           else 表达(n.otherwise);
         } else {
           发("CONST", null);
@@ -397,11 +397,11 @@ export const 编译模块 = (ast) => {
   const 函数们 = new Map();   // 名 -> 编译结果
   const 全局们 = [];          // 常量声明（Const）
   for (const decl of ast.decls) {
-    if (decl.kind === "Fn") 函数们.set(decl.name, 编译函数(decl));
+    if (decl.kind === "函数") 函数们.set(decl.name, 编译函数(decl));
     // Const 与 VarTop 都进上一级那张表：它们的初值都在顶层段里算。
     // 两者的差别只在「函数里能不能写它」—— 而那一半由 Ident / Assign 两支决定，
     // 不由这里决定。
-    else if (decl.kind === "Const" || decl.kind === "顶层变") 全局们.push(decl);
+    else if (decl.kind === "常量" || decl.kind === "顶层变") 全局们.push(decl);
     else throw new 编译错("这一份只认 fn 与 const 声明：" + decl.kind);
   }
   // 有常量就有一段初始化。它走的是普通函数那条路（编译、装栈、RET 交回 nil），

@@ -57,7 +57,7 @@ class Printer {
   decl(node) {
     const pub = node.pub ? "pub " : "";
     switch (node.kind) {
-      case "Fn": {
+      case "函数": {
         let head = pub + "fn " + node.name;
         if (node.typeParams && node.typeParams.length) head += "<" + node.typeParams.join(", ") + ">";
         head += "(" + node.params.map((p) => this.param(p)).join(", ") + ")";
@@ -73,7 +73,7 @@ class Printer {
         if (node.params && node.params.length) head += "<" + node.params.join(", ") + ">";
         return head + " = " + this.type(node.value);
       }
-      case "Const": return pub + "const " + node.name + " = " + this.expr(node.value, 0, 0);
+      case "常量": return pub + "const " + node.name + " = " + this.expr(node.value, 0, 0);
       case "效果": return pub + "effect " + node.name;
       default: return "// (unprintable declaration: " + node.kind + ")";
     }
@@ -142,7 +142,7 @@ class Printer {
       case "索引": return this.expr(node.target, level, col) + "[" + this.expr(node.index, level, col) + "]";
       case "组": return this.sequence("(", ")", node.items, level, col);
       case "记录": return this.record(node, level, col);
-      case "Block": return this.block(node, level);
+      case "块": return this.block(node, level);
       case "若": return this.ifExpr(node, level, col);
       case "Match": return this.matchExpr(node, level, col);
       default: return "/* unprintable expression: " + node.kind + " */";
@@ -193,7 +193,7 @@ class Printer {
   ifExpr(node, level, col) {
     let out = "if " + this.expr(node.condition, level, col + 3) + " " + (node.then ? this.block(node.then, level) : "{}");
     if (node.otherwise) {
-      out += " else " + (node.otherwise.kind === "Block" ? this.block(node.otherwise, level) : this.expr(node.otherwise, level, col + 7));
+      out += " else " + (node.otherwise.kind === "块" ? this.block(node.otherwise, level) : this.expr(node.otherwise, level, col + 7));
     }
     return out;
   }

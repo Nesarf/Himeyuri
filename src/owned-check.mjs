@@ -54,7 +54,7 @@ export function 持有格检查(ast, 选项 = {}) {
   // 本模块的名字优先（扁平函数表里也是先到者赢），所以先写本模块、再补外面的。
   const 签名表 = new Map();
   for (const decl of ast.decls) {
-    if (decl.kind === "Fn") 签名表.set(decl.name, decl.params || []);
+    if (decl.kind === "函数") 签名表.set(decl.name, decl.params || []);
   }
   const 外部 = 选项.外部;
   if (外部 && 外部.签名) {
@@ -62,14 +62,14 @@ export function 持有格检查(ast, 选项 = {}) {
   }
 
   for (const decl of ast.decls) {
-    if (decl.kind !== "Fn" || !decl.body) continue;
+    if (decl.kind !== "函数" || !decl.body) continue;
     走块(decl.body.statements || [], new Map(), 报, 签名表);
   }
 
   // 本模块的签名与脏要交给下一个模块 —— 那是「跨模块」这件事的全部内容。
   if (外部 && 外部.签名 && 外部.脏) {
     for (const decl of ast.decls) {
-      if (decl.kind === "Fn") 外部.签名.set(decl.name, decl.params || []);
+      if (decl.kind === "函数") 外部.签名.set(decl.name, decl.params || []);
     }
   }
 
@@ -223,7 +223,7 @@ function 句子里提到的名字(n, 出 = new Set()) {
 // 这一层只看同一模块的调用。跨模块要等模块那一层有名字解析；动态目标
 // （把函数当值传）在这门语言里今天没有，所以那两个缺口不在这里。
 function 查借用承诺(ast, 签名表, 报, 外部) {
-  const 函数们 = ast.decls.filter((d) => d.kind === "Fn" && d.body);
+  const 函数们 = ast.decls.filter((d) => d.kind === "函数" && d.body);
 
   // 查脏要同时看本模块与外面那张表 —— 被调者可能在别的模块里先装载过。
   const 查脏 = (名) => {

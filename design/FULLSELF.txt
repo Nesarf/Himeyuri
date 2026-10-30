@@ -2066,6 +2066,22 @@ selfloa 的 27/27）。
     Fn（40）、Error（52）。而 Fn 与 Error 是两个大件 —— 它们各自 40 与 52 处，而且
     都在「名字与别的东西撞」的那一类里。
 
+自立：四种结构词一起换，只剩 Error（2026-11-02，新一段第 29 轮）
+
+    Const（18 处）、Block（16）、Module（10）、Fn（40）—— 它们各自的可疑行最后都是
+    kind 语境（subset-parse 的 kind 调用、self-tree 的映射表与期望列表），所以一起换了
+    84 处、24 份文件，变成 常量 / 块 / 模块 / 函数。
+
+    而 host-deps.test.mjs 被排除在替换之外：它里面的 "Error" 是 JS 内置的清单
+    （TypeError 那一类），不是我们的 kind。这是这一整段里第一次「按文件排除」。
+
+    读数：eval、codes-eval、minimal-eval、bytecode、vm、parser、module、subset-census、
+    bootstrap、docs 十套全过；run.hmoks 重编。
+
+    进度：32 种里完成 30 种。只剩 Error（52 处）—— 而它的难点不在数量，在「同一个拼写
+    住在两个世界」（JS 的 Error 与树上的误）。下一轮只换 kind 语境的那几处，而
+    host-deps 与 loader-swap 里的那两个必须留着。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 HMYR-載-001；
 另外引的文件不在就报 HMYR-載-003（宿主也是这个码）。顺序取后序，于是 order 逐项相同。

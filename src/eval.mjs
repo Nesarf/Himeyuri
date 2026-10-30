@@ -143,10 +143,10 @@ export class Runtime {
   // 挂在求值器上的那几套对拍。
   registerModule(ast, 文件 = null) {
     for (const decl of ast.decls) {
-      if (decl.kind === "Fn") this.functions.set(decl.name, decl);
-      else if (decl.kind === "Const") this.globals.set(decl.name, this.evalExpr(decl.value, new Scope(null)));
-      if (文件 && (decl.kind === "Fn" || decl.kind === "Const")) this.归属.set(decl.name, 文件);
-      if (文件 && (decl.kind === "Fn" || decl.kind === "Const")) {
+      if (decl.kind === "函数") this.functions.set(decl.name, decl);
+      else if (decl.kind === "常量") this.globals.set(decl.name, this.evalExpr(decl.value, new Scope(null)));
+      if (文件 && (decl.kind === "函数" || decl.kind === "常量")) this.归属.set(decl.name, 文件);
+      if (文件 && (decl.kind === "函数" || decl.kind === "常量")) {
         if (!this.模块声明.has(文件)) this.模块声明.set(文件, new Map());
         this.模块声明.get(文件).set(decl.name, decl);
       }
@@ -192,8 +192,8 @@ export class Runtime {
 
   run(ast) {
     for (const decl of ast.decls) {
-      if (decl.kind === "Fn") this.functions.set(decl.name, decl);
-      else if (decl.kind === "Const") this.globals.set(decl.name, this.evalExpr(decl.value, new Scope(null)));
+      if (decl.kind === "函数") this.functions.set(decl.name, decl);
+      else if (decl.kind === "常量") this.globals.set(decl.name, this.evalExpr(decl.value, new Scope(null)));
     }
     const main = this.functions.get("main");
     if (!main) this.fail("HMYR-行-001", "no main function to run");
@@ -327,8 +327,8 @@ export class Runtime {
       }
       case "表达式语句": return this.evalExpr(stmt.expr, scope, effects);
       case "声明语句":
-        if (stmt.decl.kind === "Fn") { this.functions.set(stmt.decl.name, stmt.decl); return null; }
-        if (stmt.decl.kind === "Const") { const v = this.evalExpr(stmt.decl.value, scope, effects); scope.set(stmt.decl.name, v, false); return v; }
+        if (stmt.decl.kind === "函数") { this.functions.set(stmt.decl.name, stmt.decl); return null; }
+        if (stmt.decl.kind === "常量") { const v = this.evalExpr(stmt.decl.value, scope, effects); scope.set(stmt.decl.name, v, false); return v; }
         return null;
       default:
         this.fail("HMYR-行-010", "cannot execute a statement of kind " + stmt.kind);
@@ -381,7 +381,7 @@ export class Runtime {
         const condition = this.evalExpr(node.condition, scope, effects);
         if (this.truthy(condition)) return node.then ? this.execBlock(node.then, scope, effects) : null;
         if (!node.otherwise) return null;
-        return node.otherwise.kind === "Block" ? this.execBlock(node.otherwise, scope, effects) : this.evalExpr(node.otherwise, scope, effects);
+        return node.otherwise.kind === "块" ? this.execBlock(node.otherwise, scope, effects) : this.evalExpr(node.otherwise, scope, effects);
       }
       case "Match": {
         const subject = this.evalExpr(node.subject, scope, effects);
@@ -394,7 +394,7 @@ export class Runtime {
         this.fail("HMYR-行-006", "no match arm accepted the value");
         break;
       }
-      case "Block": return this.execBlock(node, scope, effects);
+      case "块": return this.execBlock(node, scope, effects);
       case "组": return node.items.map((n) => this.evalExpr(n, scope, effects));
       case "记录": {
         const record = {};

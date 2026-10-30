@@ -94,7 +94,7 @@ console.log("\nif and match");
 {
   const r = clean("fn f() {\n  if a { 1 } else if b { 2 } else { 3 }\n}\n");
   const e = r.ast.decls[0].body.statements[0].expr;
-  ok("if / else if / else", e.kind === "若" && e.otherwise.kind === "若" && e.otherwise.otherwise.kind === "Block");
+  ok("if / else if / else", e.kind === "若" && e.otherwise.kind === "若" && e.otherwise.otherwise.kind === "块");
 }
 {
   const r = clean("fn f() {\n  match x {\n    1 => \"one\",\n    _ => \"other\"\n  }\n}\n");

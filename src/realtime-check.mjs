@@ -62,7 +62,7 @@ export function 实时检查(ast, 选项 = {}) {
   const 实时们 = new Set();
   const 用户函数 = new Set();
   for (const decl of ast.decls) {
-    if (decl.kind !== "Fn") continue;
+    if (decl.kind !== "函数") continue;
     用户函数.add(decl.name);
     // 真语法（fn f() realtime）与旧的 effects(realtime) 两只都认：
     // 后者是把档位写在权限位上的那段将就，而仓库里还有按那个写法写的文档与程序。
@@ -120,7 +120,7 @@ export function 实时检查(ast, 选项 = {}) {
   };
 
   for (const decl of ast.decls) {
-    if (decl.kind !== "Fn" || !decl.body || !实时们.has(decl.name)) continue;
+    if (decl.kind !== "函数" || !decl.body || !实时们.has(decl.name)) continue;
     走(decl.body);
   }
   return 出;

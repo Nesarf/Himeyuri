@@ -24,9 +24,9 @@ console.log("一、同一个文件，两边都认得（self/lex.hmyr）");
   ok("两边都说 ok", 宿.ok === true && 桥.ok === true, JSON.stringify([宿.ok, 桥.ok]));
   // 宿主的函数名从 modules 里取；桥的是它自己造出来的 Module 的 decls。
   const 宿名 = [];
-  for (const f of 宿.order) for (const d of 宿.modules.get(f).decls) if (d.kind === "Fn") 宿名.push(d.name);
+  for (const f of 宿.order) for (const d of 宿.modules.get(f).decls) if (d.kind === "函数") 宿名.push(d.name);
   const 桥名 = [];
-  for (const k of 桥.order) for (const d of Array.from(桥.modules.get(k).decls)) if (d.kind === "Fn") 桥名.push(d.name);
+  for (const k of 桥.order) for (const d of Array.from(桥.modules.get(k).decls)) if (d.kind === "函数") 桥名.push(d.name);
   ok("函数名一模一样（" + 宿名.length + " 个）", JSON.stringify(宿名) === JSON.stringify(桥名), JSON.stringify(桥名.slice(0, 5)));
 }
 

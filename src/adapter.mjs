@@ -100,7 +100,7 @@ export const expression = (源码) => {
 
 const 块 = (节点) => {
   if (!节点) return [];
-  if (节点.kind === "Block") return (节点.statements || []).map(语句).filter(Boolean);
+  if (节点.kind === "块") return (节点.statements || []).map(语句).filter(Boolean);
   if (Array.isArray(节点)) return 节点.map(语句).filter(Boolean);
   return [语句(节点)].filter(Boolean);
 };
@@ -140,12 +140,12 @@ const 语句 = (节点) => {
       // 体在 body 里，是 Block；而 If 那边叫 then。
       return { kind: "当", cond: 转(节点.condition), body: 块(节点.body) };
 
-    case "Block":
+    case "块":
       // 裸的块：它的语句就是这一条「语句」，于是上面用 块() 展开它。
       return { kind: "Error", text: "裸块不该单独出现" };
 
     case "声明语句":
-    case "Fn":
+    case "函数":
       // 函数声明要一张函数表，而那是另一件事。说清，而不是塞一个假形状进去。
       return { kind: "Error", text: "函数声明不在这一层：那要一张函数表" };
 
@@ -158,7 +158,7 @@ const 语句 = (节点) => {
 export const statements = (源码) => {
   const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
   const { ast } = parse(lex(源码, { diagnostics: d }).tokens, { diagnostics: d });
-  const fn = (ast.decls || []).find((x) => x.kind === "Fn" && x.name === "main");
+  const fn = (ast.decls || []).find((x) => x.kind === "函数" && x.name === "main");
   if (!fn) return { 语句们: null, 错: "没有 main" };
   return { 语句们: 块(fn.body), 错: null };
 };
@@ -179,7 +179,7 @@ export const functions = (源码) => {
   const 表 = [];
   const 错们 = [];
   for (const 声 of ast.decls || []) {
-    if (声.kind !== "Fn") continue;
+    if (声.kind !== "函数") continue;
     const 体 = 块(声.body);
     const 坏的 = 体.find((s) => s && s.kind === "err");
     if (坏的) { 错们.push(声.name + "：" + 坏的.text); continue; }

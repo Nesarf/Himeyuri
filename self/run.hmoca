@@ -304,7 +304,7 @@ fn 转语句们(语句们: Int, i: Int, acc: Int) {
 }
 
 fn 包块(语句们: Int, 行: Int) {
-  return {kind: "Block", statements: 转语句们(语句们, 0, ()), line: 行}
+  return {kind: "块", statements: 转语句们(语句们, 0, ()), line: 行}
 }
 
 // 参数名 → {name, passing}。宿主的参数是记录（带 type 与 passing），而这一侧
@@ -350,7 +350,7 @@ fn 包声明(声明们: Int, i: Int, acc: Int) {
   var 公开 = 0
   if len(d) > 7 { 公开 = d[7] }
   let 体 = 包块(句, 行)
-  let 函 = {kind: "Fn", name: 名, params: 转参数们(参, 0, ()), returns: 返, effects: 效, contracts: (), body: 体, pub: 公开, line: 行, column: 列}
+  let 函 = {kind: "函数", name: 名, params: 转参数们(参, 0, ()), returns: 返, effects: 效, contracts: (), body: 体, pub: 公开, line: 行, column: 列}
   return 包声明(声明们, i + 1, acc + (函,))
 }
 
@@ -414,11 +414,11 @@ fn 造模块(源: String) {
   // 解析用**原始** token 流：去导入 会把行号整体上移，两边就对不上位置了。
   let 全部 = parse_decls(全toks)
   if len(全部.fns) > 0 {
-    return {kind: "Module", imports: 导入, decls: 包声明(全部.fns, 0, ()), rev: 模块版本(全toks, 0)}
+    return {kind: "模块", imports: 导入, decls: 包声明(全部.fns, 0, ()), rev: 模块版本(全toks, 0)}
   }
   let 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
   let 体 = parse_body(scan_lines(有壳))
-  return {kind: "Module", imports: 导入, decls: 包声明((("main", (), 体.list, (), 1, 1),), 0, ()), rev: 0}
+  return {kind: "模块", imports: 导入, decls: 包声明((("main", (), 体.list, (), 1, 1),), 0, ()), rev: 0}
 }
 
 // 整棵 import 树：加载（递归、去重、环拒绝、后序）+ 造形状，一步做完。

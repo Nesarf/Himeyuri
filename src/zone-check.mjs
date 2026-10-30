@@ -57,7 +57,7 @@ export function 区检查(ast, 选项 = {}) {
   };
   if (!ast || !Array.isArray(ast.decls)) return 出;
   for (const decl of ast.decls) {
-    if (decl.kind !== "Fn" || !decl.body) continue;
+    if (decl.kind !== "函数" || !decl.body) continue;
     const 场 = new Map();   // 局部 arena 的名字 → { 块: Set, 交出: Set, 关了: bool }
 
     const 建场 = (名) => {

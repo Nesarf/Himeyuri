@@ -682,8 +682,8 @@ export class 最小运行时 {
 
   登记模块(ast) {
     for (const decl of ast.decls) {
-      if (decl.kind === "Fn") this.functions.set(decl.name, decl);
-      else if (decl.kind === "Const") this.globals.set(decl.name, this.求值(decl.value, new 作用域(null), null));
+      if (decl.kind === "函数") this.functions.set(decl.name, decl);
+      else if (decl.kind === "常量") this.globals.set(decl.name, this.求值(decl.value, new 作用域(null), null));
     }
   }
 
@@ -807,7 +807,7 @@ export class 最小运行时 {
         const condition = this.求值(node.condition, scope, effects);
         if (this.真(condition)) return node.then ? this.执行块(node.then, scope, effects) : null;
         if (!node.otherwise) return null;
-        return node.otherwise.kind === "Block" ? this.执行块(node.otherwise, scope, effects) : this.求值(node.otherwise, scope, effects);
+        return node.otherwise.kind === "块" ? this.执行块(node.otherwise, scope, effects) : this.求值(node.otherwise, scope, effects);
       }
       case "组": return node.items.map((n) => this.求值(n, scope, effects));
       case "记录": {

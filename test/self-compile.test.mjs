@@ -22,7 +22,7 @@ const 算名 = (路) => Array.from(自举.callFunction(自举.functions.get("函
 const 宿名 = (路) => {
   const 宿 = loadUnit(路);
   const 本 = 宿.modules.get(路);
-  return 本 ? 本.decls.filter((d) => d.kind === "Fn").map((d) => d.name) : null;
+  return 本 ? 本.decls.filter((d) => d.kind === "函数").map((d) => d.name) : null;
 };
 
 console.log("一、六份，默认栈下，名字与顺序都与宿主一致");
