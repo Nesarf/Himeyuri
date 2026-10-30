@@ -381,78 +381,78 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   let 名 = 节点.callee.text
   let 参 = 求参数(节点.args, 环境)
   if 参.ok == false { return 参 }
-  let 值们 = 参.value
+  let 值簇 = 参.value
   if 名 == "len" {
-    if len(值们) != 1 { return 坏("len 要一个参数") }
-    return 好(len(值们[0]))
+    if len(值簇) != 1 { return 坏("len 要一个参数") }
+    return 好(len(值簇[0]))
   }
   if 名 == "str" {
-    if len(值们) != 1 { return 坏("str 要一个参数") }
-    return 好(str(值们[0]))
+    if len(值簇) != 1 { return 坏("str 要一个参数") }
+    return 好(str(值簇[0]))
   }
   // 字符串那一层还差几个纯函数，而标准库把它们当砖用。
   // 它们不碰世界、不改状态，所以在这一层直接转给语言自己的同名内置。
   if 名 == "slice" {
-    if len(值们) != 3 { return 坏("slice 要三个参数") }
-    return 好(slice(值们[0], 值们[1], 值们[2]))
+    if len(值簇) != 3 { return 坏("slice 要三个参数") }
+    return 好(slice(值簇[0], 值簇[1], 值簇[2]))
   }
   // 字节元组转文本：这一层只转发。解码由下面那一层做。
   if 名 == "bytes_to_text" {
-    if len(值们) != 1 { return 坏("bytes_to_text 要一个参数") }
-    return 好(bytes_to_text(值们[0]))
+    if len(值簇) != 1 { return 坏("bytes_to_text 要一个参数") }
+    return 好(bytes_to_text(值簇[0]))
   }
   // 从标准输入读 N 个字节：与读一行分成两格，因为请求体未必只有一行。
   if 名 == "read_stdin_bytes" {
-    if len(值们) != 1 { return 坏("read_stdin_bytes 要一个参数") }
-    return 好(read_stdin_bytes(值们[0]))
+    if len(值簇) != 1 { return 坏("read_stdin_bytes 要一个参数") }
+    return 好(read_stdin_bytes(值簇[0]))
   }
   // 从标准输入读一行。这一层只转发 —— 交回的记录里有「行」与「结束」两格。
   if 名 == "read_stdin_line" {
-    if len(值们) != 0 { return 坏("read_stdin_line 不要参数") }
+    if len(值簇) != 0 { return 坏("read_stdin_line 不要参数") }
     return 好(read_stdin_line())
   }
   // 文件那一组剩下的几格。这一层只转发 —— 读不到由下面那一层说。
   if 名 == "file_exists" {
     let 欠在 = 要效果(环境, "file", "file_exists")
     if 欠在 != "" { return 坏(欠在) }
-    if len(值们) != 1 { return 坏("file_exists 要一个参数") }
-    return 好(file_exists(值们[0]))
+    if len(值簇) != 1 { return 坏("file_exists 要一个参数") }
+    return 好(file_exists(值簇[0]))
   }
   if 名 == "read_line" {
     let 欠行 = 要效果(环境, "file", "read_line")
     if 欠行 != "" { return 坏(欠行) }
-    if len(值们) != 2 { return 坏("read_line 要两个参数") }
-    return 好(read_line(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("read_line 要两个参数") }
+    return 好(read_line(值簇[0], 值簇[1]))
   }
   if 名 == "read_lines" {
     let 欠们 = 要效果(环境, "file", "read_lines")
     if 欠们 != "" { return 坏(欠们) }
-    if len(值们) != 1 { return 坏("read_lines 要一个参数") }
-    return 好(read_lines(值们[0]))
+    if len(值簇) != 1 { return 坏("read_lines 要一个参数") }
+    return 好(read_lines(值簇[0]))
   }
   if 名 == "write_bytes" {
     let 欠写 = 要效果(环境, "file", "write_bytes")
     if 欠写 != "" { return 坏(欠写) }
-    if len(值们) != 2 { return 坏("write_bytes 要两个参数") }
-    return 好(write_bytes(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("write_bytes 要两个参数") }
+    return 好(write_bytes(值簇[0], 值簇[1]))
   }
   if 名 == "f64_bytes" {
-    if len(值们) != 1 { return 坏("f64_bytes 要一个参数") }
-    return 好(f64_bytes(值们[0]))
+    if len(值簇) != 1 { return 坏("f64_bytes 要一个参数") }
+    return 好(f64_bytes(值簇[0]))
   }
   if 名 == "pack_value" {
-    if len(值们) != 1 { return 坏("pack_value 要一个参数") }
-    return 好(pack_value(值们[0]))
+    if len(值簇) != 1 { return 坏("pack_value 要一个参数") }
+    return 好(pack_value(值簇[0]))
   }
   // arena 那一格：区在这一层是真的了（2026-10-27），所以这里不再只是「没有」。
   // 交回的是一条索引；alloc / close / freeze / adopt / held 由求方法分派。
   if 名 == "arena" {
-    if len(值们) != 0 { return 坏("arena 不要参数") }
+    if len(值簇) != 0 { return 坏("arena 不要参数") }
     return 好(新区())
   }
   // owned：单一所有者的持有格。四个动作由 求方法 的 owner 分支分派。
   if 名 == "owned" {
-    if len(值们) != 0 { return 坏("owned 不要参数") }
+    if len(值簇) != 0 { return 坏("owned 不要参数") }
     let 格 = 新持有格()
     // 登记到当前帧：帧退出时会被自动关掉（见 关本帧持有格从）。
     let 全 = 查找(环境, "全局")
@@ -465,10 +465,10 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   // FFI 的最小形状（design/FFI.txt 第四节）：一段不拷贝的窗口。
   // 用索引表示：kind = "view"，三个字段 源 / 起 / 长。与另两台同一套判词。
   if 名 == "bytes_view" {
-    if len(值们) != 3 { return 坏("bytes_view 要三个参数") }
-    let 源 = 值们[0]
-    let 起 = to_int(值们[1])
-    let 长 = to_int(值们[2])
+    if len(值簇) != 3 { return 坏("bytes_view 要三个参数") }
+    let 源 = 值簇[0]
+    let 起 = to_int(值簇[1])
+    let 长 = to_int(值簇[2])
     if 起 < 0 || 长 < 0 || 起 + 长 > len(源) {
       return 坏("HMYR-行-018 bytes_view: 范围在外面（" + str(len(源)) + "）")
     }
@@ -480,42 +480,42 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     return 好(窗)
   }
   if 名 == "view_len" {
-    if len(值们) != 1 { return 坏("view_len 要一个参数") }
-    if index_has(值们[0], "kind") == false { return 坏("HMYR-行-019 view_len: 这不是窗口") }
-    if index_get(值们[0], "kind") != "view" { return 坏("HMYR-行-019 view_len: 这不是窗口") }
-    return 好(index_get(值们[0], "长"))
+    if len(值簇) != 1 { return 坏("view_len 要一个参数") }
+    if index_has(值簇[0], "kind") == false { return 坏("HMYR-行-019 view_len: 这不是窗口") }
+    if index_get(值簇[0], "kind") != "view" { return 坏("HMYR-行-019 view_len: 这不是窗口") }
+    return 好(index_get(值簇[0], "长"))
   }
   if 名 == "view_get" {
-    if len(值们) != 2 { return 坏("view_get 要两个参数") }
-    if index_has(值们[0], "kind") == false { return 坏("HMYR-行-019 view_get: 这不是窗口") }
-    if index_get(值们[0], "kind") != "view" { return 坏("HMYR-行-019 view_get: 这不是窗口") }
-    let 长 = index_get(值们[0], "长")
-    let i = to_int(值们[1])
+    if len(值簇) != 2 { return 坏("view_get 要两个参数") }
+    if index_has(值簇[0], "kind") == false { return 坏("HMYR-行-019 view_get: 这不是窗口") }
+    if index_get(值簇[0], "kind") != "view" { return 坏("HMYR-行-019 view_get: 这不是窗口") }
+    let 长 = index_get(值簇[0], "长")
+    let i = to_int(值簇[1])
     if i < 0 || i >= 长 { return 坏("HMYR-行-018 view_get: " + str(i) + " 在窗口外面（" + str(长) + "）") }
-    let 源 = index_get(值们[0], "源")
-    return 好(源[index_get(值们[0], "起") + i])
+    let 源 = index_get(值簇[0], "源")
+    return 好(源[index_get(值簇[0], "起") + i])
   }
   if 名 == "view_set" {
-    if len(值们) != 3 { return 坏("view_set 要三个参数") }
-    if index_has(值们[0], "kind") == false { return 坏("HMYR-行-019 view_set: 这不是窗口") }
-    if index_get(值们[0], "kind") != "view" { return 坏("HMYR-行-019 view_set: 这不是窗口") }
-    let 长 = index_get(值们[0], "长")
-    let i = to_int(值们[1])
+    if len(值簇) != 3 { return 坏("view_set 要三个参数") }
+    if index_has(值簇[0], "kind") == false { return 坏("HMYR-行-019 view_set: 这不是窗口") }
+    if index_get(值簇[0], "kind") != "view" { return 坏("HMYR-行-019 view_set: 这不是窗口") }
+    let 长 = index_get(值簇[0], "长")
+    let i = to_int(值簇[1])
     if i < 0 || i >= 长 { return 坏("HMYR-行-019 view_set: " + str(i) + " 在窗口外面（" + str(长) + "）") }
-    let 源 = index_get(值们[0], "源")
-    let 位 = index_get(值们[0], "起") + i
+    let 源 = index_get(值簇[0], "源")
+    let 位 = index_get(值簇[0], "起") + i
     // 写进源。源不可写时由 设() 那一层判（HMYR-行-018）—— 这一层看不见它的判据，
     // 所以那一侧在这里没有同一句话可给：source-not-writable 在自举层是「设() 报错」。
-    设(源, 位, 值们[2])
-    return 好(值们[2])
+    设(源, 位, 值簇[2])
+    return 好(值簇[2])
   }
   // fmt_number(值, 档案)：按档案格式化数字（design/LOCALES.txt 那一节）。
   // 与另两台同一套规矩：中文按四位分组（万进位），其余按三位；小数点是句点。
   // 这一台不转发，自己拼 —— 因为它要证明的是「这条规矩在 HMYR 里也写得出来」。
   if 名 == "fmt_number" {
-    if len(值们) != 2 { return 坏("fmt_number 要两个参数") }
-    let 文 = str(值们[0])
-    let 档 = 值们[1]
+    if len(值簇) != 2 { return 坏("fmt_number 要两个参数") }
+    let 文 = str(值簇[0])
+    let 档 = 值簇[1]
     var 每组 = 3
     if len(档) >= 6 && slice(档, 0, 6) == "zh-CN." { 每组 = 4 }
     return 好(加千分位(文, 每组))
@@ -524,68 +524,68 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   if 名 == "read_bytes" {
     let 欠读 = 要效果(环境, "file", "read_bytes")
     if 欠读 != "" { return 坏(欠读) }
-    if len(值们) != 1 { return 坏("read_bytes 要一个参数") }
-    return 好(read_bytes(值们[0]))
+    if len(值簇) != 1 { return 坏("read_bytes 要一个参数") }
+    return 好(read_bytes(值簇[0]))
   }
   // 切开：这一层只转发。切法（空分隔按码元、连续分隔留空段）由下面那一层给。
   if 名 == "split" {
-    if len(值们) != 2 { return 坏("split 要两个参数") }
-    return 好(split(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("split 要两个参数") }
+    return 好(split(值簇[0], 值簇[1]))
   }
   // 环境与路径：读这台机器在哪儿。这一层只转发 ——
   // 两台机器给出不同的串是对的（契约写的是「读宿主的位置」）。
   if 名 == "cwd" {
-    if len(值们) != 0 { return 坏("cwd 不要参数") }
+    if len(值簇) != 0 { return 坏("cwd 不要参数") }
     return 好(cwd())
   }
   if 名 == "home_dir" {
-    if len(值们) != 0 { return 坏("home_dir 不要参数") }
+    if len(值簇) != 0 { return 坏("home_dir 不要参数") }
     return 好(home_dir())
   }
   if 名 == "temp_path" {
-    if len(值们) != 1 { return 坏("temp_path 要一个参数") }
-    return 好(temp_path(值们[0]))
+    if len(值簇) != 1 { return 坏("temp_path 要一个参数") }
+    return 好(temp_path(值簇[0]))
   }
   if 名 == "repo_path" {
-    if len(值们) != 1 { return 坏("repo_path 要一个参数") }
-    return 好(repo_path(值们[0]))
+    if len(值簇) != 1 { return 坏("repo_path 要一个参数") }
+    return 好(repo_path(值簇[0]))
   }
   if 名 == "python_path" {
-    if len(值们) != 0 { return 坏("python_path 不要参数") }
+    if len(值簇) != 0 { return 坏("python_path 不要参数") }
     return 好(python_path())
   }
   if 名 == "locale_current" {
-    if len(值们) != 0 { return 坏("locale_current 不要参数") }
+    if len(值簇) != 0 { return 坏("locale_current 不要参数") }
     return 好(locale_current())
   }
   if 名 == "locale_set" {
-    if len(值们) != 1 { return 坏("locale_set 要一个参数") }
-    return 好(locale_set(值们[0]))
+    if len(值簇) != 1 { return 坏("locale_set 要一个参数") }
+    return 好(locale_set(值簇[0]))
   }
   if 名 == "locale_env" {
-    if len(值们) != 0 { return 坏("locale_env 不要参数") }
+    if len(值簇) != 0 { return 坏("locale_env 不要参数") }
     return 好(locale_env())
   }
   if 名 == "console_codepage" {
-    if len(值们) != 0 { return 坏("console_codepage 不要参数") }
+    if len(值簇) != 0 { return 坏("console_codepage 不要参数") }
     return 好(console_codepage())
   }
   // 线程与 arena：这一层照实转发 —— 下面那一层说「没有」，这一层不替它编。
   if 名 == "thr_spawn" {
-    if len(值们) != 2 { return 坏("thr_spawn 要两个参数") }
-    return 好(thr_spawn(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("thr_spawn 要两个参数") }
+    return 好(thr_spawn(值簇[0], 值簇[1]))
   }
   if 名 == "thr_join" {
-    if len(值们) < 1 { return 坏("thr_join 至少要一个参数") }
-    if len(值们) == 1 { return 好(thr_join(值们[0])) }
-    return 好(thr_join(值们[0], 值们[1]))
+    if len(值簇) < 1 { return 坏("thr_join 至少要一个参数") }
+    if len(值簇) == 1 { return 好(thr_join(值簇[0])) }
+    return 好(thr_join(值簇[0], 值簇[1]))
   }
   if 名 == "thr_cancel" {
-    if len(值们) != 1 { return 坏("thr_cancel 要一个参数") }
-    return 好(thr_cancel(值们[0]))
+    if len(值簇) != 1 { return 坏("thr_cancel 要一个参数") }
+    return 好(thr_cancel(值簇[0]))
   }
   if 名 == "thr_count" {
-    if len(值们) != 0 { return 坏("thr_count 不要参数") }
+    if len(值簇) != 0 { return 坏("thr_count 不要参数") }
     return 好(thr_count())
   }
   // arena 故意不在这里：它在语言里是关键字（有它自己的语法），
@@ -593,216 +593,216 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   // 进程：跑一个程序。这一层照参数个数转发（1 到 4 个），
   // 记录那五个字段（code stdout stderr timedOut error）由下面那一层给。
   if 名 == "run_program" {
-    if len(值们) == 1 { return 好(run_program(值们[0])) }
-    if len(值们) == 2 { return 好(run_program(值们[0], 值们[1])) }
-    if len(值们) == 3 { return 好(run_program(值们[0], 值们[1], 值们[2])) }
-    if len(值们) == 4 { return 好(run_program(值们[0], 值们[1], 值们[2], 值们[3])) }
+    if len(值簇) == 1 { return 好(run_program(值簇[0])) }
+    if len(值簇) == 2 { return 好(run_program(值簇[0], 值簇[1])) }
+    if len(值簇) == 3 { return 好(run_program(值簇[0], 值簇[1], 值簇[2])) }
+    if len(值簇) == 4 { return 好(run_program(值簇[0], 值簇[1], 值簇[2], 值簇[3])) }
     return 坏("run_program 最多四个参数")
   }
   // 进程：改工作目录。这一层只转发 —— 进不去时下面那一层报 HMYR-內-009。
   if 名 == "chdir" {
-    if len(值们) != 1 { return 坏("chdir 要一个参数") }
-    return 好(chdir(值们[0]))
+    if len(值簇) != 1 { return 坏("chdir 要一个参数") }
+    return 好(chdir(值簇[0]))
   }
   // 输入：一条键队列。这一层只转发 —— 队列与「有没有终端」在下面那一层。
   if 名 == "key_push" {
-    if len(值们) != 1 { return 坏("key_push 要一个参数") }
-    return 好(key_push(值们[0]))
+    if len(值簇) != 1 { return 坏("key_push 要一个参数") }
+    return 好(key_push(值簇[0]))
   }
   if 名 == "key_available" {
-    if len(值们) != 0 { return 坏("key_available 不要参数") }
+    if len(值簇) != 0 { return 坏("key_available 不要参数") }
     return 好(key_available())
   }
   if 名 == "key_read" {
-    if len(值们) != 0 { return 坏("key_read 不要参数") }
+    if len(值簇) != 0 { return 坏("key_read 不要参数") }
     return 好(key_read())
   }
   if 名 == "key_start" {
-    if len(值们) != 1 { return 坏("key_start 要一个参数") }
-    return 好(key_start(值们[0]))
+    if len(值簇) != 1 { return 坏("key_start 要一个参数") }
+    return 好(key_start(值簇[0]))
   }
   // 时间：读一次钟，或等一会儿。这一层只转发 ——
   // 「它们破坏可复现性」那条警告写在契约里，不写在每一次调用上。
   if 名 == "now_ms" {
-    if len(值们) != 0 { return 坏("now_ms 不要参数") }
+    if len(值簇) != 0 { return 坏("now_ms 不要参数") }
     return 好(now_ms())
   }
   if 名 == "sleep_ms" {
-    if len(值们) != 1 { return 坏("sleep_ms 要一个参数") }
-    return 好(sleep_ms(值们[0]))
+    if len(值簇) != 1 { return 坏("sleep_ms 要一个参数") }
+    return 好(sleep_ms(值簇[0]))
   }
   // 终端那一组：只交回字符串，不写出去。照参数个数转发；
   // term_color 收一个或两个 —— 语言的写法定不了可选参数，所以两条各自写出来。
   if 名 == "term_size" {
-    if len(值们) != 0 { return 坏("term_size 不要参数") }
+    if len(值簇) != 0 { return 坏("term_size 不要参数") }
     return 好(term_size())
   }
   if 名 == "term_clear" {
-    if len(值们) != 0 { return 坏("term_clear 不要参数") }
+    if len(值簇) != 0 { return 坏("term_clear 不要参数") }
     return 好(term_clear())
   }
   if 名 == "term_hide" {
-    if len(值们) != 0 { return 坏("term_hide 不要参数") }
+    if len(值簇) != 0 { return 坏("term_hide 不要参数") }
     return 好(term_hide())
   }
   if 名 == "term_show" {
-    if len(值们) != 0 { return 坏("term_show 不要参数") }
+    if len(值簇) != 0 { return 坏("term_show 不要参数") }
     return 好(term_show())
   }
   if 名 == "term_escape" {
-    if len(值们) != 2 { return 坏("term_escape 要两个参数") }
-    return 好(term_escape(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("term_escape 要两个参数") }
+    return 好(term_escape(值簇[0], 值簇[1]))
   }
   if 名 == "term_color" {
-    if len(值们) == 1 { return 好(term_color(值们[0])) }
-    if len(值们) == 2 { return 好(term_color(值们[0], 值们[1])) }
+    if len(值簇) == 1 { return 好(term_color(值簇[0])) }
+    if len(值簇) == 2 { return 好(term_color(值簇[0], 值簇[1])) }
     return 坏("term_color 要一个或两个参数")
   }
   // 大小写是规格第一圈里的内置。宿主那一份一直有，自举这一层补上转发就够了。
   if 名 == "to_upper" {
-    if len(值们) != 1 { return 坏("to_upper 要一个参数") }
-    return 好(to_upper(值们[0]))
+    if len(值簇) != 1 { return 坏("to_upper 要一个参数") }
+    return 好(to_upper(值簇[0]))
   }
   if 名 == "to_lower" {
-    if len(值们) != 1 { return 坏("to_lower 要一个参数") }
-    return 好(to_lower(值们[0]))
+    if len(值簇) != 1 { return 坏("to_lower 要一个参数") }
+    return 好(to_lower(值簇[0]))
   }
   // 算术那一组。abs、floor、int 是转发；min 与 max 自己走一遍，
   // 因为它们是变长的，而「转给同一个名字」只能写出固定个数的参数。
   if 名 == "abs" {
-    if len(值们) != 1 { return 坏("abs 要一个参数") }
-    return 好(abs(值们[0]))
+    if len(值簇) != 1 { return 坏("abs 要一个参数") }
+    return 好(abs(值簇[0]))
   }
   if 名 == "floor" {
-    if len(值们) != 1 { return 坏("floor 要一个参数") }
-    return 好(floor(值们[0]))
+    if len(值簇) != 1 { return 坏("floor 要一个参数") }
+    return 好(floor(值簇[0]))
   }
   if 名 == "int" {
-    if len(值们) != 1 { return 坏("int 要一个参数") }
-    return 好(int(值们[0]))
+    if len(值簇) != 1 { return 坏("int 要一个参数") }
+    return 好(int(值簇[0]))
   }
   if 名 == "min" {
-    if len(值们) < 1 { return 坏("min 至少要一个参数") }
-    var 小 = 值们[0]
+    if len(值簇) < 1 { return 坏("min 至少要一个参数") }
+    var 小 = 值簇[0]
     var 甲 = 1
-    while 甲 < len(值们) {
-      if 值们[甲] < 小 { 小 = 值们[甲] }
+    while 甲 < len(值簇) {
+      if 值簇[甲] < 小 { 小 = 值簇[甲] }
       甲 = 甲 + 1
     }
     return 好(小)
   }
   if 名 == "max" {
-    if len(值们) < 1 { return 坏("max 至少要一个参数") }
-    var 大 = 值们[0]
+    if len(值簇) < 1 { return 坏("max 至少要一个参数") }
+    var 大 = 值簇[0]
     var 乙 = 1
-    while 乙 < len(值们) {
-      if 值们[乙] > 大 { 大 = 值们[乙] }
+    while 乙 < len(值簇) {
+      if 值簇[乙] > 大 { 大 = 值簇[乙] }
       乙 = 乙 + 1
     }
     return 好(大)
   }
   // 记录那一组：造、取、问、列。四个都只是转发 —— 记录的形状由宿主那一层给。
   if 名 == "record_new" {
-    if len(值们) != 1 { return 坏("record_new 要一个参数") }
-    return 好(record_new(值们[0]))
+    if len(值簇) != 1 { return 坏("record_new 要一个参数") }
+    return 好(record_new(值簇[0]))
   }
   if 名 == "field_get" {
-    if len(值们) != 2 { return 坏("field_get 要两个参数") }
-    return 好(field_get(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("field_get 要两个参数") }
+    return 好(field_get(值簇[0], 值簇[1]))
   }
   if 名 == "field_has" {
-    if len(值们) != 2 { return 坏("field_has 要两个参数") }
-    return 好(field_has(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("field_has 要两个参数") }
+    return 好(field_has(值簇[0], 值簇[1]))
   }
   // 字段名的列表。有了它，「把一条记录摊开」才写得出来 —— 标准库的表那一份卡在这里。
   if 名 == "field_names" {
-    if len(值们) != 1 { return 坏("field_names 要一个参数") }
-    return 好(field_names(值们[0]))
+    if len(值簇) != 1 { return 坏("field_names 要一个参数") }
+    return 好(field_names(值簇[0]))
   }
   // 列一个目录。名字的顺序由下面那一层排好，这一层只转发 ——
   // 排序是「两台机器要交回同一个答案」的事，不该在语言这一侧各写一遍。
   if 名 == "read_dir" {
     let 欠列 = 要效果(环境, "file", "read_dir")
     if 欠列 != "" { return 坏(欠列) }
-    if len(值们) != 1 { return 坏("read_dir 要一个参数") }
-    return 好(read_dir(值们[0]))
+    if len(值簇) != 1 { return 坏("read_dir 要一个参数") }
+    return 好(read_dir(值簇[0]))
   }
   // 这是不是一个目录。递归要往下走，就得先问这一句。
   if 名 == "is_dir" {
     let 欠问 = 要效果(环境, "file", "is_dir")
     if 欠问 != "" { return 坏(欠问) }
-    if len(值们) != 1 { return 坏("is_dir 要一个参数") }
-    return 好(is_dir(值们[0]))
+    if len(值簇) != 1 { return 坏("is_dir 要一个参数") }
+    return 好(is_dir(值簇[0]))
   }
   // CRC32：纯算术，不需要效果。收字节元组，元素可以是一字节也可以是一块。
   if 名 == "校验和" {
-    if len(值们) != 1 { return 坏("校验和 要一个参数") }
-    return 好(校验和(值们[0]))
+    if len(值簇) != 1 { return 坏("校验和 要一个参数") }
+    return 好(校验和(值簇[0]))
   }
   // 读一份文本。与 write_text 配成一对，两边都要 file 效果。
   if 名 == "read_text" {
     let 欠读 = 要效果(环境, "file", "read_text")
     if 欠读 != "" { return 坏(欠读) }
-    if len(值们) < 1 { return 坏("read_text 至少要一个参数") }
-    if len(值们) == 1 { return 好(read_text(值们[0])) }
-    return 好(read_text(值们[0], 值们[1]))
+    if len(值簇) < 1 { return 坏("read_text 至少要一个参数") }
+    if len(值簇) == 1 { return 好(read_text(值簇[0])) }
+    return 好(read_text(值簇[0], 值簇[1]))
   }
   // 写一份文本。这一层只转发 —— 编码与脱敏都在下面那一层管。
   if 名 == "write_text" {
     let 欠写 = 要效果(环境, "file", "write_text")
     if 欠写 != "" { return 坏(欠写) }
-    if len(值们) != 2 { return 坏("write_text 要两个参数") }
-    return 好(write_text(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("write_text 要两个参数") }
+    return 好(write_text(值簇[0], 值簇[1]))
   }
   // 位运算：八支转发到宿主内建。名字带前缀，所以不会与本文件里的函数重名。
   if 名 == "位与" {
-    if len(值们) != 2 { return 坏("位与 要两个参数") }
-    return 好(位与(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("位与 要两个参数") }
+    return 好(位与(值簇[0], 值簇[1]))
   }
   if 名 == "位或" {
-    if len(值们) != 2 { return 坏("位或 要两个参数") }
-    return 好(位或(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("位或 要两个参数") }
+    return 好(位或(值簇[0], 值簇[1]))
   }
   if 名 == "位异或" {
-    if len(值们) != 2 { return 坏("位异或 要两个参数") }
-    return 好(位异或(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("位异或 要两个参数") }
+    return 好(位异或(值簇[0], 值簇[1]))
   }
   if 名 == "位非" {
-    if len(值们) != 1 { return 坏("位非 要一个参数") }
-    return 好(位非(值们[0]))
+    if len(值簇) != 1 { return 坏("位非 要一个参数") }
+    return 好(位非(值簇[0]))
   }
   if 名 == "位右移" {
-    if len(值们) != 2 { return 坏("位右移 要两个参数") }
-    return 好(位右移(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("位右移 要两个参数") }
+    return 好(位右移(值簇[0], 值簇[1]))
   }
   if 名 == "位加" {
-    if len(值们) != 2 { return 坏("位加 要两个参数") }
-    return 好(位加(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("位加 要两个参数") }
+    return 好(位加(值簇[0], 值簇[1]))
   }
   if 名 == "位循环右移" {
-    if len(值们) != 2 { return 坏("位循环右移 要两个参数") }
-    return 好(位循环右移(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("位循环右移 要两个参数") }
+    return 好(位循环右移(值簇[0], 值簇[1]))
   }
   if 名 == "位循环左移" {
-    if len(值们) != 2 { return 坏("位循环左移 要两个参数") }
-    return 好(位循环左移(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("位循环左移 要两个参数") }
+    return 好(位循环左移(值簇[0], 值簇[1]))
   }
   // 可变数组：这两支只是转发到宿主那一层的内建。
   // 名字相同不会递归 —— 数组/设 不是这个文件里定义的函数，编译器把它们编成内建调用。
   if 名 == "数组" {
-    if len(值们) != 1 { return 坏("数组 要一个参数") }
-    return 好(数组(值们[0]))
+    if len(值簇) != 1 { return 坏("数组 要一个参数") }
+    return 好(数组(值簇[0]))
   }
   if 名 == "设" {
-    if len(值们) != 3 { return 坏("设 要三个参数") }
-    return 好(设(值们[0], 值们[1], 值们[2]))
+    if len(值簇) != 3 { return 坏("设 要三个参数") }
+    return 好(设(值簇[0], 值簇[1], 值簇[2]))
   }
   // 命令行参数：目标程序看到的是自己的那一份，由调用的那一层放进环境。
   // 早先这里没有这一支，于是程序里写 argv() 会报「没有这个函数：argv」。
   if 名 == "argv" {
     let 欠参 = 要效果(环境, "process", "argv")
     if 欠参 != "" { return 坏(欠参) }
-    if len(值们) != 0 { return 坏("argv 不要参数") }
+    if len(值簇) != 0 { return 坏("argv 不要参数") }
     let r = 查找(环境, "argv")
     if r.found { return 好(r.value) }
     return 好(())
@@ -813,8 +813,8 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   if 名 == "print" {
     var 出文 = ""
     var i = 0
-    while i < len(值们) {
-      出文 = 出文 + str(值们[i])
+    while i < len(值簇) {
+      出文 = 出文 + str(值簇[i])
       i = i + 1
     }
     print(出文)
@@ -825,65 +825,65 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     if 欠错 != "" { return 坏(欠错) }
     var 错文 = ""
     var j = 0
-    while j < len(值们) {
-      错文 = 错文 + str(值们[j])
+    while j < len(值簇) {
+      错文 = 错文 + str(值簇[j])
       j = j + 1
     }
     print_err(错文)
     return 好(())
   }
   if 名 == "chr" {
-    if len(值们) != 1 { return 坏("chr 要一个参数") }
-    return 好(chr(值们[0]))
+    if len(值簇) != 1 { return 坏("chr 要一个参数") }
+    return 好(chr(值簇[0]))
   }
   // 码点那一对是配套的：chr 造字符，ord 读回来。少了 ord，任何按码点分类的
   // 字符串处理都得写成逐字符比较 —— 标准库第一份正是这样撞上的。
   if 名 == "ord" {
-    if len(值们) != 1 { return 坏("ord 要一个参数") }
-    return 好(ord(值们[0]))
+    if len(值簇) != 1 { return 坏("ord 要一个参数") }
+    return 好(ord(值簇[0]))
   }
   if 名 == "to_int" {
-    if len(值们) != 1 { return 坏("to_int 要一个参数") }
-    return 好(to_int(值们[0]))
+    if len(值簇) != 1 { return 坏("to_int 要一个参数") }
+    return 好(to_int(值簇[0]))
   }
   if 名 == "nfc" {
-    if len(值们) != 1 { return 坏("nfc 要一个参数") }
-    return 好(nfc(值们[0]))
+    if len(值簇) != 1 { return 坏("nfc 要一个参数") }
+    return 好(nfc(值簇[0]))
   }
   if 名 == "is_letter" {
-    if len(值们) != 1 { return 坏("is_letter 要一个参数") }
-    return 好(is_letter(值们[0]))
+    if len(值簇) != 1 { return 坏("is_letter 要一个参数") }
+    return 好(is_letter(值簇[0]))
   }
   if 名 == "is_mark" {
-    if len(值们) != 1 { return 坏("is_mark 要一个参数") }
-    return 好(is_mark(值们[0]))
+    if len(值簇) != 1 { return 坏("is_mark 要一个参数") }
+    return 好(is_mark(值簇[0]))
   }
   // 索引：一个按键查的东西。约定见 design/INDEX.txt —— 键是任意字符串，
   // set 交回同一个索引（于是可以写 表 = index_set(表, k, v)），取不到报 HMYR-內-018。
   // 这六条是自举求值器的分派：它跑在宿主或字节码机上，于是实际调用落到那一层的内置。
   if 名 == "index_new" {
-    if len(值们) != 0 { return 坏("index_new 不要参数") }
+    if len(值簇) != 0 { return 坏("index_new 不要参数") }
     return 好(index_new())
   }
   if 名 == "index_set" {
-    if len(值们) != 3 { return 坏("index_set 要三个参数") }
-    return 好(index_set(值们[0], 值们[1], 值们[2]))
+    if len(值簇) != 3 { return 坏("index_set 要三个参数") }
+    return 好(index_set(值簇[0], 值簇[1], 值簇[2]))
   }
   if 名 == "index_get" {
-    if len(值们) != 2 { return 坏("index_get 要两个参数") }
-    return 好(index_get(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("index_get 要两个参数") }
+    return 好(index_get(值簇[0], 值簇[1]))
   }
   if 名 == "index_has" {
-    if len(值们) != 2 { return 坏("index_has 要两个参数") }
-    return 好(index_has(值们[0], 值们[1]))
+    if len(值簇) != 2 { return 坏("index_has 要两个参数") }
+    return 好(index_has(值簇[0], 值簇[1]))
   }
   if 名 == "index_len" {
-    if len(值们) != 1 { return 坏("index_len 要一个参数") }
-    return 好(index_len(值们[0]))
+    if len(值簇) != 1 { return 坏("index_len 要一个参数") }
+    return 好(index_len(值簇[0]))
   }
   if 名 == "index_keys" {
-    if len(值们) != 1 { return 坏("index_keys 要一个参数") }
-    return 好(index_keys(值们[0]))
+    if len(值簇) != 1 { return 坏("index_keys 要一个参数") }
+    return 好(index_keys(值簇[0]))
   }
   let 找 = 查找(环境, "fn:" + 名)
   if 找.found == false { return 坏("没有这个函数：" + 名) }
@@ -898,8 +898,8 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   if len(找.value) > 2 { 子效 = 找.value[2] }
   let 欠 = 缺效果(子效, 我的效果(环境))
   if 欠 != "" { return 坏("HMYR-內-001 调 " + 名 + " 要 " + 欠 + " 效果，而调用它的函数没有声明") }
-  if len(参名册) != len(值们) { return 坏("参数个数不对：" + 名 + " 要 " + str(len(参名册)) + " 个，给了 " + str(len(值们))) }
-  let 体环境 = 绑参数(环境, 参名册, 值们, 0)
+  if len(参名册) != len(值簇) { return 坏("参数个数不对：" + 名 + " 要 " + str(len(参名册)) + " 个，给了 " + str(len(值簇))) }
+  let 体环境 = 绑参数(环境, 参名册, 值簇, 0)
   // 帧边界：进来时把「本帧持有格」清空（上一帧那份先记下来），退出时关掉这一帧登记的。
   // 只到帧级，不到块级 —— 这门语言没有块钩子，而「一次调用一圈」是能写进判据的最小形状。
   let 全 = 查找(环境, "全局")
@@ -1118,16 +1118,16 @@ fn 求值成文字(节点: Int, 环境: Int) -> String {
 //   {ok: true,  env: 新环境, done: true,  value: 返回值}  遇到 return
 //   {ok: false, env: (),     done: true,  text: 原因}     出错（done 也是真：不能再往下走）
 
-// 绑参数：把 值们 挨个绑到 名册 上，交回一层新环境。
+// 绑参数：把 值簇 挨个绑到 名册 上，交回一层新环境。
 // 「新的一层」这件事在 执行块 里由它自己管（它把 let 绑在局部），
 // 而参数这一层必须先于函数体的第一个 let 就位。
-fn 绑参数从(环境: Int, 名册: Int, 值们: Int, i: Int) -> Int {
+fn 绑参数从(环境: Int, 名册: Int, 值簇: Int, i: Int) -> Int {
   if i >= len(名册) { return 环境 }
-  return 绑参数从(更新(环境, 名册[i], 值们[i]), 名册, 值们, i + 1)
+  return 绑参数从(更新(环境, 名册[i], 值簇[i]), 名册, 值簇, i + 1)
 }
 
-fn 绑参数(环境: Int, 名册: Int, 值们: Int, 起: Int) -> Int {
-  return 绑参数从(环境, 名册, 值们, 起)
+fn 绑参数(环境: Int, 名册: Int, 值簇: Int, 起: Int) -> Int {
+  return 绑参数从(环境, 名册, 值簇, 起)
 }
 
 fn 更新(环境: Int, 名: String, 值: Int) -> Int {
