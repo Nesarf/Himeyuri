@@ -974,6 +974,13 @@ static Value v_str(const uint16_t *p, uint32_t len) {
 
 /* 一个 ASCII 串变成语言里的字符串。终端与诊断都拿它交回短序列：
  * 那些序列里没有一个字节是中文，所以逐字节摊成码元就够。 */
+/* 把 HMYR 的串折成 C 的 ASCII（非 ASCII 按低八位截断 —— ABI 第三节说字符串借而不复制，而这一版只认 ASCII）。 */
+static void 串到ascii(const Value *v, char *buf, int cap) {
+  uint32_t n = v->slen < (uint32_t)(cap - 1) ? v->slen : (uint32_t)(cap - 1);
+  for (uint32_t i = 0; i < n; i++) buf[i] = (char)(v->s[i] & 0xFF);
+  buf[n] = 0;
+}
+
 static Value ascii_text(const char *s) {
   size_t n = strlen(s);
   uint16_t *p = 串存(n ? n : 1);
@@ -4616,6 +4623,63 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     区放键(v.idx, "start", v_num((double)起));
     区放键(v.idx, "len", v_num((double)长));
     *out = v;
+    return 1;
+  }
+  if (name_is(名off, "call_c")) {
+    /* 调一个 C 函数（design/ABI.txt 第四节）。这一版只走 Windows：dlfcn 在 MinGW 上
+     * 没有，而这一台本来就 include <windows.h> —— 所以是 LoadLibraryA 与 GetProcAddress。
+     * 参数只认 Int（截成 int），返回也只认 Int（再从 int 扩回 f64）。
+     * String 与元组参数留到下一版，理由是它们要处理「借而不复制」的生命周期，
+     * 而那是 ABI 第三节那一条，值得单独一次。 */
+    if (nargs != 3) { fail("HMYR-行-002", "call_c wants a library, a symbol and a tuple of arguments"); return 1; }
+    if (args[0].tag != T_STR || args[1].tag != T_STR) {
+      fail("HMYR-行-002", "call_c wants strings for the library and the symbol");
+      return 1;
+    }
+    if (args[2].tag != T_TUPLE && args[2].tag != T_ARRAY) {
+      fail("HMYR-行-002", "call_c wants a tuple for the arguments");
+      return 1;
+    }
+    if (args[2].ilen > 8) { fail("HMYR-行-002", "call_c takes at most eight arguments"); return 1; }
+    char 库名[512], 符号[256];
+    串到ascii(&args[0], 库名, (int)sizeof 库名);
+    串到ascii(&args[1], 符号, (int)sizeof 符号);
+    HMODULE 模 = LoadLibraryA(库名);
+    if (!模) {
+      fail("HMYR-器-013", "call_c cannot open the library; check the name and the working directory");
+      return 1;
+    }
+    FARPROC 函 = GetProcAddress(模, 符号);
+    if (!函) {
+      FreeLibrary(模);
+      fail("HMYR-器-014", "call_c cannot find that symbol in the library");
+      return 1;
+    }
+    int 数们[8];
+    for (uint32_t i = 0; i < args[2].ilen; i++) {
+      Value 项 = args[2].items[i];
+      if (项.tag == T_NUM) 数们[i] = (int)项.num;
+      else if (项.tag == T_BOOL) 数们[i] = 项.boolean ? 1 : 0;
+      else {
+        FreeLibrary(模);
+        fail("HMYR-器-015", "call_c this version takes only numbers and booleans; strings come later");
+        return 1;
+      }
+    }
+    /* 统一按「最多八个 int 参数、返回 int」调 —— ABI 第四节的最小形状就是这个。 */
+    int 结果 = 0;
+    switch (args[2].ilen) {
+      case 0: 结果 = ((int (*)(void))函)(); break;
+      case 1: 结果 = ((int (*)(int))函)(数们[0]); break;
+      case 2: 结果 = ((int (*)(int, int))函)(数们[0], 数们[1]); break;
+      case 3: 结果 = ((int (*)(int, int, int))函)(数们[0], 数们[1], 数们[2]); break;
+      default:
+        FreeLibrary(模);
+        fail("HMYR-行-002", "call_c this version takes at most three arguments");
+        return 1;
+    }
+    FreeLibrary(模);
+    *out = v_num((double)结果);
     return 1;
   }
   if (name_is(名off, "view_len")) {
