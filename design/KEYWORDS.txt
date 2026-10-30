@@ -40,7 +40,7 @@
      441    false       假        新定（它是字面量，不是节点）
      400    true        真        新定（同上）
      163    else        否则      新定
-     146    effects     效果      节点名 效果
+     146    effects     效果串    集合名，按 design/COLLECTIVE.txt 挑字（一串效果）
      114    import      引入      节点名 引入
      105    pub         公开      新定
       37    const       常量      节点名 常量
@@ -51,7 +51,7 @@
        8    own         拥有      设计文档里叫「拥有」
        5    as          作        新定（引入 名 作 别名）
        4    managed     托管      设计文档里叫「托管区」
-       2    effect      效果      与 effects 同一个词
+       2    effect      效果      单条效果（与 effects 那条分开，那条是集合）
        0    requires    要求      新定，尚未使用
        0    ensures     保证      新定，尚未使用
        0    invariant   不变式    新定，尚未使用
