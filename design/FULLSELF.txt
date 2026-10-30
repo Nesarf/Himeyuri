@@ -2228,6 +2228,27 @@ selfloa 的 27/27）。
     所以这一轮留下的代码是：vm/hmyr.c 里的 call_c 与 串到ascii（编得过、逻辑在），
     而它还没有真的被调到。
 
+自立：call_c 真的调到了一个 C 函数（2026-11-02，新一段第 37 轮）
+
+    上一轮它编进了 C 机器，而运行时说「没有这个函数」。这一轮找到了第二层：
+
+      src/bytecode.mjs 第 388 行有一份内置名单（bytes_view、view_len、view_get…）——
+      编译时按它判断「这个名字是内置还是普通函数」。call_c 不在里面，于是它被编成一个
+      普通的 CALLF，而运行时的函数表里没有它，于是 HMYR-行-005。
+
+    加进去之后，同一个探针给出：
+
+      call_c("msvcrt.dll", "abs", (-7,))  →  7
+
+    所以第三件的判据（HMYR 真的调到一个 C 函数并拿到正确返回值）达成了。
+
+    读数：eval、codes-eval、bytecode、vm、c-vm、minimal-eval、ffi（14.3 秒）、docs
+    八套全过。
+
+    这一轮留下的代码：vm/hmyr.c 的 call_c 与 串到ascii、src/bytecode.mjs 的内置名单
+    一条。而 ABI.txt 里写的那三处失败码（器-013 / 014 / 015）还没登记进两张码表 ——
+    那是下一轮的事，而它正好是 conform 那套会查的东西。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 HMYR-載-001；
 另外引的文件不在就报 HMYR-載-003（宿主也是这个码）。顺序取后序，于是 order 逐项相同。
