@@ -35,7 +35,9 @@ fn is_alpha(c: String) -> Bool {
   return is_letter(c)
 }
 
-fn is_digit(c: String) -> Bool {
+// pub 是给 run.hmoca 用的：是包名字 要判「首字符不是数字」，而那是字符分类这件事
+// 该留在词法这一层（2026-11-02）。
+pub fn is_digit(c: String) -> Bool {
   return in_set(c, digits(), 0)
 }
 

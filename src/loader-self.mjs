@@ -280,18 +280,18 @@ export function loadUnitSelf(entry, options = {}) {
         }
       }
     }
-    // 包名那一支：解析出来排到队头，让它先于后面那些被处理（尽量靠前，见上面那条
-    // 关于顺序的说明）。解析失败（不是「像名字」的形状）就交给包管理器，这里不管。
+    // 包名那一支（2026-11-02 后半段改）：order 现在由自举层给出 —— 它的 加载走 认得包名
+    // （解析路 与 是包名字 都在 self/run.hmoca 里），所以这里不再自己入队。
+    // 这一层只做两件自举层还没有的事：清单那八项校验（E0304 到 E0307，由 resolveImport
+    // 里那一趟给出），以及不成形状时的 W0301。
     for (const imp of ast.imports || []) {
       if (!imp || 是路径形式(imp.path)) continue;
       const 目标 = resolveImport(能力, abs, imp.path, diagnostics);
       if (!目标) {
         // 不像包名、也不是路径：宿主在这里说一句 W0301（「包管理器将来管它」），
-        // 而不是把它当成缺文件。适配层原来静默跳过了这一条（2026-11-02）。
+        // 而不是把它当成缺文件。
         diagnostics.warn("HMYR-W0301", "import of '" + imp.path + "' is not a path; the package manager will own that", 0, 0);
-        continue;
       }
-      if (!已见.has(目标) && fs.existsSync(目标)) 队列.unshift(目标);
     }
   }
 

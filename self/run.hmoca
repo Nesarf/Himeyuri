@@ -133,7 +133,16 @@ fn 是路径(s: String) -> Bool {
 }
 
 fn 加载走(目录: String, 相对: String, 栈: Int, 已载: Int) effects(file) {
-  let 路 = 拼路径(目录, 相对)
+  // 包名也走这条路（2026-11-02）：解析路 认得路径、绝对路径与包名三种写法，
+  // 与宿主 loader 的 resolveImport 同一条规矩。原来这里只 拼路径，于是包名
+  // 被当成「不是文件」跳过，而适配层只好在 JS 那一侧再补一遍 —— 那就是两份知识。
+  //
+  // 不成形状的（比如 std/io 里的斜杠）交给包管理器：宿主在那里报 W0301 并跳过，
+  // 这里也跳过，因为「不是文件」与「缺文件」是两件事。
+  if 是路径(相对) == false && 是绝对(相对) == false && 是包名字(相对) == false {
+    return {已载: 已载, 错: ""}
+  }
+  let 路 = 解析路(目录, 相对)
   // 环先判：栈 记的是「这一条路径上走过的」，而已载 记的是「已经加载过的」。
   // 两者的顺序要紧 —— 已载 先判会把环当成「已经加载过」，于是 E0301 永远报不出来
   // （2026-11-01 实测：调换之后 selfmod 那条环用例才重新通过）。
@@ -167,8 +176,15 @@ fn 加载走(目录: String, 相对: String, 栈: Int, 已载: Int) effects(file
 
 fn 加载多(目录: String, 路们: Int, i: Int, 栈: Int, 已载: Int) effects(file) {
   if i >= len(路们) { return {已载: 已载, 错: ""} }
-  // 非路径的 import 不是文件，跳过 —— 报 E0302 会把「包」当成「缺文件」。
-  if 是路径(路们[i]) == false { return 加载多(目录, 路们, i + 1, 栈, 已载) }
+  // 三种形状放行：路径、绝对、包名。其余的（std/io 这种）跳过 —— 报 E0302 会把
+  // 「包管理器将来的事」当成「缺文件」。
+  //
+  // 这一道门与 加载走 开头那道要一起改（2026-11-02）：只改后者的话，包名在进
+  // 加载走 之前就被这里滤掉了，症状是 order 里没有包 —— 而 pkg-manifest 与
+  // owned-check 的那三条判据全在包上，它们一起红，看起来像检查坏了。
+  if 是路径(路们[i]) == false && 是绝对(路们[i]) == false && 是包名字(路们[i]) == false {
+    return 加载多(目录, 路们, i + 1, 栈, 已载)
+  }
   let r = 加载走(目录, 路们[i], 栈, 已载)
   if r.错 != "" { return {已载: r.已载, 错: r.错} }
   return 加载多(目录, 路们, i + 1, 栈, r.已载)
@@ -409,16 +425,26 @@ fn 解析程序(源: String) {
   return (体.list,)
 }
 
+// 量具与启动器传进来的是「相对当前目录的路径」，可能不写 ./ 开头（self/sign.hmoca 这样）。
+// 而 加载走 现在按 import 说明的三种形状去判（路径 / 绝对 / 包名）—— 于是这里补一个 ./，
+// 别让「包名」那条分支抓住一条本来就能读的相对路径（2026-11-02 实测：不补的话
+// self-load 那套量出空 order，四棵树一起红）。
+fn 当路径(相对: String) -> String {
+  if 是路径(相对) { return 相对 }
+  if 是绝对(相对) { return 相对 }
+  return "./" + 相对
+}
+
 // 给一个入口（相对当前目录），交回 "ok <文件数>" 或 "错 <码> <路径>"。
 fn 只加载(入口: String) -> String effects(file) {
-  let r = 加载走(".", 入口, (), ())
+  let r = 加载走(".", 当路径(入口), (), ())
   if r.错 != "" { return "错 " + r.错 }
   return "ok " + str(len(r.已载))
 }
 
 // 加载顺序，一行一个（相对当前目录的写法）。量具靠它逐项比宿主 loader 的 order。
 fn 加载序(入口: String) -> String effects(file) {
-  let r = 加载走(".", 入口, (), ())
+  let r = 加载走(".", 当路径(入口), (), ())
   if r.错 != "" { return "错 " + r.错 }
   var 出 = ""
   var i = 0
@@ -630,6 +656,21 @@ fn 是路径(相对: String) -> Bool {
   if len(相对) >= 3 && slice(相对, 0, 3) == "../" { return true }
   if 是绝对(相对) { return true }
   return false
+}
+
+// 像不像一个包名：不以数字、连字符或点开头，且整段不含斜杠。
+// 与宿主那条正则同一条意思（名字里允许非 ASCII —— 这门语言的标识符本来就允许）。
+// 不成形状的东西（std/io 这种）不是包名，是包管理器将来的事。
+fn 是包名字(s: String) -> Bool {
+  if len(s) == 0 { return false }
+  if is_digit(s[0]) { return false }
+  if s[0] == "-" || s[0] == "." { return false }
+  var i = 0
+  while i < len(s) {
+    if s[i] == "/" { return false }
+    i = i + 1
+  }
+  return true
 }
 
 // 从某个目录往上找「包根」：最外层的那个含 hmyr.hmkit 的目录。
