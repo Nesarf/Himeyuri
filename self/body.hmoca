@@ -339,7 +339,13 @@ fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
   let 效们 = 效果们(tokens, at + 1, open)
   // 第七件是返回类型。它加在末尾，所以读 选[2] 与 选[3] 的老代码一行都不用改。
   let 返型 = 返回类型在(tokens, at + 1, open)
-  return decls_from(tokens, got.next, acc + ((名, 参名们, got.list, 效们, 位.line, 位.column, 返型),), 常量们)
+  // 第八件：这个声明是不是 pub。原来不收它，于是「可见性第一步」与「命名空间」在
+  // 自举层那条路上永远看不到 pub —— 跨模块调用一律被当成私有的（2026-11-02 实测：
+  // 桥交出的 pub 恒为 false，而 namespace 那套的「写 pub 就不报」因此恒红）。
+  // pub 写在 fn 前一个记号：next_decl 只停在 fn/const/var，所以它被跳过了。
+  var 公开 = 0
+  if at > 0 && tokens[at - 1].kind == "ident" && tokens[at - 1].text == "pub" { 公开 = 1 }
+  return decls_from(tokens, got.next, acc + ((名, 参名们, got.list, 效们, 位.line, 位.column, 返型, 公开),), 常量们)
 }
 
 // 交回 {fns: ((名字, 参数名们, 语句们, 效果名们, 行, 列), …), consts: ((名字, 值), …), next}。

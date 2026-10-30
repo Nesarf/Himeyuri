@@ -857,6 +857,34 @@ selfloa 的 27/27）。
 
     开关量法那五套仍全过 —— 这一轮动的都是桥那边的东西，没有碰到主路。
 
+第二段：pub 在自举层的解析里被丢掉了（2026-11-02，同一段第三轮）
+
+    namespace 那套的「写 pub 就不报」一直红，而用探针一问就见到了形状：
+
+      lib.hmoca  decl name=甲 kind=Fn pub=false
+      lib.hmoca  decl name=乙 kind=Fn pub=false      ← 甲 写的是 pub fn 甲
+
+    pub 恒为 false。顺着往上找，根在 self/body.hmoca 的 decls_from：它交回的声明是
+    七件元组（名字、参数名们、语句们、效果名们、行、列、返回类型），**pub 不在里面**。
+    而 next_decl 只在 fn / const / var 上停，于是写在 fn 前面的那个 pub 被整个跳过了。
+
+    修法是第八件：
+
+      decls_from   看 at - 1 那个记号是不是 pub，收回元组第八位
+      造模块       原来写死 pub: false，改成读第八位
+
+    之后同一个探针给出 pub=1 与 pub=0，而 warnings 空了 —— 误报的 W0303 一起消失。
+    开关量法上 selfcompile、bootstrap、bytecode、namespace 四套仍全过（元组多一位
+    不影响任何数函数个数的判据）。
+
+    读数：换载量法 100 → 101（pkgmanifest 转绿 —— 它的两条要的是「清单的版本与入口
+    顶部的 rev 对得上」，而桥那条路上也一样没有）。剩下六套：求值器语义四套
+    （macro 的宏展开、stage0eval 与 minimaleval 的 match、numbers 的 str(nil)），
+    以及两条与 pub 无关的（ownedcheck 的跨模块转移、namespace 的别名是 null）。
+
+    桥那边 namespace 转成另一处（招牌来自哪个文件那个 alias 是 null），ownedcheck 的
+    跨模块转移也还没过 —— 这两条是下一轮的事。
+
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 E0301；
 另外引的文件不在就报 E0302（宿主也是这个码）。顺序取后序，于是 order 逐项相同。

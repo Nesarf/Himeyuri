@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import { loadUnit as 宿主载, runUnit as 宿主跑 } from "../src/loader.mjs";
 import { 逐模块检查, 全树检查 } from "../src/loader-checks.mjs";
 import { resolveImport } from "../src/loader.mjs";
+import { 找包根, 读包清单 } from "../src/loader.mjs";
 import { Diagnostics } from "../src/diagnostics.mjs";
 import { Runtime } from "../src/eval.mjs";
 import { 读程序 } from "../src/code-file.mjs";
@@ -262,6 +263,32 @@ export function loadUnit(entry, options = {}) {
         const 目标 = resolveImport(能力, 键, p, 诊断);
         if (!目标) continue;
         if (imp.alias) 别名表.set(imp.alias, 目标);
+      }
+    }
+  }
+
+  // 清单的版本与入口顶部的 rev 必须一致（宿主 src/loader.mjs 第 325 到 340 行）。
+  // 两处写同一件事看着冗余，但它们的读者不同：清单给包管理看，rev 给装载器看。
+  // 只对「某个包的 index.hmoca」做这一条 —— 而「真的是包的入口」由旁边有没有
+  // hmyr.hmkit 来问（临时文件常常就叫 index.hmoca，那件事在 loader-self 里踩过一次）。
+  {
+    const 能力 = 本机能力();
+    for (const 键 of order) {
+      if (path.basename(键) !== "index.hmoca") continue;
+      const 包目录 = path.dirname(键);
+      const 包根 = 找包根(能力, 键);
+      const 清单路 = path.join(包根, path.basename(包目录), "hmyr.hmkit");
+      if (!fs.existsSync(清单路)) continue;
+      const 清单 = 读包清单(能力, 包根, path.basename(包目录), 诊断);
+      const ast = modules.get(键);
+      if (清单 && Number.isInteger(清单.版本) && ast && ast.rev !== null && ast.rev !== undefined && ast.rev !== 清单.版本) {
+        诊断.error(
+          "HMYR-E0304",
+          "package '" + path.basename(包目录) + "' declares 版本 " + 清单.版本 + " but its index.hmoca says rev " + ast.rev +
+            "; the two places that name a revision have to agree",
+          0,
+          0,
+        );
       }
     }
   }

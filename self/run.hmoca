@@ -331,8 +331,11 @@ fn 包声明(声明们: Int, i: Int, acc: Int) {
   if len(d) > 5 { 列 = d[5] }
   var 返 = ()
   if len(d) > 6 { 返 = d[6] }
+  // 第八件是「这个声明是不是 pub」（self/body.hmoca 的 decls_from 现在收它）。
+  var 公开 = 0
+  if len(d) > 7 { 公开 = d[7] }
   let 体 = 包块(句, 行)
-  let 函 = {kind: "Fn", name: 名, params: 转参数们(参, 0, ()), returns: 返, effects: 效, contracts: (), body: 体, pub: false, line: 行, column: 列}
+  let 函 = {kind: "Fn", name: 名, params: 转参数们(参, 0, ()), returns: 返, effects: 效, contracts: (), body: 体, pub: 公开, line: 行, column: 列}
   return 包声明(声明们, i + 1, acc + (函,))
 }
 
