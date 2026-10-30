@@ -17,6 +17,9 @@ import { 是源码 } from "./file-kind.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit as 宿主载, runUnit as 宿主跑 } from "../src/loader.mjs";
+import { 逐模块检查, 全树检查 } from "../src/loader-checks.mjs";
+import { resolveImport } from "../src/loader.mjs";
+import { Diagnostics } from "../src/diagnostics.mjs";
 import { Runtime } from "../src/eval.mjs";
 import { 读程序 } from "../src/code-file.mjs";
 import { 虚拟机 } from "../src/vm.mjs";
@@ -66,7 +69,21 @@ function 取引导() {
   return 引导;
 }
 
-const 新诊断 = () => ({ errors: [], warnings: [], items: [], add() {}, error() {}, warn() {} });
+// 桥自己的诊断袋。原来 error 与 warn 是空函数 —— 于是「第二趟的检查」报了等于没报：
+// zonestatic、realtime、ownedcheck 三套的判据要的是「装载应当失败」，而它们拿到的
+// 永远是 ok:true 与一个空数组（2026-11-02 实测）。现在按 Diagnostics 的形状收集。
+const 新诊断 = () => {
+  const 袋 = { errors: [], warnings: [], items: [] };
+  袋.add = (severity, code, message, line, column) => {
+    const 条 = { code, message, line: line || 0, column: column || 0 };
+    if (severity === "error") 袋.errors.push(条);
+    else 袋.warnings.push(条);
+    袋.items.push(条);
+  };
+  袋.error = (code, message, line, column) => 袋.add("error", code, message, line, column);
+  袋.warn = (code, message, line, column) => 袋.add("warn", code, message, line, column);
+  return 袋;
+};
 
 // 两台执行器交回的记录长得不一样：解释器给普通对象与数组，字节码机给它自己的
 // 类记录（fields 是一个 Map）与类元组（items）。宿主的 Runtime 只认前一种，
@@ -152,6 +169,9 @@ export function loadUnit(entry, options = {}) {
     let 键 = String(原).startsWith("./") ? String(原).slice(2) : String(原);
     键 = 键.split("/").join(path.sep);
     modules.set(键, m);
+    // 区与实时那两条编译期检查：宿主在 visit 里做，桥这条路上原来一样也没有 ——
+    // 于是 zonestatic / realtime 那两套的判据看到的是 ok:true（2026-11-02）。
+    逐模块检查(m, path.basename(键), 诊断, options);
     // 同一个模块挂两个门牌：order 里用相对形式，而多数套件拿绝对路径来 get。
     // 但别名只挂在查询上，不进 Map 本身 —— 否则 modules.size 会翻倍，
     // 而 bootstrap 那套正是拿 size 数「带进几份文件」。
@@ -159,23 +179,9 @@ export function loadUnit(entry, options = {}) {
     if (绝对键 !== 键) 别名.set(绝对键, m);
     order.push(键);
   });
-  // 重名声明：与宿主 src/loader.mjs 同一句话、同一个位置（diagnostics.items）。
-  // 时机也一样 —— 整棵树的模块都建好之后再判，而不是边读边判。
-  const 声明过 = new Map();
-  for (const 键 of order) {
-    for (const d of Array.from(modules.get(键).decls || [])) {
-      if (!d || (d.kind !== "Fn" && d.kind !== "Const" && d.kind !== "TypeAlias")) continue;
-      if (声明过.has(d.name)) {
-        诊断.items.push({
-          code: "HMYR-W0302",
-          message: "two modules declare '" + d.name + "' (" + 声明过.get(d.name) + " and " + 键 +
-            "); the later one wins until namespaces exist",
-        });
-      } else {
-        声明过.set(d.name, 键);
-      }
-    }
-  }
+  // 重名声明（W0302）与可见性（W0303）、持有格的两趟，都搬到 src/loader-checks.mjs 了：
+  // 这里原来还有一份自己的版本，于是同一个文件被报两次「两个模块声明了同一个名字」。
+  // 两条 loader 要做的第二趟一模一样，抄第二份就是让两份知识分叉。
   // 「写了 rev 但没有数字」是一条语法错，不是「不提要求」。
   for (const 键 of order) {
     for (const d of Array.from(modules.get(键).decls || [])) void d;
@@ -237,14 +243,40 @@ export function loadUnit(entry, options = {}) {
       }
     }
   }
+  // 第二趟：共享名字、可见性、持有格。与 src/loader-self.mjs 用的是同一份实现
+  // （src/loader-checks.mjs）—— 两条路要做的第二趟一模一样，抄第二份就是让知识分叉。
+  全树检查(modules, order, 诊断, options);
+
+  // 别名表与包清单：这两件与「import 说明怎么解析成一个文件」有关，所以留在各层。
+  // 桥这边的解析在 HMYR 里，而清单校验是宿主的那一份 —— 借它跑一遍，形状不同不影响
+  // 「这棵树能不能用」，只影响诊断。
+  const 别名表 = new Map();
+  {
+    const 能力 = 本机能力();
+    for (const 键 of order) {
+      const ast = modules.get(键);
+      if (!ast) continue;
+      for (const imp of Array.from(ast.imports || [])) {
+        const p = String((imp && imp.path) || "");
+        if (!p) continue;
+        const 目标 = resolveImport(能力, 键, p, 诊断);
+        if (!目标) continue;
+        if (imp.alias) 别名表.set(imp.alias, 目标);
+      }
+    }
+  }
+
   // 有错就不是一条能用的加载结果 —— 宿主那边 ok 与 diagnostics 是同一个判断。
   const 好用 = 诊断.errors.length === 0;
-  return { ok: 好用, order, modules, diagnostics: 诊断 };
+  return { ok: 好用, order, modules, 别名表, diagnostics: 诊断 };
 }
 
 export function runUnit(unit, options = {}) {
   const rt = new Runtime(options);
   for (const key of unit.order) rt.registerModule(unit.modules.get(key));
+  // 别名要登记进运行时，否则 命名空间::名字 这种写法全报「没有这个名字」——
+  // 宿主 loader 的 runUnit 也做这一件（src/loader.mjs 第 435 行）。
+  for (const [名, 文件] of unit.别名表 || []) rt.登记别名(名, 文件);
   return rt;
 }
 

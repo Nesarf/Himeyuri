@@ -47,11 +47,16 @@ for (const [名, 脚本] of 清单) {
   候选.push({ 名, 脚本, 副本 });
 }
 
-console.log("候选套件（import 了宿主 loader 的）：" + 候选.length);
+// --only=名,名 ：只跑这几套。量全量要十分钟，而查一处改动只要几套（2026-11-02）。
+const 只参数 = process.argv.find((a) => a.startsWith("--only="));
+const 只要 = 只参数 ? new Set(只参数.slice(7).split(",").map((s) => s.trim()).filter(Boolean)) : null;
+const 要跑 = 只要 ? 候选.filter((c) => 只要.has(c.名)) : 候选;
+
+console.log("候选套件（import 了宿主 loader 的）：" + 要跑.length);
 const 能换 = [];
 const 换不动 = [];
 const t0 = Date.now();
-for (const c of 候选) {
+for (const c of 要跑) {
   const r = spawnSync(process.execPath, [c.副本], { cwd: ROOT, encoding: "utf8", timeout: 300000 });
   if (r.status === 0) 能换.push(c.名);
   else {
