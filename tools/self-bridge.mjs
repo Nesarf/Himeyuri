@@ -217,11 +217,13 @@ export function loadUnit(entry, options = {}) {
     for (const imp of Array.from(模块.imports || [])) {
       const p = String((imp && imp.path) || "");
       if (!p) continue;
-      const 算路径 = p.startsWith("./") || p.startsWith("../") || /^[A-Za-z]:[\\/]/.test(p) || path.isAbsolute(p);
-      if (!算路径) continue;
-      const 目标路 = path.resolve(path.dirname(键), p.split("/").join(path.sep));
-      // 查表要用 order 里的键（相对形式）—— 拿绝对路径去 modules.get 永远查不到，
-      // 于是版本协商一条都不报，而判据那边看到的是「没有 E0303」（2026-11-02 实测）。
+      // 目标要用 resolveImport 拿 —— 它懂包名（包根/名/index.hmoca），而在这里
+      // 手工拼路径对包名会少拼一段：import "甲包" 拼成 ...\甲包，而模块表里那一项是
+      // ...\甲包\index.hmoca，于是查不到、版本协商一条也不报（2026-11-02 实测：
+      // 探针打出 目标键=无、有目标=false，而 order 里明明有 index.hmoca）。
+      // 路径形式与包名都交给它，两边一条规矩。
+      const 目标路 = resolveImport(本机能力(), 键, p, null);
+      if (!目标路) continue;
       const 目标键 = order.find((k) => path.resolve(k) === 目标路);
       const 目标 = 目标键 ? modules.get(目标键) : undefined;
       if (!目标) continue;
