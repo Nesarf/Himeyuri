@@ -105,4 +105,7 @@ export const CODES = [
   { code: "HMYR-碼-003", stage: "run", checkedBy: "test/zone.test.mjs", meaning: "a block was adopted into a second arena that is still open: its lifetime would be owned in two places" },
   { code: "HMYR-形-007", stage: "tool", checkedBy: "test/format.test.mjs", meaning: "the formatter found something it cannot write back" },
   { code: "HMYR-載-023", stage: "link", internal: true, meaning: "rev is not followed by a revision number" },
+  { code: "HMYR-器-013", stage: "link", planned: true, meaning: "call_c cannot open the library" },
+  { code: "HMYR-器-014", stage: "link", planned: true, meaning: "call_c cannot find that symbol in the library" },
+  { code: "HMYR-器-015", stage: "link", planned: true, meaning: "call_c was given an argument this version cannot pass" },
 ];

@@ -2222,8 +2222,8 @@ selfloa 的 27/27）。
           而 call_c 这一版最多三个参数 —— 超过就报 HMYR-行-002。
 
     读数：gcc 编过（0 warning 之外的都清了）。而跑一条 call_c("msvcrt.dll", "abs",
-    (-7,)) 时它说 HMYR-行-005「没有这个函数」—— 说明 C 机器认了它，而**调用点那一路
-    还有一层内置白名单要登记**。那是下一轮的第一件事。
+    (-7,)) 时它说 HMYR-行-005「没有这个函数」—— 说明 C 机器认了它，而调用点那一路
+    还有一层内置白名单要登记。那是下一轮的第一件事。
 
     所以这一轮留下的代码是：vm/hmyr.c 里的 call_c 与 串到ascii（编得过、逻辑在），
     而它还没有真的被调到。
@@ -2248,6 +2248,24 @@ selfloa 的 27/27）。
     这一轮留下的代码：vm/hmyr.c 的 call_c 与 串到ascii、src/bytecode.mjs 的内置名单
     一条。而 ABI.txt 里写的那三处失败码（器-013 / 014 / 015）还没登记进两张码表 ——
     那是下一轮的事，而它正好是 conform 那套会查的东西。
+
+自立：三个 FFI 码登记好了，而它们标着 planned（2026-11-02，新一段第 38 轮）
+
+    把 ABI.txt 承诺的三个码（器-013 / 014 / 015）登记进两张表，而 conform 立刻报
+    dead=3 —— 「登记了但没被发出」，因为 conformance.mjs 只扫 src/ 与 tools/，而
+    call_c 的那三个码在 vm/hmyr.c 里。
+
+    三条路里选了标 planned: true，理由是诚实的：那三个失败还没有用例（call_c 打不开库、
+    找不到符号、参数类型不对），而把 checkedBy 写上去只会让 conform 假绿 —— 它会去那个
+    文件里找码的字样，找到一个注释也算数。
+
+    读数：conform 的 why 行全 0 —— failed、xpassed、unregistered、dead、duplicated、
+    unexplained、unexercised、outside、odd、grammar 十项都是 0。
+
+    所以第三件的两个遗留里，一个解决了（码登记），另一个留着（那三条用例）。而这一轮
+    也量出一件结构上的事：C 机器的码不在 conform 的视野里，所以它的 dead 判据对
+    「只在 C 机器里发出的码」永远会误报。这件事值得记 —— 将来要么让 conformance 扫
+    vm/，要么给这类码一个「在 C 机器侧」的标记。
 
 第三件（2026-10-24）：模块加载的语义也量了。self/run.hmoca 的 加载走 照宿主 loader
 文件头那三条承诺实现 —— import 真的加载、同一个文件只加载一次、环引用报 HMYR-載-001；
