@@ -17,6 +17,7 @@ const SUITES = [
   ["parser", "test/parser.test.mjs", "SPEC 2.2 - grammar, one case per production"],
   ["eval", "test/eval.test.mjs", "SPEC 2.2 acceptance - twenty programs run"],
   ["docs", "tools/check-docs.mjs", "no rendering syntax in any document"],
+  ["docshmyr", "test/docs-hmyr.test.mjs", "M7 - the document checker written in Himeyuri agrees with the JavaScript one on the same tree: the same documents, the same verdict on each, and no rendering syntax either way (skipped when the host has no C compiler)"],
   ["conform", "tools/conformance.mjs", "SPEC 4.2 - every clause has cases, every error code is registered"],
   ["kpb", "test/kpb.test.mjs", "SPEC M4 - a piece described in Himeyuri, read back as data"],
   ["m4rt", "test/kpb-roundtrip.test.mjs", "SPEC M4 - a description survives a round trip, and can be generated"],
