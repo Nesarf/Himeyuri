@@ -5,7 +5,7 @@
 函数 main() -> Int 效果串(process) {
   定 参们 = argv()
   print("len=" + str(len(参们)) + chr(10))
-  var i = 0
+  变 i = 0
   当 i < len(参们) {
     print(str(i) + "=[" + 参们[i] + "]" + chr(10))
     i = i + 1

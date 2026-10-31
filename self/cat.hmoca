@@ -6,7 +6,7 @@
 // 用法：hmyr self/cat.hmyr < 某个文件
 
 函数 main() -> Int {
-  var 继续 = 真
+  变 继续 = 真
   当 继续 {
     定 r = read_stdin_line()
     若 len(r.行) > 0 {

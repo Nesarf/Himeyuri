@@ -26,8 +26,8 @@
 引入 "./manifest.hmoca"
 
 函数 收一件(路们: Int, 目录: String, 名册: Int) {
-  var 出 = 路们
-  var i = 0
+  变 出 = 路们
+  变 i = 0
   当 i < len(名册) {
     出 = 出 + (目录 + "/" + 名册[i],)
     i = i + 1
@@ -59,10 +59,10 @@
   // runtime/text.hmyr 与 runtime/ucd/blocks.hmyr，包若不含它们，
   // 「拿到包的人自己验」就会在那两项上报缺。这一处是 release-loop 照出来的 ——
   // 在仓库根下验清单永远看不见它，因为那些文件本来就在仓库里。
-  var 目录们 = ("src", "self", "bin", "tools", "test", "design", "examples", "assets")
+  变 目录们 = ("src", "self", "bin", "tools", "test", "design", "examples", "assets")
   若 只收 != "" { 目录们 = (只收,) }
-  var 路们 = ()
-  var d = 0
+  变 路们 = ()
+  变 d = 0
   当 d < len(目录们) {
     若 is_dir(目录们[d]) {
       路们 = 收一件(路们, 目录们[d], 走文件(目录们[d]))
@@ -73,9 +73,9 @@
   // 走文件 是递归的，所以 runtime/ucd/blocks.hmyr 也会进来 —— 清单里列了它。
   若 只收 == "" {
     定 语名册 = 走文件("runtime")
-    var j = 0
+    变 j = 0
     当 j < len(语名册) {
-      var 要 = 假
+      变 要 = 假
       若 以尾(语名册[j], ".hmoca") { 要 = 真 }
       若 以尾(语名册[j], ".hmoks") || 以尾(语名册[j], ".hmtn") { 要 = 真 }
       若 要 { 路们 = 收一件(路们, "runtime", (语名册[j],)) }
@@ -88,11 +88,11 @@
     返回 1
   }
 
-  var 块堆 = ()
-  var 心们 = ()
-  var 偏移 = 0
-  var 总原始 = 0
-  var k = 0
+  变 块堆 = ()
+  变 心们 = ()
+  变 偏移 = 0
+  变 总原始 = 0
+  变 k = 0
   当 k < len(路们) {
     定 一 = 成员(路们[k], 正规名(路们[k]), 要压, 偏移)
     块堆 = 块堆 + (一.块,)
@@ -125,11 +125,11 @@
 
 函数 main() -> Int 效果串(file, process) {
   定 参 = argv()
-  var 要压 = 假
-  var 附加路 = ""
-  var 附加名 = "manifest.json"
-  var 位置 = ()
-  var i = 0
+  变 要压 = 假
+  变 附加路 = ""
+  变 附加名 = "manifest.json"
+  变 位置 = ()
+  变 i = 0
   当 i < len(参) {
     若 参[i] == "--压" {
       要压 = 真

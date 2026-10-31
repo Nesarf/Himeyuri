@@ -167,8 +167,8 @@ fn 读字符串从(s: String, i: Int, acc: String) {
 // 后者不是「好看」——清单的 digest 是对那一串字节算的，差一个空格就对不上。
 
 函数 转义文(s: String) -> String {
-  var 出 = ""
-  var i = 0
+  变 出 = ""
+  变 i = 0
   当 i < len(s) {
     定 c = s[i]
     若 c == "\"" { 出 = 出 + "\\\"" }
@@ -187,8 +187,8 @@ fn 读字符串从(s: String, i: Int, acc: String) {
 }
 
 函数 缩进空(n: Int) -> String {
-  var 出 = ""
-  var i = 0
+  变 出 = ""
+  变 i = 0
   当 i < n {
     出 = 出 + "  "
     i = i + 1
@@ -206,8 +206,8 @@ fn 读字符串从(s: String, i: Int, acc: String) {
   }
   若 值.kind == "null" { 返回 "null" }
   若 值.kind == "a" {
-    var 出 = "["
-    var i = 0
+    变 出 = "["
+    变 i = 0
     当 i < len(值.value) {
       若 i > 0 { 出 = 出 + "," }
       出 = 出 + 生成紧凑(值.value[i])
@@ -216,8 +216,8 @@ fn 读字符串从(s: String, i: Int, acc: String) {
     返回 出 + "]"
   }
   若 值.kind == "o" {
-    var 出 = "{"
-    var i = 0
+    变 出 = "{"
+    变 i = 0
     当 i < len(值.value) {
       若 i > 0 { 出 = 出 + "," }
       出 = 出 + 引号(值.value[i][0]) + ":" + 生成紧凑(值.value[i][1])
@@ -241,8 +241,8 @@ fn 读字符串从(s: String, i: Int, acc: String) {
   若 值.kind == "a" {
     若 len(值.value) == 0 { 返回 "[]" }
     定 内 = 缩进空(层 + 1)
-    var 出 = "[" + chr(10)
-    var i = 0
+    变 出 = "[" + chr(10)
+    变 i = 0
     当 i < len(值.value) {
       出 = 出 + 内 + 生成缩进(值.value[i], 层 + 1)
       若 i + 1 < len(值.value) { 出 = 出 + "," }
@@ -254,8 +254,8 @@ fn 读字符串从(s: String, i: Int, acc: String) {
   若 值.kind == "o" {
     若 len(值.value) == 0 { 返回 "{}" }
     定 内 = 缩进空(层 + 1)
-    var 出 = "{" + chr(10)
-    var i = 0
+    变 出 = "{" + chr(10)
+    变 i = 0
     当 i < len(值.value) {
       出 = 出 + 内 + 引号(值.value[i][0]) + ": " + 生成缩进(值.value[i][1], 层 + 1)
       若 i + 1 < len(值.value) { 出 = 出 + "," }
@@ -286,8 +286,8 @@ fn 读字符串从(s: String, i: Int, acc: String) {
 
 公开 函数 拼平(块堆: Int, 起: Int, 止: Int) {
   若 止 - 起 <= 1 { 返回 块堆[起] }
-  var 左 = 起
-  var 右 = 止
+  变 左 = 起
+  变 右 = 止
   当 右 - 左 > 2 {
     左 = 左 + 1
     右 = 右 - 1
@@ -297,9 +297,9 @@ fn 读字符串从(s: String, i: Int, acc: String) {
 }
 
 公开 函数 从文本(s: String) {
-  var 块堆 = ()
-  var 块 = ()
-  var i = 0
+  变 块堆 = ()
+  变 块 = ()
+  变 i = 0
   当 i < len(s) {
     定 cp = ord(s[i])
     若 cp < 128 {

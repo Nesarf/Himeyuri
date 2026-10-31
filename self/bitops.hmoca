@@ -6,8 +6,8 @@
 // 用法：这一份是被 self/sha256.hmyr 引用的库，不单独跑。
 
 函数 倍(n: Int) -> Int {
-  var v = 1
-  var i = 0
+  变 v = 1
+  变 i = 0
   当 i < n {
     v = v * 2
     i = i + 1
@@ -16,11 +16,11 @@
 }
 
 函数 与(a: Int, b: Int) -> Int {
-  var 出 = 0
-  var 倍量 = 1
-  var x = a
-  var y = b
-  var i = 0
+  变 出 = 0
+  变 倍量 = 1
+  变 x = a
+  变 y = b
+  变 i = 0
   当 i < 32 {
     定 甲 = x % 2
     定 乙 = y % 2
@@ -34,11 +34,11 @@
 }
 
 函数 或(a: Int, b: Int) -> Int {
-  var 出 = 0
-  var 倍量 = 1
-  var x = a
-  var y = b
-  var i = 0
+  变 出 = 0
+  变 倍量 = 1
+  变 x = a
+  变 y = b
+  变 i = 0
   当 i < 32 {
     定 甲 = x % 2
     定 乙 = y % 2
@@ -52,11 +52,11 @@
 }
 
 函数 异或(a: Int, b: Int) -> Int {
-  var 出 = 0
-  var 倍量 = 1
-  var x = a
-  var y = b
-  var i = 0
+  变 出 = 0
+  变 倍量 = 1
+  变 x = a
+  变 y = b
+  变 i = 0
   当 i < 32 {
     定 甲 = x % 2
     定 乙 = y % 2

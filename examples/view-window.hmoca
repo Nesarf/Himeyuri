@@ -19,7 +19,7 @@
   // 首八字节：一个窗口，不复制那十一 KB。
   定 头 = bytes_view(字节, 0, 8)
   print("首八字节：")
-  var i = 0
+  变 i = 0
   当 i < view_len(头) {
     print(str(view_get(头, i)) + " ")
     i = i + 1
@@ -29,7 +29,7 @@
   // 尾巴那一小段：同一个源，另一个窗口。窗口不复制，所以两个可以同时存在。
   定 尾 = bytes_view(字节, len(字节) - 4, 4)
   print("末四字节：")
-  var j = 0
+  变 j = 0
   当 j < view_len(尾) {
     print(str(view_get(尾, j)) + " ")
     j = j + 1

@@ -12,7 +12,7 @@
 函数 最后一行(文: String) -> String {
   若 len(文) == 0 { 返回 "" }
   定 行批 = split(文, chr(10))
-  var i = len(行批) - 1
+  变 i = len(行批) - 1
   当 i >= 0 {
     定 行 = 行批[i]
     若 len(行) > 0 { 返回 行 }
@@ -38,13 +38,13 @@
 
 函数 main() -> Int 效果串(file, process) {
   定 参 = argv()
-  var 清单路 = "tools/suite-list.txt"
+  变 清单路 = "tools/suite-list.txt"
   若 len(参) > 1 { 清单路 = 参[1] }
   定 文 = read_text(清单路)
   定 行批 = split(文, chr(10))
-  var 过 = 0
-  var 败 = 0
-  var i = 0
+  变 过 = 0
+  变 败 = 0
+  变 i = 0
   当 i < len(行批) {
     定 行 = 行批[i]
     若 len(行) > 0 {

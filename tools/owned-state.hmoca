@@ -32,7 +32,7 @@
 }
 
 函数 main() -> Int 效果串(process, file) {
-  var 没读到 = read_stdin_line()
+  变 没读到 = read_stdin_line()
   当 没读到.结束 == 假 {
     定 行 = 没读到.行
     若 len(行) > 0 {

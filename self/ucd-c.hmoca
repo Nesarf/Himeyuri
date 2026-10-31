@@ -9,17 +9,17 @@
 // 用法：hmyr self/ucd-c.hmyr <输入.txt> <输出目录>
 
 函数 十六进制值(文: String) -> Int {
-  var v = 0
-  var i = 0
+  变 v = 0
+  变 i = 0
   当 i < len(文) {
     定 c = 文[i]
-    var d = 0 - 1
-    var k = 0
+    变 d = 0 - 1
+    变 k = 0
     当 k < 10 {
       若 c == "0123456789"[k] { d = k }
       k = k + 1
     }
-    var k2 = 0
+    变 k2 = 0
     当 k2 < 6 {
       若 c == "abcdef"[k2] { d = 10 + k2 }
       若 c == "ABCDEF"[k2] { d = 10 + k2 }
@@ -34,8 +34,8 @@
 函数 十六进制写法(n: Int) -> String {
   若 n == 0 { 返回 "0" }
   定 表 = "0123456789abcdef"
-  var 出 = ""
-  var 余 = n
+  变 出 = ""
+  变 余 = n
   当 余 > 0 {
     定 低 = 余 % 16
     出 = 表[低] + 出
@@ -58,8 +58,8 @@
 // 文件名：大写表名转小写，下划线换成连字符 —— 与 JS 版同一条规矩。
 函数 文件名(名: String) -> String {
   定 小 = to_lower(名)
-  var 出 = ""
-  var i = 0
+  变 出 = ""
+  变 i = 0
   当 i < len(小) {
     若 小[i] == "_" { 出 = 出 + "-" } 否则 { 出 = 出 + 小[i] }
     i = i + 1
@@ -69,13 +69,13 @@
 
 函数 写表(名: String, 说: String, 起们: Int, 止们: Int, 目录: String) -> Int {
   定 段数 = len(起们)
-  var 平 = ()
-  var i = 0
+  变 平 = ()
+  变 i = 0
   当 i < 段数 {
     平 = 平 + (起们[i], 止们[i])
     i = i + 1
   }
-  var 文 = "/* " + 说 + chr(10)
+  变 文 = "/* " + 说 + chr(10)
   文 = 文 + " *" + chr(10)
   文 = 文 + " * 由 tools/ucd-c.mjs 从 runtime/ucd/codepoints.txt 生成，别手改。" + chr(10)
   文 = 文 + " * 每两个数一段：起、止，两端都含。按码点升序。" + chr(10)
@@ -86,9 +86,9 @@
   文 = 文 + "#include <stdint.h>" + chr(10)
   文 = 文 + "#include <stddef.h>" + chr(10) + chr(10)
   文 = 文 + "static const uint32_t " + to_lower(名) + "_ranges[] = {" + chr(10)
-  var 行 = "  "
-  var 列 = 0
-  var k = 0
+  变 行 = "  "
+  变 列 = 0
+  变 k = 0
   当 k < len(平) {
     行 = 行 + "0x" + 十六进制写法(to_int(平[k])) + "u"
     列 = 列 + 1
@@ -117,13 +117,13 @@
   }
   定 文 = read_text(参[1])
   定 行批 = split(文, chr(10))
-  var 字起 = ()
-  var 字止 = ()
-  var 记起 = ()
-  var 记止 = ()
-  var 字上 = 0 - 2
-  var 记上 = 0 - 2
-  var i = 0
+  变 字起 = ()
+  变 字止 = ()
+  变 记起 = ()
+  变 记止 = ()
+  变 字上 = 0 - 2
+  变 记上 = 0 - 2
+  变 i = 0
   当 i < len(行批) {
     定 行 = 行批[i]
     若 len(行) > 0 {

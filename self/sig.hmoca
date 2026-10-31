@@ -46,15 +46,15 @@
 函数 type_end(tokens: Int, i: Int) -> Int {
   若 i >= len(tokens) { 返回 i }
   若 is_punct(tokens[i], "(") { 返回 括号到(tokens, i, 0) }
-  var j = i + 1
+  变 j = i + 1
   若 j < len(tokens) && is_punct(tokens[j], "?") { j = j + 1 }
   返回 j
 }
 
 // 把一段 token 的文字拼起来当类型名。元组类型就拼成它写下的样子。
 函数 type_text(tokens: Int, 起: Int, 止: Int) -> String {
-  var 出 = ""
-  var i = 起
+  变 出 = ""
+  变 i = 起
   当 i < 止 {
     出 = 出 + tokens[i].text
     i = i + 1
@@ -82,7 +82,7 @@
     若 i + 1 < len(tokens) && is_punct(tokens[i + 1], ":") {
       定 类止 = type_end(tokens, i + 2)
       定 ty = type_text(tokens, i + 2, 类止)
-      var next = 类止
+      变 next = 类止
       若 next < len(tokens) && is_punct(tokens[next], "=") {
         next = skip_default(tokens, next + 1)
       }
@@ -128,16 +128,16 @@
     返回 {node: {kind: "误", text: "fn " + name}, next: i + 1}
   }
   定 got = params(tokens, i + 3, ())
-  var at = got.next
-  // returns 与 eff 都会被改写，所以是 var——定 不可变是这门语言的规则。
-  var returns = ""
+  变 at = got.next
+  // returns 与 eff 都会被改写，所以是 变——定 不可变是这门语言的规则。
+  变 returns = ""
   若 at < len(tokens) && is_punct(tokens[at], "->") {
     // 返回类型也用同一对帮手：它可能带括号（元组类型），也可能带可空标记。
     定 止 = type_end(tokens, at + 1)
     returns = type_text(tokens, at + 1, 止)
     at = 止
   }
-  var eff = ()
+  变 eff = ()
   若 at < len(tokens) && is_word(tokens[at], "effects") && at + 1 < len(tokens) && is_punct(tokens[at + 1], "(") {
     定 e = effect_list(tokens, at + 2, ())
     eff = e.list
@@ -166,10 +166,10 @@
 // 跳过一个函数体：从签名之后的位置开始，找第一个 { 并配平到它的 }。
 // 只在 hasBody 为真时调用 —— 没有体的时候「第一个 {」是下一个函数的，跳过去就少读一个声明。
 函数 跳体(tokens: Int, i: Int) -> Int {
-  var k = i
+  变 k = i
   当 k < len(tokens) {
     若 is_punct(tokens[k], "{") {
-      var 深 = 0
+      变 深 = 0
       当 k < len(tokens) {
         若 is_punct(tokens[k], "{") { 深 = 深 + 1 }
         若 is_punct(tokens[k], "}") {
@@ -187,11 +187,11 @@
 
 // 整份源码里的所有函数声明，按出现顺序。语言服务器的 documentSymbol 用它。
 公开 函数 all_signatures(tokens: Int) -> Int {
-  var 列 = ()
-  var i = 0
+  变 列 = ()
+  变 i = 0
   当 i < len(tokens) {
     定 是公 = is_word(tokens[i], "pub")
-    var 起 = i
+    变 起 = i
     若 是公 { 起 = i + 1 }
     若 起 < len(tokens) && is_word(tokens[起], "fn") {
       定 r = signature_at(tokens, i, 是公)

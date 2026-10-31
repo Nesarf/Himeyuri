@@ -4,7 +4,7 @@
 //
 // 前一件（chain.hmyr）只把**一个表达式**读成树；这一件把它抬到**一行语句**：
 //   定 x = <表达式>   -> {kind: "定", name, value}
-//   var x = <表达式>   -> {kind: "变", name, value}
+//   变 x = <表达式>   -> {kind: "变", name, value}
 //   返回 <表达式>    -> {kind: "返回", value}
 //   返回（不带值）    -> {kind: "返回", value: {kind: "nil"}}
 //     用 空 节点而不是空元组：空元组是一个**值**，而「没有值」不是值。两者混在一起，
@@ -92,7 +92,7 @@
 函数 parse_if(tokens: Int, i: Int) {
   // 「若 这个节点在哪」= 若 关键字在哪。调用方传进来的是关键字之后那一位，
   // 所以往回看一格；位置与宿主那边同一个规矩（If 记关键字的位置）。
-  var 位 = tokens[0]
+  变 位 = tokens[0]
   若 i > 0 { 位 = tokens[i - 1] }
   定 cond = from_here(tokens, i)
   定 at = skip_newlines(tokens, cond.next)
@@ -100,8 +100,8 @@
     返回 {node: {kind: "误", text: "if", line: 位.line, column: 位.column}, next: at}
   }
   定 then = block(tokens, at + 1)
-  var otherwise = ()
-  var next = skip_newlines(tokens, then.next)
+  变 otherwise = ()
+  变 next = skip_newlines(tokens, then.next)
   若 next < len(tokens) && is_word(tokens[next], "else") {
     定 e = skip_newlines(tokens, next + 1)
     若 e < len(tokens) && is_punct(tokens[e], "{") {
@@ -120,7 +120,7 @@
 // 当：条件是一个表达式，然后是一个块。
 // 与 若 相比它没有 否则——而「什么时候停」由条件说，这一层不管。
 函数 parse_while(tokens: Int, i: Int) {
-  var 位 = tokens[0]
+  变 位 = tokens[0]
   若 i > 0 { 位 = tokens[i - 1] }
   定 cond = from_here(tokens, i)
   定 at = skip_newlines(tokens, cond.next)
