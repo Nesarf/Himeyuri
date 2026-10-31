@@ -384,7 +384,7 @@
   // 位置加在**末尾**，所以读 选[2] 与 选[3] 的老代码一行都不用改 ——
   // 而声明层要包成 Fn 节点时，位置才有东西可抄。
   定 参名册 = 参数名册(tokens, at + 1, open)
-  定 效们 = 效果们(tokens, at + 1, open)
+  定 效册 = 效果们(tokens, at + 1, open)
   // 第七件是返回类型。它加在末尾，所以读 选[2] 与 选[3] 的老代码一行都不用改。
   定 返型 = 返回类型在(tokens, at + 1, open)
   // 第八件：这个声明是不是 公开。原来不收它，于是「可见性第一步」与「命名空间」在
@@ -393,7 +393,7 @@
   // 公开 写在 函数 前一个记号：next_decl 只停在 函数/常量/变，所以它被跳过了。
   变 是公开 = 0
   若 at > 0 && tokens[at - 1].kind == "ident" && tokens[at - 1].text == "pub" { 是公开 = 1 }
-  返回 decls_from(tokens, got.next, acc + ((名, 参名册, got.list, 效们, 位.line, 位.column, 返型, 是公开),), 常量册)
+  返回 decls_from(tokens, got.next, acc + ((名, 参名册, got.list, 效册, 位.line, 位.column, 返型, 是公开),), 常量册)
 }
 
 // 交回 {fns: ((名字, 参数名册, 语句批, 效果名册, 行, 列), …), consts: ((名字, 值), …), next}。

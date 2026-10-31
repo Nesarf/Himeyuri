@@ -324,9 +324,9 @@
   返回 转参数们(名册, i + 1, acc + ({name: 名, passing: ()},))
 }
 
-函数 包声明(声明们: Int, i: Int, acc: Int) {
-  若 i >= len(声明们) { 返回 acc }
-  定 d = 声明们[i]
+函数 包声明(声明批: Int, i: Int, acc: Int) {
+  若 i >= len(声明批) { 返回 acc }
+  定 d = 声明批[i]
   变 名 = ""
   变 参 = ()
   变 句 = ()
@@ -342,7 +342,7 @@
   // 第九件是 "macro" 的时候，第三件放的是表达式而不是语句批 —— 宏的 body 是一个
   // 表达式（src/expand.mjs 的换回按表达式走），所以这里不能包成 Block。
   若 len(d) > 8 && d[8] == "macro" {
-    返回 包声明(声明们, i + 1, acc + ({kind: "宏", name: 名, params: 参, body: 句, line: 行, column: 列},))
+    返回 包声明(声明批, i + 1, acc + ({kind: "宏", name: 名, params: 参, body: 句, line: 行, column: 列},))
   }
   变 返 = ()
   若 len(d) > 6 { 返 = d[6] }
@@ -351,7 +351,7 @@
   若 len(d) > 7 { 是公开 = d[7] }
   定 体 = 包块(句, 行)
   定 函 = {kind: "函数", name: 名, params: 转参数们(参, 0, ()), returns: 返, 效果串: 效, contracts: (), body: 体, 公开: 是公开, line: 行, column: 列}
-  返回 包声明(声明们, i + 1, acc + (函,))
+  返回 包声明(声明批, i + 1, acc + (函,))
 }
 
 // 从 token 流里找出 引入 行，包成 Import 节点。
