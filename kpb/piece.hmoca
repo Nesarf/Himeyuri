@@ -5,7 +5,7 @@
 //
 // 两件今天还不成立的事，不藏在这里：
 //   ・类型标注尚未被检查（-> Int 眼下是写给读者看的，不是约束）
-//   ・arena 是三区模型的宿主桩，不是模型本身（design/MEMORY.txt 写了它该成为什么）
+//   ・区 是三区模型的宿主桩，不是模型本身（design/MEMORY.txt 写了它该成为什么）
 
 函数 note(key: Int, start: Int, length: Int) -> Int {
   // 一个音符：音高、起点、长度（单位是 tick）

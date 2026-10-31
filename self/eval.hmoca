@@ -170,7 +170,7 @@
 // 「这是不是区或块」用 index_has(x, "种") 判：它对任何值都安全 —— 不是索引就交回 假，
 // 记录也交回 假（记录不是 Map，见 src/eval.mjs 的 index_has）。所以不必另加 is_index。
 //
-// 与宿主那一份（src/eval.mjs 的 arena）的差别只有表示：那边是 JS 对象，这边是索引。
+// 与宿主那一份（src/eval.mjs 的 区）的差别只有表示：那边是 JS 对象，这边是索引。
 // 判据是「两台机器的判词一样」，不是「两台机器的内部一样」。
 
 // 每 每组 位插一个逗号，只动整数部分。
@@ -210,13 +210,13 @@
   返回 找点从(体, i + 1)
 }
 
-函数 新区() -> Int {
-  定 区 = index_new()
-  index_set(区, "种", "区")
-  index_set(区, "关", 0)
-  index_set(区, "下一个", 1)
-  index_set(区, "活", 0)
-  返回 区
+函数 新场() -> Int {
+  定 场 = index_new()
+  index_set(场, "种", "区")
+  index_set(场, "关", 0)
+  index_set(场, "下一个", 1)
+  index_set(场, "活", 0)
+  返回 场
 }
 
 // 一个持有格：只装零个或一个值，取出即转移（design/MEMORY.txt 第 2 节）。
@@ -230,9 +230,9 @@
   返回 格
 }
 
-函数 分配块(区: Int, 大小: Int) -> Int {
-  若 index_get(区, "关") != 0 { 返回 坏("HMYR-碼-002 arena.alloc: that arena is already closed") }
-  定 号 = index_get(区, "下一个")
+函数 分配块(场: Int, 大小: Int) -> Int {
+  若 index_get(场, "关") != 0 { 返回 坏("HMYR-碼-002 arena.alloc: that arena is already closed") }
+  定 号 = index_get(场, "下一个")
   定 块 = index_new()
   index_set(块, "种", "块")
   index_set(块, "kind", "block")
@@ -243,45 +243,45 @@
   // 块的格子：按下标的可变内容。没有它，块只有大小，于是「把值放进区里」写不出来 ——
   // 而那也是区一直只能记账的理由。
   index_set(块, "格", index_new())
-  index_set(区, "块" + str(号), 块)
-  index_set(区, "下一个", 号 + 1)
-  index_set(区, "活", index_get(区, "活") + 1)
+  index_set(场, "块" + str(号), 块)
+  index_set(场, "下一个", 号 + 1)
+  index_set(场, "活", index_get(场, "活") + 1)
   返回 好(块)
 }
 
 // 关区：把它名下的块（还没交出去的）一起标记成死的，再记下「关」。
 // 交出去的那些归托管，close 不带它们走 —— 那正是 freeze 的全部意义。
-函数 关区(区: Int) -> Int {
-  定 下一个 = index_get(区, "下一个")
+函数 关场(场: Int) -> Int {
+  定 下一个 = index_get(场, "下一个")
   变 i = 1
   当 i < 下一个 {
     定 键 = "块" + str(i)
-    若 index_has(区, 键) {
-      定 块 = index_get(区, 键)
+    若 index_has(场, 键) {
+      定 块 = index_get(场, 键)
       若 index_get(块, "zone") == "arena" { index_set(块, "live", 0) }
     }
     i = i + 1
   }
-  index_set(区, "关", 1)
-  index_set(区, "活", 0)
+  index_set(场, "关", 1)
+  index_set(场, "活", 0)
   返回 好(0)
 }
 
-函数 交出去(区: Int, 块: Int) -> Int {
-  若 index_get(区, "关") != 0 { 返回 坏("HMYR-碼-002 arena.freeze: that arena is already closed") }
+函数 交出去(场: Int, 块: Int) -> Int {
+  若 index_get(场, "关") != 0 { 返回 坏("HMYR-碼-002 arena.freeze: that arena is already closed") }
   若 index_get(块, "zone") != "arena" { 返回 坏("HMYR-碼-002 arena.freeze was given a block this arena does not own") }
   index_set(块, "zone", "managed")
   index_set(块, "live", 1)
-  index_set(区, "活", index_get(区, "活") - 1)
+  index_set(场, "活", index_get(场, "活") - 1)
   返回 好(块)
 }
 
-函数 收回来(区: Int, 块: Int) -> Int {
-  若 index_get(区, "关") != 0 { 返回 坏("HMYR-碼-002 arena.adopt: that arena is already closed") }
+函数 收回来(场: Int, 块: Int) -> Int {
+  若 index_get(场, "关") != 0 { 返回 坏("HMYR-碼-002 arena.adopt: that arena is already closed") }
   若 index_get(块, "zone") != "managed" { 返回 坏("HMYR-碼-003 arena.adopt: that block was not handed to the managed zone") }
   index_set(块, "zone", "arena")
   index_set(块, "live", 1)
-  index_set(区, "活", index_get(区, "活") + 1)
+  index_set(场, "活", index_get(场, "活") + 1)
   返回 好(块)
 }
 
@@ -354,7 +354,7 @@
     若 len(参) != 1 { 返回 坏("alloc 要一个参数") }
     返回 分配块(主, 参[0])
   }
-  若 名 == "close" { 返回 关区(主) }
+  若 名 == "close" { 返回 关场(主) }
   若 名 == "held" { 返回 好(index_get(主, "活")) }
   若 名 == "freeze" {
     若 len(参) != 1 { 返回 坏("freeze 要一个参数") }
@@ -444,11 +444,11 @@
     若 len(值簇) != 1 { 返回 坏("pack_value 要一个参数") }
     返回 好(pack_value(值簇[0]))
   }
-  // arena 那一格：区在这一层是真的了（2026-10-27），所以这里不再只是「没有」。
+  // 区 那一格：区在这一层是真的了（2026-10-27），所以这里不再只是「没有」。
   // 交回的是一条索引；alloc / close / freeze / adopt / held 由求方法分派。
   若 名 == "arena" {
     若 len(值簇) != 0 { 返回 坏("arena 不要参数") }
-    返回 好(新区())
+    返回 好(新场())
   }
   // owned：单一所有者的持有格。四个动作由 求方法 的 owner 分支分派。
   若 名 == "owned" {
@@ -570,7 +570,7 @@
     若 len(值簇) != 0 { 返回 坏("console_codepage 不要参数") }
     返回 好(console_codepage())
   }
-  // 线程与 arena：这一层照实转发 —— 下面那一层说「没有」，这一层不替它编。
+  // 线程与 区：这一层照实转发 —— 下面那一层说「没有」，这一层不替它编。
   若 名 == "thr_spawn" {
     若 len(值簇) != 2 { 返回 坏("thr_spawn 要两个参数") }
     返回 好(thr_spawn(值簇[0], 值簇[1]))
@@ -588,7 +588,7 @@
     若 len(值簇) != 0 { 返回 坏("thr_count 不要参数") }
     返回 好(thr_count())
   }
-  // arena 故意不在这里：它在语言里是关键字（有它自己的语法），
+  // 区 故意不在这里：它在语言里是关键字（有它自己的语法），
   // 而自举这条 parser 不认它 —— 写出来就是 HMYR-形-005，字节码路径上它走不到。
   // 进程：跑一个程序。这一层照参数个数转发（1 到 4 个），
   // 记录那五个字段（code stdout stderr timedOut error）由下面那一层给。

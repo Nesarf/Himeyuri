@@ -196,7 +196,7 @@
   返回 头
 }
 
-函数 写区间(名: String, 列: Int, 说明: String) -> String {
+函数 写场间(名: String, 列: Int, 说明: String) -> String {
   变 行批 = ""
   变 平 = ()
   变 i = 0
@@ -224,7 +224,7 @@
   返回 头
 }
 
-函数 收区间(数据目录: String, 名字: String) -> Int 效果串(file) {
+函数 收场间(数据目录: String, 名字: String) -> Int 效果串(file) {
   变 列 = ()
   定 文 = read_text(数据目录 + "/DerivedCoreProperties.txt")
   定 行批 = split(文, chr(10))
@@ -337,8 +337,8 @@
   定 小写 = 收(完整下, 简单下)
 
   // ---- 四、两个属性区间 ----
-  定 区有 = 收区间(数据目录, "Cased")
-  定 区可 = 收区间(数据目录, "Case_Ignorable")
+  定 场有 = 收场间(数据目录, "Cased")
+  定 场可 = 收场间(数据目录, "Case_Ignorable")
 
   // ---- 五、写出来 ----
   变 文本 = "/* Unicode 的大小写表，C 那台机器用。" + chr(10)
@@ -361,8 +361,8 @@
   文本 = 文本 + "} HmyrCaseEntry;" + chr(10) + chr(10)
   文本 = 文本 + 写映射("ucd_upper_map", 大写, "大写映射：码点 → 大写的 UTF-16 单元") + chr(10)
   文本 = 文本 + 写映射("ucd_lower_map", 小写, "小写映射：码点 → 小写的 UTF-16 单元") + chr(10)
-  文本 = 文本 + 写区间("ucd_cased_ranges", 区有, "有大小写的码点区间（DerivedCoreProperties 的 Cased）") + chr(10)
-  文本 = 文本 + 写区间("ucd_case_ignorable_ranges", 区可, "大小写可以忽略的码点区间（DerivedCoreProperties 的 Case_Ignorable）") + chr(10)
+  文本 = 文本 + 写场间("ucd_cased_ranges", 场有, "有大小写的码点区间（DerivedCoreProperties 的 Cased）") + chr(10)
+  文本 = 文本 + 写场间("ucd_case_ignorable_ranges", 场可, "大小写可以忽略的码点区间（DerivedCoreProperties 的 Case_Ignorable）") + chr(10)
   文本 = 文本 + chr(10) + "#endif" + chr(10)
 
   write_text(出文件, 文本)
@@ -381,7 +381,7 @@
   }
   print("大写映射 " + str(len(大写)) + " 条（其中多单元 " + str(多上) + " 条）" + chr(10))
   print("小写映射 " + str(len(小写)) + " 条（其中多单元 " + str(多下) + " 条）" + chr(10))
-  print("有大小写 " + str(len(区有)) + " 段；大小写可忽略 " + str(len(区可)) + " 段" + chr(10))
+  print("有大小写 " + str(len(场有)) + " 段；大小写可忽略 " + str(len(场可)) + " 段" + chr(10))
   print("→ " + 出文件 + "  " + str(len(文本) / 1024) + " KB" + chr(10))
   返回 0
 }
