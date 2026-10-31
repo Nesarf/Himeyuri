@@ -351,9 +351,9 @@
   返回 {name: 名, params: 参, body: 体, next: 末}
 }
 
-函数 decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
+函数 decls_from(tokens: Int, i: Int, acc: Int, 常量册: Int) {
   定 at = next_decl(tokens, i)
-  若 at < 0 { 返回 {fns: acc, consts: 常量们, next: len(tokens)} }
+  若 at < 0 { 返回 {fns: acc, consts: 常量册, next: len(tokens)} }
   定 位 = tokens[at]
   // 常量 与 变 走另一条路：它们没有函数体，值到行尾为止，而名字、值与「可写吗」
   // 一起收进常量表。这张表是「模块级名字」的通道 —— 三区模型 §4.2 要的容器也在其中。
@@ -361,8 +361,8 @@
     变 是变 = 0
     若 位.text == "var" { 是变 = 1 }
     定 常 = 常量在(tokens, at, 是变)
-    若 常.name == "" { 返回 decls_from(tokens, 常.next, acc, 常量们) }
-    返回 decls_from(tokens, 常.next, acc, 常量们 + ((常.name, 常.value, 常.writable),))
+    若 常.name == "" { 返回 decls_from(tokens, 常.next, acc, 常量册) }
+    返回 decls_from(tokens, 常.next, acc, 常量册 + ((常.name, 常.value, 常.writable),))
   }
   // macro 名(参数) = 表达式 —— 宏声明。
   //
@@ -372,13 +372,13 @@
   // 路上报「没有这个名字 两次」（2026-11-02 实测）。
   若 位.text == "macro" {
     定 宏 = 宏声明(tokens, at)
-    若 宏.name == "" { 返回 decls_from(tokens, 宏.next, acc, 常量们) }
+    若 宏.name == "" { 返回 decls_from(tokens, 宏.next, acc, 常量册) }
     // 九件：与 Fn 同形的前八件，第九件标成 "macro"，第三件放的是表达式（不是语句批）。
-    返回 decls_from(tokens, 宏.next, acc + ((宏.name, 宏.params, 宏.body, (), 位.line, 位.column, (), 0, "macro"),), 常量们)
+    返回 decls_from(tokens, 宏.next, acc + ((宏.name, 宏.params, 宏.body, (), 位.line, 位.column, (), 0, "macro"),), 常量册)
   }
   定 名 = 名字在(tokens, at)
   定 open = find_body(tokens, at + 1)
-  若 open < 0 { 返回 {fns: acc, consts: 常量们, next: len(tokens)} }
+  若 open < 0 { 返回 {fns: acc, consts: 常量册, next: len(tokens)} }
   定 got = each(tokens, open + 1, ())
   // 六件：名字、参数名册、语句批、效果名册、行、列。
   // 位置加在**末尾**，所以读 选[2] 与 选[3] 的老代码一行都不用改 ——
@@ -393,7 +393,7 @@
   // 公开 写在 函数 前一个记号：next_decl 只停在 函数/常量/变，所以它被跳过了。
   变 是公开 = 0
   若 at > 0 && tokens[at - 1].kind == "ident" && tokens[at - 1].text == "pub" { 是公开 = 1 }
-  返回 decls_from(tokens, got.next, acc + ((名, 参名册, got.list, 效们, 位.line, 位.column, 返型, 是公开),), 常量们)
+  返回 decls_from(tokens, got.next, acc + ((名, 参名册, got.list, 效们, 位.line, 位.column, 返型, 是公开),), 常量册)
 }
 
 // 交回 {fns: ((名字, 参数名册, 语句批, 效果名册, 行, 列), …), consts: ((名字, 值), …), next}。
