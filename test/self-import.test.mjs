@@ -18,7 +18,7 @@ const ok = (label, condition, detail = "") => {
 const 层 = loadUnit(path.join(ROOT, "self/run.hmoca"));
 ok("自举那一层加载得动", 层.ok, 层.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
 const 自举 = runUnit(层);
-const 认 = (源) => 自举.callFunction(自举.functions.get("找导入们"), [源], null);
+const 认 = (源) => 自举.callFunction(自举.functions.get("找导入批"), [源], null);
 
 console.log("一、认得出");
 {

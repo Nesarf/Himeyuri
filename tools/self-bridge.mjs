@@ -192,7 +192,7 @@ export function loadUnit(entry, options = {}) {
   const 原get = modules.get.bind(modules);
   modules.get = (k) => 原get(k) || 别名.get(k);
   const order = [];
-  const 路径们 = Array.from(树.路径们 || []);
+  const 路径们 = Array.from(树.路径串 || []);
   Array.from(树.模块族).forEach((m, i) => {
     const 原 = 路径们[i] || (相对 + "#" + i);
     // 加载器用的是 /（HMYR 里没有反斜杠），而调用方拿 path.join / path.resolve 得到的是本机形式。

@@ -43,7 +43,7 @@
 }
 
 // 一条记录的字段名拼成一行，用在诊断里。
-函数 名字们(t: Int) -> String {
+函数 取名字(t: Int) -> String {
   定 列 = field_names(t)
   变 出 = ""
   变 i = 0
@@ -92,7 +92,7 @@
   若 field_has(op, "kind") { 返回 坏("不认识的运算符：一个 " + op.kind + " 节点") }
   若 field_has(op, "op") { 返回 坏("不认识的运算符：一个自己带 op 的记录，它的 op 是 " + op.op) }
   若 field_has(op, "name") { 返回 坏("不认识的运算符：一个带 name 的记录，名字是 " + op.name) }
-  若 field_has(op, "value") { 返回 坏("不认识的运算符：一个带 value 的记录，字段是 " + 名字们(op)) }
+  若 field_has(op, "value") { 返回 坏("不认识的运算符：一个带 value 的记录，字段是 " + 取名字(op)) }
   返回 坏("不认识的运算符：" + op)
 }
 
