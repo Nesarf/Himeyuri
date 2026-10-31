@@ -9,36 +9,36 @@
 //   ・语法树上的叶子（num 与 name 的文本）
 // 两者一一对应，才算这条路真的通了。
 
-fn is_space(c: String) -> Bool {
+函数 is_space(c: String) -> Bool {
   返回 c == " " || c == "\t"
 }
 
-fn last_non_space(s: String, i: Int) -> Int {
+函数 last_non_space(s: String, i: Int) -> Int {
   若 i <= 0 { 返回 0 }
   若 is_space(s[i - 1]) { 返回 last_non_space(s, i - 1) }
   返回 i
 }
 
-fn first_non_space(s: String, i: Int) -> Int {
+函数 first_non_space(s: String, i: Int) -> Int {
   若 i >= len(s) { 返回 len(s) }
   若 is_space(s[i]) { 返回 first_non_space(s, i + 1) }
   返回 i
 }
 
-fn slice(s: String, from: Int, to: Int) -> String {
+函数 slice(s: String, from: Int, to: Int) -> String {
   若 from >= to { 返回 "" }
   返回 s[from] + slice(s, from + 1, to)
 }
 
 // 取等号之后的部分。
-fn after_eq(s: String, i: Int) -> String {
+函数 after_eq(s: String, i: Int) -> String {
   若 i >= len(s) { 返回 "" }
   若 s[i] == "=" { 返回 slice(s, i + 1, len(s)) }
   返回 after_eq(s, i + 1)
 }
 
 // 从一行里取出表达式：等号之后、两侧去空白。
-fn expression_of(line: String) -> String {
+函数 expression_of(line: String) -> String {
   定 raw = after_eq(line, 0)
   定 from = first_non_space(raw, 0)
   定 to = last_non_space(raw, len(raw))
@@ -46,7 +46,7 @@ fn expression_of(line: String) -> String {
 }
 
 // 语法树上的叶子，按顺序取出来。
-fn leaves(tree: Int, acc: Int) -> Int {
+函数 leaves(tree: Int, acc: Int) -> Int {
   若 tree.kind == "二元" {
     返回 leaves(tree.right, leaves(tree.left, acc))
   }
@@ -57,7 +57,7 @@ fn leaves(tree: Int, acc: Int) -> Int {
 }
 
 // 词法挑出的字面量，按顺序取出来。
-fn literals(tokens: Int, n: Int, acc: Int) -> Int {
+函数 literals(tokens: Int, n: Int, acc: Int) -> Int {
   若 n >= len(tokens) { 返回 acc }
   定 t = tokens[n]
   若 t.kind == "int" || t.kind == "ident" {
@@ -67,7 +67,7 @@ fn literals(tokens: Int, n: Int, acc: Int) -> Int {
 }
 
 // 把两条路合到一起：一段源码，交给词法与语法各走一遍。
-fn check(source: String) {
+函数 check(source: String) {
   定 expr = expression_of(source)
   定 tokens = scan(expr)
   定 tree = parse(expr)
@@ -82,18 +82,18 @@ fn check(source: String) {
 }
 
 // 两个元组是否逐项相同。
-fn same_list(a: Int, b: Int) -> Bool {
+函数 same_list(a: Int, b: Int) -> Bool {
   若 len(a) != len(b) { 返回 假 }
   返回 same_each(a, b, 0)
 }
 
-fn same_each(a: Int, b: Int, i: Int) -> Bool {
+函数 same_each(a: Int, b: Int, i: Int) -> Bool {
   若 i >= len(a) { 返回 真 }
   若 a[i] != b[i] { 返回 假 }
   返回 same_each(a, b, i + 1)
 }
 
-fn main() -> Int {
+函数 main() -> Int {
   定 one = check("let x = 12 + 34 * (5 - 6)")
   print(str(len(one.tokens)) + " token(s), " + str(len(one.leaves)) + " leaf/leaves, agree: " + str(one.agree))
   返回 0

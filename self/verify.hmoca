@@ -14,11 +14,11 @@
 引入 "./sha256.hmoca"
 引入 "../json.hmoca"
 
-fn 前16(十六: String) -> String {
+函数 前16(十六: String) -> String {
   返回 slice(十六, 0, 16)
 }
 
-fn 找(s: String, 片: String, i: Int) -> Int {
+函数 找(s: String, 片: String, i: Int) -> Int {
   若 i + len(片) > len(s) { 返回 0 - 1 }
   若 slice(s, i, i + len(片)) == 片 { 返回 i }
   返回 找(s, 片, i + 1)
@@ -31,7 +31,7 @@ fn 找(s: String, 片: String, i: Int) -> Int {
 // 于是那一行被当成了哈希行，读出来的「哈希」是字面量 sha256，
 // 标签却是上一项的路径。症状是「有一项莫名其妙不对，而且写着 sha256」。
 // 判键名，不判内容。
-fn 键(s: String) -> String {
+函数 键(s: String) -> String {
   定 一 = 找(s, "\"", 0)
   若 一 < 0 { 返回 "" }
   定 二 = 找(s, "\"", 一 + 1)
@@ -40,7 +40,7 @@ fn 键(s: String) -> String {
 }
 
 // 冒号之后第一对引号之间：值。
-fn 值(s: String) -> String {
+函数 值(s: String) -> String {
   定 冒 = 找(s, ":", 0)
   若 冒 < 0 { 返回 "" }
   定 一 = 找(s, "\"", 冒 + 1)
@@ -52,7 +52,7 @@ fn 值(s: String) -> String {
 
 // 找某个顶层键所在的行号（"tools" 与 "documents" 两段的分界）。
 // 同样用键名比：有个套件可能就叫 tools。
-fn 行号(s: String, 名: String) -> Int {
+函数 行号(s: String, 名: String) -> Int {
   定 行批 = split(s, chr(10))
   var i = 0
   当 i < len(行批) {
@@ -63,7 +63,7 @@ fn 行号(s: String, 名: String) -> Int {
 }
 
 // 去掉行尾那一个逗号（只有 digest 之前那一行用得上）。
-fn 去尾逗号(s: String) {
+函数 去尾逗号(s: String) {
   若 len(s) == 0 { 返回 s }
   若 slice(s, len(s) - 1, len(s)) == "," { 返回 slice(s, 0, len(s) - 1) }
   返回 s
@@ -77,7 +77,7 @@ fn 去尾逗号(s: String) {
 // 换行写在块内（每行后面都带一个），不要在块与块之间去补：折平是用 + 拼字符串，
 // 块边界上没有位置插那个 chr(10)。这一处错过一次，症状很有教育意义 ——
 // 二十几行的小清单只有一块，全对；九百多行分成八块，digest 立刻不对。
-fn 重建文本(行批: Int, dig: Int) {
+函数 重建文本(行批: Int, dig: Int) {
   var 前 = dig - 1
   当 前 >= 0 && 行批[前] == "" { 前 = 前 - 1 }
   var 块堆 = ()
@@ -111,7 +111,7 @@ fn 重建文本(行批: Int, dig: Int) {
 
 // 一件：标签（用来印）、路（要读的文件）、写（清单里写的哈希前十六位）、
 // 行（那一行的原文 —— 不通过时一起印出来，证据跟着结论走）。
-fn 验一件(标签: String, 路: String, 写: String, 对: Int, 错: Int, 缺: Int, 说: String, 行: String) 效果串(file) {
+函数 验一件(标签: String, 路: String, 写: String, 对: Int, 错: Int, 缺: Int, 说: String, 行: String) 效果串(file) {
   若 file_exists(路) == 假 {
     返回 {对: 对, 错: 错, 缺: 缺 + 1, 说: 说 + "  [缺] " + 标签 + chr(10)}
   }
@@ -122,7 +122,7 @@ fn 验一件(标签: String, 路: String, 写: String, 对: Int, 错: Int, 缺: 
   返回 {对: 对, 错: 错 + 1, 缺: 缺, 说: 说 + "  [不通过] " + 标签 + "：写着 " + 写 + "，算出来 " + 算 + chr(10) + "  那一行是 " + 行 + chr(10)}
 }
 
-fn main() -> Int 效果串(file, process) {
+函数 main() -> Int 效果串(file, process) {
   定 参 = argv()
   若 len(参) < 2 {
     print("用法：hmyr self/verify.hmyr <清单.json>" + chr(10))

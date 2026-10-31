@@ -5,7 +5,7 @@
 // 若这里跑出来的是那六行，说明适配层不能借 main 当入口，得靠 pub 函数加 argv。
 引入 "../self/run.hmoca"
 
-fn main() -> Int 效果串(process) {
+函数 main() -> Int 效果串(process) {
   print("这是探针的 main" + chr(10))
   返回 0
 }

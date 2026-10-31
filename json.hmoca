@@ -44,14 +44,14 @@ fn 读字符串从(s: String, i: Int, acc: String) {
   返回 读字符串从(s, i + 1, acc + c)
 }
 
-fn 读字符串(s: String, i: Int) {
+函数 读字符串(s: String, i: Int) {
   返回 读字符串从(s, i, "")
 }
 
 // 数字：整数，可带负号。
 // 数字：整数或小数。小数点只认一个，读到别的字符就收工。
 // 整数给 "n"（值是整数），带小数点的给 "f"（值保留原文，免得把 0.969 悄悄读成 0）。
-fn 读数字从(s: String, i: Int, acc: String, 有点: Bool) {
+函数 读数字从(s: String, i: Int, acc: String, 有点: Bool) {
   若 i >= len(s) { 返回 (收数字(acc), i) }
   定 c = s[i]
   若 是数字字符(c) { 返回 读数字从(s, i + 1, acc + c, 有点) }
@@ -59,18 +59,18 @@ fn 读数字从(s: String, i: Int, acc: String, 有点: Bool) {
   返回 (收数字(acc), i)
 }
 
-fn 收数字(原文: String) {
+函数 收数字(原文: String) {
   若 含点(原文) { 返回 {kind: "f", value: 原文} }
   返回 {kind: "n", value: to_int(原文)}
 }
 
-fn 含点从(s: String, i: Int) -> Bool {
+函数 含点从(s: String, i: Int) -> Bool {
   若 i >= len(s) { 返回 假 }
   若 s[i] == "." { 返回 真 }
   返回 含点从(s, i + 1)
 }
 
-fn 含点(s: String) -> Bool {
+函数 含点(s: String) -> Bool {
   返回 含点从(s, 0)
 }
 
@@ -78,7 +78,7 @@ fn 含点(s: String) -> Bool {
 
 
 // 字面量：真 / 假 / null
-fn 读字面量(s: String, i: Int, 字: String, 值: Int) {
+函数 读字面量(s: String, i: Int, 字: String, 值: Int) {
   若 i + len(字) > len(s) { 返回 ({kind: "err", text: "字面量不完整：" + 字}, i) }
   定 片 = slice(s, i, i + len(字))
   若 片 != 字 { 返回 ({kind: "err", text: "不认识的词：" + 片}, i) }
@@ -87,7 +87,7 @@ fn 读字面量(s: String, i: Int, 字: String, 值: Int) {
 
 
 
-fn 读值(s: String, i: Int) {
+函数 读值(s: String, i: Int) {
   定 j = 跳过空白(s, i)
   若 j >= len(s) { 返回 ({kind: "err", text: "没有值"}, j) }
   定 c = s[j]
@@ -108,7 +108,7 @@ fn 读值(s: String, i: Int) {
 }
 
 // 数组：[值, 值, ...]——遇到 ] 收工。
-fn 读数组从(s: String, i: Int, acc: Int) {
+函数 读数组从(s: String, i: Int, acc: Int) {
   定 j = 跳过空白(s, i)
   若 j >= len(s) { 返回 ({kind: "err", text: "数组没有闭合"}, j) }
   若 s[j] == "]" { 返回 ({kind: "a", value: acc}, j + 1) }
@@ -118,12 +118,12 @@ fn 读数组从(s: String, i: Int, acc: Int) {
   返回 读数组从(s, 一个[1], acc + (一个[0],))
 }
 
-fn 读数组(s: String, i: Int, acc: Int) {
+函数 读数组(s: String, i: Int, acc: Int) {
   返回 读数组从(s, i, acc)
 }
 
 // 对象：{"键": 值, ...}——键读成字符串值，再塞进 (键, 值) 的对里。
-fn 读对象从(s: String, i: Int, acc: Int) {
+函数 读对象从(s: String, i: Int, acc: Int) {
   定 j = 跳过空白(s, i)
   若 j >= len(s) { 返回 ({kind: "err", text: "对象没有闭合"}, j) }
   若 s[j] == "}" { 返回 ({kind: "o", value: acc}, j + 1) }
@@ -138,24 +138,24 @@ fn 读对象从(s: String, i: Int, acc: Int) {
   返回 读对象从(s, 值[1], acc + ((键[0].value, 值[0]),))
 }
 
-fn 读对象(s: String, i: Int, acc: Int) {
+函数 读对象(s: String, i: Int, acc: Int) {
   返回 读对象从(s, i, acc)
 }
 
 // 入口：读一段 JSON，交回 (值, 结束位置)。值带着 kind，所以调用方不必猜它是什么。
-pub fn 解析(s: String) {
+pub 函数 解析(s: String) {
   返回 读值(s, 0)
 }
 
 // 从对象里取一个字段。不是对象、或没有这个键，都返回 err——
 // 调用方据此拒绝，而不是拿默认值顶上。
-fn 字段从(对表: Int, 键: String, i: Int) {
+函数 字段从(对表: Int, 键: String, i: Int) {
   若 i >= len(对表) { 返回 {kind: "err", text: "没有字段：" + 键} }
   若 对表[i][0] == 键 { 返回 对表[i][1] }
   返回 字段从(对表, 键, i + 1)
 }
 
-fn 字段(对象: Int, 键: String) {
+函数 字段(对象: Int, 键: String) {
   若 对象.kind != "o" { 返回 {kind: "err", text: "不是对象，取不到字段 " + 键} }
   返回 字段从(对象.value, 键, 0)
 }
@@ -166,7 +166,7 @@ fn 字段(对象: Int, 键: String) {
 // 紧凑形式对齐 JSON.stringify(x)，缩进形式对齐 JSON.stringify(x, null, 2)。
 // 后者不是「好看」——清单的 digest 是对那一串字节算的，差一个空格就对不上。
 
-fn 转义文(s: String) -> String {
+函数 转义文(s: String) -> String {
   var 出 = ""
   var i = 0
   当 i < len(s) {
@@ -182,11 +182,11 @@ fn 转义文(s: String) -> String {
   返回 出
 }
 
-fn 引号(s: String) -> String {
+函数 引号(s: String) -> String {
   返回 "\"" + 转义文(s) + "\""
 }
 
-fn 缩进空(n: Int) -> String {
+函数 缩进空(n: Int) -> String {
   var 出 = ""
   var i = 0
   当 i < n {
@@ -196,7 +196,7 @@ fn 缩进空(n: Int) -> String {
   返回 出
 }
 
-fn 生成紧凑(值: Int) -> String {
+函数 生成紧凑(值: Int) -> String {
   若 值.kind == "n" { 返回 str(值.value) }
   若 值.kind == "f" { 返回 值.value }
   若 值.kind == "s" { 返回 引号(值.value) }
@@ -229,7 +229,7 @@ fn 生成紧凑(值: Int) -> String {
 }
 
 // 缩进形式：空容器写成 [] / {}，非空才换行。
-fn 生成缩进(值: Int, 层: Int) -> String {
+函数 生成缩进(值: Int, 层: Int) -> String {
   若 值.kind == "n" { 返回 str(值.value) }
   若 值.kind == "f" { 返回 值.value }
   若 值.kind == "s" { 返回 引号(值.value) }
@@ -267,11 +267,11 @@ fn 生成缩进(值: Int, 层: Int) -> String {
   返回 "null"
 }
 
-pub fn 生成(值: Int) -> String {
+pub 函数 生成(值: Int) -> String {
   返回 生成紧凑(值)
 }
 
-fn 生成二(值: Int) -> String {
+函数 生成二(值: Int) -> String {
   返回 生成缩进(值, 0)
 }
 
@@ -284,7 +284,7 @@ fn 生成二(值: Int) -> String {
 // 写法上有一处必须避开：往元组上一个一个追加是平方级（这个仓库里同一句教训已经出现过四次）。
 // 这里每 1024 字节封一块，最后用两半合并折平。
 
-pub fn 拼平(块堆: Int, 起: Int, 止: Int) {
+pub 函数 拼平(块堆: Int, 起: Int, 止: Int) {
   若 止 - 起 <= 1 { 返回 块堆[起] }
   var 左 = 起
   var 右 = 止
@@ -296,7 +296,7 @@ pub fn 拼平(块堆: Int, 起: Int, 止: Int) {
   返回 拼平(块堆, 起, 中) + 拼平(块堆, 中, 止)
 }
 
-pub fn 从文本(s: String) {
+pub 函数 从文本(s: String) {
   var 块堆 = ()
   var 块 = ()
   var i = 0
@@ -323,7 +323,7 @@ pub fn 从文本(s: String) {
   返回 拼平(块堆, 0, len(块堆))
 }
 
-fn main() -> Int {
+函数 main() -> Int {
   定 一个 = 解析("{\"a\": 1, \"b\": [true, false]}")[0]
   print("kind " + 一个.kind + " 字段 " + str(len(一个.value)) + "\n")
   返回 0

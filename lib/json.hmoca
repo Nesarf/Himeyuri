@@ -13,12 +13,12 @@
 //
 // 三条老规矩照旧：没有复合条件（嵌套 若）、没有 break（标志收尾）、没有整数除法。
 
-fn 错(话: String) {
+函数 错(话: String) {
   返回 {ok: 假, 错: 话}
 }
 
 // 四类空白：空格、制表、换行、回车。
-fn 是空白(c: String) -> Bool {
+函数 是空白(c: String) -> Bool {
   若 c == " " { 返回 真 }
   若 c == "\t" { 返回 真 }
   若 c == "\n" { 返回 真 }
@@ -26,27 +26,27 @@ fn 是空白(c: String) -> Bool {
   返回 假
 }
 
-fn 跳空(文: String, i: Int) -> Int {
+函数 跳空(文: String, i: Int) -> Int {
   若 i >= len(文) { 返回 i }
   若 是空白(文[i]) { 返回 跳空(文, i + 1) }
   返回 i
 }
 
-fn 是数字(c: String) -> Bool {
+函数 是数字(c: String) -> Bool {
   定 o = ord(c)
   若 o < 48 { 返回 假 }
   若 o > 57 { 返回 假 }
   返回 真
 }
 
-fn 数位从(文: String, i: Int) -> Int {
+函数 数位从(文: String, i: Int) -> Int {
   若 i >= len(文) { 返回 i }
   若 是数字(文[i]) { 返回 数位从(文, i + 1) }
   返回 i
 }
 
 // 十六进制一位的值，认不出就 -1。
-fn 十六位(c: String) -> Int {
+函数 十六位(c: String) -> Int {
   定 o = ord(c)
   若 o >= 48 {
     若 o <= 57 { 返回 o - 48 }
@@ -60,7 +60,7 @@ fn 十六位(c: String) -> Int {
   返回 0 - 1
 }
 
-fn 十的幂(n: Int) -> Int {
+函数 十的幂(n: Int) -> Int {
   若 n < 0 { 返回 1 / 十的幂(0 - n) }
   var 出 = 1
   var i = 0
@@ -71,7 +71,7 @@ fn 十的幂(n: Int) -> Int {
   返回 出
 }
 
-fn 小数点处(s: String) -> Int {
+函数 小数点处(s: String) -> Int {
   var i = 0
   当 i < len(s) {
     若 s[i] == "." { 返回 i }
@@ -80,7 +80,7 @@ fn 小数点处(s: String) -> Int {
   返回 0 - 1
 }
 
-fn 指数处(s: String) -> Int {
+函数 指数处(s: String) -> Int {
   var i = 0
   当 i < len(s) {
     若 s[i] == "e" { 返回 i }
@@ -94,7 +94,7 @@ fn 指数处(s: String) -> Int {
 //
 // 负数这里有一处必须分开：-2.5 的整数部分是 -2，而它要「减去」那半个，
 // 写成加法就成了 -1.5 —— 第一版正是这样，断言把这件事钉了出来。
-fn 小数值(s: String) -> Int {
+函数 小数值(s: String) -> Int {
   定 位 = 小数点处(s)
   若 位 < 0 { 返回 to_int(s) }
   定 整 = slice(s, 0, 位)
@@ -105,7 +105,7 @@ fn 小数值(s: String) -> Int {
 }
 
 // 一段数字文字 → 数。负数、小数、指数三种都要处理。
-fn 值从文(s: String) -> Int {
+函数 值从文(s: String) -> Int {
   定 指 = 指数处(s)
   若 指 >= 0 {
     定 尾 = slice(s, 0, 指)
@@ -116,7 +116,7 @@ fn 值从文(s: String) -> Int {
 }
 
 // 认一个词（真 / 假 / null）。对不上就是错。
-fn 认词(文: String, i: Int, 词: String) {
+函数 认词(文: String, i: Int, 词: String) {
   定 末 = i + len(词)
   若 末 > len(文) { 返回 错("这里该是 " + 词) }
   若 slice(文, i, 末) != 词 { 返回 错("这里该是 " + 词) }
@@ -124,7 +124,7 @@ fn 认词(文: String, i: Int, 词: String) {
 }
 
 // 四个十六进制位 → 一个码点。认不出就 -1。
-fn 四位的码点(文: String, i: Int) -> Int {
+函数 四位的码点(文: String, i: Int) -> Int {
   若 i + 4 > len(文) { 返回 0 - 1 }
   定 a = 十六位(文[i])
   定 b = 十六位(文[i + 1])
@@ -138,7 +138,7 @@ fn 四位的码点(文: String, i: Int) -> Int {
 }
 
 // 串：i 已经在开头的引号之后。acc 是已经收下的部分。
-fn 解析串(文: String, i: Int, acc: String) {
+函数 解析串(文: String, i: Int, acc: String) {
   若 i >= len(文) { 返回 错("字符串没有收尾的引号") }
   定 c = 文[i]
   若 c == "\"" { 返回 {ok: 真, 值: {串: acc}, next: i + 1} }
@@ -146,7 +146,7 @@ fn 解析串(文: String, i: Int, acc: String) {
   返回 解析串(文, i + 1, acc + c)
 }
 
-fn 转义后(文: String, i: Int, acc: String) -> Int {
+函数 转义后(文: String, i: Int, acc: String) -> Int {
   若 i >= len(文) { 返回 错("转义没有收尾") }
   定 c = 文[i]
   若 c == "\"" { 返回 解析串(文, i + 1, acc + "\"") }
@@ -166,7 +166,7 @@ fn 转义后(文: String, i: Int, acc: String) -> Int {
 }
 
 // 数：符号、整数位、可选的小数、可选的指数。
-fn 解析数(文: String, i: Int) {
+函数 解析数(文: String, i: Int) {
   定 起 = i
   var j = i
   若 j < len(文) {
@@ -194,7 +194,7 @@ fn 解析数(文: String, i: Int) {
 }
 
 // 指数那一截：可选的符号，然后至少要一位数字。
-fn 指数后(文: String, i: Int) -> Int {
+函数 指数后(文: String, i: Int) -> Int {
   var j = i
   若 j < len(文) {
     若 文[j] == "+" { j = j + 1 }
@@ -206,7 +206,7 @@ fn 指数后(文: String, i: Int) -> Int {
 }
 
 // 一个值。i 已经跳过空白。
-fn 解析值(文: String, i: Int) {
+函数 解析值(文: String, i: Int) {
   若 i >= len(文) { 返回 错("文到头了，这里该有一个值") }
   定 c = 文[i]
   若 c == "{" { 返回 解析对象(文, i + 1, ()) }
@@ -231,7 +231,7 @@ fn 解析值(文: String, i: Int) {
 }
 
 // 数组：i 已经在开头的方括号之后。
-fn 解析数组(文: String, i: Int, acc: Int) {
+函数 解析数组(文: String, i: Int, acc: Int) {
   定 j = 跳空(文, i)
   若 j >= len(文) { 返回 错("数组没有收尾的方括号") }
   若 文[j] == "]" { 返回 {ok: 真, 值: {数组: acc}, next: j + 1} }
@@ -246,7 +246,7 @@ fn 解析数组(文: String, i: Int, acc: Int) {
 }
 
 // 对象：i 已经在开头的花括号之后。
-fn 解析对象(文: String, i: Int, acc: Int) {
+函数 解析对象(文: String, i: Int, acc: Int) {
   定 j = 跳空(文, i)
   若 j >= len(文) { 返回 错("对象没有收尾的花括号") }
   若 文[j] == "}" { 返回 {ok: 真, 值: {对象: acc}, next: j + 1} }
@@ -267,7 +267,7 @@ fn 解析对象(文: String, i: Int, acc: Int) {
 }
 
 // 入口：整份文都要读掉。尾部还剩下东西就是错 —— 那不是 JSON，是一段以 JSON 开头的文字。
-pub fn 解析(文: String) {
+pub 函数 解析(文: String) {
   定 i = 跳空(文, 0)
   定 r = 解析值(文, i)
   若 r.ok == 假 { 返回 r }
@@ -279,7 +279,7 @@ pub fn 解析(文: String) {
 // ---- 生成 ----
 
 // 一个字符要不要转义。JSON 只要求转义引号、反斜杠与控制字符。
-fn 要转义(c: String) -> Bool {
+函数 要转义(c: String) -> Bool {
   定 o = ord(c)
   若 o < 32 { 返回 真 }
   若 c == "\"" { 返回 真 }
@@ -287,7 +287,7 @@ fn 要转义(c: String) -> Bool {
   返回 假
 }
 
-fn 写串从(s: String, i: Int, acc: String) -> String {
+函数 写串从(s: String, i: Int, acc: String) -> String {
   若 i >= len(s) { 返回 acc }
   定 c = s[i]
   若 要转义(c) {
@@ -301,12 +301,12 @@ fn 写串从(s: String, i: Int, acc: String) -> String {
   返回 写串从(s, i + 1, acc + c)
 }
 
-fn 写串(s: String) -> String {
+函数 写串(s: String) -> String {
   返回 "\"" + 写串从(s, 0, "") + "\""
 }
 
 // 一个 0 到 65535 的数写成四位十六进制（大写）。
-fn 四位十六进制(n: Int) -> String {
+函数 四位十六进制(n: Int) -> String {
   定 位 = "0123456789abcdef"
   定 a = (n - n % 4096) / 4096
   定 b = (n % 4096 - n % 256) / 256
@@ -315,7 +315,7 @@ fn 四位十六进制(n: Int) -> String {
   返回 slice(位, a, a + 1) + slice(位, b, b + 1) + slice(位, c, c + 1) + slice(位, d, d + 1)
 }
 
-fn 写对表(项: Int, i: Int, acc: String) -> String {
+函数 写对表(项: Int, i: Int, acc: String) -> String {
   若 i >= len(项) { 返回 acc }
   var 前 = ""
   若 i > 0 { 前 = "," }
@@ -323,7 +323,7 @@ fn 写对表(项: Int, i: Int, acc: String) -> String {
   返回 写对表(项, i + 1, acc + 前 + 这)
 }
 
-fn 写元组(项: Int, i: Int, acc: String) -> String {
+函数 写元组(项: Int, i: Int, acc: String) -> String {
   若 i >= len(项) { 返回 acc }
   var 前 = ""
   若 i > 0 { 前 = "," }
@@ -332,7 +332,7 @@ fn 写元组(项: Int, i: Int, acc: String) -> String {
 
 // 生成：按标记分派。没有标记的值交回空串 —— 那是「调用方给错了」，
 // 而这一层不猜（猜一个形状，就是把一个错误变成一个更像真话的错）。
-pub fn 生成(v: Int) -> String {
+pub 函数 生成(v: Int) -> String {
   若 field_has(v, "数") { 返回 str(v.数) }
   若 field_has(v, "串") { 返回 写串(v.串) }
   若 field_has(v, "真值") { 返回 "true" }

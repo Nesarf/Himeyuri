@@ -16,13 +16,13 @@
 // 的干净。
 //
 // 用法：hmyr tools/doc-stats.hmoca [目录]
-fn 尾是(名: String, 后缀: String) -> Bool {
+函数 尾是(名: String, 后缀: String) -> Bool {
   定 段 = split(名, ".")
   若 len(段) < 2 { 返回 假 }
   返回 段[len(段) - 1] == 后缀
 }
 
-fn 数行(内容: String) -> Int {
+函数 数行(内容: String) -> Int {
   定 段 = split(内容, chr(10))
   若 len(段) > 0 {
     若 段[len(段) - 1] == "" { 返回 len(段) - 1 }
@@ -30,7 +30,7 @@ fn 数行(内容: String) -> Int {
   返回 len(段)
 }
 
-fn 数份(相对: String, 后缀: String, 次: Int) -> Int 效果串(file) {
+函数 数份(相对: String, 后缀: String, 次: Int) -> Int 效果串(file) {
   若 次 > 24 { 返回 0 }
   若 is_dir(相对) == 假 { 返回 0 }
   定 名册 = read_dir(相对)
@@ -48,7 +48,7 @@ fn 数份(相对: String, 后缀: String, 次: Int) -> Int 效果串(file) {
   返回 份
 }
 
-fn 数行总(相对: String, 后缀: String, 次: Int) -> Int 效果串(file) {
+函数 数行总(相对: String, 后缀: String, 次: Int) -> Int 效果串(file) {
   若 次 > 24 { 返回 0 }
   若 is_dir(相对) == 假 { 返回 0 }
   定 名册 = read_dir(相对)
@@ -66,7 +66,7 @@ fn 数行总(相对: String, 后缀: String, 次: Int) -> Int 效果串(file) {
   返回 行
 }
 
-fn main() -> Int 效果串(file, process) {
+函数 main() -> Int 效果串(file, process) {
   定 参们 = argv()
   var 起 = "design"
   若 len(参们) > 1 { 起 = 参们[1] }

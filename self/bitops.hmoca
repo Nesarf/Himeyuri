@@ -5,7 +5,7 @@
 //
 // 用法：这一份是被 self/sha256.hmyr 引用的库，不单独跑。
 
-fn 倍(n: Int) -> Int {
+函数 倍(n: Int) -> Int {
   var v = 1
   var i = 0
   当 i < n {
@@ -15,7 +15,7 @@ fn 倍(n: Int) -> Int {
   返回 v
 }
 
-fn 与(a: Int, b: Int) -> Int {
+函数 与(a: Int, b: Int) -> Int {
   var 出 = 0
   var 倍量 = 1
   var x = a
@@ -33,7 +33,7 @@ fn 与(a: Int, b: Int) -> Int {
   返回 出
 }
 
-fn 或(a: Int, b: Int) -> Int {
+函数 或(a: Int, b: Int) -> Int {
   var 出 = 0
   var 倍量 = 1
   var x = a
@@ -51,7 +51,7 @@ fn 或(a: Int, b: Int) -> Int {
   返回 出
 }
 
-fn 异或(a: Int, b: Int) -> Int {
+函数 异或(a: Int, b: Int) -> Int {
   var 出 = 0
   var 倍量 = 1
   var x = a
@@ -70,21 +70,21 @@ fn 异或(a: Int, b: Int) -> Int {
 }
 
 // 32 位取反：全一减它。
-fn 非(a: Int) -> Int {
+函数 非(a: Int) -> Int {
   返回 4294967295 - (a % 4294967296)
 }
 
-fn 右移(a: Int, n: Int) -> Int {
+函数 右移(a: Int, n: Int) -> Int {
   返回 (a - a % 倍(n)) / 倍(n)
 }
 
 // 32 位加：溢出就绕回来。
-fn 加32(a: Int, b: Int) -> Int {
+函数 加32(a: Int, b: Int) -> Int {
   返回 (a + b) % 4294967296
 }
 
 // 循环右移：低 n 位搬到高 n 位，其余右移 n 位。
-fn 循环右移(a: Int, n: Int) -> Int {
+函数 循环右移(a: Int, n: Int) -> Int {
   定 割 = 倍(n)
   定 低 = a % 割
   定 高 = (a - 低) / 割
@@ -92,14 +92,14 @@ fn 循环右移(a: Int, n: Int) -> Int {
 }
 
 // 循环左移：与右移相反方向，SHA-256 的 Σ 用它。
-fn 循环左移(a: Int, n: Int) -> Int {
+函数 循环左移(a: Int, n: Int) -> Int {
   定 割 = 倍(32 - n)
   定 低 = a % 割
   定 高 = (a - 低) / 割
   返回 低 * 倍(n) + 高
 }
 
-fn main() -> Int {
+函数 main() -> Int {
   // 自带小测：拿几组已知答案核对，不对就喊出来。
   print(str(与(12, 10)) + chr(10))          // 8
   print(str(或(12, 10)) + chr(10))          // 14

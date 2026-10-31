@@ -1,6 +1,6 @@
 引入 "../runtime/ucd/blocks.hmoca"
 
-fn main() -> Int {
+函数 main() -> Int {
   若 块名(65) != "Basic Latin" {
     返回 1
   }

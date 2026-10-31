@@ -10,7 +10,7 @@
 //
 // 用法：hmyr self/ucd-case.hmyr <data/ucd 目录> <输出文件>
 
-fn 十六进制值(文: String) -> Int {
+函数 十六进制值(文: String) -> Int {
   var v = 0
   var i = 0
   当 i < len(文) {
@@ -33,7 +33,7 @@ fn 十六进制值(文: String) -> Int {
   返回 v
 }
 
-fn 十六进制写法(n: Int) -> String {
+函数 十六进制写法(n: Int) -> String {
   若 n == 0 { 返回 "0" }
   定 表 = "0123456789ABCDEF"
   var 出 = ""
@@ -45,7 +45,7 @@ fn 十六进制写法(n: Int) -> String {
   返回 出
 }
 
-fn 修剪(文: String) -> String {
+函数 修剪(文: String) -> String {
   var 起 = 0
   var 止 = len(文)
   var 走 = 真
@@ -63,7 +63,7 @@ fn 修剪(文: String) -> String {
 }
 
 // 一串十六进制码点（空格分隔）→ 元组。空串给空元组。
-fn 切码点(文: String) -> Int {
+函数 切码点(文: String) -> Int {
   var 出 = ()
   若 len(文) == 0 { 返回 出 }
   定 部 = split(文, " ")
@@ -77,7 +77,7 @@ fn 切码点(文: String) -> Int {
 }
 
 // 码点 → UTF-16 单元。语言里的字符串就是按单元算的，所以表里存单元。
-fn 成单元(码点们: Int) -> Int {
+函数 成单元(码点们: Int) -> Int {
   var 出 = ()
   var i = 0
   当 i < len(码点们) {
@@ -95,7 +95,7 @@ fn 成单元(码点们: Int) -> Int {
 
 // 把两个索引合起来：完整映射优先，否则简单映射；与自身相同的丢掉；代理区跳过。
 // 交回「按码点升序」的元组，每条是 (码点, 单元们)。
-fn 收(完整: Int, 简单: Int) -> Int {
+函数 收(完整: Int, 简单: Int) -> Int {
   // 先把两边的键并起来。键是字符串形式的码点，这里要按数值排，所以转回数字。
   var 全部 = ()
   定 完键 = index_keys(完整)
@@ -161,7 +161,7 @@ fn 收(完整: Int, 简单: Int) -> Int {
   返回 列
 }
 // 只改一个位置的元组：slice 对元组不可用，所以逐个取出来重拼。
-fn 只改(t: Int, 位: Int, 值: Int) -> Int {
+函数 只改(t: Int, 位: Int, 值: Int) -> Int {
   var 出 = ()
   var i = 0
   当 i < len(t) {
@@ -171,7 +171,7 @@ fn 只改(t: Int, 位: Int, 值: Int) -> Int {
   返回 出
 }
 
-fn 写映射(名: String, 列: Int, 说明: String) -> String {
+函数 写映射(名: String, 列: Int, 说明: String) -> String {
   var 行批 = ""
   var i = 0
   当 i < len(列) {
@@ -196,7 +196,7 @@ fn 写映射(名: String, 列: Int, 说明: String) -> String {
   返回 头
 }
 
-fn 写区间(名: String, 列: Int, 说明: String) -> String {
+函数 写区间(名: String, 列: Int, 说明: String) -> String {
   var 行批 = ""
   var 平 = ()
   var i = 0
@@ -224,7 +224,7 @@ fn 写区间(名: String, 列: Int, 说明: String) -> String {
   返回 头
 }
 
-fn 收区间(数据目录: String, 名字: String) -> Int 效果串(file) {
+函数 收区间(数据目录: String, 名字: String) -> Int 效果串(file) {
   var 列 = ()
   定 文 = read_text(数据目录 + "/DerivedCoreProperties.txt")
   定 行批 = split(文, chr(10))
@@ -267,7 +267,7 @@ fn 收区间(数据目录: String, 名字: String) -> Int 效果串(file) {
   返回 列
 }
 
-fn main() -> Int 效果串(file, process) {
+函数 main() -> Int 效果串(file, process) {
   定 参 = argv()
   var 数据目录 = "data/ucd"
   若 len(参) > 1 { 数据目录 = 参[1] }

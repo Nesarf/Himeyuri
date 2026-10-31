@@ -7,25 +7,25 @@
 // 因此宿主按段喂入（每段最多 100 行）。深度可控，逻辑照旧用 Himeyuri 写。
 
 // 取一段字符串。递归深度等于片段长度，所以调用方要保证片段不长。
-fn slice(s: String, from: Int, to: Int) -> String {
+函数 slice(s: String, from: Int, to: Int) -> String {
   若 from >= to { 返回 "" }
   返回 s[from] + slice(s, from + 1, to)
 }
 
 // 一个字符是不是空白。
-fn is_space(c: String) -> Bool {
+函数 is_space(c: String) -> Bool {
   返回 c == " " || c == "\t" || c == "\r"
 }
 
 // 跳过行首空白，返回第一个非空白字符的位置。
-fn skip_space(s: String, i: Int) -> Int {
+函数 skip_space(s: String, i: Int) -> Int {
   若 i >= len(s) { 返回 i }
   若 is_space(s[i]) { 返回 skip_space(s, i + 1) }
   返回 i
 }
 
 // 在 s 的 from 处，是否以 p 开头。
-fn starts_with(s: String, from: Int, p: String, k: Int) -> Bool {
+函数 starts_with(s: String, from: Int, p: String, k: Int) -> Bool {
   若 k >= len(p) { 返回 真 }
   若 from + k >= len(s) { 返回 假 }
   若 s[from + k] != p[k] { 返回 假 }
@@ -33,7 +33,7 @@ fn starts_with(s: String, from: Int, p: String, k: Int) -> Bool {
 }
 
 // 从 i 起读一个标识符；遇到分隔符就停。
-fn read_word(s: String, i: Int, acc: String) -> String {
+函数 read_word(s: String, i: Int, acc: String) -> String {
   若 i >= len(s) { 返回 acc }
   定 c = s[i]
   若 is_space(c) { 返回 acc }
@@ -48,7 +48,7 @@ fn read_word(s: String, i: Int, acc: String) -> String {
 }
 
 // 找从 i 起第一个换行的位置（找不到就是末尾）。深度等于一行的长度。
-fn find_nl(s: String, i: Int) -> Int {
+函数 find_nl(s: String, i: Int) -> Int {
   若 i >= len(s) { 返回 i }
   若 s[i] == "\n" { 返回 i }
   返回 find_nl(s, i + 1)
@@ -57,7 +57,7 @@ fn find_nl(s: String, i: Int) -> Int {
 // 把一段文本切成行：外层每行一层递归，行内找换行是独立的一次递归。
 // 两者不嵌套在同一层里，所以深度是「行数」与「行长」中的较大者，而不是它们的乘积——
 // 逐字符到底的写法会让一段一百行变成几千层，直接撞上调用深度上限。
-fn split_each(s: String, at: Int, acc: Int) -> Int {
+函数 split_each(s: String, at: Int, acc: Int) -> Int {
   若 at >= len(s) { 返回 acc }
   定 nl = find_nl(s, at)
   定 line = slice(s, at, nl)
@@ -66,10 +66,12 @@ fn split_each(s: String, at: Int, acc: Int) -> Int {
 }
 
 // 一行的声明：记录 {keyword, name, indent}，不是声明就返回 keyword 为空串的记录。
-fn what_is(line: String, line_number: Int) {
+函数 what_is(line: String, line_number: Int) {
   定 i = skip_space(line, 0)
   若 starts_with(line, i, "pub ", 0) { i = skip_space(line, i + 4) }
-  若 starts_with(line, i, "fn ", 0) {
+  // 两种写法都认（2026-11-02 换关键字之后）。碰巧「fn 」与「函数 」都是三个字符，
+  // 所以下面 read_word 的起点 i + 3 两种写法通用 —— 哪天换了别的长度，这一行要跟着改。
+  若 starts_with(line, i, "fn ", 0) || starts_with(line, i, "函数 ", 0) {
     返回 {kind: "fn", name: read_word(line, i + 3, ""), line: line_number}
   }
   若 starts_with(line, i, "type ", 0) {
@@ -85,7 +87,7 @@ fn what_is(line: String, line_number: Int) {
 }
 
 // 逐行识别，累积成元组。start_line 是本段第一行在整个文件里的行号（从 1 起算）。
-fn scan_each(lines: Int, n: Int, start_line: Int, acc: Int) -> Int {
+函数 scan_each(lines: Int, n: Int, start_line: Int, acc: Int) -> Int {
   若 n >= len(lines) { 返回 acc }
   定 found = what_is(lines[n], start_line + n)
   若 found.kind == "" {
@@ -95,12 +97,12 @@ fn scan_each(lines: Int, n: Int, start_line: Int, acc: Int) -> Int {
 }
 
 // 宿主调用的入口：给一段文本和它的起始行号，返回这一段里认出的声明。
-fn scan(text: String, start_line: Int) -> Int {
+函数 scan(text: String, start_line: Int) -> Int {
   返回 scan_each(split_each(text, 0, ()), 0, start_line, ())
 }
 
 // 让宿主能问一句「你准备好了吗」，也方便人工试跑。
-fn main() -> Int {
+函数 main() -> Int {
   定 demo = "fn a() {\n  let x = 1\n}\n\ntype T = Int\n"
   定 found = scan(demo, 1)
   定 i = 0
@@ -109,7 +111,7 @@ fn main() -> Int {
 }
 
 // 没有 当，就用递归打印（只为人工试跑用）。
-fn while_demo(found: Int, i: Int) -> Int {
+函数 while_demo(found: Int, i: Int) -> Int {
   若 i >= len(found) { 返回 0 }
   print(str(found[i].line) + " " + found[i].kind + " " + found[i].name)
   返回 while_demo(found, i + 1)

@@ -25,7 +25,7 @@
 引入 "./zip.hmoca"
 引入 "./manifest.hmoca"
 
-fn 收一件(路们: Int, 目录: String, 名册: Int) {
+函数 收一件(路们: Int, 目录: String, 名册: Int) {
   var 出 = 路们
   var i = 0
   当 i < len(名册) {
@@ -37,7 +37,7 @@ fn 收一件(路们: Int, 目录: String, 名册: Int) {
 
 // 名字要带自己的前缀：合并程序是「先到者赢」，而 manifest.hmyr 里也有一个 主。
 // 撞名不会报错 —— 只会安静地跑成另一个工具。这一条与 zip.hmyr 文件头那句同源。
-fn 打包(包路: String, 只收: String, 要压: Bool) 效果串(file, process) {
+函数 打包(包路: String, 只收: String, 要压: Bool) 效果串(file, process) {
   返回 打包带(包路, 只收, 要压, "", "")
 }
 
@@ -47,7 +47,7 @@ fn 打包(包路: String, 只收: String, 要压: Bool) 效果串(file, process)
 // 「包外的清单」两样东西，而它们可能来自不同的传递路径。收进去之后，解包即得清单，
 // 包内包外是同一批字节（清单不列自己 —— 造它的时候它还不存在）。
 // 顺序仍由调用者保证：清单必须先存在。
-pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String, 附加名: String) 效果串(file, process) {
+pub 函数 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String, 附加名: String) 效果串(file, process) {
   // 要收的目录。默认这一层；给了第三个参数就只收那一个 —— 后者用来验结构。
   //
   // conformance/ 与 runtime/ucd/ 的语料不在表里：单个文件 45 MB 与 31 MB，
@@ -123,7 +123,7 @@ pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String
   返回 0
 }
 
-fn main() -> Int 效果串(file, process) {
+函数 main() -> Int 效果串(file, process) {
   定 参 = argv()
   var 要压 = 假
   var 附加路 = ""

@@ -9,11 +9,11 @@
 
 // 八十个轮常量：前八十个素数立方根的小数部分，各取六十四位。
 // 这一串由工具算出来（整数二分求立方根），不是抄的 —— 抄八十个十六进制数太容易错一位。
-fn 常量串() -> String {
+函数 常量串() -> String {
   返回 "428a2f98d728ae227137449123ef65cdb5c0fbcfec4d3b2fe9b5dba58189dbbc3956c25bf348b53859f111f1b605d019923f82a4af194f9bab1c5ed5da6d8118d807aa98a303024212835b0145706fbe243185be4ee4b28c550c7dc3d5ffb4e272be5d74f27b896f80deb1fe3b1696b19bdc06a725c71235c19bf174cf692694e49b69c19ef14ad2efbe4786384f25e30fc19dc68b8cd5b5240ca1cc77ac9c652de92c6f592b02754a7484aa6ea6e4835cb0a9dcbd41fbd476f988da831153b5983e5152ee66dfaba831c66d2db43210b00327c898fb213fbf597fc7beef0ee4c6e00bf33da88fc2d5a79147930aa72506ca6351e003826f142929670a0e6e7027b70a8546d22ffc2e1b21385c26c9264d2c6dfc5ac42aed53380d139d95b3df650a73548baf63de766a0abb3c77b2a881c2c92e47edaee692722c851482353ba2bfe8a14cf10364a81a664bbc423001c24b8b70d0f89791c76c51a30654be30d192e819d6ef5218d69906245565a910f40e35855771202a106aa07032bbd1b819a4c116b8d2d0c81e376c085141ab532748774cdf8eeb9934b0bcb5e19b48a8391c0cb3c5c95a634ed8aa4ae3418acb5b9cca4f7763e373682e6ff3d6b2b8a3748f82ee5defb2fc78a5636f43172f6084c87814a1f0ab728cc702081a6439ec90befffa23631e28a4506cebde82bde9bef9a3f7b2c67915c67178f2e372532bca273eceea26619cd186b8c721c0c207eada7dd6cde0eb1ef57d4f7fee6ed17806f067aa72176fba0a637dc5a2c898a6113f9804bef90dae1b710b35131c471b28db77f523047d8432caab7b40c724933c9ebe0a15c9bebc431d67c49c100d4c4cc5d4becb3e42b6597f299cfc657e2a5fcb6fab3ad6faec6c44198c4a475817"
 }
 
-fn 初始串() -> String {
+函数 初始串() -> String {
   返回 "6a09e667f3bcc908bb67ae8584caa73b3c6ef372fe94f82ba54ff53a5f1d36f1" +
          "510e527fade682d19b05688c2b3e6c1f1f83d9abfb41bd6b5be0cd19137e2179"
 }
@@ -21,7 +21,7 @@ fn 初始串() -> String {
 // 十六进制串里第 i 个 64 位常量，交回 (小半, 大半)。
 // 一串十六进制是「高位在前」写的，所以前八个字符是**高** 32 位。
 // 第一版把前八个当成低半，于是每一轮的常数都反着进来 —— 摘要对不上但从外面看不出为什么。
-fn 取64(串: String, i: Int) {
+函数 取64(串: String, i: Int) {
   定 起 = i * 16
   定 高半 = 从十六进制(slice(串, 起, 起 + 8))
   定 低半 = 从十六进制(slice(串, 起 + 8, 起 + 16))
@@ -29,13 +29,13 @@ fn 取64(串: String, i: Int) {
 }
 
 // 从一个大整数里取低 32 位（八个 16 位字里的前两个）。
-fn 成数32(a: Int) -> Int {
+函数 成数32(a: Int) -> Int {
   返回 a[0] + a[1] * 65536
 }
 
 // ---- 64 位字的四则 ----
 
-fn 左移32(x: Int, n: Int) -> Int {
+函数 左移32(x: Int, n: Int) -> Int {
   var y = x
   var i = 0
   当 i < n {
@@ -45,7 +45,7 @@ fn 左移32(x: Int, n: Int) -> Int {
   返回 y
 }
 
-fn 右移64(a: Int, n: Int) {
+函数 右移64(a: Int, n: Int) {
   定 lo = a[0]
   定 hi = a[1]
   若 n == 0 { 返回 (lo, hi) }
@@ -53,7 +53,7 @@ fn 右移64(a: Int, n: Int) {
   返回 (位右移(hi, n - 32), 0)
 }
 
-fn 左移64(a: Int, n: Int) {
+函数 左移64(a: Int, n: Int) {
   定 lo = a[0]
   定 hi = a[1]
   若 n == 0 { 返回 (lo, hi) }
@@ -61,67 +61,67 @@ fn 左移64(a: Int, n: Int) {
   返回 (0, 左移32(lo, n - 32))
 }
 
-fn 循环右移64(a: Int, n: Int) {
+函数 循环右移64(a: Int, n: Int) {
   定 右 = 右移64(a, n)
   定 左 = 左移64(a, 64 - n)
   返回 (位或(右[0], 左[0]), 位或(右[1], 左[1]))
 }
 
-fn 加64(a: Int, b: Int) {
+函数 加64(a: Int, b: Int) {
   定 和 = a[0] + b[0]
   定 lo = 和 % 4294967296
   定 进 = (和 - lo) / 4294967296
   返回 (lo, 位加(a[1], 位加(b[1], 进)))
 }
 
-fn 异或64(a: Int, b: Int) {
+函数 异或64(a: Int, b: Int) {
   返回 (位异或(a[0], b[0]), 位异或(a[1], b[1]))
 }
 
-fn 与64(a: Int, b: Int) {
+函数 与64(a: Int, b: Int) {
   返回 (位与(a[0], b[0]), 位与(a[1], b[1]))
 }
 
-fn 非64(a: Int) {
+函数 非64(a: Int) {
   返回 (位非(a[0]), 位非(a[1]))
 }
 
 // ---- 压缩函数要用的六个小函数 ----
 
-fn 大Σ0(a: Int) {
+函数 大Σ0(a: Int) {
   返回 异或64(异或64(循环右移64(a, 28), 循环右移64(a, 34)), 循环右移64(a, 39))
 }
 
-fn 大Σ1(a: Int) {
+函数 大Σ1(a: Int) {
   返回 异或64(异或64(循环右移64(a, 14), 循环右移64(a, 18)), 循环右移64(a, 41))
 }
 
-fn 小σ0(a: Int) {
+函数 小σ0(a: Int) {
   返回 异或64(异或64(循环右移64(a, 1), 循环右移64(a, 8)), 右移64(a, 7))
 }
 
-fn 小σ1(a: Int) {
+函数 小σ1(a: Int) {
   返回 异或64(异或64(循环右移64(a, 19), 循环右移64(a, 61)), 右移64(a, 6))
 }
 
-fn 选(e: Int, f: Int, g: Int) {
+函数 选(e: Int, f: Int, g: Int) {
   // Ch(e,f,g) = (e & f) ^ (~e & g)
   返回 异或64(与64(e, f), 与64(非64(e), g))
 }
 
-fn 择(a: Int, b: Int, c: Int) {
+函数 择(a: Int, b: Int, c: Int) {
   // Maj(a,b,c) = (a & b) ^ (a & c) ^ (b & c)
   返回 异或64(异或64(与64(a, b), 与64(a, c)), 与64(b, c))
 }
 
-fn 一64() -> (Int, Int) { 返回 (1, 0) }
+函数 一64() -> (Int, Int) { 返回 (1, 0) }
 
-fn 零64() -> (Int, Int) { 返回 (0, 0) }
+函数 零64() -> (Int, Int) { 返回 (0, 0) }
 
 // ---- 分块与压缩 ----
 
 // 一块 128 字节 → 16 个 64 位字（大端）。
-fn 读块(字节串: Int, 起: Int) {
+函数 读块(字节串: Int, 起: Int) {
   var 出 = ()
   var i = 0
   当 i < 16 {
@@ -140,7 +140,7 @@ fn 读块(字节串: Int, 起: Int) {
   返回 出
 }
 
-fn 压缩(哈希们: Int, 块: Int) {
+函数 压缩(哈希们: Int, 块: Int) {
   var w = ()
   var i = 0
   当 i < 16 {
@@ -180,7 +180,7 @@ fn 压缩(哈希们: Int, 块: Int) {
 }
 
 // 填充：补一个 0x80，补零到 112 mod 128，最后 16 字节写大端的消息位长。
-fn 填充(字节串: Int) {
+函数 填充(字节串: Int) {
   定 长 = len(字节串)
   var 出 = 字节串 + (128,)
   当 len(出) % 128 != 112 {
@@ -201,7 +201,7 @@ fn 填充(字节串: Int) {
 }
 
 // 与 sha512 同一套，但交回字节元组 —— 验签要的是 64 个字节，不是 128 个字符。
-pub fn sha512字节(字节串: Int) {
+pub 函数 sha512字节(字节串: Int) {
   定 填 = 填充(字节串)
   定 串 = 初始串()
   var 哈希们 = ()
@@ -231,7 +231,7 @@ pub fn sha512字节(字节串: Int) {
   返回 出
 }
 
-fn sha512(字节串: Int) {
+函数 sha512(字节串: Int) {
   定 填 = 填充(字节串)
   定 串 = 初始串()
   var 哈希们 = ()
@@ -254,7 +254,7 @@ fn sha512(字节串: Int) {
   返回 出
 }
 
-fn 十六进制32(v: Int) -> String {
+函数 十六进制32(v: Int) -> String {
   定 表 = "0123456789abcdef"
   var 出 = ""
   var i = 7
@@ -266,7 +266,7 @@ fn 十六进制32(v: Int) -> String {
   返回 出
 }
 
-fn 倍16(n: Int) -> Int {
+函数 倍16(n: Int) -> Int {
   var v = 1
   var i = 0
   当 i < n {
@@ -276,7 +276,7 @@ fn 倍16(n: Int) -> Int {
   返回 v
 }
 
-fn main() -> Int 效果串(file, process) {
+函数 main() -> Int 效果串(file, process) {
   定 参 = argv()
   若 len(参) < 2 {
     print("用法：hmyr self/sha512.hmyr <文件>" + chr(10))

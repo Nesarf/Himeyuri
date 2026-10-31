@@ -43,7 +43,7 @@ const 规范 = (s) => s
   .replace(/否则/g, "else").replace(/效果串/g, "effects").replace(/不变式/g, "invariant")
   .replace(/返回/g, "return").replace(/引入/g, "import").replace(/常量/g, "const")
   .replace(/借用/g, "borrow").replace(/拥有/g, "own").replace(/托管/g, "managed")
-  .replace(/要求/g, "requires").replace(/保证/g, "ensures")
+  .replace(/要求/g, "requires").replace(/保证/g, "ensures").replace(/函数/g, "fn")
   .replace(/若/g, "if").replace(/定/g, "let").replace(/当/g, "while").replace(/作/g, "as");
 for (const 路 of ["examples/arith.hmoca", "examples/over.hmoca", "examples/twice.hmoca"]) {
   const 源 = 读(路);

@@ -1,8 +1,8 @@
-fn 双(n: Int) -> Int {
+函数 双(n: Int) -> Int {
   返回 n * 2
 }
 
-fn main() -> Int {
+函数 main() -> Int {
   print("hi ")
   print(str(双(21)))
   print(" ")

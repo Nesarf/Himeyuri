@@ -9,17 +9,17 @@
 // 而置入与删除恰恰就是那件事。
 
 // 一条记录有哪些键。已内置，这里给一个好读的名字。
-fn 键们(t: Int) -> (String,) {
+函数 键们(t: Int) -> (String,) {
   返回 field_names(t)
 }
 
-fn 有几件(t: Int) -> Int {
+函数 有几件(t: Int) -> Int {
   返回 len(field_names(t))
 }
 
 // 置入：造一条新记录，旧字段原样搬过去，然后加上（或者覆盖）这一个。
 // 元组拼接那一条让「搬字段」写得短：旧字段的对加新对。
-fn 置入(t: Int, 名: String, 值: Int) -> Int {
+函数 置入(t: Int, 名: String, 值: Int) -> Int {
   var 对 = ()
   定 旧名 = field_names(t)
   var i = 0
@@ -34,7 +34,7 @@ fn 置入(t: Int, 名: String, 值: Int) -> Int {
 }
 
 // 删掉一个键。没有这个键就原样交回一条新记录 —— 删不存在的东西不是失败。
-fn 删(t: Int, 名: String) -> Int {
+函数 删(t: Int, 名: String) -> Int {
   var 对 = ()
   定 旧名 = field_names(t)
   var i = 0
@@ -49,7 +49,7 @@ fn 删(t: Int, 名: String) -> Int {
 
 // 取，但给一个默认值：没有那个键就交回它。
 // 这与 field_get 的立场不同 —— 那一个拒绝，这一个退让。两个都要有，用途不同。
-fn 取或(t: Int, 名: String, 缺: Int) -> Int {
+函数 取或(t: Int, 名: String, 缺: Int) -> Int {
   若 field_has(t, 名) {
     返回 field_get(t, 名)
   }
@@ -58,7 +58,7 @@ fn 取或(t: Int, 名: String, 缺: Int) -> Int {
 
 // 合并：右边的盖住左边的。同名的键留下右边那一条 —— 后放进的对会覆盖先放的，
 // 那是 record_new 的行为，于是这里不必先剔左边。
-fn 合并(a: Int, b: Int) -> Int {
+函数 合并(a: Int, b: Int) -> Int {
   var 对 = ()
   定 左 = field_names(a)
   var i = 0
@@ -78,11 +78,11 @@ fn 合并(a: Int, b: Int) -> Int {
 // 一条空表：一对都没有的记录。这不是让步 —— record_new(()) 就是空记录，
 // 而 键们 面对它交回空元组。（第一版以为记录至少要一个字段，借了一个占位键；
 // record-new 那一套的用例纠正了这件事。）
-fn 空表() -> Int {
+函数 空表() -> Int {
   返回 record_new(())
 }
 
-fn 是空表(t: Int) -> Bool {
+函数 是空表(t: Int) -> Bool {
   若 有几件(t) == 0 {
     返回 真
   }

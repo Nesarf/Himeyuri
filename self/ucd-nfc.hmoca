@@ -21,7 +21,7 @@
 //
 // 用法：hmyr self/ucd-nfc.hmyr <data/ucd 目录> <输出文件>
 
-fn 十六进制值(文: String) -> Int {
+函数 十六进制值(文: String) -> Int {
   var v = 0
   var i = 0
   当 i < len(文) {
@@ -44,7 +44,7 @@ fn 十六进制值(文: String) -> Int {
   返回 v
 }
 
-fn 十六进制写法(n: Int) -> String {
+函数 十六进制写法(n: Int) -> String {
   若 n == 0 { 返回 "0" }
   定 表 = "0123456789ABCDEF"
   var 出 = ""
@@ -59,7 +59,7 @@ fn 十六进制写法(n: Int) -> String {
 }
 
 // 去首尾空白
-fn 修剪(文: String) -> String {
+函数 修剪(文: String) -> String {
   var 起 = 0
   var 止 = len(文)
   var 走 = 真
@@ -77,7 +77,7 @@ fn 修剪(文: String) -> String {
 }
 
 // 按空格切开，丢掉空段。分解那一列是一串十六进制码点。
-fn 切码点(文: String) -> Int {
+函数 切码点(文: String) -> Int {
   var 出 = ()
   var 部 = split(文, " ")
   var i = 0
@@ -94,7 +94,7 @@ fn 切码点(文: String) -> Int {
 // 为什么用递归而不是显式的栈：这一门语言的 slice 只切字符串 —— 对元组它会先把元组写成
 // 文字再切（slice((7,8,9),0,1) 交回 "["），于是「弹出栈顶」那一步会把元组变成字符串。
 // 递归没有这个动作，累积仍走元组拼接，而每一份分解都很短。
-fn 全展开(cp: Int, 直表: Int, 出: Int) -> Int {
+函数 全展开(cp: Int, 直表: Int, 出: Int) -> Int {
   若 index_has(直表, str(cp)) {
     定 部 = index_get(直表, str(cp))
     var acc = 出
@@ -108,7 +108,7 @@ fn 全展开(cp: Int, 直表: Int, 出: Int) -> Int {
   返回 出 + (cp,)
 }
 
-fn main() -> Int 效果串(file, process) {
+函数 main() -> Int 效果串(file, process) {
   定 参 = argv()
   // 参[0] 是脚本自己的路径；真实参数从 1 起（与第一支同一套规矩）
   var 数据目录 = "data/ucd"

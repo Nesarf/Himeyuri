@@ -23,27 +23,27 @@
 // 结果统一包成 {ok: 真, value} 或 {ok: 假, text}——这样错误一路往上走，
 // 不会被当成一个值参与计算。这一点比「返回特殊值」可靠。
 
-fn 好(v: Int) {
+函数 好(v: Int) {
   返回 {ok: 真, value: v}
 }
 
-fn 坏(t: String) {
+函数 坏(t: String) {
   返回 {ok: 假, text: t}
 }
 
 // 查环境从后往前：后定义要覆盖先定义。正着找会拿到旧值，那是个安静的错。
-fn 查找到(环境: Int, 名: String, i: Int) {
+函数 查找到(环境: Int, 名: String, i: Int) {
   若 i < 0 { 返回 {found: 假, value: ()} }
   若 环境[i][0] == 名 { 返回 {found: 真, value: 环境[i][1]} }
   返回 查找到(环境, 名, i - 1)
 }
 
-fn 查找(环境: Int, 名: String) -> Int {
+函数 查找(环境: Int, 名: String) -> Int {
   返回 查找到(环境, 名, len(环境) - 1)
 }
 
 // 一条记录的字段名拼成一行，用在诊断里。
-fn 名字们(t: Int) -> String {
+函数 名字们(t: Int) -> String {
   定 列 = field_names(t)
   var 出 = ""
   var i = 0
@@ -54,7 +54,7 @@ fn 名字们(t: Int) -> String {
   返回 出
 }
 
-fn 求二元(op: String, a: Int, b: Int) -> Int {
+函数 求二元(op: String, a: Int, b: Int) -> Int {
   若 a.ok == 假 { 返回 a }
   若 b.ok == 假 { 返回 b }
   定 x = a.value
@@ -96,7 +96,7 @@ fn 求二元(op: String, a: Int, b: Int) -> Int {
   返回 坏("不认识的运算符：" + op)
 }
 
-fn 求一元(op: String, a: Int) -> Int {
+函数 求一元(op: String, a: Int) -> Int {
   若 a.ok == 假 { 返回 a }
   若 op == "-" { 返回 好(0 - a.value) }
   若 op == "!" { 返回 好(!a.value) }
@@ -104,14 +104,14 @@ fn 求一元(op: String, a: Int) -> Int {
 }
 
 // 一次性把参数都求出来。任一参数出错就整体出错——不跳过、不补默认值。
-fn 求参数从(节点们: Int, 环境: Int, i: Int, acc: Int) -> Int {
+函数 求参数从(节点们: Int, 环境: Int, i: Int, acc: Int) -> Int {
   若 i >= len(节点们) { 返回 好(acc) }
   定 一个 = 求值(节点们[i], 环境)
   若 一个.ok == 假 { 返回 一个 }
   返回 求参数从(节点们, 环境, i + 1, acc + (一个.value,))
 }
 
-fn 求参数(节点们: Int, 环境: Int) -> Int {
+函数 求参数(节点们: Int, 环境: Int) -> Int {
   返回 求参数从(节点们, 环境, 0, ())
 }
 
@@ -123,14 +123,14 @@ fn 求参数(节点们: Int, 环境: Int) -> Int {
 // 这一版是**动态作用域**（被调函数看得见调用者的局部名字），不是词法作用域。
 // 先这样，因为真正的词法作用域要等闭包那一层；这一点写在明处，不装作已经是词法作用域。
 // 一个效果名在不在这一串里。
-fn 效在(效们: Int, 名: String, i: Int) -> Bool {
+函数 效在(效们: Int, 名: String, i: Int) -> Bool {
   若 i >= len(效们) { 返回 假 }
   若 效们[i] == 名 { 返回 真 }
   返回 效在(效们, 名, i + 1)
 }
 
 // 交回第一个缺的效果名；一个也不缺就交回空串。
-fn 缺效果从(要的: Int, 有的: Int, i: Int) -> String {
+函数 缺效果从(要的: Int, 有的: Int, i: Int) -> String {
   若 i >= len(要的) { 返回 "" }
   // realtime 是档位，不是权限 —— 它不沿调用链传（design/MEMORY.txt 第 3 节那处将就）。
   // 传下去的话，每个调用实时函数的人都要声明自己也在实时档位上，而那不是真的。
@@ -139,20 +139,20 @@ fn 缺效果从(要的: Int, 有的: Int, i: Int) -> String {
   返回 缺效果从(要的, 有的, i + 1)
 }
 
-fn 缺效果(要的: Int, 有的: Int) -> String {
+函数 缺效果(要的: Int, 有的: Int) -> String {
   返回 缺效果从(要的, 有的, 0)
 }
 
 // 当前函数有哪些效果：环境里那个 "效果" 键，由调用的那一层放进来。
 // 没有就是空 —— 顶层没写 效果串(...) 就是不要任何效果。
-fn 我的效果(环境: Int) {
+函数 我的效果(环境: Int) {
   定 r = 查找(环境, "效果")
   若 r.found { 返回 r.value }
   返回 ()
 }
 
 // 一个内置要的效果够不够。够就交回空串，不够就交回那句话。
-fn 要效果(环境: Int, 效: String, 名: String) -> String {
+函数 要效果(环境: Int, 效: String, 名: String) -> String {
   若 效在(我的效果(环境), 效, 0) { 返回 "" }
   返回 "HMYR-內-001 " + 名 + " 要 " + 效 + " 效果，而调用它的函数没有声明"
 }
@@ -175,7 +175,7 @@ fn 要效果(环境: Int, 效: String, 名: String) -> String {
 
 // 每 每组 位插一个逗号，只动整数部分。
 // 三条规矩：分组看档案、小数点是句点、负号前置 —— 所以它只改整数部分的分隔符。
-fn 加千分位(文: String, 每组: Int) -> String {
+函数 加千分位(文: String, 每组: Int) -> String {
   var 负 = 假
   var 体 = 文
   若 len(文) > 0 && slice(文, 0, 1) == "-" {
@@ -204,13 +204,13 @@ fn 加千分位(文: String, 每组: Int) -> String {
   返回 出 + 尾
 }
 
-fn 找点从(体: String, i: Int) -> Int {
+函数 找点从(体: String, i: Int) -> Int {
   若 i >= len(体) { 返回 0 - 1 }
   若 体[i] == "." { 返回 i }
   返回 找点从(体, i + 1)
 }
 
-fn 新区() -> Int {
+函数 新区() -> Int {
   定 区 = index_new()
   index_set(区, "种", "区")
   index_set(区, "关", 0)
@@ -221,7 +221,7 @@ fn 新区() -> Int {
 
 // 一个持有格：只装零个或一个值，取出即转移（design/MEMORY.txt 第 2 节）。
 // 取出之后 装 变回 0，于是「两处都声称拥有它」在运行期不成立。
-fn 新持有格() -> Int {
+函数 新持有格() -> Int {
   定 格 = index_new()
   index_set(格, "kind", "owner")
   index_set(格, "装", 0)
@@ -230,7 +230,7 @@ fn 新持有格() -> Int {
   返回 格
 }
 
-fn 分配块(区: Int, 大小: Int) -> Int {
+函数 分配块(区: Int, 大小: Int) -> Int {
   若 index_get(区, "关") != 0 { 返回 坏("HMYR-碼-002 arena.alloc: that arena is already closed") }
   定 号 = index_get(区, "下一个")
   定 块 = index_new()
@@ -251,7 +251,7 @@ fn 分配块(区: Int, 大小: Int) -> Int {
 
 // 关区：把它名下的块（还没交出去的）一起标记成死的，再记下「关」。
 // 交出去的那些归托管，close 不带它们走 —— 那正是 freeze 的全部意义。
-fn 关区(区: Int) -> Int {
+函数 关区(区: Int) -> Int {
   定 下一个 = index_get(区, "下一个")
   var i = 1
   当 i < 下一个 {
@@ -267,7 +267,7 @@ fn 关区(区: Int) -> Int {
   返回 好(0)
 }
 
-fn 交出去(区: Int, 块: Int) -> Int {
+函数 交出去(区: Int, 块: Int) -> Int {
   若 index_get(区, "关") != 0 { 返回 坏("HMYR-碼-002 arena.freeze: that arena is already closed") }
   若 index_get(块, "zone") != "arena" { 返回 坏("HMYR-碼-002 arena.freeze was given a block this arena does not own") }
   index_set(块, "zone", "managed")
@@ -276,7 +276,7 @@ fn 交出去(区: Int, 块: Int) -> Int {
   返回 好(块)
 }
 
-fn 收回来(区: Int, 块: Int) -> Int {
+函数 收回来(区: Int, 块: Int) -> Int {
   若 index_get(区, "关") != 0 { 返回 坏("HMYR-碼-002 arena.adopt: that arena is already closed") }
   若 index_get(块, "zone") != "managed" { 返回 坏("HMYR-碼-003 arena.adopt: that block was not handed to the managed zone") }
   index_set(块, "zone", "arena")
@@ -287,7 +287,7 @@ fn 收回来(区: Int, 块: Int) -> Int {
 
 // 方法分派。这一版只认区上的方法 —— 别的值当主时给一句说得清的话，不崩：
 // 而它不会崩的理由是 index_has 对不是索引的值交回 假，而不是抛。
-fn 求方法(环境: Int, 主: Int, 名: String, 参: Int) -> Int {
+函数 求方法(环境: Int, 主: Int, 名: String, 参: Int) -> Int {
   // 块上的方法：存与取。块的上下文只有它自己，所以这两支必须挂在块上。
   若 index_has(主, "kind") {
     若 index_get(主, "kind") == "block" {
@@ -367,7 +367,7 @@ fn 求方法(环境: Int, 主: Int, 名: String, 参: Int) -> Int {
   返回 坏("区上没有这个方法：" + 名)
 }
 
-fn 求调用(节点: Int, 环境: Int) -> Int {
+函数 求调用(节点: Int, 环境: Int) -> Int {
   // 方法调用（a.alloc(16)）：区是这一层唯一有方法的对象。
   // 别的值当主时求方法给的是一句话，不是崩 —— 见那边对 index_has 的说明。
   若 节点.callee.kind == "字段" {
@@ -924,7 +924,7 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
 
 // 十的幂。小数与指数解析都要用它。
 // 负指数是除以十的正次幂 —— 1e-3 那一类写法要有落点。
-fn 幂十(n: Int) -> Int {
+函数 幂十(n: Int) -> Int {
   若 n < 0 {
     返回 1 / 幂十(0 - n)
   }
@@ -937,7 +937,7 @@ fn 幂十(n: Int) -> Int {
   返回 出
 }
 
-fn 小数点位置(s: String) -> Int {
+函数 小数点位置(s: String) -> Int {
   var i = 0
   当 i < len(s) {
     若 s[i] == "." {
@@ -949,7 +949,7 @@ fn 小数点位置(s: String) -> Int {
 }
 
 // 指数的位置：e 或 E。没有就交回 -1。
-fn 指数位置(s: String) -> Int {
+函数 指数位置(s: String) -> Int {
   var i = 0
   当 i < len(s) {
     若 s[i] == "e" { 返回 i }
@@ -960,7 +960,7 @@ fn 指数位置(s: String) -> Int {
 }
 
 // 没有指数的那些：整数交给 to_int，带小数点的自己拆。
-fn 小数到(s: String) -> Int {
+函数 小数到(s: String) -> Int {
   定 位 = 小数点位置(s)
   若 位 < 0 {
     返回 to_int(s)
@@ -979,7 +979,7 @@ fn 小数到(s: String) -> Int {
 // 按基数读一串数字：0x 十六进制、0b 二进制、0o 八进制。下划线是分隔符，不参与计算。
 // 十进制仍交给 数到（它认得小数与指数）—— 复用一份比再写一份好。
 // 这一对原先只写在包装层（run.hmyr），于是「造树」那条路认得 0x1_0，而求值器那条路不认得。
-fn 按基读(s: String, 起: Int, 基: Int) -> Int {
+函数 按基读(s: String, 起: Int, 基: Int) -> Int {
   var 出 = 0
   var i = 起
   当 i < len(s) {
@@ -993,7 +993,7 @@ fn 按基读(s: String, 起: Int, 基: Int) -> Int {
   返回 出
 }
 
-pub fn 数字值(s: String) -> Int {
+pub 函数 数字值(s: String) -> Int {
   若 len(s) >= 2 {
     定 标 = slice(s, 1, 2)
     若 标 == "x" || 标 == "X" { 返回 按基读(s, 2, 16) }
@@ -1002,7 +1002,7 @@ pub fn 数字值(s: String) -> Int {
   }
   返回 数到(s)
 }
-fn 数到(s: String) -> Int {
+函数 数到(s: String) -> Int {
   定 指 = 指数位置(s)
   若 指 >= 0 {
     定 尾 = slice(s, 0, 指)
@@ -1013,7 +1013,7 @@ fn 数到(s: String) -> Int {
 }
 
 // 求一个节点。这是核心：节点种类一分派，其余都交给上面的帮手。
-pub fn 求值(节点: Int, 环境: Int) -> Int {
+pub 函数 求值(节点: Int, 环境: Int) -> Int {
   定 种 = 节点.kind
   若 种 == "int" { 返回 好(to_int(节点.text)) }
   若 种 == "字" && 节点.type == "int" { 返回 好(数字值(节点.text)) }
@@ -1101,7 +1101,7 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
 }
 
 // 一段节点求值并直接把结果打成文字。给示例与测试用。
-fn 求值成文字(节点: Int, 环境: Int) -> String {
+函数 求值成文字(节点: Int, 环境: Int) -> String {
   定 r = 求值(节点, 环境)
   若 r.ok == 假 { 返回 "错：" + r.text }
   返回 str(r.value)
@@ -1121,22 +1121,22 @@ fn 求值成文字(节点: Int, 环境: Int) -> String {
 // 绑参数：把 值簇 挨个绑到 名册 上，交回一层新环境。
 // 「新的一层」这件事在 执行块 里由它自己管（它把 定 绑在局部），
 // 而参数这一层必须先于函数体的第一个 定 就位。
-fn 绑参数从(环境: Int, 名册: Int, 值簇: Int, i: Int) -> Int {
+函数 绑参数从(环境: Int, 名册: Int, 值簇: Int, i: Int) -> Int {
   若 i >= len(名册) { 返回 环境 }
   返回 绑参数从(更新(环境, 名册[i], 值簇[i]), 名册, 值簇, i + 1)
 }
 
-fn 绑参数(环境: Int, 名册: Int, 值簇: Int, 起: Int) -> Int {
+函数 绑参数(环境: Int, 名册: Int, 值簇: Int, 起: Int) -> Int {
   返回 绑参数从(环境, 名册, 值簇, 起)
 }
 
-fn 更新(环境: Int, 名: String, 值: Int) -> Int {
+函数 更新(环境: Int, 名: String, 值: Int) -> Int {
   返回 环境 + ((名, 值),)
 }
 
 // 环境里那个名字最后一次出现在第几项。-1 表示没有。
 // 「最后一次」与 查找 从后往前是同一条规矩：近的定义盖住远的。
-fn 末位(环境: Int, 名: String, i: Int, 局: Int) {
+函数 末位(环境: Int, 名: String, i: Int, 局: Int) {
   若 i >= len(环境) { 返回 局 }
   var 新局 = 局
   若 环境[i][0] == 名 { 新局 = i }
@@ -1148,25 +1148,25 @@ fn 末位(环境: Int, 名: String, i: Int, 局: Int) {
 // 为什么不能「追加一条」了事：函数体里的环境是「模块级 + 参数 + 局部」，
 // 追加只会落在最内层，函数一返回，模块级那个名字还是旧值。
 // 症状是「写了一个模块级 var，读出来永远是初值」—— 而它看起来像赋值没生效。
-fn 改在从(环境: Int, 到: Int, 值: Int, i: Int, 出: Int) {
+函数 改在从(环境: Int, 到: Int, 值: Int, i: Int, 出: Int) {
   若 i >= len(环境) { 返回 出 }
   若 i == 到 { 返回 改在从(环境, 到, 值, i + 1, 出 + ((环境[i][0], 值),)) }
   返回 改在从(环境, 到, 值, i + 1, 出 + (环境[i],))
 }
 
-fn 改在(环境: Int, 到: Int, 值: Int) {
+函数 改在(环境: Int, 到: Int, 值: Int) {
   返回 改在从(环境, 到, 值, 0, ())
 }
 
-fn 好执行(环境: Int, 完成: Bool, 值: Int) {
+函数 好执行(环境: Int, 完成: Bool, 值: Int) {
   返回 {ok: 真, env: 环境, done: 完成, value: 值}
 }
 
-fn 坏执行(原因: String) {
+函数 坏执行(原因: String) {
   返回 {ok: 假, env: (), done: 真, text: 原因}
 }
 
-fn 执行(节点: Int, 环境: Int) -> Int {
+函数 执行(节点: Int, 环境: Int) -> Int {
   定 种 = 节点.kind
   若 种 == "定" || 种 == "变" {
     定 v = 求值(节点.value, 环境)
@@ -1224,7 +1224,7 @@ fn 执行(节点: Int, 环境: Int) -> Int {
 
 // 当：条件真就跑一遍体，然后拿**体交回的环境**再判一次。
 // 体里若有 i = i + 1，新环境在 r.env 里；不看它，循环就永远不前进。
-fn 执行反复(节点: Int, 环境: Int, 次数: Int) -> Int {
+函数 执行反复(节点: Int, 环境: Int, 次数: Int) -> Int {
   若 次数 >= 1000000 { 返回 坏执行("while 跑过一百万次还没结束") }
   定 c = 求值(节点.cond, 环境)
   若 c.ok == 假 { 返回 坏执行(c.text) }
@@ -1235,7 +1235,7 @@ fn 执行反复(节点: Int, 环境: Int, 次数: Int) -> Int {
   返回 执行反复(节点, r.env, 次数 + 1)
 }
 
-fn 执行块从(语句们: Int, 环境: Int, i: Int) -> Int {
+函数 执行块从(语句们: Int, 环境: Int, i: Int) -> Int {
   若 i >= len(语句们) { 返回 好执行(环境, 假, ()) }
   定 r = 执行(语句们[i], 环境)
   若 r.ok == 假 { 返回 r }
@@ -1243,12 +1243,12 @@ fn 执行块从(语句们: Int, 环境: Int, i: Int) -> Int {
   返回 执行块从(语句们, r.env, i + 1)
 }
 
-fn 执行块(语句们: Int, 环境: Int) -> Int {
+函数 执行块(语句们: Int, 环境: Int) -> Int {
   返回 执行块从(语句们, 环境, 0)
 }
 
 // 跑一段语句：从空环境开始。交回 {ok, env, done, value}。
-pub fn 跑程序(语句们: Int) -> Int {
+pub 函数 跑程序(语句们: Int) -> Int {
   返回 执行块(语句们, ())
 }
 
@@ -1256,7 +1256,7 @@ pub fn 跑程序(语句们: Int) -> Int {
 // 函数表里每一项是 (名字, 参数名册, 语句们)，而环境里存的是 (参数名册, 语句们)。
 // 为什么要带参数名：自举这一层以前执行函数体时不绑参数，于是带参数的函数
 // 会以「没有这个名字」失败。那不是错——它诚实地说了——而它让这门语言少了一半。
-fn 装函数从(环境: Int, 函数族: Int, i: Int) -> Int {
+函数 装函数从(环境: Int, 函数族: Int, i: Int) -> Int {
   若 i >= len(函数族) { 返回 环境 }
   定 项 = 函数族[i]
   // 形状不对就跳过，而不是交回一个错误记录——
@@ -1272,13 +1272,13 @@ fn 装函数从(环境: Int, 函数族: Int, i: Int) -> Int {
 
 // 老的入口留着：两个套件按两参数调它，而它们测的是「适配层造出的语句表能不能跑」。
 // 新的一层带参数，因为目标程序要看得见自己的 argv —— 那件事以前根本做不到。
-fn 跑程序带函数(语句们: Int, 函数族: Int) -> Int {
+函数 跑程序带函数(语句们: Int, 函数族: Int) -> Int {
   返回 跑程序带常量与参(语句们, 函数族, (), (), ())
 }
 
 // 效们 是 main 自己声明的效果。它要放进环境，因为「当前函数有哪些效果」这件事
 // 只能在运行时知道 —— 效果检查靠的就是这个键。
-fn 跑程序带函数与参(语句们: Int, 函数族: Int, 参们: Int, 效们: Int) -> Int {
+函数 跑程序带函数与参(语句们: Int, 函数族: Int, 参们: Int, 效们: Int) -> Int {
   返回 跑程序带常量与参(语句们, 函数族, (), 参们, 效们)
 }
 
@@ -1287,7 +1287,7 @@ fn 跑程序带函数与参(语句们: Int, 函数族: Int, 参们: Int, 效们:
 // 顺序就是源码顺序，所以一个常量可以先引用前面已经装好的常量。装不上的就跳过 ——
 // 与 装函数从 对坏形状的处理同一条规矩：这一层的返回类型是环境，带不了错误记录，
 // 而「没有这个名字」会在真正用到它的时候说出来，那时候报得比这里准。
-fn 装常量从(环境: Int, 常量们: Int, i: Int) -> Int {
+函数 装常量从(环境: Int, 常量们: Int, i: Int) -> Int {
   若 i >= len(常量们) { 返回 环境 }
   定 项 = 常量们[i]
   若 len(项) < 2 { 返回 装常量从(环境, 常量们, i + 1) }
@@ -1311,7 +1311,7 @@ fn 装常量从(环境: Int, 常量们: Int, i: Int) -> Int {
   返回 装常量从(新, 常量们, i + 1)
 }
 
-pub fn 跑程序带常量与参(语句们: Int, 函数族: Int, 常量们: Int, 参们: Int, 效们: Int) -> Int {
+pub 函数 跑程序带常量与参(语句们: Int, 函数族: Int, 常量们: Int, 参们: Int, 效们: Int) -> Int {
   定 有函数 = 装函数从((), 函数族, 0)
   // 那张共享的小表先放进去：装常量时（以及运行时赋值）都靠它。
   定 全 = index_new()
@@ -1324,19 +1324,19 @@ pub fn 跑程序带常量与参(语句们: Int, 函数族: Int, 常量们: Int, 
 }
 
 // 把一个值从元组里去掉（只去第一个相等的）。持有格交出去时用。
-fn 去掉项从(们: Int, 值: Int, i: Int, acc: Int) {
+函数 去掉项从(们: Int, 值: Int, i: Int, acc: Int) {
   若 i >= len(们) { 返回 acc }
   若 们[i] == 值 { 返回 去掉项从(们, 值, i + 1, acc) }
   返回 去掉项从(们, 值, i + 1, acc + (们[i],))
 }
 
-fn 去掉项(们: Int, 值: Int) -> Int {
+函数 去掉项(们: Int, 值: Int) -> Int {
   返回 去掉项从(们, 值, 0, ())
 }
 
 // 把当前帧登记的持有格一个不留地关掉。帧退出时调用（design/MEMORY.txt 第 2 节）。
 // 登记表里只有持有格，所以这里不判类型 —— 判错类型的地方在 求方法 的 owner 分支。
-fn 关本帧持有格从(格们: Int, i: Int) {
+函数 关本帧持有格从(格们: Int, i: Int) {
   若 i >= len(格们) { 返回 () }
   index_set(格们[i], "关", 1)
   返回 关本帧持有格从(格们, i + 1)
@@ -1346,7 +1346,7 @@ fn 关本帧持有格从(格们: Int, i: Int) {
 // 字段名来自源码，所以一定是标识符能写的形状——这正是 record_of 收的那一类。
 // 字段的形状来自 self/chain.hmyr：{name, value}——是记录，不是二元元组。
 // 所以这里读 .name 与 .value，而不是取下标。
-fn 求字段从(字段们: Int, 环境: Int, i: Int, acc: Int) -> Int {
+函数 求字段从(字段们: Int, 环境: Int, i: Int, acc: Int) -> Int {
   若 i >= len(字段们) { 返回 好(acc) }
   定 字段 = 字段们[i]
   定 v = 求值(字段.value, 环境)
@@ -1354,13 +1354,13 @@ fn 求字段从(字段们: Int, 环境: Int, i: Int, acc: Int) -> Int {
   返回 求字段从(字段们, 环境, i + 1, acc + ((字段.name, v.value),))
 }
 
-fn 求记录(节点: Int, 环境: Int) -> Int {
+函数 求记录(节点: Int, 环境: Int) -> Int {
   定 里 = 求字段从(节点.fields, 环境, 0, ())
   若 里.ok == 假 { 返回 里 }
   返回 好(record_new(里.value))
 }
 
-fn main() -> Int 效果串(process) {
+函数 main() -> Int 效果串(process) {
   定 节点 = {kind: "二元", op: "+", left: {kind: "int", text: "1"}, right: {kind: "二元", op: "*", left: {kind: "int", text: "2"}, right: {kind: "int", text: "3"}}}
   print(求值成文字(节点, ()) + "\n")
   返回 0

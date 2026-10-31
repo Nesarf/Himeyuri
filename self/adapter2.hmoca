@@ -3,7 +3,7 @@
 // 还是 adapter.hmoca 的内容。
 引入 "./run.hmoca"
 
-fn main() -> Int 效果串(process) {
+函数 main() -> Int 效果串(process) {
   print("self 里的最小探针跑起来了" + chr(10))
   返回 0
 }

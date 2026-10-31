@@ -1,15 +1,15 @@
-fn 加(a: Int, b: Int) -> Int {
+函数 加(a: Int, b: Int) -> Int {
   返回 a + b
 }
 
-fn 阶(n: Int) -> Int {
+函数 阶(n: Int) -> Int {
   若 n <= 1 {
     返回 1
   }
   返回 n * 阶(n - 1)
 }
 
-fn main() -> Int {
+函数 main() -> Int {
   print(str(加(20, 22)))
   print(" ")
   print(str(阶(5)))

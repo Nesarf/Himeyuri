@@ -1,17 +1,17 @@
 引入 "../lib/tables.hmoca"
 
-fn 检(好: Bool, 号: Int) -> Int {
+函数 检(好: Bool, 号: Int) -> Int {
   若 好 {
     返回 0
   }
   返回 号
 }
 
-fn 造(a: Int, b: Int) -> Int {
+函数 造(a: Int, b: Int) -> Int {
   返回 record_new((("a", a), ("b", b)))
 }
 
-fn main() -> Int {
+函数 main() -> Int {
   定 t = 造(1, 2)
   定 a = 检(有几件(t) == 2, 1)
   若 a != 0 {

@@ -14,13 +14,13 @@
 引入 "../lib/json.hmoca"
 引入 "./sig.hmoca"
 
-fn 是长度行(行: String) -> Bool {
+函数 是长度行(行: String) -> Bool {
   若 len(行) < 16 { 返回 假 }
   返回 slice(行, 0, 15) == "Content-Length:"
 }
 
 // " 123" → 123。只看数字，别的字符跳过。
-fn 数值(文: String) -> Int {
+函数 数值(文: String) -> Int {
   var v = 0
   var i = 0
   当 i < len(文) {
@@ -32,7 +32,7 @@ fn 数值(文: String) -> Int {
 }
 
 // 读一条消息：头先读到空行为止，体按长度读。交回 {体, 结束}。
-fn 读消息() {
+函数 读消息() {
   var 长 = 0 - 1
   var 继续 = 真
   var 完 = 假
@@ -55,7 +55,7 @@ fn 读消息() {
 
 // 从 JSON 对象里取一个键。找不到交回空。
 // 键是裸字符串（写对表那一支就是这么写的），值才是带标记的记录。
-fn 取(对象: Int, 键: String) {
+函数 取(对象: Int, 键: String) {
   若 !field_has(对象, "对象") { 返回 {空值: 1} }
   定 对们 = 对象.对象
   var i = 0
@@ -66,7 +66,7 @@ fn 取(对象: Int, 键: String) {
   返回 {空值: 1}
 }
 
-fn 取串(对象: Int, 键: String) -> String {
+函数 取串(对象: Int, 键: String) -> String {
   定 v = 取(对象, 键)
   若 field_has(v, "串") { 返回 v.串 }
   返回 ""
@@ -76,7 +76,7 @@ fn 取串(对象: Int, 键: String) -> String {
 // 回话里一旦出现中文，两者就不再相等。代理对按四个字节算（两个码元合起来才是一个字符）。
 // 一段文本按 UTF-8 编码要几个字节。Content-Length 数的是字节，而 len 数的是码元 ——
 // 回话里一旦出现中文，两者就不再相等。代理对按四个字节算（两个码元合起来才是一个字符）。
-fn utf8字节数(文: String) -> Int {
+函数 utf8字节数(文: String) -> Int {
   var 数 = 0
   var i = 0
   当 i < len(文) {
@@ -96,16 +96,16 @@ fn utf8字节数(文: String) -> Int {
   返回 数
 }
 
-fn 应答(id: Int, 结果: Int) -> String {
+函数 应答(id: Int, 结果: Int) -> String {
   返回 生成({对象: (("jsonrpc", {串: "2.0"}), ("id", id), ("result", 结果))})
 }
 
-fn 应答错(id: Int, 码: Int, 话: String) -> String {
+函数 应答错(id: Int, 码: Int, 话: String) -> String {
   返回 生成({对象: (("jsonrpc", {串: "2.0"}), ("id", id), ("error", {对象: (("code", {数: 码}), ("message", {串: 话}))}))})
 }
 
 // 一个字符算不算「词里的字」。中文与全角都算 —— 这门语言的标识符允许它们。
-fn 是词字(c: String) -> Bool {
+函数 是词字(c: String) -> Bool {
   定 o = ord(c)
   若 o >= 48 && o <= 57 { 返回 真 }
   若 o >= 65 && o <= 90 { 返回 真 }
@@ -115,7 +115,7 @@ fn 是词字(c: String) -> Bool {
 }
 
 // 按行列从原文里取出那个词。位置给的是零基行列，与 LSP 一致。
-fn 词在(文本: String, 行: Int, 列: Int) -> String {
+函数 词在(文本: String, 行: Int, 列: Int) -> String {
   定 行批 = split(文本, chr(10))
   若 行 >= len(行批) { 返回 "" }
   定 该行 = 行批[行]
@@ -134,7 +134,7 @@ fn 词在(文本: String, 行: Int, 列: Int) -> String {
 }
 
 // 码元偏移换成行列。LSP 的 range 要行列，而 token 只记偏移。
-fn at转行列(文本: String, at: Int) {
+函数 at转行列(文本: String, at: Int) {
   var 行 = 0
   var 列 = 0
   var i = 0
@@ -152,13 +152,13 @@ fn at转行列(文本: String, at: Int) {
   返回 {行: 行, 列: 列}
 }
 
-fn 取数(对象: Int, 键: String) -> Int {
+函数 取数(对象: Int, 键: String) -> Int {
   定 v = 取(对象, 键)
   若 field_has(v, "数") { 返回 v.数 }
   返回 0
 }
 
-fn 找签名(列: Int, 名: String) {
+函数 找签名(列: Int, 名: String) {
   var i = 0
   当 i < len(列) {
     若 列[i].name == 名 { 返回 列[i] }
@@ -168,7 +168,7 @@ fn 找签名(列: Int, 名: String) {
 }
 
 // 一条签名排成一行：悬浮签名要的就是这一行。
-fn 签名文字(签: Int) -> String {
+函数 签名文字(签: Int) -> String {
   var 文 = "fn " + 签.name + "("
   var i = 0
   当 i < len(签.params) {
@@ -186,7 +186,7 @@ fn 签名文字(签: Int) -> String {
 // 一份文档的符号：名字、类别、位置。
 // 位置是零宽度的（起止都给 character 0）—— 与 src/lsp.mjs 同一条规矩：
 // 签名只记「声明从哪个码元开始」，行内宽度它没有，编一个出来比留空更糟。
-fn 符号表(文本: String, 地址: String) {
+函数 符号表(文本: String, 地址: String) {
   定 tokens = scan(文本)
   定 列 = all_signatures(tokens)
   var 出 = ()
@@ -207,7 +207,7 @@ fn 符号表(文本: String, 地址: String) {
 // kind 用 CompletionItemKind（函数是 3），而 documentSymbol 用的是 SymbolKind（函数是 12）。
 // 两张表各自成立，混用会让编辑器把函数显示成变量。
 // 不做前缀过滤：那是客户端的事，编辑器会按已经敲下的几个字自己筛。
-fn 补全表(文本: String) {
+函数 补全表(文本: String) {
   定 列 = all_signatures(scan(文本))
   var 出 = ()
   var i = 0
@@ -224,7 +224,7 @@ fn 补全表(文本: String) {
 // 编辑器的 uri 是 file:// 的，文件系统要的是路径；换算只做这一处。
 // file:///E:/a/b.hmyr → E:/a/b.hmyr（Windows 那个开头的斜杠要去掉）
 // file:///tmp/x.hmyr  → /tmp/x.hmyr（在那里它本来就该在）
-fn 地址转路径(地址: String) -> String {
+函数 地址转路径(地址: String) -> String {
   若 len(地址) <= 7 { 返回 "" }
   var 路 = slice(地址, 7, len(地址))
   若 len(路) >= 3 {
@@ -233,7 +233,7 @@ fn 地址转路径(地址: String) -> String {
   返回 路
 }
 
-fn 目录名(路: String) -> String {
+函数 目录名(路: String) -> String {
   var i = len(路) - 1
   当 i >= 0 {
     若 路[i] == "/" { 返回 slice(路, 0, i) }
@@ -243,7 +243,7 @@ fn 目录名(路: String) -> String {
 }
 
 // 引入 的路径相对当前文件所在目录，与加载器同一条规矩。
-fn 拼导入(基: String, 相对: String) -> String {
+函数 拼导入(基: String, 相对: String) -> String {
   var 名 = 相对
   若 len(名) >= 2 {
     若 slice(名, 0, 2) == "./" { 名 = slice(名, 2, len(名)) }
@@ -252,7 +252,7 @@ fn 拼导入(基: String, 相对: String) -> String {
 }
 
 // 一份文本里的 引入 路径们。关键字在词法里是 ident，后面那一个必须是字符串。
-fn 导入路们(文本: String) -> Int {
+函数 导入路们(文本: String) -> Int {
   定 tokens = scan(文本)
   var 出 = ()
   var i = 0
@@ -268,14 +268,14 @@ fn 导入路们(文本: String) -> Int {
 }
 
 // 一份文件的签名册。读不了就交回空元组 —— 问了一个打不开的文件不是错误。
-fn 文件签名册(路: String) -> Int {
+函数 文件签名册(路: String) -> Int {
   var 出 = ()
   若 file_exists(路) { 出 = all_signatures(scan(read_text(路))) }
   返回 出
 }
 
 // 一个签名在它自己那份文本里的位置。
-fn 地位(地址: String, 那份: String, 签: Int) {
+函数 地位(地址: String, 那份: String, 签: Int) {
   定 位 = at转行列(那份, 签.at)
   定 起 = {对象: (("line", {数: 位.行}), ("character", {数: 位.列}))}
   定 止 = {对象: (("line", {数: 位.行}), ("character", {数: 位.列 + len(签.name)}))}
@@ -285,7 +285,7 @@ fn 地位(地址: String, 那份: String, 签: Int) {
 
 // 处理一条消息：交回 {文, 停, 文本}。文本是「当前打开的文档」——
 // didOpen 送来它，documentSymbol 用它。状态在这一层过一手，因为语言里没有可变的全局。
-fn 处理(体: String, 文本: String) 效果串(file) {
+函数 处理(体: String, 文本: String) 效果串(file) {
   定 p = 解析(体)
   若 !p.ok { 返回 {文: "", 停: 假, 文本: 文本} }
   定 值 = p.值
@@ -354,7 +354,7 @@ fn 处理(体: String, 文本: String) 效果串(file) {
   返回 {文: 应答错(id, 0 - 32601, "method not found"), 停: 假, 文本: 文本}
 }
 
-fn main() -> Int 效果串(file) {
+函数 main() -> Int 效果串(file) {
   var 跑 = 真
   var 文本 = ""
   当 跑 {

@@ -5,7 +5,7 @@
 // 若 len 少算一个，或者末字符不是换行，越界的位置就解释得通。
 引入 "../self/lex.hmoca"
 
-fn main() -> Int 效果串(process) {
+函数 main() -> Int 效果串(process) {
   定 源码 = "fn main() -> Int {\n  return 0\n}\n"
   print("len=" + str(len(源码)) + chr(10))
   print("末码=" + str(ord(slice(源码, len(源码) - 1, len(源码)))) + chr(10))

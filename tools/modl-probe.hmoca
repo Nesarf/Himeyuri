@@ -4,7 +4,7 @@
 // 所以这里量到的差异只能来自 模L长。
 引入 "../self/curve.hmoca"
 
-fn main() -> Int 效果串(process) {
+函数 main() -> Int 效果串(process) {
   定 哈 = sha512字节((97, 98, 99))
   print(成十六进制(模L长(哈)) + chr(10))
   返回 0

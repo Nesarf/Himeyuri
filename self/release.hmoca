@@ -14,12 +14,12 @@
 引入 "./manifest.hmoca"
 引入 "./package.hmoca"
 
-fn 数字(s: String) -> String {
+函数 数字(s: String) -> String {
   返回 s
 }
 
 // 一行一行攒成一段文字：每行后面带换行，末尾再切掉一个。
-fn 拼行(行集: Int) {
+函数 拼行(行集: Int) {
   var 块 = ()
   var 一段 = ""
   var i = 0
@@ -30,7 +30,7 @@ fn 拼行(行集: Int) {
   返回 slice(一段, 0, len(一段) - 1)
 }
 
-fn 说明书(标: String, 包名: String, 清单名: String) 效果串(file) {
+函数 说明书(标: String, 包名: String, 清单名: String) 效果串(file) {
   var 行 = ()
   行 = 行 + ("Himeyuri " + 标,)
   行 = 行 + ("",)
@@ -81,7 +81,7 @@ fn 说明书(标: String, 包名: String, 清单名: String) 效果串(file) {
   返回 拼行(行) + chr(10)
 }
 
-fn 发布(标: String, 出目录: String) 效果串(file, process) {
+函数 发布(标: String, 出目录: String) 效果串(file, process) {
   // 目录不存在时，write_text 会抛 HMYR-內-012 —— 那句话对写程序的人是够用的，对跑发布的人
   // 不够。所以这里先挡一下，把「先建目录」说清楚。
   若 !is_dir(出目录) {
@@ -123,7 +123,7 @@ fn 发布(标: String, 出目录: String) 效果串(file, process) {
   返回 0
 }
 
-fn main() -> Int 效果串(file, process) {
+函数 main() -> Int 效果串(file, process) {
   定 参 = argv()
   若 len(参) < 2 {
     print("用法：hmyr self/release.hmyr <tag> [输出目录]" + chr(10))

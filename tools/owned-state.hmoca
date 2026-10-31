@@ -14,7 +14,7 @@
 //   closed 放     -> closed use-after-close
 //   moved 取      -> moved use-after-move
 
-fn 转移(态: String, 动作: String) -> Int {
+函数 转移(态: String, 动作: String) -> Int {
   // 交回一个二元组：(新状态, 错误词或空串)。
   // 顺序与 JS 那份一样：先看「已转移」，再看「关」是幂等的，再看「已关」，最后是两个动作。
   若 态 == "moved" { 返回 (态, "was moved into another function earlier") }
@@ -31,7 +31,7 @@ fn 转移(态: String, 动作: String) -> Int {
   返回 (态, "unknown action")
 }
 
-fn main() -> Int 效果串(process, file) {
+函数 main() -> Int 效果串(process, file) {
   var 没读到 = read_stdin_line()
   当 没读到.结束 == 假 {
     定 行 = 没读到.行
@@ -52,24 +52,24 @@ fn main() -> Int 效果串(process, file) {
   返回 0
 }
 
-fn 找空位(s: String, i: Int) -> Int {
+函数 找空位(s: String, i: Int) -> Int {
   若 i >= len(s) { 返回 0 - 1 }
   若 s[i] == " " { 返回 i }
   返回 找空位(s, i + 1)
 }
 
-fn 前段(s: String, 止: Int, i: Int, acc: String) -> String {
+函数 前段(s: String, 止: Int, i: Int, acc: String) -> String {
   若 i >= 止 { 返回 acc }
   返回 前段(s, 止, i + 1, acc + s[i])
 }
 
-fn 后段从(s: String, 起: Int, i: Int, acc: String) -> String {
+函数 后段从(s: String, 起: Int, i: Int, acc: String) -> String {
   定 位 = 起 + i
   若 位 >= len(s) { 返回 acc }
   返回 后段从(s, 起, i + 1, acc + s[位])
 }
 
-fn 错或好(词: String) -> String {
+函数 错或好(词: String) -> String {
   若 词 == "" { 返回 "ok" }
   返回 词
 }

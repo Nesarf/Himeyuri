@@ -14,7 +14,7 @@
 // 合并规矩是后到者覆盖先到者 —— 所以这一份定义自己的，就把那一个盖住了。
 //
 // 这一条是这一轮最贵的一课：之前所有的 print 都不出现，是因为程序根本没跑到 main。
-fn 命令行入口() -> Int 效果串(process, file) {
+函数 命令行入口() -> Int 效果串(process, file) {
   定 参们 = argv()
   若 len(参们) < 3 {
     print("用法：adapter.hmoca <目录> <相对路径>" + chr(10))
@@ -24,7 +24,7 @@ fn 命令行入口() -> Int 效果串(process, file) {
   返回 0
 }
 
-fn main() -> Int 效果串(process) {
+函数 main() -> Int 效果串(process) {
   print("adapter：请带 <目录> <相对路径> 两个参数" + chr(10))
   返回 0
 }

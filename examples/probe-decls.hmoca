@@ -1,4 +1,4 @@
-// 一个只问形状的探针：把「一份带 fn 声明的程序」交给自举层的解析器，
+// 一个只问形状的探针：把「一份带 函数 声明的程序」交给自举层的解析器，
 // 把声明表与每项的长度打出来。
 //
 // 为什么需要它（2026-11-01）：默认路径跑 run.hmoca 时在 选[2] 那里报
@@ -7,7 +7,7 @@
 引入 "../self/lex.hmoca"
 引入 "../self/body.hmoca"
 
-fn main() -> Int 效果串(process) {
+函数 main() -> Int 效果串(process) {
   定 源码 = "fn main() -> Int {\n  print(str(6 * 7) + chr(10))\n  return 0\n}\n"
   定 tokens = scan_lines(源码)
   print("tokens=" + str(len(tokens)) + chr(10))

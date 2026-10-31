@@ -5,7 +5,7 @@
 // 这一步通了，pub 包装才有意义；不通的话，适配层得换一条通道。
 引入 "../self/lex.hmoca"
 
-fn main() -> Int 效果串(process) {
+函数 main() -> Int 效果串(process) {
   定 tokens = scan_lines("fn a() -> Int {\n  return 1\n}\n")
   print("自举层词法在宿主上跑通，词数=" + str(len(tokens)) + chr(10))
   返回 0

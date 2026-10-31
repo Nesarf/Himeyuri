@@ -5,7 +5,7 @@
 引入 "./ssh.hmoca"
 引入 "./curve.hmoca"
 
-fn 验文件(签名路: String, 消息路: String) -> Bool 效果串(file, process) {
+函数 验文件(签名路: String, 消息路: String) -> Bool 效果串(file, process) {
   定 解 = 解签名(read_text(签名路))
   定 消哈 = sha512字节(read_bytes(消息路))
   // 被签数据里没有版本与公钥 —— 见 ssh.hmyr 里 造签名数据 的注释。
@@ -15,7 +15,7 @@ fn 验文件(签名路: String, 消息路: String) -> Bool 效果串(file, proce
   返回 验签(解.公钥点, 前几(签, 32), 前几(从第(签, 32), 32), 数据)
 }
 
-fn main() -> Int 效果串(file, process) {
+函数 main() -> Int 效果串(file, process) {
   定 参 = argv()
   若 len(参) < 3 {
     print("用法：hmyr self/sign.hmyr <签名.sig> <被签文件>" + chr(10))

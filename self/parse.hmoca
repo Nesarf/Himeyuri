@@ -13,52 +13,52 @@
 // 自足：模块系统还没有，工具函数在这里重写一份。
 // 边界写在明处：只认 + - * / % 与括号，不认一元负号，不认比较与逻辑运算。
 
-fn digits() -> String {
+函数 digits() -> String {
   返回 "0123456789"
 }
 
-fn letters() -> String {
+函数 letters() -> String {
   返回 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
 }
 
-fn in_set(ch: String, set: String, i: Int) -> Bool {
+函数 in_set(ch: String, set: String, i: Int) -> Bool {
   若 i >= len(set) { 返回 假 }
   若 ch == set[i] { 返回 真 }
   返回 in_set(ch, set, i + 1)
 }
 
-fn is_digit_c(c: String) -> Bool {
+函数 is_digit_c(c: String) -> Bool {
   返回 in_set(c, digits(), 0)
 }
 
-fn is_alpha_c(c: String) -> Bool {
+函数 is_alpha_c(c: String) -> Bool {
   返回 in_set(c, letters(), 0)
 }
 
-fn is_ident_c(c: String) -> Bool {
+函数 is_ident_c(c: String) -> Bool {
   返回 is_alpha_c(c) || is_digit_c(c)
 }
 
-fn skip_sp(s: String, i: Int) -> Int {
+函数 skip_sp(s: String, i: Int) -> Int {
   若 i >= len(s) { 返回 i }
   若 s[i] == " " || s[i] == "\t" { 返回 skip_sp(s, i + 1) }
   返回 i
 }
 
-fn read_num(s: String, i: Int, acc: String) {
+函数 read_num(s: String, i: Int, acc: String) {
   若 i >= len(s) { 返回 {next: i, text: acc} }
   若 is_digit_c(s[i]) { 返回 read_num(s, i + 1, acc + s[i]) }
   返回 {next: i, text: acc}
 }
 
-fn read_name(s: String, i: Int, acc: String) {
+函数 read_name(s: String, i: Int, acc: String) {
   若 i >= len(s) { 返回 {next: i, text: acc} }
   若 is_ident_c(s[i]) { 返回 read_name(s, i + 1, acc + s[i]) }
   返回 {next: i, text: acc}
 }
 
 // 原子：括号、整数、标识符。括号里的解析回到最低优先级那一层。
-fn parse_atom(s: String, i: Int) {
+函数 parse_atom(s: String, i: Int) {
   定 j = skip_sp(s, i)
   若 j >= len(s) { 返回 {node: {kind: "误", text: ""}, next: j} }
   定 c = s[j]
@@ -80,7 +80,7 @@ fn parse_atom(s: String, i: Int) {
 }
 
 // 乘除一层：左结合，靠尾递归累积，层数不随运算个数增长。
-fn mul_tail(s: String, i: Int, left: Int) {
+函数 mul_tail(s: String, i: Int, left: Int) {
   定 j = skip_sp(s, i)
   若 j >= len(s) { 返回 {node: left, next: j} }
   定 c = s[j]
@@ -91,13 +91,13 @@ fn mul_tail(s: String, i: Int, left: Int) {
   返回 {node: left, next: j}
 }
 
-fn parse_mul(s: String, i: Int) -> Int {
+函数 parse_mul(s: String, i: Int) -> Int {
   定 left = parse_atom(s, i)
   返回 mul_tail(s, left.next, left.node)
 }
 
 // 加减一层：同样左结合。
-fn add_tail(s: String, i: Int, left: Int) {
+函数 add_tail(s: String, i: Int, left: Int) {
   定 j = skip_sp(s, i)
   若 j >= len(s) { 返回 {node: left, next: j} }
   定 c = s[j]
@@ -108,13 +108,13 @@ fn add_tail(s: String, i: Int, left: Int) {
   返回 {node: left, next: j}
 }
 
-fn parse_add(s: String, i: Int) -> Int {
+函数 parse_add(s: String, i: Int) -> Int {
   定 left = parse_mul(s, i)
   返回 add_tail(s, left.next, left.node)
 }
 
 // 宿主入口：解析一个表达式，返回 {node, next}。
-pub fn parse(text: String) -> Int {
+pub 函数 parse(text: String) -> Int {
   返回 parse_add(text, 0)
 }
 

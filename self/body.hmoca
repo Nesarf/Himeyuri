@@ -8,13 +8,13 @@
 // 深度先算好：外层「一条语句一层」（层数等于语句数），而收集一条语句时最多占「这一条自己的 token 数」
 // 那么多层。两者相加而不是相乘，所以一段百来行的体不会碰到调用深度上限。
 
-pub fn is_punct(t: Int, ch: String) -> Bool {
+pub 函数 is_punct(t: Int, ch: String) -> Bool {
   返回 t.kind == "punct" && t.text == ch
 }
 
 // 跳过一个配对的组：( … )、{ … }、< … >。
 // 交回配对的右括号之后那一个位置；不配对就一路到底。
-fn skip_group(tokens: Int, i: Int, 开: String, 闭: String) -> Int {
+函数 skip_group(tokens: Int, i: Int, 开: String, 闭: String) -> Int {
   若 i >= len(tokens) { 返回 i }
   若 !is_punct(tokens[i], 开) { 返回 i }
   var 深 = 0
@@ -33,12 +33,12 @@ fn skip_group(tokens: Int, i: Int, 开: String, 闭: String) -> Int {
 // 跳过一个类型：标识符、元组、记录、泛型参数、可空问号。
 // 记录类型那种花括号是这一条存在的理由 —— 把它当成函数体的开括号，
 // 函数体就会变成「next: Int, text: String」那么一串。
-fn 顺带问号(tokens: Int, k: Int) -> Int {
+函数 顺带问号(tokens: Int, k: Int) -> Int {
   若 k < len(tokens) && is_punct(tokens[k], "?") { 返回 k + 1 }
   返回 k
 }
 
-fn skip_type(tokens: Int, i: Int) -> Int {
+函数 skip_type(tokens: Int, i: Int) -> Int {
   若 i >= len(tokens) { 返回 i }
   定 t = tokens[i]
   若 is_punct(t, "{") { 返回 顺带问号(tokens, skip_group(tokens, i, "{", "}")) }
@@ -52,10 +52,10 @@ fn skip_type(tokens: Int, i: Int) -> Int {
 
 // 体的起点：不是「第一个左花括号」，而是「跳过参数、返回类型、效果之后的那一个」。
 //
-// 早先这里是「第一个 {」—— 于是 fn read_ident(...) -> {next: Int, text: String} { … }
+// 早先这里是「第一个 {」—— 于是 函数 read_ident(...) -> {next: Int, text: String} { … }
 // 的体被读成了 next: Int, text: String，而报出来的是「没有这个槽：next」。
 // 一句话的距离，两轮的工夫。
-fn find_body(tokens: Int, i: Int) -> Int {
+函数 find_body(tokens: Int, i: Int) -> Int {
   var k = i
   当 k < len(tokens) {
     定 t = tokens[k]
@@ -81,7 +81,7 @@ fn find_body(tokens: Int, i: Int) -> Int {
 // 原来的问题：只有花括号有深度，于是 `返回 (` 换行之后，collect 认为这一条语句到此为止，
 // 把后面的元组元素切成一条条独立语句。而解析器本身（atom 与 paren_or_tuple）是认得跨行的，
 // 只是它从没拿到完整的那一段。
-fn collect(tokens: Int, i: Int, depth: Int, paren: Int, acc: Int) {
+函数 collect(tokens: Int, i: Int, depth: Int, paren: Int, acc: Int) {
   若 i >= len(tokens) { 返回 {line: acc, next: i, end: 真} }
   定 t = tokens[i]
   若 is_punct(t, "{") { 返回 collect(tokens, i + 1, depth + 1, paren, acc + (t,)) }
@@ -107,9 +107,9 @@ fn collect(tokens: Int, i: Int, depth: Int, paren: Int, acc: Int) {
 //
 // 这里有一处曾经吃过亏：遇到收尾的 } 时，collect 会交回 end 与「还没编的那一行」。
 // 多行的写法里那行是空的（上一轮已经按 newline 编过了），所以直接返回没问题；
-// 而单行写法 fn f() { 返回 7 } 里，那一行就是全部内容 —— 早先直接返回，
+// 而单行写法 函数 f() { 返回 7 } 里，那一行就是全部内容 —— 早先直接返回，
 // 于是函数体被读成空的：编译出来只有「交回空」，跑什么都不对。
-fn each(tokens: Int, i: Int, acc: Int) {
+函数 each(tokens: Int, i: Int, acc: Int) {
   定 got = collect(tokens, i, 0, 0, ())
   var 收 = acc
   若 len(got.line) > 0 {
@@ -121,7 +121,7 @@ fn each(tokens: Int, i: Int, acc: Int) {
 }
 
 // 宿主入口：拿整份函数声明的 token 流，读出它的体。
-pub fn parse_body(tokens: Int) {
+pub 函数 parse_body(tokens: Int) {
   定 at = find_body(tokens, 0)
   若 at < 0 { 返回 {list: (), next: len(tokens), found: 假} }
   定 got = each(tokens, at + 1, ())
@@ -130,20 +130,20 @@ pub fn parse_body(tokens: Int) {
 
 // ---- 多声明 ----
 //
-// parse_body 只找**第一个**花括号之后的体；这一层找**所有的** fn。
-// 认「fn 名字 … { 体 }」这一种声明，而三样东西一起收下来：参数名、效果名、返回类型
+// parse_body 只找**第一个**花括号之后的体；这一层找**所有的** 函数。
+// 认「函数 名字 … { 体 }」这一种声明，而三样东西一起收下来：参数名、效果名、返回类型
 // （见 decls_from 那条七件元组）。原地这句说的是「返回类型与效果声明都跳过」——
 // 那是它当时的形状，2026-11-01 改：效果后来必须收，因为效果检查要拿它。
-fn next_fn(tokens: Int, i: Int) -> Int {
+函数 next_fn(tokens: Int, i: Int) -> Int {
   若 i >= len(tokens) { 返回 -1 }
   定 t = tokens[i]
   若 t.kind == "ident" && t.text == "fn" { 返回 i }
   返回 next_fn(tokens, i + 1)
 }
 
-// 顶层声明只认两个词：fn 与 常量。词法把它们都标成 ident，
+// 顶层声明只认两个词：函数 与 常量。词法把它们都标成 ident，
 // 而 stmt 那边判关键字也是看 text（is_word 不看 kind），这里照同一条规矩。
-fn next_decl(tokens: Int, i: Int) -> Int {
+函数 next_decl(tokens: Int, i: Int) -> Int {
   若 i >= len(tokens) { 返回 -1 }
   定 t = tokens[i]
   若 t.kind == "ident" && (t.text == "fn" || t.text == "const" || t.text == "var" || t.text == "macro") { 返回 i }
@@ -152,13 +152,13 @@ fn next_decl(tokens: Int, i: Int) -> Int {
 
 // 一行在哪里结束。顶层 常量 的值到行尾为止 —— 而 chain 交回的 next 是
 // 「用掉了几个 token」，不负责替你断行，所以这里先切出一段交给它。
-fn 行尾位(tokens: Int, i: Int) -> Int {
+函数 行尾位(tokens: Int, i: Int) -> Int {
   若 i >= len(tokens) { 返回 i }
   若 tokens[i].kind == "newline" { 返回 i }
   返回 行尾位(tokens, i + 1)
 }
 
-fn 等号位(tokens: Int, i: Int, 末: Int) -> Int {
+函数 等号位(tokens: Int, i: Int, 末: Int) -> Int {
   若 i >= 末 { 返回 -1 }
   // 只看 text，不看 kind —— 与 stmt 的 is_word 同一条规矩。
   // 词法给 = 的 kind 与这里原先假设的不一样，而「等号是哪一个字」这件事只看文字就够了。
@@ -169,7 +169,7 @@ fn 等号位(tokens: Int, i: Int, 末: Int) -> Int {
 // 切一段 token。为什么不用 slice：slice 只收字符串（宿主那一份先 asString），
 // 而 tokens 是元组 —— 拿它切出来的东西不是 token 数组，后面的 chain 会崩在
 // 「no field 'kind' on that value」上。顶层常量很少，所以这里的拼接不成问题。
-fn 切段(tokens: Int, 起: Int, 止: Int, acc: Int) -> Int {
+函数 切段(tokens: Int, 起: Int, 止: Int, acc: Int) -> Int {
   若 起 >= 止 { 返回 acc }
   返回 切段(tokens, 起 + 1, 止, acc + (tokens[起],))
 }
@@ -178,11 +178,11 @@ fn 切段(tokens: Int, 起: Int, 止: Int, acc: Int) -> Int {
 //
 // 它只认「常量 名 = 表达式」这一种写法 —— 与宿主那一份 parseConst 同一个形状。
 // 认不出来的部分（没有等号、表达式搭不起来）交回 -1，让上层跳过而不是猜。
-fn 常量在(tokens: Int, at: Int, 可写: Int) {
+函数 常量在(tokens: Int, at: Int, 可写: Int) {
   定 末 = 行尾位(tokens, at + 1)
   定 等 = 等号位(tokens, at + 2, 末)
   若 等 < 0 { 返回 {name: "", value: -1, writable: 可写, next: 末 + 1} }
-  // 名字在(tokens, i) 看的是 tokens[i+1] —— 它是为「从 fn 的位置取名」写的。
+  // 名字在(tokens, i) 看的是 tokens[i+1] —— 它是为「从 函数 的位置取名」写的。
   // 所以这里传 at（声明自己的位置），不能再 +1：那会让它去看等号，名字永远是空。
   定 名 = 名字在(tokens, at)
   定 子 = 切段(tokens, 等 + 1, 末, ())
@@ -190,20 +190,20 @@ fn 常量在(tokens: Int, at: Int, 可写: Int) {
   返回 {name: 名, value: 值.node, writable: 可写, next: 末 + 1}
 }
 
-fn 名字在(tokens: Int, i: Int) -> String {
+函数 名字在(tokens: Int, i: Int) -> String {
   若 i + 1 < len(tokens) && tokens[i + 1].kind == "ident" { 返回 tokens[i + 1].text }
   返回 ""
 }
 
-// 从 fn 之后扫到 { 之前，把参数名收出来。
+// 从 函数 之后扫到 { 之前，把参数名收出来。
 //
-// 参数长这样：fn f(a: Int, b: String) -> Int
+// 参数长这样：函数 f(a: Int, b: String) -> Int
 // 于是「括号里、冒号之前」的那个 ident 就是参数名。
 // 而括号里也可能有逗号——逗号之后的第一个 ident 是下一个参数名。
 //
 // 为什么要它：函数表要带参数名，而求值器靠它把实参绑进环境。
 // 以前这一层把它们跳过了，于是带参数的函数跑不了——而那是半个语言。
-fn 括号位(tokens: Int, i: Int, 末: Int) -> Int {
+函数 括号位(tokens: Int, i: Int, 末: Int) -> Int {
   若 i >= 末 { 返回 -1 }
   若 tokens[i].kind == "punct" && tokens[i].text == "(" { 返回 i }
   返回 括号位(tokens, i + 1, 末)
@@ -212,7 +212,7 @@ fn 括号位(tokens: Int, i: Int, 末: Int) -> Int {
 // 配对的右括号。深度要跟着算：元组类型 (String,) 里有自己的括号，
 // 取第一个 ) 会把参数表的边界切在类型里面 —— 早先正是这样，
 // 于是 连接(段们: (String,), 分隔: String) 只认出 段们 一个参数。
-fn 反括号位(tokens: Int, i: Int, 末: Int, 深: Int) -> Int {
+函数 反括号位(tokens: Int, i: Int, 末: Int, 深: Int) -> Int {
   若 i >= 末 { 返回 -1 }
   定 t = tokens[i]
   若 t.kind == "punct" && t.text == "(" { 返回 反括号位(tokens, i + 1, 末, 深 + 1) }
@@ -225,7 +225,7 @@ fn 反括号位(tokens: Int, i: Int, 末: Int, 深: Int) -> Int {
 
 // 在括号里扫：等待一个 ident，收下它，然后等逗号。
 // 深 大于零表示正在一个内层括号里（元组类型），那里面的 ident 与逗号都不算数。
-fn 收名从(tokens: Int, i: Int, 末: Int, 等下个: Bool, 深: Int, acc: Int) -> Int {
+函数 收名从(tokens: Int, i: Int, 末: Int, 等下个: Bool, 深: Int, acc: Int) -> Int {
   若 i >= 末 { 返回 acc }
   定 t = tokens[i]
   若 t.kind == "punct" && t.text == "(" { 返回 收名从(tokens, i + 1, 末, 等下个, 深 + 1, acc) }
@@ -234,7 +234,7 @@ fn 收名从(tokens: Int, i: Int, 末: Int, 等下个: Bool, 深: Int, acc: Int)
   若 t.kind == "punct" && t.text == "," { 返回 收名从(tokens, i + 1, 末, 真, 深, acc) }
   若 等下个 && t.kind == "ident" {
     // 借用 与 拥有 是参数上的前缀词，名字在它们后面一格 —— 所以收到前缀之后
-    // 继续等下一个。原来一律置 假，于是 fn 借(借用 格: Int) 只交出
+    // 继续等下一个。原来一律置 假，于是 函数 借(借用 格: Int) 只交出
     // ("borrow",)，名字被吞掉；而这正是「跨模块的转移」看不见的原因
     // （2026-11-02 实测：探针打出 参个数=1、参0=借用）。
     若 t.text == "borrow" || t.text == "own" {
@@ -245,7 +245,7 @@ fn 收名从(tokens: Int, i: Int, 末: Int, 等下个: Bool, 深: Int, acc: Int)
   返回 收名从(tokens, i + 1, 末, 等下个, 深, acc)
 }
 
-fn 参数名册(tokens: Int, 起: Int, 末: Int) {
+函数 参数名册(tokens: Int, 起: Int, 末: Int) {
   定 开 = 括号位(tokens, 起, 末)
   若 开 < 0 { 返回 () }
   定 闭 = 反括号位(tokens, 开 + 1, 末, 0)
@@ -254,7 +254,7 @@ fn 参数名册(tokens: Int, 起: Int, 末: Int) {
 }
 
 // 一个词的位置：从 起 扫到 末，找 is_word(t, w)。没有就 -1。
-fn 找词(tokens: Int, i: Int, 末: Int, w: String) -> Int {
+函数 找词(tokens: Int, i: Int, 末: Int, w: String) -> Int {
   若 i >= 末 { 返回 -1 }
   若 is_word(tokens[i], w) { 返回 i }
   返回 找词(tokens, i + 1, 末, w)
@@ -265,7 +265,7 @@ fn 找词(tokens: Int, i: Int, 末: Int, w: String) -> Int {
 // 为什么需要它：函数表以前只收（名字, 参数名, 语句们），于是「声明了 效果串(file)」
 // 这件事在自举那一层根本不存在 —— 结果是凡声明效果的程序一调要效果的函数就撞 HMYR-內-001，
 // 只能退回最小求值器跑。收进来之后，那一层才谈得上核对。
-fn 效果们(tokens: Int, 起: Int, 末: Int) {
+函数 效果们(tokens: Int, 起: Int, 末: Int) {
   定 at = 找词(tokens, 起, 末, "effects")
   若 at < 0 { 返回 () }
   定 开 = 括号位(tokens, at + 1, 末)
@@ -280,7 +280,7 @@ fn 效果们(tokens: Int, 起: Int, 末: Int) {
 // 字节码产物也少了它那一段。收成一个字符串，包成节点的事留给包装层。
 // 一个类型：裸名、元组 (A, B)、记录 {x: A}。宿主把它们记成 TypeRef / TupleType / RecordType，
 // 这里照着造同样的节点 —— 静态核对读的是 kind 与 items，形状对不上就等于没写。
-fn 类型在(tokens: Int, i: Int, 末: Int) {
+函数 类型在(tokens: Int, i: Int, 末: Int) {
   若 i >= 末 { 返回 {node: (), next: i} }
   定 t = tokens[i]
   若 t.kind == "punct" && t.text == "(" { 返回 类型元组(tokens, i + 1, 末, ()) }
@@ -289,7 +289,7 @@ fn 类型在(tokens: Int, i: Int, 末: Int) {
   返回 {node: (), next: i + 1}
 }
 
-fn 类型元组(tokens: Int, i: Int, 末: Int, acc: Int) {
+函数 类型元组(tokens: Int, i: Int, 末: Int, acc: Int) {
   若 i >= 末 { 返回 {node: {kind: "组类型", items: acc}, next: i} }
   定 t = tokens[i]
   若 t.kind == "punct" && t.text == ")" { 返回 {node: {kind: "组类型", items: acc}, next: i + 1} }
@@ -299,7 +299,7 @@ fn 类型元组(tokens: Int, i: Int, 末: Int, acc: Int) {
   返回 类型元组(tokens, 项.next, 末, acc + (项.node,))
 }
 
-fn 类型记录(tokens: Int, i: Int, 末: Int, acc: Int) {
+函数 类型记录(tokens: Int, i: Int, 末: Int, acc: Int) {
   若 i >= 末 { 返回 {node: {kind: "记录类型", fields: acc}, next: i} }
   定 t = tokens[i]
   若 t.kind == "punct" && t.text == "}" { 返回 {node: {kind: "记录类型", fields: acc}, next: i + 1} }
@@ -314,7 +314,7 @@ fn 类型记录(tokens: Int, i: Int, 末: Int, acc: Int) {
 }
 
 // 返回类型：`-> X` 里那个 X，形状交给 类型在。
-fn 返回类型在(tokens: Int, 起: Int, 末: Int) {
+函数 返回类型在(tokens: Int, 起: Int, 末: Int) {
   var i = 起
   当 i < 末 {
     定 t = tokens[i]
@@ -325,7 +325,7 @@ fn 返回类型在(tokens: Int, 起: Int, 末: Int) {
 }
 
 // 切一段 token 出来（含起点，不含末）。表达式那一层从 0 开始吃，所以要先切。
-fn 切片(tokens: Int, i: Int, 末: Int, acc: Int) {
+函数 切片(tokens: Int, i: Int, 末: Int, acc: Int) {
   若 i >= 末 { 返回 acc }
   返回 切片(tokens, i + 1, 末, acc + (tokens[i],))
 }
@@ -333,9 +333,9 @@ fn 切片(tokens: Int, i: Int, 末: Int, acc: Int) {
 // macro 名(参数) = 表达式 的解析，交回 {name, params, body, next}。
 //
 // 表达式交给 chain：它从 0 开始吃一串 token，所以这里先切出「= 之后到行尾」那一段。
-// 参数收的是字符串元组 —— 与 fn 的参数同一套收法，只是宏的参数没有 借用 / 拥有
+// 参数收的是字符串元组 —— 与 函数 的参数同一套收法，只是宏的参数没有 借用 / 拥有
 // 那种前缀，它们就是名字。
-fn 宏声明(tokens: Int, at: Int) {
+函数 宏声明(tokens: Int, at: Int) {
   若 at + 1 >= len(tokens) { 返回 {name: "", params: (), body: (), next: at + 1} }
   定 名 = tokens[at + 1].text
   定 开 = 括号位(tokens, at + 1, len(tokens))
@@ -351,7 +351,7 @@ fn 宏声明(tokens: Int, at: Int) {
   返回 {name: 名, params: 参, body: 体, next: 末}
 }
 
-fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
+函数 decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
   定 at = next_decl(tokens, i)
   若 at < 0 { 返回 {fns: acc, consts: 常量们, next: len(tokens)} }
   定 位 = tokens[at]
@@ -367,7 +367,7 @@ fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
   // macro 名(参数) = 表达式 —— 宏声明。
   //
   // 为什么要在这一层认它：宏的展开在宿主那一边（src/expand.mjs 的 展开模块），
-  // 而它要的是一条 kind 为 Macro 的声明。自举层原来只认 fn / 常量 / var，
+  // 而它要的是一条 kind 为 Macro 的声明。自举层原来只认 函数 / 常量 / var，
   // 于是宏声明被整个跳过、树里没有它，展开那一步拿到空表 —— macro 那套在桥这条
   // 路上报「没有这个名字 两次」（2026-11-02 实测）。
   若 位.text == "macro" {
@@ -390,18 +390,18 @@ fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
   // 第八件：这个声明是不是 pub。原来不收它，于是「可见性第一步」与「命名空间」在
   // 自举层那条路上永远看不到 pub —— 跨模块调用一律被当成私有的（2026-11-02 实测：
   // 桥交出的 pub 恒为 假，而 namespace 那套的「写 pub 就不报」因此恒红）。
-  // pub 写在 fn 前一个记号：next_decl 只停在 fn/常量/var，所以它被跳过了。
-  var 公开 = 0
-  若 at > 0 && tokens[at - 1].kind == "ident" && tokens[at - 1].text == "pub" { 公开 = 1 }
-  返回 decls_from(tokens, got.next, acc + ((名, 参名册, got.list, 效们, 位.line, 位.column, 返型, 公开),), 常量们)
+  // pub 写在 函数 前一个记号：next_decl 只停在 函数/常量/var，所以它被跳过了。
+  var 是公开 = 0
+  若 at > 0 && tokens[at - 1].kind == "ident" && tokens[at - 1].text == "pub" { 是公开 = 1 }
+  返回 decls_from(tokens, got.next, acc + ((名, 参名册, got.list, 效们, 位.line, 位.column, 返型, 是公开),), 常量们)
 }
 
 // 交回 {fns: ((名字, 参数名册, 语句们, 效果名册, 行, 列), …), consts: ((名字, 值), …), next}。
-pub fn parse_decls(tokens: Int) -> Int {
+pub 函数 parse_decls(tokens: Int) -> Int {
   返回 decls_from(tokens, 0, (), ())
 }
 
-fn main() -> Int {
+函数 main() -> Int {
   定 tokens = ({kind: "punct", text: "{"}, {kind: "ident", text: "let"}, {kind: "ident", text: "x"},
     {kind: "punct", text: "="}, {kind: "int", text: "1"}, {kind: "newline", text: "\n"},
     {kind: "ident", text: "return"}, {kind: "ident", text: "x"}, {kind: "punct", text: "}"})

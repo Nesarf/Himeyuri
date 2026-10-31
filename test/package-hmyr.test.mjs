@@ -24,9 +24,9 @@ const 层 = loadUnit(源路);
 ok("加载没有诊断", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
 const 文 = fs.readFileSync(源路, "utf8");
 // 撞名那个错只有真跑才现形：manifest.hmoca 里也有 主，而合并是先到者赢。
-ok("辅助函数不叫 主（会和 manifest 撞名）", !/fn 主\(/.test(文));
-// 效果那一段两种写法都认：源码里的关键字已经换成 效果串（2026-11-02）
-ok("打包 声明了 file 效果", /fn 打包\([^)]*\) (?:effects|效果串)\(file/.test(文));
+ok("辅助函数不叫 主（会和 manifest 撞名）", !/(?:fn|函数) 主\(/.test(文));
+// 效果那一段与声明关键字都两种写法都认：源码里的关键字已换成 效果串 与 函数（2026-11-02）
+ok("打包 声明了 file 效果", /(?:fn|函数) 打包\([^)]*\) (?:effects|效果串)\(file/.test(文));
 
 const 有编译器 = (() => {
   try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }

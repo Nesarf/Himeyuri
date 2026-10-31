@@ -20,7 +20,7 @@
 //
 //   node bin/hmyr.mjs tools/check-docs.hmoca
 
-fn 是文档(名: String) -> Bool {
+函数 是文档(名: String) -> Bool {
   定 n = len(名)
   若 n >= 4 && slice(名, n - 4, n) == ".txt" { 返回 真 }
   若 n >= 4 && slice(名, n - 4, n) == ".rst" { 返回 真 }
@@ -28,7 +28,7 @@ fn 是文档(名: String) -> Bool {
   返回 假
 }
 
-fn 要跳过(名: String) -> Bool {
+函数 要跳过(名: String) -> Bool {
   若 名 == "node_modules" { 返回 真 }
   若 名 == ".git" { 返回 真 }
   若 名 == "build" { 返回 真 }
@@ -49,7 +49,7 @@ fn 要跳过(名: String) -> Bool {
   返回 假
 }
 
-fn 有片(文: String, 片: String) -> Bool {
+函数 有片(文: String, 片: String) -> Bool {
   定 片长 = len(片)
   若 片长 == 0 { 返回 真 }
   var i = 0
@@ -60,12 +60,12 @@ fn 有片(文: String, 片: String) -> Bool {
   返回 假
 }
 
-fn 行首是(行: String, 头: String) -> Bool {
+函数 行首是(行: String, 头: String) -> Bool {
   若 len(行) < len(头) { 返回 假 }
   返回 slice(行, 0, len(头)) == 头
 }
 
-fn 含(们: Int, 值: String) -> Bool {
+函数 含(们: Int, 值: String) -> Bool {
   var i = 0
   当 i < len(们) {
     若 们[i] == 值 { 返回 真 }
@@ -75,7 +75,7 @@ fn 含(们: Int, 值: String) -> Bool {
 }
 
 // 行首那一列的记号。都不命中就交回空串。
-fn 行记号(行: String) -> String {
+函数 行记号(行: String) -> String {
   若 行首是(行, "```") { 返回 "fenced code block" }
   若 行首是(行, "# ") { 返回 "hash heading" }
   若 行首是(行, "## ") { 返回 "hash heading" }
@@ -92,7 +92,7 @@ fn 行记号(行: String) -> String {
 }
 
 // 整份文本里命中的行首记号（去重，按出现顺序）。
-fn 行记号们(文: String) -> Int {
+函数 行记号们(文: String) -> Int {
   var 出 = ()
   var 起 = 0
   var i = 0
@@ -109,7 +109,7 @@ fn 行记号们(文: String) -> Int {
 }
 
 // 不在行首的那三种。逐行找，因为逐字符找整份（几十 KB 一份）是平方的。
-fn 行内记号们(文: String) -> Int {
+函数 行内记号们(文: String) -> Int {
   var 出 = ()
   var 起 = 0
   var i = 0
@@ -127,7 +127,7 @@ fn 行内记号们(文: String) -> Int {
   返回 出
 }
 
-fn 拼(们: Int) -> String {
+函数 拼(们: Int) -> String {
   var 出 = ""
   var i = 0
   当 i < len(们) {
@@ -138,7 +138,7 @@ fn 拼(们: Int) -> String {
   返回 出
 }
 
-fn 走(路径: String, 出: Int, 次: Int) -> Int 效果串(file) {
+函数 走(路径: String, 出: Int, 次: Int) -> Int 效果串(file) {
   若 次 > 24 { 返回 出 }
   定 名册 = read_dir(路径)
   var 收 = 出
@@ -158,7 +158,7 @@ fn 走(路径: String, 出: Int, 次: Int) -> Int 效果串(file) {
   返回 收
 }
 
-fn main() -> Int 效果串(file, process) {
+函数 main() -> Int 效果串(file, process) {
   // 没有参数时走全仓；给了参数就只走那一个目录（先拿 design/ 试性能）。
   定 参们 = argv()
   var 起 = "."

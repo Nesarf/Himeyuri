@@ -8,7 +8,7 @@
 //
 // 用法：hmyr self/ucd-c.hmyr <输入.txt> <输出目录>
 
-fn 十六进制值(文: String) -> Int {
+函数 十六进制值(文: String) -> Int {
   var v = 0
   var i = 0
   当 i < len(文) {
@@ -31,7 +31,7 @@ fn 十六进制值(文: String) -> Int {
   返回 v
 }
 
-fn 十六进制写法(n: Int) -> String {
+函数 十六进制写法(n: Int) -> String {
   若 n == 0 { 返回 "0" }
   定 表 = "0123456789abcdef"
   var 出 = ""
@@ -47,7 +47,7 @@ fn 十六进制写法(n: Int) -> String {
 // 收集：不连续时开新段，并把上一段的止补上（补的是最后见到的那个码点，
 // 不是「下一段起减一」—— 段与段之间有空洞，减一那一下会多算进去）。
 // 两本账一起返回：语言的函数只交回一个值，所以包成元组。
-fn 收(起们: Int, 止们: Int, 上一位: Int, cp: Int) {
+函数 收(起们: Int, 止们: Int, 上一位: Int, cp: Int) {
   若 cp != 上一位 + 1 {
     若 上一位 >= 0 { 返回 (起们 + (cp,), 止们 + (上一位,)) }
     返回 (起们 + (cp,), 止们)
@@ -56,7 +56,7 @@ fn 收(起们: Int, 止们: Int, 上一位: Int, cp: Int) {
 }
 
 // 文件名：大写表名转小写，下划线换成连字符 —— 与 JS 版同一条规矩。
-fn 文件名(名: String) -> String {
+函数 文件名(名: String) -> String {
   定 小 = to_lower(名)
   var 出 = ""
   var i = 0
@@ -67,7 +67,7 @@ fn 文件名(名: String) -> String {
   返回 出
 }
 
-fn 写表(名: String, 说: String, 起们: Int, 止们: Int, 目录: String) -> Int {
+函数 写表(名: String, 说: String, 起们: Int, 止们: Int, 目录: String) -> Int {
   定 段数 = len(起们)
   var 平 = ()
   var i = 0
@@ -109,7 +109,7 @@ fn 写表(名: String, 说: String, 起们: Int, 止们: Int, 目录: String) ->
   返回 段数
 }
 
-fn main() -> Int 效果串(file) {
+函数 main() -> Int 效果串(file) {
   定 参 = argv()
   若 len(参) < 3 {
     print("用法：hmyr self/ucd-c.hmyr <输入.txt> <输出目录>" + chr(10))

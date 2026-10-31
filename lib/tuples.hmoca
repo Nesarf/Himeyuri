@@ -9,7 +9,7 @@
 // 同一条算法要为两种元素各写一份。这是缺口，不是选择。
 
 // 把一个数插进已排好的元组里，保持升序。
-fn 插入(t: (Int,), x: Int) -> (Int,) {
+函数 插入(t: (Int,), x: Int) -> (Int,) {
   var 出 = ()
   var i = 0
   var 放 = 假
@@ -29,7 +29,7 @@ fn 插入(t: (Int,), x: Int) -> (Int,) {
   返回 出
 }
 
-fn 排序(t: (Int,)) -> (Int,) {
+函数 排序(t: (Int,)) -> (Int,) {
   var 出 = ()
   var i = 0
   当 i < len(t) {
@@ -39,7 +39,7 @@ fn 排序(t: (Int,)) -> (Int,) {
   返回 出
 }
 
-fn 反转(t: (Int,)) -> (Int,) {
+函数 反转(t: (Int,)) -> (Int,) {
   var 出 = ()
   var i = len(t) - 1
   当 i >= 0 {
@@ -49,7 +49,7 @@ fn 反转(t: (Int,)) -> (Int,) {
   返回 出
 }
 
-fn 和(t: (Int,)) -> Int {
+函数 和(t: (Int,)) -> Int {
   var 出 = 0
   var i = 0
   当 i < len(t) {
@@ -60,7 +60,7 @@ fn 和(t: (Int,)) -> Int {
 }
 
 // 空的元组交回零。那是定义，不是猜 —— 调用方要知道这一条。
-fn 最小(t: (Int,)) -> Int {
+函数 最小(t: (Int,)) -> Int {
   若 len(t) == 0 {
     返回 0
   }
@@ -75,7 +75,7 @@ fn 最小(t: (Int,)) -> Int {
   返回 出
 }
 
-fn 最大(t: (Int,)) -> Int {
+函数 最大(t: (Int,)) -> Int {
   若 len(t) == 0 {
     返回 0
   }
@@ -90,7 +90,7 @@ fn 最大(t: (Int,)) -> Int {
   返回 出
 }
 
-fn 含(t: (Int,), x: Int) -> Bool {
+函数 含(t: (Int,), x: Int) -> Bool {
   var i = 0
   当 i < len(t) {
     若 t[i] == x {
@@ -102,7 +102,7 @@ fn 含(t: (Int,), x: Int) -> Bool {
 }
 
 // 子段：起止都在下标位置上，越界的部分自然被跳过。
-pub fn 子段(t: (Int,), 起: Int, 止: Int) -> (Int,) {
+pub 函数 子段(t: (Int,), 起: Int, 止: Int) -> (Int,) {
   var 出 = ()
   var i = 起
   当 i < 止 {
@@ -116,12 +116,12 @@ pub fn 子段(t: (Int,), 起: Int, 止: Int) -> (Int,) {
   返回 出
 }
 
-fn 接起来(t: (Int,), u: (Int,)) -> (Int,) {
+函数 接起来(t: (Int,), u: (Int,)) -> (Int,) {
   返回 t + u
 }
 
 // 字符串那一份：同一条算法，换元素类型。排的是码元序。
-fn 串插入(t: (String,), x: String) -> (String,) {
+函数 串插入(t: (String,), x: String) -> (String,) {
   var 出 = ()
   var i = 0
   var 放 = 假
@@ -141,7 +141,7 @@ fn 串插入(t: (String,), x: String) -> (String,) {
   返回 出
 }
 
-fn 串排序(t: (String,)) -> (String,) {
+函数 串排序(t: (String,)) -> (String,) {
   var 出 = ()
   var i = 0
   当 i < len(t) {
@@ -151,7 +151,7 @@ fn 串排序(t: (String,)) -> (String,) {
   返回 出
 }
 
-fn 串含(t: (String,), x: String) -> Bool {
+函数 串含(t: (String,), x: String) -> Bool {
   var i = 0
   当 i < len(t) {
     若 t[i] == x {

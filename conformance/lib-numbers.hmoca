@@ -1,14 +1,14 @@
 引入 "../lib/numbers.hmoca"
 
 // 一条断言：通过了交回 0，不通过交回它的编号。
-fn 检(好: Bool, 号: Int) -> Int {
+函数 检(好: Bool, 号: Int) -> Int {
   若 好 {
     返回 0
   }
   返回 号
 }
 
-fn main() -> Int {
+函数 main() -> Int {
   定 a = 检(绝对值(0 - 5) == 5, 1)
   若 a != 0 {
     返回 a

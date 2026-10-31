@@ -7,20 +7,20 @@
 //   ・类型标注尚未被检查（-> Int 眼下是写给读者看的，不是约束）
 //   ・arena 是三区模型的宿主桩，不是模型本身（design/MEMORY.txt 写了它该成为什么）
 
-fn note(key: Int, start: Int, length: Int) -> Int {
+函数 note(key: Int, start: Int, length: Int) -> Int {
   // 一个音符：音高、起点、长度（单位是 tick）
   返回 (key, start, length)
 }
 
-fn track(name: String, notes: Int) -> Int {
+函数 track(name: String, notes: Int) -> Int {
   返回 {name: name, notes: notes}
 }
 
-fn strip(name: String, gain: Int, pan: Int) -> Int {
+函数 strip(name: String, gain: Int, pan: Int) -> Int {
   返回 {name: name, gain: gain, pan: pan}
 }
 
-fn main() -> Int {
+函数 main() -> Int {
   定 lead = (
     note(69, 0, 480),
     note(71, 480, 480),

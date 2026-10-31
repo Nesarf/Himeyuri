@@ -1,6 +1,6 @@
 // write_text 的验收。路径从 argv 取 —— 目标程序现在看得见自己的参数了，
 // 而 argv 要 process 效果，所以 main 声明两个。
-fn main() -> Int 效果串(process, file) {
+函数 main() -> Int 效果串(process, file) {
   定 参 = argv()
   定 路 = 参[1]
   定 文 = "写着玩的"

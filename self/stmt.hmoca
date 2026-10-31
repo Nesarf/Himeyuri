@@ -15,18 +15,18 @@
 // 依赖是明写的：表达式那一层在 chain.hmyr 里，加载器会顺着它把 lex.hmyr 也带进来。
 // 关键字在词法里都是 ident（这条边界写在 lex.hmyr 的文件头），所以这里用 text 判断。
 
-pub fn is_word(t: Int, w: String) -> Bool {
+pub 函数 is_word(t: Int, w: String) -> Bool {
   返回 t.kind == "ident" && t.text == w
 }
 
 // 从第 i 个 token 起，交给链的最外层继续读。
 // 最外层是逻辑那两级（|| 与 &&）—— 用 compare 会漏掉它们，
 // 而漏掉的样子是「语法层报的错：若」。
-fn from_here(tokens: Int, i: Int) -> Int {
+函数 from_here(tokens: Int, i: Int) -> Int {
   返回 logic(tokens, i)
 }
 
-fn binding(tokens: Int, i: Int, keyword: String) {
+函数 binding(tokens: Int, i: Int, keyword: String) {
   定 位 = tokens[i]
   若 i + 2 >= len(tokens) {
     返回 {node: {kind: "误", text: keyword, line: 位.line, column: 位.column}, next: i}
@@ -43,7 +43,7 @@ fn binding(tokens: Int, i: Int, keyword: String) {
   返回 {node: {kind: "变", name: name.text, value: got.node, line: 位.line, column: 位.column}, next: got.next}
 }
 
-fn statement(tokens: Int, i: Int) {
+函数 statement(tokens: Int, i: Int) {
   若 i >= len(tokens) {
     返回 {node: {kind: "误", text: "", line: 0, column: 0}, next: i}
   }
@@ -72,14 +72,14 @@ fn statement(tokens: Int, i: Int) {
 }
 
 // 跳过换行：块内的语句之间有换行，它们只是分隔，不是内容。
-fn skip_newlines(tokens: Int, i: Int) -> Int {
+函数 skip_newlines(tokens: Int, i: Int) -> Int {
   若 i < len(tokens) && tokens[i].kind == "newline" { 返回 skip_newlines(tokens, i + 1) }
   返回 i
 }
 
 // 一个花括号块：逐条读语句，直到右花括号。每条语句各自独立递归，所以深度是「块内语句数」与
 // 「单条语句的深度」相加，不是相乘。
-fn block(tokens: Int, i: Int) {
+函数 block(tokens: Int, i: Int) {
   定 at = skip_newlines(tokens, i)
   若 at >= len(tokens) { 返回 {list: (), next: at} }
   若 is_punct(tokens[at], "}") { 返回 {list: (), next: at + 1} }
@@ -89,7 +89,7 @@ fn block(tokens: Int, i: Int) {
 }
 
 // 若：条件是一个表达式，然后是一个块，可选 否则（块或单条语句）。
-fn parse_if(tokens: Int, i: Int) {
+函数 parse_if(tokens: Int, i: Int) {
   // 「若 这个节点在哪」= 若 关键字在哪。调用方传进来的是关键字之后那一位，
   // 所以往回看一格；位置与宿主那边同一个规矩（If 记关键字的位置）。
   var 位 = tokens[0]
@@ -119,7 +119,7 @@ fn parse_if(tokens: Int, i: Int) {
 
 // 当：条件是一个表达式，然后是一个块。
 // 与 若 相比它没有 否则——而「什么时候停」由条件说，这一层不管。
-fn parse_while(tokens: Int, i: Int) {
+函数 parse_while(tokens: Int, i: Int) {
   var 位 = tokens[0]
   若 i > 0 { 位 = tokens[i - 1] }
   定 cond = from_here(tokens, i)
@@ -132,11 +132,11 @@ fn parse_while(tokens: Int, i: Int) {
 }
 
 // 宿主入口：读一条语句。
-pub fn parse_statement(tokens: Int) -> Int {
+pub 函数 parse_statement(tokens: Int) -> Int {
   返回 statement(tokens, 0)
 }
 
-fn main() -> Int {
+函数 main() -> Int {
   // 手工造几个 token，验证最小的一步能走
   定 tokens = ({kind: "ident", text: "let"}, {kind: "ident", text: "x"}, {kind: "punct", text: "="}, {kind: "int", text: "7"})
   定 one = parse_statement(tokens)

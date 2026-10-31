@@ -14,7 +14,7 @@
 // 输出：static 常量 unsigned char <符号名>[] = { ... };
 //       static 常量 unsigned int <符号名>_len = N;
 
-fn 十六(字节: Int) -> String {
+函数 十六(字节: Int) -> String {
   定 表 = "0123456789abcdef"
   定 高 = (字节 - (字节 % 16)) / 16
   定 低 = 字节 % 16
@@ -22,7 +22,7 @@ fn 十六(字节: Int) -> String {
 }
 
 // 折半拼接：与 self/compile.hmyr 的 拼两半 同一个形状，也一样不用除法。
-fn 拼(行批: Int, 起: Int, 止: Int) -> String {
+函数 拼(行批: Int, 起: Int, 止: Int) -> String {
   若 止 - 起 <= 1 { 返回 行批[起] }
   var 左 = 起
   var 右 = 止
@@ -34,7 +34,7 @@ fn 拼(行批: Int, 起: Int, 止: Int) -> String {
   返回 拼(行批, 起, 中) + 拼(行批, 中, 止)
 }
 
-fn main() -> Int 效果串(file) {
+函数 main() -> Int 效果串(file) {
   定 参 = argv()
   若 len(参) < 4 {
     print("用法：hmyr self/embed.hmyr <字节码文件> <输出.c> <符号名>" + chr(10))

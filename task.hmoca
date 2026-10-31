@@ -10,25 +10,25 @@
 // 树是一个元组，每项是 {id, name, parent}；parent 为 -1 表示它是根。
 // id 就是它在元组里的位置，所以不必另存一个计数器。
 
-fn 空树() -> Int {
+函数 空树() -> Int {
   返回 ()
 }
 
 // 建一个任务：父给 -1 就是根。父不存在就原样交回（不猜、也不悄悄建游离任务）。
 // id 就是它在元组里的位置，所以这个函数只追加，不改已有项。
-fn 挂(树: Int, 名: String, 父: Int) -> Int {
+函数 挂(树: Int, 名: String, 父: Int) -> Int {
   若 父 >= len(树) { 返回 树 }
   返回 树 + ({id: len(树), name: 名, parent: 父},)
 }
 
 // 一个集合里有某个 id 吗。
-fn 含从(集: Int, id: Int, i: Int) -> Bool {
+函数 含从(集: Int, id: Int, i: Int) -> Bool {
   若 i >= len(集) { 返回 假 }
   若 集[i] == id { 返回 真 }
   返回 含从(集, id, i + 1)
 }
 
-fn 含(集: Int, id: Int) -> Bool {
+函数 含(集: Int, id: Int) -> Bool {
   返回 含从(集, id, 0)
 }
 
@@ -36,16 +36,16 @@ fn 含(集: Int, id: Int) -> Bool {
 //
 // 做法是「反复扫一遍，把父已经在集合里的收进来，直到不再增加」。
 // 这样不必递归——深度不随树的深度增长，而宽树也只是多扫几遍。
-fn 子树(树: Int, id: Int) -> Int {
+函数 子树(树: Int, id: Int) -> Int {
   var 收 = (id,)
-  var 变 = 真
-  当 变 {
-    变 = 假
+  var 标记 = 真
+  当 标记 {
+    标记 = 假
     var i = 0
     当 i < len(树) {
       若 含(收, 树[i].parent) && 含(收, 树[i].id) == 假 {
         收 = 收 + (树[i].id,)
-        变 = 真
+        标记 = 真
       }
       i = i + 1
     }
@@ -58,19 +58,19 @@ fn 子树(树: Int, id: Int) -> Int {
 // 为什么不能用「id 小于任务数」来判断：取消之后树是新元组、位置全变了，
 // 而 id 是记录里的字段、不随位置变。判据必须按 id 查，否则取消一个任务之后
 // 别的表面会错位显示——那种 bug 只会在真窗口里才被发现。
-fn 有id从(树: Int, id: Int, i: Int) -> Bool {
+函数 有id从(树: Int, id: Int, i: Int) -> Bool {
   若 i >= len(树) { 返回 假 }
   若 树[i].id == id { 返回 真 }
   返回 有id从(树, id, i + 1)
 }
 
-pub fn 有id(树: Int, id: Int) -> Bool {
+pub 函数 有id(树: Int, id: Int) -> Bool {
   返回 有id从(树, id, 0)
 }
 
 // 取消一棵子树：交回「还在的」那些任务。
 // 父任务不得先于子任务结束，所以取消父就一起取消——这正是子树的定义。
-fn 取消(树: Int, id: Int) -> Int {
+函数 取消(树: Int, id: Int) -> Int {
   定 去 = 子树(树, id)
   var 留 = ()
   var i = 0
@@ -81,27 +81,27 @@ fn 取消(树: Int, id: Int) -> Int {
   返回 留
 }
 
-fn 名字(树: Int, id: Int) -> String {
+函数 名字(树: Int, id: Int) -> String {
   若 id < 0 || id >= len(树) { 返回 "" }
   返回 树[id].name
 }
 
-fn 父(树: Int, id: Int) -> Int {
+函数 父(树: Int, id: Int) -> Int {
   若 id < 0 || id >= len(树) { 返回 -2 }
   返回 树[id].parent
 }
 
-fn 任务数(树: Int) -> Int {
+函数 任务数(树: Int) -> Int {
   返回 len(树)
 }
 
 // 失败的去向：默认传播给父；根任务没有父，那就交给接住它的人（三选一里的第三种）。
 // 这一版只算去向，不接管策略——策略属于监督者那一层。
-fn 失败去向(树: Int, id: Int) -> Int {
+函数 失败去向(树: Int, id: Int) -> Int {
   返回 父(树, id)
 }
 
-fn main() -> Int {
+函数 main() -> Int {
   var t = 空树()
   t = 挂(t, "主窗口", -1)
   t = 挂(t, "子窗口 A", 0)

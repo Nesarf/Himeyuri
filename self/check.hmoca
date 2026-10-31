@@ -9,7 +9,7 @@
 // 默认读 tools/suite-list.txt。
 
 // 一段输出的最后一行：套件的判定就在那一行（「N passed, M failed」）。
-fn 最后一行(文: String) -> String {
+函数 最后一行(文: String) -> String {
   若 len(文) == 0 { 返回 "" }
   定 行批 = split(文, chr(10))
   var i = len(行批) - 1
@@ -21,7 +21,7 @@ fn 最后一行(文: String) -> String {
   返回 ""
 }
 
-fn 跑一个(名字: String, 路: String) -> Int {
+函数 跑一个(名字: String, 路: String) -> Int {
   定 r = run_program("node", (路,))
   若 r.code == 0 {
     print("  通过  " + 名字 + "  " + 最后一行(r.stdout) + chr(10))
@@ -36,7 +36,7 @@ fn 跑一个(名字: String, 路: String) -> Int {
   返回 1
 }
 
-fn main() -> Int 效果串(file, process) {
+函数 main() -> Int 效果串(file, process) {
   定 参 = argv()
   var 清单路 = "tools/suite-list.txt"
   若 len(参) > 1 { 清单路 = 参[1] }

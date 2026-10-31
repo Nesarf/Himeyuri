@@ -6,7 +6,7 @@
 // （先前漏了它，于是宿主去取 scan 时拿到空值，报错只说「读不到 params」——
 //   一条看起来像内部故障、其实是缺依赖的信息。补上依赖，信息才对得上号。）
 //
-//   [pub] fn 名字 ( 参数… ) [-> 类型] [效果串( 效果… )] [函数体]
+//   [pub] 函数 名字 ( 参数… ) [-> 类型] [效果串( 效果… )] [函数体]
 //
 // 读成：{kind: "fn", pub, name, params, returns, 效果串, hasBody}
 //   params  : 元组，每项 {name, type}（拥有 / 借用 这类前缀会被跳过）
@@ -19,11 +19,11 @@
 //
 // 另一条边界：参数里的默认值会被跳过（记录里不保留），返回类型只保留名字与可空标记。
 
-fn is_word(t: Int, w: String) -> Bool {
+函数 is_word(t: Int, w: String) -> Bool {
   返回 t.kind == "ident" && t.text == w
 }
 
-fn is_punct(t: Int, ch: String) -> Bool {
+函数 is_punct(t: Int, ch: String) -> Bool {
   返回 t.kind == "punct" && t.text == ch
 }
 
@@ -33,7 +33,7 @@ fn is_punct(t: Int, ch: String) -> Bool {
 // 不是「一个括号加两个参数」。早先这一层只认一个标识符，于是
 // 连接(段们: (String,), 分隔: String) 只解析出一个参数 —— 错误消息是
 // 「参数个数不对：连接 要 1 个，给了 2」，看起来像调用写错了。
-fn 括号到(tokens: Int, i: Int, 深: Int) -> Int {
+函数 括号到(tokens: Int, i: Int, 深: Int) -> Int {
   若 i >= len(tokens) { 返回 i }
   若 is_punct(tokens[i], "(") { 返回 括号到(tokens, i + 1, 深 + 1) }
   若 is_punct(tokens[i], ")") {
@@ -43,7 +43,7 @@ fn 括号到(tokens: Int, i: Int, 深: Int) -> Int {
   返回 括号到(tokens, i + 1, 深)
 }
 
-fn type_end(tokens: Int, i: Int) -> Int {
+函数 type_end(tokens: Int, i: Int) -> Int {
   若 i >= len(tokens) { 返回 i }
   若 is_punct(tokens[i], "(") { 返回 括号到(tokens, i, 0) }
   var j = i + 1
@@ -52,7 +52,7 @@ fn type_end(tokens: Int, i: Int) -> Int {
 }
 
 // 把一段 token 的文字拼起来当类型名。元组类型就拼成它写下的样子。
-fn type_text(tokens: Int, 起: Int, 止: Int) -> String {
+函数 type_text(tokens: Int, 起: Int, 止: Int) -> String {
   var 出 = ""
   var i = 起
   当 i < 止 {
@@ -63,14 +63,14 @@ fn type_text(tokens: Int, 起: Int, 止: Int) -> String {
 }
 
 // 跳过默认值：从 = 之后一直跳到 , 或 ) 之前。
-fn skip_default(tokens: Int, i: Int) -> Int {
+函数 skip_default(tokens: Int, i: Int) -> Int {
   若 i >= len(tokens) { 返回 i }
   若 is_punct(tokens[i], ",") || is_punct(tokens[i], ")") { 返回 i }
   返回 skip_default(tokens, i + 1)
 }
 
 // 参数列表：从 ( 之后开始。
-fn params(tokens: Int, i: Int, acc: Int) {
+函数 params(tokens: Int, i: Int, acc: Int) {
   若 i >= len(tokens) { 返回 {list: acc, next: i, closed: 假} }
   定 t = tokens[i]
   若 is_punct(t, ")") { 返回 {list: acc, next: i + 1, closed: 真} }
@@ -94,7 +94,7 @@ fn params(tokens: Int, i: Int, acc: Int) {
 }
 
 // 效果列表：效果串( 之后。函数名不能叫 效果串——它是关键字，所以这里叫 effect_list。
-fn effect_list(tokens: Int, i: Int, acc: Int) {
+函数 effect_list(tokens: Int, i: Int, acc: Int) {
   若 i >= len(tokens) { 返回 {list: acc, next: i} }
   定 t = tokens[i]
   若 is_punct(t, ")") { 返回 {list: acc, next: i + 1} }
@@ -104,18 +104,18 @@ fn effect_list(tokens: Int, i: Int, acc: Int) {
 }
 
 // 主体：签名之后一直读到末尾（体没有被切开，见文件头）。
-fn has_body(tokens: Int, i: Int) -> Bool {
+函数 has_body(tokens: Int, i: Int) -> Bool {
   若 i >= len(tokens) { 返回 假 }
   若 is_punct(tokens[i], "{") { 返回 真 }
   返回 has_body(tokens, i + 1)
 }
 
 // 宿主入口：读一份「函数声明」的 token 流。
-fn read_signature(tokens: Int) -> Int {
+函数 read_signature(tokens: Int) -> Int {
   返回 signature(tokens, 0, 假)
 }
 
-fn signature_at(tokens: Int, i: Int, is_pub: Bool) {
+函数 signature_at(tokens: Int, i: Int, is_pub: Bool) {
   若 i >= len(tokens) { 返回 {node: {kind: "误", text: ""}, next: i} }
   定 t = tokens[i]
   若 is_word(t, "pub") { 返回 signature_at(tokens, i + 1, 真) }
@@ -159,13 +159,13 @@ fn signature_at(tokens: Int, i: Int, is_pub: Bool) {
 }
 
 // 只要记录的那一版：read_signature 与测试用它。
-fn signature(tokens: Int, i: Int, is_pub: Bool) {
+函数 signature(tokens: Int, i: Int, is_pub: Bool) {
   返回 signature_at(tokens, i, is_pub).node
 }
 
 // 跳过一个函数体：从签名之后的位置开始，找第一个 { 并配平到它的 }。
 // 只在 hasBody 为真时调用 —— 没有体的时候「第一个 {」是下一个函数的，跳过去就少读一个声明。
-fn 跳体(tokens: Int, i: Int) -> Int {
+函数 跳体(tokens: Int, i: Int) -> Int {
   var k = i
   当 k < len(tokens) {
     若 is_punct(tokens[k], "{") {
@@ -186,7 +186,7 @@ fn 跳体(tokens: Int, i: Int) -> Int {
 }
 
 // 整份源码里的所有函数声明，按出现顺序。语言服务器的 documentSymbol 用它。
-pub fn all_signatures(tokens: Int) -> Int {
+pub 函数 all_signatures(tokens: Int) -> Int {
   var 列 = ()
   var i = 0
   当 i < len(tokens) {

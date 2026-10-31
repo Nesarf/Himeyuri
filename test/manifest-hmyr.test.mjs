@@ -31,9 +31,9 @@ if (层.ok) {
   const 文 = fs.readFileSync(源路, "utf8");
   // 效果那一段两种写法都认：源码里的关键字已经换成 效果串（2026-11-02），
   // 而这三条判据原本只按英文的 effects( 抓。
-  ok("造库项 声明了 file 效果", /fn 造库项\([^)]*\) (?:effects|效果串)\(file\)/.test(文));
-  ok("造套件项 声明了 file 效果", /fn 造套件项\([^)]*\) (?:effects|效果串)\(file\)/.test(文));
-  ok("造名项 声明了 file 效果", /fn 造名项\([^)]*\) (?:effects|效果串)\(file\)/.test(文));
+  ok("造库项 声明了 file 效果", /(?:fn|函数) 造库项\([^)]*\) (?:effects|效果串)\(file\)/.test(文));
+  ok("造套件项 声明了 file 效果", /(?:fn|函数) 造套件项\([^)]*\) (?:effects|效果串)\(file\)/.test(文));
+  ok("造名项 声明了 file 效果", /(?:fn|函数) 造名项\([^)]*\) (?:effects|效果串)\(file\)/.test(文));
   ok("函数体里没有裸块（字节码后端不认 Block 表达式）", !/^\s*\{\s*$/m.test(文.split("fn 主(")[1] || ""));
 }
 
