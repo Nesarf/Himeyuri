@@ -6,7 +6,7 @@
 //
 // 节点形状（由 self/chain.hmyr 与 self/stmt.hmyr 定义）：
 //   {kind: "int" | "num", text}      整数（原文）
-//   {kind: "字", type: "string", text}              字符串
+//   {kind: "字", 类型: "string", text}              字符串
 //   {kind: "名", text}             标识符
 //   {kind: "二元", op, left, right}
 //   {kind: "一元", op, operand}
@@ -1016,8 +1016,8 @@
 公开 函数 求值(节点: Int, 环境: Int) -> Int {
   定 种 = 节点.kind
   若 种 == "int" { 返回 好(to_int(节点.text)) }
-  若 种 == "字" && 节点.type == "int" { 返回 好(数字值(节点.text)) }
-  若 种 == "字" && 节点.type == "string" { 返回 好(节点.text) }
+  若 种 == "字" && 节点.类型 == "int" { 返回 好(数字值(节点.text)) }
+  若 种 == "字" && 节点.类型 == "string" { 返回 好(节点.text) }
   // 空：这门语言没有 null，空元组就是它。而求值器要认得出 {kind: "nil"} 这种节点，
   // 因为 stmt.hmyr 用它在「返回 不带值」时占位。
   若 种 == "nil" { 返回 好(()) }

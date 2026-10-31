@@ -84,8 +84,8 @@
   定 j = 跳行(tokens, i)
   若 j >= len(tokens) { 返回 {node: {kind: "误", text: "", line: 0, column: 0}, next: j} }
   定 t = tokens[j]
-  若 t.kind == "int" { 返回 {node: {kind: "字", type: "int", text: t.text, raw: t.text, line: t.line, column: t.column}, next: j + 1} }
-  若 t.kind == "string" { 返回 {node: {kind: "字", type: "string", text: t.text, raw: 假, line: t.line, column: t.column}, next: j + 1} }
+  若 t.kind == "int" { 返回 {node: {kind: "字", 类型: "int", text: t.text, raw: t.text, line: t.line, column: t.column}, next: j + 1} }
+  若 t.kind == "string" { 返回 {node: {kind: "字", 类型: "string", text: t.text, raw: 假, line: t.line, column: t.column}, next: j + 1} }
   若 t.kind == "ident" { 返回 {node: {kind: "名", name: t.text, text: t.text, line: t.line, column: t.column}, next: j + 1} }
   若 is_punct(t, "(") { 返回 paren_or_tuple(tokens, j + 1) }
   若 is_punct(t, "{") { 返回 record_of(tokens, j + 1) }
@@ -118,7 +118,7 @@
 }
 
 // {字段: 值, …}：字段名可以是标识符（词法里关键字也归在标识符一类，
-// 所以 type、公开、效果串 这些词在这里天然可用）。
+// 所以 类型、公开、效果串 这些词在这里天然可用）。
 函数 record_of(tokens: Int, i: Int) -> Int {
   返回 record_tail(tokens, i, ())
 }

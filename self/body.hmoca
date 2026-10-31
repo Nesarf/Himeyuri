@@ -308,7 +308,7 @@
   // 名 : 类型
   若 i + 2 < 末 && tokens[i + 1].kind == "punct" && tokens[i + 1].text == ":" {
     定 值 = 类型在(tokens, i + 2, 末)
-    返回 类型记录(tokens, 值.next, 末, acc + ({name: t.text, type: 值.node},))
+    返回 类型记录(tokens, 值.next, 末, acc + ({name: t.text, 类型: 值.node},))
   }
   返回 类型记录(tokens, i + 1, 末, acc)
 }

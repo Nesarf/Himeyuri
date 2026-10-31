@@ -174,7 +174,7 @@
   当 i < len(签.params) {
     若 i > 0 { 文 = 文 + ", " }
     文 = 文 + 签.params[i].name
-    若 len(签.params[i].type) > 0 { 文 = 文 + ": " + 签.params[i].type }
+    若 len(签.params[i].类型) > 0 { 文 = 文 + ": " + 签.params[i].类型 }
     i = i + 1
   }
   文 = 文 + ")"

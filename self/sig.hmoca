@@ -9,8 +9,8 @@
 //   [公开] 函数 名字 ( 参数… ) [-> 类型] [效果串( 效果… )] [函数体]
 //
 // 读成：{kind: "fn", 公开, name, params, returns, 效果串, hasBody}
-//   params  : 元组，每项 {name, type}（拥有 / 借用 这类前缀会被跳过）
-//             字段名就叫 type：语言的字段名位置允许关键字，这条正是自举逼出来的。
+//   params  : 元组，每项 {name, 类型}（拥有 / 借用 这类前缀会被跳过）
+//             字段名就叫 类型：语言的字段名位置允许关键字，这条正是自举逼出来的。
 //
 // 一件**故意没做**的事，写在明处：函数体没有被切开。
 // 原因是上一层的边界——self/lex.hmyr 把空白与换行一起丢掉了，而换行正是语句的分界。
@@ -86,7 +86,7 @@
       若 next < len(tokens) && is_punct(tokens[next], "=") {
         next = skip_default(tokens, next + 1)
       }
-      返回 params(tokens, next, acc + ({name: name, type: ty},))
+      返回 params(tokens, next, acc + ({name: name, 类型: ty},))
     }
     返回 params(tokens, i + 1, acc)
   }

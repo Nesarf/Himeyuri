@@ -221,18 +221,18 @@
 // 工具那一层就只剩搬运 —— 而「宿主一口吃下去」这句话才算有证据。
 函数 翻表达式(n: Int) {
   若 n.kind == "字" {
-    若 n.type == "int" {
-      返回 {kind: "字", type: "int", value: 数字值(n.text), raw: n.text, text: n.text, line: 行(n), column: 列(n)}
+    若 n.类型 == "int" {
+      返回 {kind: "字", 类型: "int", value: 数字值(n.text), raw: n.text, text: n.text, line: 行(n), column: 列(n)}
     }
-    返回 {kind: "字", type: "string", value: n.text, raw: 假, text: n.text, line: 行(n), column: 列(n)}
+    返回 {kind: "字", 类型: "string", value: n.text, raw: 假, text: n.text, line: 行(n), column: 列(n)}
   }
   若 n.kind == "名" {
     // 真 与 假 在这一侧是标识符（词法把关键字也归在 ident 里），在宿主那边是字面量。
     // 不转的话，宿主会去找一个叫 假 的名字 —— 报 HMYR-行-005，而那句话听起来像拼写错误。
-    若 n.text == "true" { 返回 {kind: "字", type: "bool", value: 真, raw: 假, text: n.text, line: 行(n), column: 列(n)} }
-    若 n.text == "false" { 返回 {kind: "字", type: "bool", value: 假, raw: 假, text: n.text, line: 行(n), column: 列(n)} }
-    // 空 在宿主那边是一个字面量（type "nil"、值 null），不是名字。
-    若 n.text == "nil" { 返回 {kind: "字", type: "nil", value: (), raw: 假, text: n.text, line: 行(n), column: 列(n)} }
+    若 n.text == "true" { 返回 {kind: "字", 类型: "bool", value: 真, raw: 假, text: n.text, line: 行(n), column: 列(n)} }
+    若 n.text == "false" { 返回 {kind: "字", 类型: "bool", value: 假, raw: 假, text: n.text, line: 行(n), column: 列(n)} }
+    // 空 在宿主那边是一个字面量（类型 "nil"、值 null），不是名字。
+    若 n.text == "nil" { 返回 {kind: "字", 类型: "nil", value: (), raw: 假, text: n.text, line: 行(n), column: 列(n)} }
     返回 {kind: "名", name: n.text, text: n.text, line: 行(n), column: 列(n)}
   }
   若 n.kind == "二元" {
@@ -307,7 +307,7 @@
   返回 {kind: "块", statements: 转语句们(语句们, 0, ()), line: 行}
 }
 
-// 参数名 → {name, passing}。宿主的参数是记录（带 type 与 passing），而这一侧
+// 参数名 → {name, passing}。宿主的参数是记录（带 类型 与 passing），而这一侧
 // 原来只交 {name} —— 于是「跨模块的借用分析」在自举层那条路上什么都看不见：
 // 它判的第一件事就是 params[].passing 是不是 借用（2026-11-02 实测，
 // ownedcheck 那套的「跨模块的转移被看见」因此拿到空数组）。

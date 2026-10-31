@@ -5,7 +5,7 @@
 // 所以它不会碰到调用深度上限。
 //
 // 形状与 JS 版解析器对齐，只保留结构：
-//   {kind: "字", type: "int", text}         整数（原文）
+//   {kind: "字", 类型: "int", text}         整数（原文）
 //   {kind: "名", text}        标识符
 //   {kind: "二元", op, left, right}
 // 对拍时 JS 侧做同样的映射，行号一类的位置信息两边都不带。
@@ -70,7 +70,7 @@
   }
   若 is_digit_c(c) {
     定 got = read_num(s, j, "")
-    返回 {node: {kind: "字", type: "int", text: got.text}, next: got.next}
+    返回 {node: {kind: "字", 类型: "int", text: got.text}, next: got.next}
   }
   若 is_alpha_c(c) {
     定 got = read_name(s, j, "")
