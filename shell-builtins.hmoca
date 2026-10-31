@@ -90,10 +90,10 @@ fn 参数(判定: Int) -> String {
 // ---- 执行层 ----
 //
 // 认法那一层只说「想做什么」，这一层才真的动世界：改目录、给出输出、要求退出。
-// 动世界的地方带着效果声明（effects(process)），而输出与退出只是交回一个判定——
+// 动世界的地方带着效果声明（效果串(process)），而输出与退出只是交回一个判定——
 // 这一层不自己去 print，也不自己去 exit，因为那两件事由调用方决定。
 
-pub fn 执行命令(判定: Int) -> Int effects(process) {
+pub fn 执行命令(判定: Int) -> Int 效果串(process) {
   若 判定.kind == "empty" { 返回 {kind: "nothing"} }
   若 判定.kind == "unknown" { 返回 {kind: "external", name: 判定.name} }
   若 判定.kind == "err" { 返回 {kind: "err", text: 判定.text} }
@@ -110,12 +110,12 @@ pub fn 执行命令(判定: Int) -> Int effects(process) {
 
 // cd：不带参数就回家（宿主给的主目录）。进不去时宿主会报编号，这里不接住它——
 // 接住就变成了「悄悄失败」，那比报错更坏。
-fn 执行cd(参: String) -> Int effects(process) {
+fn 执行cd(参: String) -> Int 效果串(process) {
   若 参 == "" { 返回 执行cd到(home_dir()) }
   返回 执行cd到(参)
 }
 
-fn 执行cd到(目标: String) -> Int effects(process) {
+fn 执行cd到(目标: String) -> Int 效果串(process) {
   返回 {kind: "nothing", text: chdir(目标)}
 }
 

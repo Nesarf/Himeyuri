@@ -194,7 +194,7 @@ pub fn sha256(字节串: Int) -> String {
   返回 出
 }
 
-fn main() -> Int effects(file, process) {
+fn main() -> Int 效果串(file, process) {
   定 参 = argv()
   若 len(参) < 2 {
     print("用法：hmyr self/sha256.hmyr <文件>" + chr(10))

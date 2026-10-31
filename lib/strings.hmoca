@@ -47,10 +47,10 @@ fn 修剪(s: String) -> String {
   当 走 {
     若 起 >= n {
       走 = false
-    } else {
+    } 否则 {
       若 空白一(s[起]) {
         起 = 起 + 1
-      } else {
+      } 否则 {
         走 = false
       }
     }
@@ -60,10 +60,10 @@ fn 修剪(s: String) -> String {
   当 走 {
     若 止 <= 起 {
       走 = false
-    } else {
+    } 否则 {
       若 空白一(s[止 - 1]) {
         止 = 止 - 1
-      } else {
+      } 否则 {
         走 = false
       }
     }
@@ -89,7 +89,7 @@ fn 匹配在(s: String, 起: Int, 子: String) -> Bool {
   当 i < m {
     若 s[起 + i] == 子[i] {
       i = i + 1
-    } else {
+    } 否则 {
       好 = false
       i = m
     }
@@ -120,10 +120,10 @@ fn 查找(s: String, 子: String) -> Int {
   当 有 {
     若 i > n - m {
       有 = false
-    } else {
+    } 否则 {
       若 匹配在(s, i, 子) {
         返回 i
-      } else {
+      } 否则 {
         i = i + 1
       }
     }
@@ -161,11 +161,11 @@ fn 替换(s: String, 旧: String, 新: String) -> String {
   当 走 {
     若 i >= n {
       走 = false
-    } else {
+    } 否则 {
       若 匹配在(s, i, 旧) {
         出 = 出 + 新
         i = i + m
-      } else {
+      } 否则 {
         出 = 出 + s[i]
         i = i + 1
       }
@@ -205,7 +205,7 @@ fn 十六进制(n: Int) -> String {
   当 走 {
     若 余 == 0 {
       走 = false
-    } else {
+    } 否则 {
       定 个 = 余 % 16
       出 = slice(位, 个, 个 + 1) + 出
       余 = (余 - 个) / 16
@@ -234,12 +234,12 @@ fn 切分(s: String, 分隔: String) -> (String,) {
   当 走 {
     若 i > n - m {
       走 = false
-    } else {
+    } 否则 {
       若 匹配在(s, i, 分隔) {
         出 = 出 + (slice(s, 起, i),)
         起 = i + m
         i = i + m
-      } else {
+      } 否则 {
         i = i + 1
       }
     }

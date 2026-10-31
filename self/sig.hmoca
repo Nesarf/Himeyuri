@@ -1,4 +1,4 @@
-import "./lex.hmoca"
+引入 "./lex.hmoca"
 
 // 用 Himeyuri 写的第七件：函数声明的签名。
 //
@@ -6,10 +6,10 @@ import "./lex.hmoca"
 // （先前漏了它，于是宿主去取 scan 时拿到空值，报错只说「读不到 params」——
 //   一条看起来像内部故障、其实是缺依赖的信息。补上依赖，信息才对得上号。）
 //
-//   [pub] fn 名字 ( 参数… ) [-> 类型] [effects( 效果… )] [函数体]
+//   [pub] fn 名字 ( 参数… ) [-> 类型] [效果串( 效果… )] [函数体]
 //
-// 读成：{kind: "fn", pub, name, params, returns, effects, hasBody}
-//   params  : 元组，每项 {name, type}（own / borrow 这类前缀会被跳过）
+// 读成：{kind: "fn", pub, name, params, returns, 效果串, hasBody}
+//   params  : 元组，每项 {name, type}（拥有 / 借用 这类前缀会被跳过）
 //             字段名就叫 type：语言的字段名位置允许关键字，这条正是自举逼出来的。
 //
 // 一件**故意没做**的事，写在明处：函数体没有被切开。
@@ -93,7 +93,7 @@ fn params(tokens: Int, i: Int, acc: Int) {
   返回 {list: acc, next: i + 1, closed: false}
 }
 
-// 效果列表：effects( 之后。函数名不能叫 effects——它是关键字，所以这里叫 effect_list。
+// 效果列表：效果串( 之后。函数名不能叫 效果串——它是关键字，所以这里叫 effect_list。
 fn effect_list(tokens: Int, i: Int, acc: Int) {
   若 i >= len(tokens) { 返回 {list: acc, next: i} }
   定 t = tokens[i]
@@ -151,7 +151,7 @@ fn signature_at(tokens: Int, i: Int, is_pub: Bool) {
       name: name,
       params: got.list,
       returns: returns,
-      effects: eff,
+      效果串: eff,
       hasBody: has_body(tokens, at),
     },
     next: at,
@@ -196,14 +196,14 @@ pub fn all_signatures(tokens: Int) -> Int {
     若 起 < len(tokens) && is_word(tokens[起], "fn") {
       定 r = signature_at(tokens, i, 是公)
       若 r.node.kind == "fn" { 列 = 列 + (r.node,) }
-      若 r.node.kind == "fn" && r.node.hasBody { i = 跳体(tokens, r.next) } else { i = r.next }
-    } else {
+      若 r.node.kind == "fn" && r.node.hasBody { i = 跳体(tokens, r.next) } 否则 { i = r.next }
+    } 否则 {
       i = i + 1
     }
   }
   返回 列
 }
 
-// 这里原有一个演示用的 main。删掉它是因为 self/lsp.hmyr 要 import 这一份 ——
+// 这里原有一个演示用的 main。删掉它是因为 self/lsp.hmyr 要 引入 这一份 ——
 // 两份 main 合在一起只有一个能活，而活着的是先到的那一个。
 // 演示由 test/self-sig.test.mjs 覆盖，它直接调 read_signature。

@@ -11,8 +11,8 @@
 // 所以先把每行放进元组，最后用折半拼接把它连起来：复制量降到「行数乘对数」。
 //
 // 用法：hmyr self/embed.hmyr <字节码文件> <输出.c> <符号名>
-// 输出：static const unsigned char <符号名>[] = { ... };
-//       static const unsigned int <符号名>_len = N;
+// 输出：static 常量 unsigned char <符号名>[] = { ... };
+//       static 常量 unsigned int <符号名>_len = N;
 
 fn 十六(字节: Int) -> String {
   定 表 = "0123456789abcdef"
@@ -34,7 +34,7 @@ fn 拼(行批: Int, 起: Int, 止: Int) -> String {
   返回 拼(行批, 起, 中) + 拼(行批, 中, 止)
 }
 
-fn main() -> Int effects(file) {
+fn main() -> Int 效果串(file) {
   定 参 = argv()
   若 len(参) < 4 {
     print("用法：hmyr self/embed.hmyr <字节码文件> <输出.c> <符号名>" + chr(10))

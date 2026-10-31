@@ -65,13 +65,13 @@ fn 修剪(文: String) -> String {
   var 走 = true
   当 起 < 止 && 走 {
     定 c = 文[起]
-    若 c == " " || c == chr(9) || c == chr(13) { 起 = 起 + 1 } else { 走 = false }
+    若 c == " " || c == chr(9) || c == chr(13) { 起 = 起 + 1 } 否则 { 走 = false }
   }
   var 完 = 止
   var 走2 = true
   当 完 > 起 && 走2 {
     定 c = 文[完 - 1]
-    若 c == " " || c == chr(9) || c == chr(13) { 完 = 完 - 1 } else { 走2 = false }
+    若 c == " " || c == chr(9) || c == chr(13) { 完 = 完 - 1 } 否则 { 走2 = false }
   }
   返回 slice(文, 起, 完)
 }
@@ -108,7 +108,7 @@ fn 全展开(cp: Int, 直表: Int, 出: Int) -> Int {
   返回 出 + (cp,)
 }
 
-fn main() -> Int effects(file, process) {
+fn main() -> Int 效果串(file, process) {
   定 参 = argv()
   // 参[0] 是脚本自己的路径；真实参数从 1 起（与第一支同一套规矩）
   var 数据目录 = "data/ucd"
@@ -216,7 +216,7 @@ fn main() -> Int effects(file, process) {
       若 大 {
         设(组合, b + 1, 看)
         b = b - 1
-      } else {
+      } 否则 {
         走 = false
       }
     }

@@ -15,8 +15,8 @@
 //
 // 函数体里没有一处裸块：裸块在解释器那边能跑，而字节码后端把它当表达式，
 // 报的是「这一份不认这种表达式：Block」。变量因此都在函数作用域里，各自起名。
-import "./sha256.hmoca"
-import "../json.hmoca"
+引入 "./sha256.hmoca"
+引入 "../json.hmoca"
 
 fn 以头(s: String, 头: String) -> Bool {
   若 len(s) < len(头) { 返回 false }
@@ -59,7 +59,7 @@ fn 行数(文: String) -> Int { 返回 len(split(文, chr(10))) }
 fn 推(块堆: Int, 块: String, 块行数: Int, 行: String) {
   var 新块堆 = 块堆
   var 新块 = 块
-  若 块行数 == 0 { 新块 = 行 + chr(10) } else { 新块 = 块 + 行 + chr(10) }
+  若 块行数 == 0 { 新块 = 行 + chr(10) } 否则 { 新块 = 块 + 行 + chr(10) }
   定 新数 = 块行数 + 1
   若 新数 >= 128 {
     新块堆 = 块堆 + (新块,)
@@ -78,7 +78,7 @@ fn 第几对(s: String, n: Int) -> String {
     若 slice(s, i, i + 1) == "\"" {
       若 开 < 0 {
         开 = i
-      } else {
+      } 否则 {
         找第 = 找第 + 1
         若 找第 == n { 返回 slice(s, 开 + 1, i) }
         开 = 0 - 1
@@ -99,7 +99,7 @@ fn 去尾逗号(行: String) -> String {
 // 走一个目录，交回它下面所有文件的相对路径（递归）。
 // 这一层靠 is_dir 分岔 —— read_dir 只给名字，说不了「这是不是一个目录」。
 // 元组相加在这里够用：一层几十项，深度两层。
-pub fn 走文件(路: String) effects(file) {
+pub fn 走文件(路: String) 效果串(file) {
   定 名册 = read_dir(路)
   var 文们 = ()
   var 子们 = ()
@@ -107,7 +107,7 @@ pub fn 走文件(路: String) effects(file) {
   当 i < len(名册) {
     若 is_dir(路 + "/" + 名册[i]) {
       子们 = 子们 + (名册[i],)
-    } else {
+    } 否则 {
       文们 = 文们 + (名册[i],)
     }
     i = i + 1
@@ -138,7 +138,7 @@ fn 首行(s: String) {
 // git 的短哈希：版本号最诚实的一种 —— 它指向确切的字节，而任何自称的版本号都能被改。
 // 读 .git/HEAD（`ref: refs/heads/main`），再读它指的那份 ref；detached HEAD 时
 // HEAD 里直接就是 sha。两条路都只读文本，所以不需要新内建，也不需要起进程问 git。
-fn 短路哈希() effects(file) {
+fn 短路哈希() 效果串(file) {
   若 file_exists(".git/HEAD") == false { 返回 "unknown" }
   定 头 = 首行(read_text(".git/HEAD"))
   若 以头(头, "ref: ") {
@@ -188,10 +188,10 @@ fn 行号含(s: String, 片: String) -> Int {
   返回 0 - 1
 }
 
-// 从 src/eval.mjs 里数 BUILTINS 块里的键：块从「const BUILTINS = {」开始，
+// 从 src/eval.mjs 里数 BUILTINS 块里的键：块从「常量 BUILTINS = {」开始，
 // 到缩进为零的 } 结束；块里每个两空格缩进、以名字首字符开头、带冒号的行算一个键。
 // 这不是解析器，是一处「够用的括号配对」——数出来的是声明，不是求值。
-fn 内置数() effects(file) {
+fn 内置数() 效果串(file) {
   定 行批 = split(read_text("src/eval.mjs"), chr(10))
   var 在内 = false
   var n = 0
@@ -201,13 +201,13 @@ fn 内置数() effects(file) {
     若 在内 {
       若 以头(行, "}") {
         在内 = false
-      } else {
+      } 否则 {
         定 净 = 去头空(行)
         // 缩进必须恰好两格：函数体里那些四格缩进的行也带冒号（三元表达式的冒号），
         // 只判「含冒号」会把它们一起数进去 —— 复刻一遍就能看见 120 对 66。
         若 缩进数(行) == 2 && 是名字首(净) && 含冒号(净) { n = n + 1 }
       }
-    } else {
+    } 否则 {
       若 以头(行, "const BUILTINS = {") { 在内 = true }
     }
     i = i + 1
@@ -224,7 +224,7 @@ fn 抽标识符(行: String) {
     定 c = ord(slice(行, i, i + 1))
     若 (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c == 95 {
       词 = 词 + slice(行, i, i + 1)
-    } else {
+    } 否则 {
       若 len(词) > 0 {
         出 = 出 + (词,)
         词 = ""
@@ -256,14 +256,14 @@ fn 排好(集: Int) {
       若 集[i] < 出[k] {
         位 = k
         k = len(出)
-      } else {
+      } 否则 {
         k = k + 1
       }
     }
     var 新 = ()
     var j = 0
     当 j < len(出) + 1 {
-      若 j == 位 { 新 = 新 + (集[i],) } else 若 j < 位 { 新 = 新 + (出[j],) } else { 新 = 新 + (出[j - 1],) }
+      若 j == 位 { 新 = 新 + (集[i],) } 否则 若 j < 位 { 新 = 新 + (出[j],) } 否则 { 新 = 新 + (出[j - 1],) }
       j = j + 1
     }
     出 = 新
@@ -274,7 +274,7 @@ fn 排好(集: Int) {
 
 // design/RUNTIME.txt 里「最小的内置集」那一节：从它那行往下，到「小库该有什么」为止，
 // 四个空格缩进的行里所有标识符（去掉 file / process / thread 三个效果名）。
-fn 最小集() effects(file) {
+fn 最小集() 效果串(file) {
   定 文 = read_text("design/RUNTIME.txt")
   定 行批 = split(文, chr(10))
   定 起 = 行号含(文, "最小的内置集")
@@ -283,7 +283,7 @@ fn 最小集() effects(file) {
   var i = 起
   当 i < len(行批) {
     定 行 = 行批[i]
-    若 含子串(行, "小库该有什么") { i = len(行批) } else 若 以头(行, "    ") {
+    若 含子串(行, "小库该有什么") { i = len(行批) } 否则 若 以头(行, "    ") {
       定 词们 = 抽标识符(行)
       var k = 0
       当 k < len(词们) {
@@ -299,7 +299,7 @@ fn 最小集() effects(file) {
   返回 排好(集)
 }
 
-fn 造库项(路: String) effects(file) {
+fn 造库项(路: String) 效果串(file) {
   定 文 = read_text(路)
   定 哈 = 前16(sha256(read_bytes(路)))
   返回 (
@@ -312,7 +312,7 @@ fn 造库项(路: String) effects(file) {
   )
 }
 
-fn 造套件项(名: String, 路: String) effects(file) {
+fn 造套件项(名: String, 路: String) 效果串(file) {
   定 哈 = 前16(sha256(read_bytes(路)))
   返回 (
     "    {",
@@ -323,7 +323,7 @@ fn 造套件项(名: String, 路: String) effects(file) {
   )
 }
 
-fn 造名项(名: String, 路: String) effects(file) {
+fn 造名项(名: String, 路: String) 效果串(file) {
   定 哈 = 前16(sha256(read_bytes(路)))
   返回 (
     "    {",
@@ -333,7 +333,7 @@ fn 造名项(名: String, 路: String) effects(file) {
   )
 }
 
-pub fn 主(出路: String) effects(file, process) {
+pub fn 主(出路: String) 效果串(file, process) {
   var 块堆 = ()
   var 块 = ""
   var 块行数 = 0
@@ -546,14 +546,14 @@ pub fn 主(出路: String) effects(file, process) {
 
   若 出路 == "" {
     print(终)
-  } else {
+  } 否则 {
     write_text(出路, 终)
     print("  已写 " + 出路 + "（" + str(行数(终)) + " 行，digest " + 摘要 + "）" + chr(10))
   }
   返回 0
 }
 
-fn main() -> Int effects(file, process) {
+fn main() -> Int 效果串(file, process) {
   定 参 = argv()
   若 len(参) < 2 {
     返回 主("")

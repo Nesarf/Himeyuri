@@ -67,8 +67,10 @@ for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
 // body 加两个与 281、run 加五个与 415、eval 只加 120 个节点；chain 与 stmt 一字未动。
 // 同日再长一格（汉字关键字那一条）：lex 加了 关键字归一 这一个函数，于是
 // 218 / 16786 变成 219 / 16826，其余五份一分没动。
-ok("合计 219 个函数声明", 函数总数 === 219, String(函数总数));
-ok("合计 16826 个节点", 节点总数 === 16826, String(节点总数));
+// 同日再晚些（十五个关键字那一批）：lex 的 关键字归一 多了十一个分支、run 与 pack 各加了
+// 一个「认两种 import 写法」的函数，于是 219 / 16826 变成 220 / 16947。
+ok("合计 220 个函数声明", 函数总数 === 220, String(函数总数));
+ok("合计 16947 个节点", 节点总数 === 16947, String(节点总数));
 
 console.log("二、位置是逐个对过的，不是大致对");
 {
@@ -133,10 +135,10 @@ console.log("六、它自己的注释写着现在的账");
 {
   const 文 = fs.readFileSync(path.join(ROOT, "src/subset-parse.mjs"), "utf8");
   ok("注释写了六种语句", 文.includes("let / var / assign / return / ExprStmt / Block"), "在");
-  ok("注释写了位置也对齐了", 文.includes("六份共 16826 个节点，逐个相同"), "在");
+  ok("注释写了位置也对齐了", 文.includes("六份共 16947 个节点，逐个相同"), "在");
   ok("注释写了那一处照抄的怪处", 文.includes("字段名之后那个 token"), "在");
   ok("注释写了它的立场", 文.includes("认得窄而说清"), "在");
-  ok("注释写了数出来的声明种类", 文.includes("只有 fn，219 个"), "在");
+  ok("注释写了数出来的声明种类", 文.includes("只有 fn，220 个"), "在");
 }
 
 console.log("七、两处后补的两侧同形：arena() 与 own/borrow 参数");

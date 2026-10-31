@@ -42,7 +42,7 @@ fn 归一名(s: String) -> String {
   若 len(s) >= 2 && slice(s, 1, 2) == ":" { i = 2 }
   当 i < len(s) {
     定 c = slice(s, i, i + 1)
-    若 c == "\\" { 出 = 出 + "/" } else { 出 = 出 + c }
+    若 c == "\\" { 出 = 出 + "/" } 否则 { 出 = 出 + c }
     i = i + 1
   }
   var j = 0
@@ -69,13 +69,13 @@ fn 串UTF8(s: String) {
     定 cp = ord(slice(s, i, i + 1))
     若 cp < 128 {
       出 = 出 + (cp,)
-    } else {
+    } 否则 {
       若 cp < 2048 {
         出 = 出 + (192 + (cp - (cp % 64)) / 64, 128 + cp % 64)
-      } else {
+      } 否则 {
         若 cp < 65536 {
           出 = 出 + (224 + (cp - (cp % 4096)) / 4096, 128 + ((cp - (cp % 64)) / 64) % 64, 128 + cp % 64)
-        } else {
+        } 否则 {
           出 = 出 + (240 + (cp - (cp % 262144)) / 262144, 128 + ((cp - (cp % 4096)) / 4096) % 64, 128 + ((cp - (cp % 64)) / 64) % 64, 128 + cp % 64)
         }
       }
@@ -95,15 +95,15 @@ fn UTF8串(字节串, 起: Int, 止: Int) -> String {
     var 续 = 0
     若 b0 < 128 {
       cp = b0
-    } else {
+    } 否则 {
       若 (b0 - (b0 % 32)) / 32 == 6 {
         cp = b0 % 32
         续 = 1
-      } else {
+      } 否则 {
         若 (b0 - (b0 % 16)) / 16 == 14 {
           cp = b0 % 16
           续 = 2
-        } else {
+        } 否则 {
           cp = b0 % 8
           续 = 3
         }
@@ -175,7 +175,7 @@ fn 扫(字节串) {
   返回 出
 }
 
-fn 装(包路: String, 文件们) -> Int effects(file) {
+fn 装(包路: String, 文件们) -> Int 效果串(file) {
   var i = 0
   当 i < len(文件们) {
     定 名 = 归一名(文件们[i])
@@ -204,7 +204,7 @@ fn 装(包路: String, 文件们) -> Int effects(file) {
   返回 0
 }
 
-fn 列(包路: String) -> Int effects(file) {
+fn 列(包路: String) -> Int 效果串(file) {
   定 字节串 = read_bytes(包路)
   若 len(字节串) < 12 || UTF8串(字节串, 0, 9) != "HMYRITTGN" {
     print("HMYR-器-003 这不是容器：" + 包路 + chr(10))
@@ -220,7 +220,7 @@ fn 列(包路: String) -> Int effects(file) {
   返回 0
 }
 
-fn 取(包路: String, 名: String, 出: String) -> Int effects(file) {
+fn 取(包路: String, 名: String, 出: String) -> Int 效果串(file) {
   定 字节串 = read_bytes(包路)
   若 len(字节串) < 12 || UTF8串(字节串, 0, 9) != "HMYRITTGN" {
     print("HMYR-器-003 这不是容器：" + 包路 + chr(10))
@@ -241,7 +241,7 @@ fn 取(包路: String, 名: String, 出: String) -> Int effects(file) {
   返回 4
 }
 
-fn main() -> Int effects(file, process) {
+fn main() -> Int 效果串(file, process) {
   定 参 = argv()
   若 len(参) < 3 {
     print("用法：hmyr self/ittgn.hmoca --装 <包> <文件...> | --列 <包> | --取 <包> <成员> <输出>" + chr(10))

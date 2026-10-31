@@ -11,8 +11,8 @@
 //
 // 用法：hmyr self/lsp.hmyr
 
-import "../lib/json.hmoca"
-import "./sig.hmoca"
+引入 "../lib/json.hmoca"
+引入 "./sig.hmoca"
 
 fn 是长度行(行: String) -> Bool {
   若 len(行) < 16 { 返回 false }
@@ -41,9 +41,9 @@ fn 读消息() {
     若 r.结束 {
       完 = true
       继续 = false
-    } else 若 len(r.行) == 0 {
+    } 否则 若 len(r.行) == 0 {
       继续 = false
-    } else 若 是长度行(r.行) {
+    } 否则 若 是长度行(r.行) {
       长 = 数值(slice(r.行, 15, len(r.行)))
     }
   }
@@ -122,12 +122,12 @@ fn 词在(文本: String, 行: Int, 列: Int) -> String {
   var 起 = 列
   var 左停 = false
   当 起 > 0 && !左停 {
-    若 是词字(该行[起 - 1]) { 起 = 起 - 1 } else { 左停 = true }
+    若 是词字(该行[起 - 1]) { 起 = 起 - 1 } 否则 { 左停 = true }
   }
   var 止 = 列
   var 右停 = false
   当 止 < len(该行) && !右停 {
-    若 是词字(该行[止]) { 止 = 止 + 1 } else { 右停 = true }
+    若 是词字(该行[止]) { 止 = 止 + 1 } 否则 { 右停 = true }
   }
   若 止 <= 起 { 返回 "" }
   返回 slice(该行, 起, 止)
@@ -144,7 +144,7 @@ fn at转行列(文本: String, at: Int) {
     若 文本[i] == chr(10) {
       行 = 行 + 1
       列 = 0
-    } else {
+    } 否则 {
       列 = 列 + 1
     }
     i = i + 1
@@ -242,7 +242,7 @@ fn 目录名(路: String) -> String {
   返回 ""
 }
 
-// import 的路径相对当前文件所在目录，与加载器同一条规矩。
+// 引入 的路径相对当前文件所在目录，与加载器同一条规矩。
 fn 拼导入(基: String, 相对: String) -> String {
   var 名 = 相对
   若 len(名) >= 2 {
@@ -251,7 +251,7 @@ fn 拼导入(基: String, 相对: String) -> String {
   返回 目录名(基) + "/" + 名
 }
 
-// 一份文本里的 import 路径们。关键字在词法里是 ident，后面那一个必须是字符串。
+// 一份文本里的 引入 路径们。关键字在词法里是 ident，后面那一个必须是字符串。
 fn 导入路们(文本: String) -> Int {
   定 tokens = scan(文本)
   var 出 = ()
@@ -285,7 +285,7 @@ fn 地位(地址: String, 那份: String, 签: Int) {
 
 // 处理一条消息：交回 {文, 停, 文本}。文本是「当前打开的文档」——
 // didOpen 送来它，documentSymbol 用它。状态在这一层过一手，因为语言里没有可变的全局。
-fn 处理(体: String, 文本: String) effects(file) {
+fn 处理(体: String, 文本: String) 效果串(file) {
   定 p = 解析(体)
   若 !p.ok { 返回 {文: "", 停: false, 文本: 文本} }
   定 值 = p.值
@@ -316,7 +316,7 @@ fn 处理(体: String, 文本: String) effects(file) {
     若 !field_has(签, "空") {
       返回 {文: 应答(id, 地位(地址, 文本, 签)), 停: false, 文本: 文本}
     }
-    // 跨模块：本地没有，就按 import 去目标文件里找。
+    // 跨模块：本地没有，就按 引入 去目标文件里找。
     // 本地优先 —— 与 src/lsp.mjs 同一条规矩：同名符号优先离得近的那一个。
     定 基 = 地址转路径(地址)
     定 路们 = 导入路们(文本)
@@ -354,14 +354,14 @@ fn 处理(体: String, 文本: String) effects(file) {
   返回 {文: 应答错(id, 0 - 32601, "method not found"), 停: false, 文本: 文本}
 }
 
-fn main() -> Int effects(file) {
+fn main() -> Int 效果串(file) {
   var 跑 = true
   var 文本 = ""
   当 跑 {
     定 m = 读消息()
     若 m.结束 {
       跑 = false
-    } else {
+    } 否则 {
       定 r = 处理(m.体, 文本)
       文本 = r.文本
       若 len(r.文) > 0 {

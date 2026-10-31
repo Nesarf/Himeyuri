@@ -11,8 +11,8 @@
 //
 // 进度走 stderr（每五十项一行）：长跑时能看出它在动，而 stdout 只留结论。
 
-import "./sha256.hmoca"
-import "../json.hmoca"
+引入 "./sha256.hmoca"
+引入 "../json.hmoca"
 
 fn 前16(十六: String) -> String {
   返回 slice(十六, 0, 16)
@@ -111,7 +111,7 @@ fn 重建文本(行批: Int, dig: Int) {
 
 // 一件：标签（用来印）、路（要读的文件）、写（清单里写的哈希前十六位）、
 // 行（那一行的原文 —— 不通过时一起印出来，证据跟着结论走）。
-fn 验一件(标签: String, 路: String, 写: String, 对: Int, 错: Int, 缺: Int, 说: String, 行: String) effects(file) {
+fn 验一件(标签: String, 路: String, 写: String, 对: Int, 错: Int, 缺: Int, 说: String, 行: String) 效果串(file) {
   若 file_exists(路) == false {
     返回 {对: 对, 错: 错, 缺: 缺 + 1, 说: 说 + "  [缺] " + 标签 + chr(10)}
   }
@@ -122,7 +122,7 @@ fn 验一件(标签: String, 路: String, 写: String, 对: Int, 错: Int, 缺: 
   返回 {对: 对, 错: 错 + 1, 缺: 缺, 说: 说 + "  [不通过] " + 标签 + "：写着 " + 写 + "，算出来 " + 算 + chr(10) + "  那一行是 " + 行 + chr(10)}
 }
 
-fn main() -> Int effects(file, process) {
+fn main() -> Int 效果串(file, process) {
   定 参 = argv()
   若 len(参) < 2 {
     print("用法：hmyr self/verify.hmyr <清单.json>" + chr(10))
@@ -154,7 +154,7 @@ fn main() -> Int effects(file, process) {
         // 名字要补前缀：tools 段补 tools/，documents 段补 design/。
         若 文档起 >= 0 && i > 文档起 {
           路 = "design/" + 上值
-        } else 若 工具起 >= 0 && i > 工具起 {
+        } 否则 若 工具起 >= 0 && i > 工具起 {
           路 = "tools/" + 上值
         }
       }
@@ -165,13 +165,13 @@ fn main() -> Int effects(file, process) {
       说 = r.说
       已验 = 已验 + 1
       若 已验 % 50 == 0 { print_err("  已验 " + str(已验) + " 项" + chr(10)) }
-    } else 若 键名 == "file" {
+    } 否则 若 键名 == "file" {
       上键 = "file"
       上值 = 值(行)
-    } else 若 键名 == "path" {
+    } 否则 若 键名 == "path" {
       上键 = "path"
       上值 = 值(行)
-    } else 若 键名 == "name" {
+    } 否则 若 键名 == "name" {
       上键 = "name"
       上值 = 值(行)
     }
@@ -185,16 +185,16 @@ fn main() -> Int effects(file, process) {
   定 码 = 行号(文, "digest")
   若 码 < 0 {
     print("  清单里没有 digest，整份这一步跳过" + chr(10))
-  } else {
+  } 否则 {
     定 写 = 值(行批[码])
     若 写 == "" {
       print("  digest 是空的，整份这一步跳过" + chr(10))
-    } else {
+    } 否则 {
       定 重建 = 重建文本(行批, 码)
       定 算 = sha256(从文本(重建))
       若 算 == 写 {
         print("  整份的 digest 对得上（重算 " + str(len(重建)) + " 字符）" + chr(10))
-      } else {
+      } 否则 {
         print("  整份的 digest 对不上：写着 " + 写 + "，算出来 " + 算 + chr(10))
         整份对 = false
       }

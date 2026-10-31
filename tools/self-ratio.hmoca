@@ -29,7 +29,7 @@ fn 数行(内容: String) -> Int {
 }
 
 // 一个目录下所有匹配后缀的文件一共多少行。深度上限 24：防环。
-fn 数(相对: String, 后缀: String, 次: Int) -> Int effects(file) {
+fn 数(相对: String, 后缀: String, 次: Int) -> Int 效果串(file) {
   若 次 > 24 { 返回 0 }
   若 is_dir(相对) == false { 返回 0 }
   定 名册 = read_dir(相对)
@@ -39,7 +39,7 @@ fn 数(相对: String, 后缀: String, 次: Int) -> Int effects(file) {
     定 全 = 相对 + "/" + 名册[i]
     若 is_dir(全) {
       行 = 行 + 数(全, 后缀, 次 + 1)
-    } else {
+    } 否则 {
       若 尾是(名册[i], 后缀) {
         行 = 行 + 数行(read_text(全, "utf8"))
       }
@@ -53,7 +53,7 @@ fn 一行(名: String, 行: Int, 语: String) -> String {
   返回 "  " + 名 + "  " + str(行) + " 行  " + 语 + chr(10)
 }
 
-fn main() -> Int effects(file, process) {
+fn main() -> Int 效果串(file, process) {
   定 自举 = 数("self", "hmoca", 0)
   定 宿主侧 = 数("self", "mjs", 0)
   定 执行器 = 数("src", "mjs", 0)

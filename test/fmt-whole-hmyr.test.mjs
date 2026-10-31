@@ -36,7 +36,15 @@ console.log("一、没有注释的文件：规范之后两边相同，而汉字�
 // 这不是哪一个写错了，是两条路能拿到的信息不同。所以判据分两条：
 // 一、把汉字写法规范成 ASCII 之后，两边逐行相同（排版那一层是一致的）；
 // 二、自举那一侧确实保留了汉字（免得哪一天它悄悄也规范了，而这条没人看）。
-const 规范 = (s) => s.replace(/返回/g, "return").replace(/若/g, "if").replace(/定/g, "let").replace(/当/g, "while");
+// 十五个词的规范（长词在前，免得 否则 被 若 那一条先吃掉）。这份表要与
+// src/lexer.mjs 的 关键字别名 同步 —— 那边一加词，这里就要跟，否则这条判据
+// 会以「排版不同」的样子报错，而真正的原因是它认不出新写法。
+const 规范 = (s) => s
+  .replace(/否则/g, "else").replace(/效果串/g, "effects").replace(/不变式/g, "invariant")
+  .replace(/返回/g, "return").replace(/引入/g, "import").replace(/常量/g, "const")
+  .replace(/借用/g, "borrow").replace(/拥有/g, "own").replace(/托管/g, "managed")
+  .replace(/要求/g, "requires").replace(/保证/g, "ensures")
+  .replace(/若/g, "if").replace(/定/g, "let").replace(/当/g, "while").replace(/作/g, "as");
 for (const 路 of ["examples/arith.hmoca", "examples/over.hmoca", "examples/twice.hmoca"]) {
   const 源 = 读(路);
   const 乙 = String(format(源, { quiet: true }).text).trim();

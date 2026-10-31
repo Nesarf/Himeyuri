@@ -14,7 +14,7 @@
 // 那与「帧是数据，不是字节」并不矛盾——这一层只是把文件读成字符，判定仍在语言里做。
 
 // 读一个文件成「字节串」：每字符一个字节。需要 file 效果。
-fn 读字节(路径: String) -> String effects(file) {
+fn 读字节(路径: String) -> String 效果串(file) {
   返回 read_text(路径, "latin1")
 }
 

@@ -339,7 +339,7 @@ fn 高半(三十二: Int) {
 }
 
 // 探针：给两个十六进制数，交回加、减、乘的低半与高半。
-fn main() -> Int effects(process) {
+fn main() -> Int 效果串(process) {
   定 参 = argv()
   若 len(参) < 3 {
     print("用法：hmyr self/bigint.hmyr <十六进制> <十六进制>" + chr(10))

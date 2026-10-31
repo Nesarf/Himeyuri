@@ -61,7 +61,7 @@ fn 文件名(名: String) -> String {
   var 出 = ""
   var i = 0
   当 i < len(小) {
-    若 小[i] == "_" { 出 = 出 + "-" } else { 出 = 出 + 小[i] }
+    若 小[i] == "_" { 出 = 出 + "-" } 否则 { 出 = 出 + 小[i] }
     i = i + 1
   }
   返回 出
@@ -96,7 +96,7 @@ fn 写表(名: String, 说: String, 起们: Int, 止们: Int, 目录: String) ->
       文 = 文 + 行 + "," + chr(10)
       行 = "  "
       列 = 0
-    } else 若 k + 1 < len(平) {
+    } 否则 若 k + 1 < len(平) {
       行 = 行 + ", "
     }
     k = k + 1
@@ -109,7 +109,7 @@ fn 写表(名: String, 说: String, 起们: Int, 止们: Int, 目录: String) ->
   返回 段数
 }
 
-fn main() -> Int effects(file) {
+fn main() -> Int 效果串(file) {
   定 参 = argv()
   若 len(参) < 3 {
     print("用法：hmyr self/ucd-c.hmyr <输入.txt> <输出目录>" + chr(10))
@@ -138,7 +138,7 @@ fn main() -> Int effects(file) {
             字起 = 果[0]
             字止 = 果[1]
             字上 = cp
-          } else 若 len(类) > 0 && slice(类, 0, 1) == "M" {
+          } 否则 若 len(类) > 0 && slice(类, 0, 1) == "M" {
             定 果2 = 收(记起, 记止, 记上, cp)
             记起 = 果2[0]
             记止 = 果2[1]

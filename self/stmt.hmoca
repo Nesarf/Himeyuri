@@ -1,4 +1,4 @@
-import "./chain.hmoca"
+引入 "./chain.hmoca"
 
 // 用 Himeyuri 写的第六件：语句级解析。
 //
@@ -88,7 +88,7 @@ fn block(tokens: Int, i: Int) {
   返回 {list: (one.node,) + rest.list, next: rest.next}
 }
 
-// 若：条件是一个表达式，然后是一个块，可选 else（块或单条语句）。
+// 若：条件是一个表达式，然后是一个块，可选 否则（块或单条语句）。
 fn parse_if(tokens: Int, i: Int) {
   // 「若 这个节点在哪」= 若 关键字在哪。调用方传进来的是关键字之后那一位，
   // 所以往回看一格；位置与宿主那边同一个规矩（If 记关键字的位置）。
@@ -108,7 +108,7 @@ fn parse_if(tokens: Int, i: Int) {
       定 other = block(tokens, e + 1)
       otherwise = other.list
       next = other.next
-    } else {
+    } 否则 {
       定 one = statement(tokens, e)
       otherwise = (one.node,)
       next = one.next
@@ -118,7 +118,7 @@ fn parse_if(tokens: Int, i: Int) {
 }
 
 // 当：条件是一个表达式，然后是一个块。
-// 与 若 相比它没有 else——而「什么时候停」由条件说，这一层不管。
+// 与 若 相比它没有 否则——而「什么时候停」由条件说，这一层不管。
 fn parse_while(tokens: Int, i: Int) {
   var 位 = tokens[0]
   若 i > 0 { 位 = tokens[i - 1] }

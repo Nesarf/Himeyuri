@@ -1,4 +1,4 @@
-import "./stmt.hmoca"
+引入 "./stmt.hmoca"
 
 // 用 Himeyuri 写的第八件：函数体。
 //
@@ -62,10 +62,10 @@ fn find_body(tokens: Int, i: Int) -> Int {
     若 is_punct(t, "{") { 返回 k }
     若 is_punct(t, "(") {
       k = skip_group(tokens, k, "(", ")")
-    } else {
+    } 否则 {
       若 is_punct(t, "->") {
         k = skip_type(tokens, k + 1)
-      } else {
+      } 否则 {
         k = k + 1
       }
     }
@@ -141,7 +141,7 @@ fn next_fn(tokens: Int, i: Int) -> Int {
   返回 next_fn(tokens, i + 1)
 }
 
-// 顶层声明只认两个词：fn 与 const。词法把它们都标成 ident，
+// 顶层声明只认两个词：fn 与 常量。词法把它们都标成 ident，
 // 而 stmt 那边判关键字也是看 text（is_word 不看 kind），这里照同一条规矩。
 fn next_decl(tokens: Int, i: Int) -> Int {
   若 i >= len(tokens) { 返回 -1 }
@@ -150,7 +150,7 @@ fn next_decl(tokens: Int, i: Int) -> Int {
   返回 next_decl(tokens, i + 1)
 }
 
-// 一行在哪里结束。顶层 const 的值到行尾为止 —— 而 chain 交回的 next 是
+// 一行在哪里结束。顶层 常量 的值到行尾为止 —— 而 chain 交回的 next 是
 // 「用掉了几个 token」，不负责替你断行，所以这里先切出一段交给它。
 fn 行尾位(tokens: Int, i: Int) -> Int {
   若 i >= len(tokens) { 返回 i }
@@ -174,9 +174,9 @@ fn 切段(tokens: Int, 起: Int, 止: Int, acc: Int) -> Int {
   返回 切段(tokens, 起 + 1, 止, acc + (tokens[起],))
 }
 
-// 一条 const 声明：交回 {name, value, next}。value 是 chain 搭出来的表达式节点。
+// 一条 常量 声明：交回 {name, value, next}。value 是 chain 搭出来的表达式节点。
 //
-// 它只认「const 名 = 表达式」这一种写法 —— 与宿主那一份 parseConst 同一个形状。
+// 它只认「常量 名 = 表达式」这一种写法 —— 与宿主那一份 parseConst 同一个形状。
 // 认不出来的部分（没有等号、表达式搭不起来）交回 -1，让上层跳过而不是猜。
 fn 常量在(tokens: Int, at: Int, 可写: Int) {
   定 末 = 行尾位(tokens, at + 1)
@@ -233,10 +233,10 @@ fn 收名从(tokens: Int, i: Int, 末: Int, 等下个: Bool, 深: Int, acc: Int)
   若 深 > 0 { 返回 收名从(tokens, i + 1, 末, 等下个, 深, acc) }
   若 t.kind == "punct" && t.text == "," { 返回 收名从(tokens, i + 1, 末, true, 深, acc) }
   若 等下个 && t.kind == "ident" {
-    // borrow 与 own 是参数上的前缀词，名字在它们后面一格 —— 所以收到前缀之后
-    // 继续等下一个。原来一律置 false，于是 fn 借(borrow 格: Int) 只交出
+    // 借用 与 拥有 是参数上的前缀词，名字在它们后面一格 —— 所以收到前缀之后
+    // 继续等下一个。原来一律置 false，于是 fn 借(借用 格: Int) 只交出
     // ("borrow",)，名字被吞掉；而这正是「跨模块的转移」看不见的原因
-    // （2026-11-02 实测：探针打出 参个数=1、参0=borrow）。
+    // （2026-11-02 实测：探针打出 参个数=1、参0=借用）。
     若 t.text == "borrow" || t.text == "own" {
       返回 收名从(tokens, i + 1, 末, true, 深, acc + (t.text,))
     }
@@ -260,9 +260,9 @@ fn 找词(tokens: Int, i: Int, 末: Int, w: String) -> Int {
   返回 找词(tokens, i + 1, 末, w)
 }
 
-// 效果名册：在右括号与 { 之间找 effects( … )，收里面的名字。
+// 效果名册：在右括号与 { 之间找 效果串( … )，收里面的名字。
 //
-// 为什么需要它：函数表以前只收（名字, 参数名, 语句们），于是「声明了 effects(file)」
+// 为什么需要它：函数表以前只收（名字, 参数名, 语句们），于是「声明了 效果串(file)」
 // 这件事在自举那一层根本不存在 —— 结果是凡声明效果的程序一调要效果的函数就撞 HMYR-內-001，
 // 只能退回最小求值器跑。收进来之后，那一层才谈得上核对。
 fn 效果们(tokens: Int, 起: Int, 末: Int) {
@@ -333,7 +333,7 @@ fn 切片(tokens: Int, i: Int, 末: Int, acc: Int) {
 // macro 名(参数) = 表达式 的解析，交回 {name, params, body, next}。
 //
 // 表达式交给 chain：它从 0 开始吃一串 token，所以这里先切出「= 之后到行尾」那一段。
-// 参数收的是字符串元组 —— 与 fn 的参数同一套收法，只是宏的参数没有 borrow / own
+// 参数收的是字符串元组 —— 与 fn 的参数同一套收法，只是宏的参数没有 借用 / 拥有
 // 那种前缀，它们就是名字。
 fn 宏声明(tokens: Int, at: Int) {
   若 at + 1 >= len(tokens) { 返回 {name: "", params: (), body: (), next: at + 1} }
@@ -355,7 +355,7 @@ fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
   定 at = next_decl(tokens, i)
   若 at < 0 { 返回 {fns: acc, consts: 常量们, next: len(tokens)} }
   定 位 = tokens[at]
-  // const 与 var 走另一条路：它们没有函数体，值到行尾为止，而名字、值与「可写吗」
+  // 常量 与 var 走另一条路：它们没有函数体，值到行尾为止，而名字、值与「可写吗」
   // 一起收进常量表。这张表是「模块级名字」的通道 —— 三区模型 §4.2 要的容器也在其中。
   若 位.text == "const" || 位.text == "var" {
     var 是var = 0
@@ -367,7 +367,7 @@ fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
   // macro 名(参数) = 表达式 —— 宏声明。
   //
   // 为什么要在这一层认它：宏的展开在宿主那一边（src/expand.mjs 的 展开模块），
-  // 而它要的是一条 kind 为 Macro 的声明。自举层原来只认 fn / const / var，
+  // 而它要的是一条 kind 为 Macro 的声明。自举层原来只认 fn / 常量 / var，
   // 于是宏声明被整个跳过、树里没有它，展开那一步拿到空表 —— macro 那套在桥这条
   // 路上报「没有这个名字 两次」（2026-11-02 实测）。
   若 位.text == "macro" {
@@ -390,7 +390,7 @@ fn decls_from(tokens: Int, i: Int, acc: Int, 常量们: Int) {
   // 第八件：这个声明是不是 pub。原来不收它，于是「可见性第一步」与「命名空间」在
   // 自举层那条路上永远看不到 pub —— 跨模块调用一律被当成私有的（2026-11-02 实测：
   // 桥交出的 pub 恒为 false，而 namespace 那套的「写 pub 就不报」因此恒红）。
-  // pub 写在 fn 前一个记号：next_decl 只停在 fn/const/var，所以它被跳过了。
+  // pub 写在 fn 前一个记号：next_decl 只停在 fn/常量/var，所以它被跳过了。
   var 公开 = 0
   若 at > 0 && tokens[at - 1].kind == "ident" && tokens[at - 1].text == "pub" { 公开 = 1 }
   返回 decls_from(tokens, got.next, acc + ((名, 参名册, got.list, 效们, 位.line, 位.column, 返型, 公开),), 常量们)

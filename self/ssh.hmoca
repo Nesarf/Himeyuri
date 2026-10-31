@@ -11,8 +11,8 @@
 //
 // 这一版只做「解出来」：把四段取出来、看到里面是什么。验签要等 Ed25519 的点解压
 // 与标量模 L —— 那是下一层。
-import "./sha512.hmoca"
-import "./bigint.hmoca"
+引入 "./sha512.hmoca"
+引入 "./bigint.hmoca"
 
 fn 值(c: Int) -> Int {
   若 c >= 65 && c <= 90 { 返回 c - 65 }
@@ -33,7 +33,7 @@ fn 解base64(s: String) {
     定 c = ord(slice(s, i, i + 1))
     若 c == 61 {
       i = len(s)
-    } else {
+    } 否则 {
       若 c != 10 && c != 13 && c != 32 {
         攒 = 攒 * 64 + 值(c)
         位数 = 位数 + 6
@@ -202,7 +202,7 @@ pub fn 解签名(文本: String) {
   }
 }
 
-fn main() -> Int effects(process) {
+fn main() -> Int 效果串(process) {
   定 参 = argv()
   若 len(参) < 2 {
     print("用法：hmyr self/ssh.hmyr <base64>" + chr(10))

@@ -34,6 +34,9 @@ export const KEYWORDS = new Set([
 // （区 四十六次、真 十次、函数 八次……），要先处理完那些再往这张表里加。
 export const 关键字别名 = {
   返回: "return", 若: "if", 定: "let", 当: "while",
+  效果串: "effects", 引入: "import",
+  否则: "else", 常量: "const", 借用: "borrow", 拥有: "own",
+  作: "as", 托管: "managed", 要求: "requires", 保证: "ensures", 不变式: "invariant",
 };
 
 // Longest first, so that -> is not read as - followed by >.

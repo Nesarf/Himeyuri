@@ -321,7 +321,7 @@ fn 推键(键: String) -> Int { 返回 key_push(键) }
 pub fn 开始收键() -> Bool { 返回 key_start() }
 
 // 跑到有键为止（或跑满上限）。返回实际跑了几帧——这就是「按 q 退出」的形状。
-fn 跑到按键从(布: Int, 栈: Int, bpm: Int, 帧号: Int, 最多帧: Int, 每帧毫秒: Int) -> Int effects(process) {
+fn 跑到按键从(布: Int, 栈: Int, bpm: Int, 帧号: Int, 最多帧: Int, 每帧毫秒: Int) -> Int 效果串(process) {
   若 帧号 >= 最多帧 { 返回 帧号 }
   若 有键() { 返回 帧号 }
   定 经过 = 帧号 * 每帧毫秒
@@ -331,7 +331,7 @@ fn 跑到按键从(布: Int, 栈: Int, bpm: Int, 帧号: Int, 最多帧: Int, �
   返回 跑到按键从(布, 栈, bpm, 帧号 + 1, 最多帧, 每帧毫秒)
 }
 
-fn 跑到按键(栈: Int, bpm: Int, 每帧毫秒: Int, 最多帧: Int) -> Int effects(process) {
+fn 跑到按键(栈: Int, bpm: Int, 每帧毫秒: Int, 最多帧: Int) -> Int 效果串(process) {
   返回 跑到按键从(空画布(2, 16), 栈, bpm, 0, 最多帧, 每帧毫秒)
 }
 
@@ -341,7 +341,7 @@ fn 跑到按键(栈: Int, bpm: Int, 每帧毫秒: Int, 最多帧: Int) -> Int ef
 // 标题就是「拍上的场景」返回的那个名字——那张表本来是场景表，这里借它当字样表，
 // 所以同一个机制两处受用，而不必再造一份。
 
-fn demo从(布: Int, 表: Int, 帧号: Int, 帧数: Int) -> Int effects(process) {
+fn demo从(布: Int, 表: Int, 帧号: Int, 帧数: Int) -> Int 效果串(process) {
   若 帧号 >= 帧数 { 返回 帧号 }
   若 有键() { 返回 帧号 }
   定 拍 = 当前拍(帧号 * 50, 1200)
@@ -352,7 +352,7 @@ fn demo从(布: Int, 表: Int, 帧号: Int, 帧数: Int) -> Int effects(process)
   返回 demo从(布, 表, 帧号 + 1, 帧数)
 }
 
-fn demo(表: Int, 帧数: Int) -> Int effects(process) {
+fn demo(表: Int, 帧数: Int) -> Int 效果串(process) {
   返回 demo从(空画布(9, 26), 表, 0, 帧数)
 }
 

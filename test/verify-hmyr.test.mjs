@@ -59,7 +59,8 @@ const 源路 = path.join(ROOT, "self/verify.hmoca");
 ok("self/verify.hmoca 在", fs.existsSync(源路));
 const 层 = loadUnit(源路);
 ok("加载没有诊断", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
-ok("它 import 了 sha256（入口抢位那个错的前提）", fs.readFileSync(源路, "utf8").includes('import "./sha256.hmoca"'));
+// 两种写法都认：源码里的 import 已经换成 引入（2026-11-02）
+ok("它 import 了 sha256（入口抢位那个错的前提）", /(?:import|引入) "\.\/sha256\.hmoca"/.test(fs.readFileSync(源路, "utf8")));
 
 const 跑 = (清单路) => {
   const 出 = [], 错 = [];

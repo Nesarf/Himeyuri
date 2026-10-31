@@ -86,11 +86,11 @@ fn 摘要(报告: Int) -> String {
   返回 "超出阈值：" + 译
 }
 
-fn 读报告(路径: String) -> Int effects(file) {
+fn 读报告(路径: String) -> Int 效果串(file) {
   返回 解析(read_text(路径, "utf8"))[0]
 }
 
-fn main() -> Int effects(file) {
+fn main() -> Int 效果串(file) {
   定 r = 读报告(temp_path("icc-report.json"))
   print(摘要(r) + "\n")
   print("源图带 ICC：" + str(源图带ICC(r)) + " · 目标：" + 目标名字(r) + "\n")

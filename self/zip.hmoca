@@ -1,7 +1,7 @@
 // ZIP 容器：stored 与 deflate 两种成员。用自家写的压缩器与 CRC32，不借 zlib。
 //
-// 为什么压缩那一段是复制过来的：import 会把两份源码合成一份，而 self/deflate.hmyr
-// 与 self/zip.hmyr 各有一个 main —— 合并的规矩是「重名先到者赢」，于是 import 进来的
+// 为什么压缩那一段是复制过来的：引入 会把两份源码合成一份，而 self/deflate.hmyr
+// 与 self/zip.hmyr 各有一个 main —— 合并的规矩是「重名先到者赢」，于是 引入 进来的
 // 那份 main 会赢，zip 就变成了一个压缩工具。复制一份核心函数是这里最省事的诚实做法，
 // 代价是同一个算法有两处；改的时候两处一起改，注释里互相指一下。
 //
@@ -249,7 +249,7 @@ fn 找匹配(字节串: Int, i: Int) {
     var 长 = 0
     var 继续 = true
     当 继续 && 长 < 258 && i + 长 < 总 && j + 长 < 总 {
-      若 字节串[i + 长] == 字节串[j + 长] { 长 = 长 + 1 } else { 继续 = false }
+      若 字节串[i + 长] == 字节串[j + 长] { 长 = 长 + 1 } 否则 { 继续 = false }
     }
     若 长 > 最 {
       最 = 长
@@ -275,7 +275,7 @@ fn 固定压(字节串: Int) {
       状 = 放位(状, 反转位(距[1], 5), 5)
       若 距[2] > 0 { 状 = 放位(状, 匹.距 - 距[0], 距[2]) }
       i = i + 匹.长
-    } else {
+    } 否则 {
       定 b = to_int(字节串[i])
       状 = 放位(状, 反转位(符号码(b), 符号位数(b)), 符号位数(b))
       i = i + 1
@@ -323,7 +323,7 @@ pub fn 正规名(路: String) -> String {
   var 出 = ""
   var i = 0
   当 i < len(路) {
-    若 路[i] == "\\" { 出 = 出 + "/" } else { 出 = 出 + 路[i] }
+    若 路[i] == "\\" { 出 = 出 + "/" } 否则 { 出 = 出 + 路[i] }
     i = i + 1
   }
   返回 出
@@ -331,7 +331,7 @@ pub fn 正规名(路: String) -> String {
 
 // 一个成员：本地头 + 负载，外加它在中央目录里的那一条。
 // 它自己读文件，所以自己声明 file 效果 —— 靠调用者代传是解释器的宽容，字节码那台不认。
-pub fn 成员(路: String, 名: String, 压: Bool, 偏移: Int) effects(file) {
+pub fn 成员(路: String, 名: String, 压: Bool, 偏移: Int) 效果串(file) {
   定 数据 = read_bytes(路)
   定 名册 = 写串(名)
   定 crc = crc32(数据)
@@ -352,7 +352,7 @@ pub fn 成员(路: String, 名: String, 压: Bool, 偏移: Int) effects(file) {
   返回 {块: 块, 中心: 中心, 原始: 原始, 压缩: 压缩}
 }
 
-fn main() -> Int effects(file) {
+fn main() -> Int 效果串(file) {
   定 参 = argv()
   var 压 = false
   var 多 = false
@@ -412,7 +412,7 @@ fn main() -> Int effects(file) {
   var 短名 = ""
   i = 0
   当 i < len(名) {
-    若 名[i] == "/" || 名[i] == "\\" { 短名 = "" } else { 短名 = 短名 + 名[i] }
+    若 名[i] == "/" || 名[i] == "\\" { 短名 = "" } 否则 { 短名 = 短名 + 名[i] }
     i = i + 1
   }
   定 名册 = 写串(短名)

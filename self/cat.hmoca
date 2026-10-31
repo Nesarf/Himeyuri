@@ -11,7 +11,7 @@ fn main() -> Int {
     定 r = read_stdin_line()
     若 len(r.行) > 0 {
       print(r.行 + chr(10))
-    } else 若 !r.结束 {
+    } 否则 若 !r.结束 {
       // 空行也是行：照原样写一个换行，不然它会和 EOF 混在一起。
       print(chr(10))
     }

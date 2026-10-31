@@ -31,7 +31,7 @@ fn 转移(态: String, 动作: String) -> Int {
   返回 (态, "unknown action")
 }
 
-fn main() -> Int effects(process, file) {
+fn main() -> Int 效果串(process, file) {
   var 没读到 = read_stdin_line()
   当 没读到.结束 == false {
     定 行 = 没读到.行
@@ -40,7 +40,7 @@ fn main() -> Int effects(process, file) {
       定 空位 = 找空位(行, 0)
       若 空位 < 0 {
         print("bad-line" + chr(10))
-      } else {
+      } 否则 {
         定 态 = 前段(行, 空位, 0, "")
         定 动作 = 后段从(行, 空位 + 1, 0, "")
         定 r = 转移(态, 动作)

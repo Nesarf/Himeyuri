@@ -8,8 +8,8 @@
 //
 // 依赖写清楚：画布、换行、贴行都来自 term.hmyr。
 
-import "./term.hmoca"
-import "./task.hmoca"
+引入 "./term.hmoca"
+引入 "./task.hmoca"
 
 fn 新表面(名: String, 行: Int, 列: Int) -> Int {
   返回 {name: 名, rows: 行, cols: 列, x: 0, y: 0, owner: -1, 布: 空画布(行, 列)}
@@ -94,7 +94,7 @@ fn 脚本路径() -> String {
 
 // 呈现到某个后端，并且**会真的动世界**（native 要起一个进程）。
 // 与上面的 呈现 分开：那一个是纯的，只交出字符串；这一个要 process 效果。
-fn 呈现进程(后端: String, 布: Int, 文字: String) -> Int effects(process) {
+fn 呈现进程(后端: String, 布: Int, 文字: String) -> Int 效果串(process) {
   若 后端 == "term" { 返回 {ok: true, text: 呈现("term", 布)} }
   若 后端 == "native" {
     定 r = run_program("powershell", ("-NoProfile", "-STA", "-File", 脚本路径(),
@@ -106,7 +106,7 @@ fn 呈现进程(后端: String, 布: Int, 文字: String) -> Int effects(process
 
 // 呈现一张图像（像素布导出的 PNG）。与 呈现进程 分开一个入口，
 // 因为它们的参数不同：一个是「一段文字」，一个是「一个文件」。
-fn 呈现图像(后端: String, 图像路径: String) -> Int effects(process) {
+fn 呈现图像(后端: String, 图像路径: String) -> Int 效果串(process) {
   若 后端 == "native" {
     定 r = run_program("powershell", ("-NoProfile", "-STA", "-File", 脚本路径(),
       "-Image", 图像路径, "-NoShow"), 20000, "utf8")
@@ -115,7 +115,7 @@ fn 呈现图像(后端: String, 图像路径: String) -> Int effects(process) {
   返回 {ok: false, text: "这个后端还不呈现图像：" + 后端}
 }
 
-fn main() -> Int effects(process) {
+fn main() -> Int 效果串(process) {
   定 主 = 空画布(6, 24)
   定 a = 写(放(新表面("A", 2, 10), 1, 1), 0, 0, "子窗口 A")
   定 b = 写(放(新表面("B", 2, 10), 12, 3), 0, 0, "子窗口 B")

@@ -30,13 +30,13 @@ fn 跑一个(名字: String, 路: String) -> Int {
   定 错 = 最后一行(r.stderr)
   若 len(错) > 0 {
     print("  不通过  " + 名字 + "  " + 最后一行(r.stdout) + "  " + 错 + chr(10))
-  } else {
+  } 否则 {
     print("  不通过  " + 名字 + "  " + 最后一行(r.stdout) + chr(10))
   }
   返回 1
 }
 
-fn main() -> Int effects(file, process) {
+fn main() -> Int 效果串(file, process) {
   定 参 = argv()
   var 清单路 = "tools/suite-list.txt"
   若 len(参) > 1 { 清单路 = 参[1] }
@@ -50,7 +50,7 @@ fn main() -> Int effects(file, process) {
     若 len(行) > 0 {
       定 列 = split(行, chr(9))
       若 len(列) >= 2 {
-        若 跑一个(列[0], 列[1]) == 0 { 过 = 过 + 1 } else { 败 = 败 + 1 }
+        若 跑一个(列[0], 列[1]) == 0 { 过 = 过 + 1 } 否则 { 败 = 败 + 1 }
       }
     }
     i = i + 1

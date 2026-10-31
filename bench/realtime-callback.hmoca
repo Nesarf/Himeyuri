@@ -6,7 +6,7 @@
 // 它不证明「零停顿」。它给那条承诺一支标尺：bench/realtime.mjs 量它的最坏耗时
 // 与分配量，而那两个数字才是「离零停顿还有多远」的证据。
 
-fn 回调(块: Int, n: Int) -> Int effects(realtime) {
+fn 回调(块: Int, n: Int) -> Int 效果串(realtime) {
   var s = 0
   var i = 0
   当 i < n {
@@ -21,7 +21,7 @@ fn 回调(块: Int, n: Int) -> Int effects(realtime) {
   返回 s
 }
 
-fn main() -> Int effects(process) {
+fn main() -> Int 效果串(process) {
   定 区 = arena()
   定 块 = 区.alloc(64)
   var k = 0

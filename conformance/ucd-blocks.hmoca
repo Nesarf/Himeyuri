@@ -1,4 +1,4 @@
-import "../runtime/ucd/blocks.hmoca"
+引入 "../runtime/ucd/blocks.hmoca"
 
 fn main() -> Int {
   若 块名(65) != "Basic Latin" {

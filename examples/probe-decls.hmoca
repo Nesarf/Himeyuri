@@ -4,10 +4,10 @@
 // 为什么需要它（2026-11-01）：默认路径跑 run.hmoca 时在 选[2] 那里报
 // index 9 outside length 9，而同一份在 C 机器上跑得好好的。两侧对「函数声明」
 // 这个元组的表示应当一致，所以先问形状，不猜。
-import "../self/lex.hmoca"
-import "../self/body.hmoca"
+引入 "../self/lex.hmoca"
+引入 "../self/body.hmoca"
 
-fn main() -> Int effects(process) {
+fn main() -> Int 效果串(process) {
   定 源码 = "fn main() -> Int {\n  print(str(6 * 7) + chr(10))\n  return 0\n}\n"
   定 tokens = scan_lines(源码)
   print("tokens=" + str(len(tokens)) + chr(10))

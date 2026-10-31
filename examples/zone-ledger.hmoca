@@ -11,7 +11,7 @@
 //   以及 C 那台（vm/hmyr.c，用种子编了再跑）。
 // 判据在 test/zone-self.test.mjs 的第八节。
 
-fn main() -> Int effects(process) {
+fn main() -> Int 效果串(process) {
   定 清单 = "阿一:12|乙:7|丙:30|丁:5|"
   定 区 = arena()
   var 起点 = 0

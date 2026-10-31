@@ -41,7 +41,12 @@ const 关键字 = new Set(["import","as","pub","fn","type","const","effect","eff
 // 汉字关键字的四个词，与 src/lexer.mjs 的 关键字别名 是同一张表。
 // 这一份不 import 那一份：src/lexer.mjs 拉着 node:path 与文件系统，而子集这一层
 // 是 Stage 0 里最干净的一格。副本会漂移，所以 lexer 套件里有一条判据盯着两边相等。
-const 关键字别名 = { 返回: "return", 若: "if", 定: "let", 当: "while" };
+const 关键字别名 = {
+  返回: "return", 若: "if", 定: "let", 当: "while",
+  效果串: "effects", 引入: "import",
+  否则: "else", 常量: "const", 借用: "borrow", 拥有: "own",
+  作: "as", 托管: "managed", 要求: "requires", 保证: "ensures", 不变式: "invariant",
+};
 
 export const 切 = (源) => {
   const 出 = [];

@@ -6,8 +6,8 @@
 //
 // 公式取自「dbl-2008-hwcd」与「add-2008-hwcd-3」这两套（a = -1 的那一支），
 // 也就是 RFC 8032 与多数实现用的那两条。
-import "./bigint.hmoca"
-import "./sha512.hmoca"
+引入 "./bigint.hmoca"
+引入 "./sha512.hmoca"
 
 fn d_常量() {
   返回 从十六进制("52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3")
@@ -156,7 +156,7 @@ fn 从字节串(字节串: Int) {
     定 值 = to_int(字节串[i])
     若 i % 2 == 0 {
       设(组, 位, 组[位] + 值)
-    } else {
+    } 否则 {
       设(组, 位, 组[位] + 值 * 256)
     }
     i = i + 1
@@ -178,7 +178,7 @@ fn 指数开方() {
 }
 
 // (p-1)/4 = 2^253 - 5：2 的这个次幂就是 sqrt(-1)。
-fn sqrt负一() effects(process) {
+fn sqrt负一() 效果串(process) {
   定 组 = 零组(16)
   var i = 0
   当 i < 16 {
@@ -194,7 +194,7 @@ fn sqrt负一() effects(process) {
 
 // 32 字节 → 点（扩展坐标，Z = 1）。符号位不合法的情形这一版不报错，
 // 交回的点仍在曲线上 —— 验签那一步会因为方程不成立而拒绝。
-fn 解压(字节串: Int) effects(process) {
+fn 解压(字节串: Int) 效果串(process) {
   定 y = 从字节串(字节串)
   定 顶 = 位右移(y[15], 15)
   设(y, 15, 位与(y[15], 32767))
@@ -283,12 +283,12 @@ pub fn 前几(字节串: Int, n: Int) {
 
 // 诊断开关：验签还没对上，把这一段留着但关掉 —— 下一轮打开就能看见中间值。
 // 诊断开关：把中间值打印出来用。默认关，开的时候把返回值改成非空串。
-fn 参全局() -> String effects(process) {
+fn 参全局() -> String 效果串(process) {
   返回 ""
 }
 
 // 验签：公钥 32 字节、R 32 字节、S 32 字节、消息字节。
-pub fn 验签(公钥们: Int, R们: Int, S们: Int, 消息: Int) effects(process) {
+pub fn 验签(公钥们: Int, R们: Int, S们: Int, 消息: Int) 效果串(process) {
   定 A = 解压(公钥们)
   定 R点 = 解压(R们)
   定 哈 = sha512字节(前几(R们, 32) + 前几(公钥们, 32) + 消息)
@@ -317,7 +317,7 @@ pub fn 验签(公钥们: Int, R们: Int, S们: Int, 消息: Int) effects(process
 
 // 探针：给一个标量（十六进制），交回「标量乘基点」的仿射 x 与 y；
 // 给 --解压 加 32 字节十六进制，交回解出来的点的 x 与 y。
-fn main() -> Int effects(process) {
+fn main() -> Int 效果串(process) {
   定 参 = argv()
   若 len(参) < 2 {
     print("用法：hmyr self/curve.hmyr <标量十六进制>" + chr(10))
@@ -350,7 +350,7 @@ fn main() -> Int effects(process) {
     定 好 = 验签(公钥们, 前几(签, 32), 前几(从第(签, 32), 32), 消)
     若 好 {
       print("通过" + chr(10))
-    } else {
+    } 否则 {
       print("不通过" + chr(10))
     }
     返回 0

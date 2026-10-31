@@ -18,7 +18,7 @@
 //
 // 三台机器跑它输出逐行相同：默认路径、--compile、C 那台；那块板子是第四台。
 // 判据在 test/zone-self.test.mjs 第九节。
-fn main() -> Int effects(process) {
+fn main() -> Int 效果串(process) {
   定 区 = arena()
 
   var 块数 = 0

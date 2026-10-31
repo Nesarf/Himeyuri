@@ -32,7 +32,7 @@ fn 拼列表(命令们: Int) -> String {
 //
 // 超时是**每条**的上限（脚本里逐条 Wait-Job），不是总时长——因为并行时「总时长」
 // 取决于最长的那一条，把它写死反而会误杀。
-fn 并行跑(命令们: Int, 超时秒: Int) -> Int effects(process, file) {
+fn 并行跑(命令们: Int, 超时秒: Int) -> Int 效果串(process, file) {
   write_text(列表路径(), 拼列表(命令们), "utf8")
   定 r = run_program("powershell", ("-NoProfile", "-STA", "-File", 并行脚本(),
     "-List", 列表路径(), "-Out", 结果路径(), "-TimeoutSec", str(超时秒)), 120000, "utf8")
@@ -40,7 +40,7 @@ fn 并行跑(命令们: Int, 超时秒: Int) -> Int effects(process, file) {
   返回 {ok: true, text: read_text(结果路径(), "utf8"), 报: r.stdout}
 }
 
-fn main() -> Int effects(process, file) {
+fn main() -> Int 效果串(process, file) {
   定 r = 并行跑(("cmd /c \"echo one\"", "cmd /c \"echo two\""), 20)
   print("ok " + str(r.ok) + " · " + str(len(r.text)) + " 字节\n")
   返回 0

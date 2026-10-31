@@ -138,7 +138,7 @@ fn 拼(们: Int) -> String {
   返回 出
 }
 
-fn 走(路径: String, 出: Int, 次: Int) -> Int effects(file) {
+fn 走(路径: String, 出: Int, 次: Int) -> Int 效果串(file) {
   若 次 > 24 { 返回 出 }
   定 名册 = read_dir(路径)
   var 收 = 出
@@ -149,7 +149,7 @@ fn 走(路径: String, 出: Int, 次: Int) -> Int effects(file) {
       定 全 = 路径 + "/" + 名
       若 is_dir(全) {
         收 = 走(全, 收, 次 + 1)
-      } else {
+      } 否则 {
         若 是文档(名) { 收 = 收 + (全,) }
       }
     }
@@ -158,7 +158,7 @@ fn 走(路径: String, 出: Int, 次: Int) -> Int effects(file) {
   返回 收
 }
 
-fn main() -> Int effects(file, process) {
+fn main() -> Int 效果串(file, process) {
   // 没有参数时走全仓；给了参数就只走那一个目录（先拿 design/ 试性能）。
   定 参们 = argv()
   var 起 = "."
@@ -173,7 +173,7 @@ fn main() -> Int effects(file, process) {
     定 相对 = slice(路, 2, len(路))
     若 len(记们) == 0 {
       print("  [通过] " + 相对 + chr(10))
-    } else {
+    } 否则 {
       坏 = 坏 + 1
       print("  [不通过] " + 相对 + "  " + 拼(记们) + chr(10))
     }

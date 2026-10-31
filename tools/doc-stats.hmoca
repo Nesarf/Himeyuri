@@ -30,7 +30,7 @@ fn 数行(内容: String) -> Int {
   返回 len(段)
 }
 
-fn 数份(相对: String, 后缀: String, 次: Int) -> Int effects(file) {
+fn 数份(相对: String, 后缀: String, 次: Int) -> Int 效果串(file) {
   若 次 > 24 { 返回 0 }
   若 is_dir(相对) == false { 返回 0 }
   定 名册 = read_dir(相对)
@@ -40,7 +40,7 @@ fn 数份(相对: String, 后缀: String, 次: Int) -> Int effects(file) {
     定 全 = 相对 + "/" + 名册[i]
     若 is_dir(全) {
       份 = 份 + 数份(全, 后缀, 次 + 1)
-    } else {
+    } 否则 {
       若 尾是(名册[i], 后缀) { 份 = 份 + 1 }
     }
     i = i + 1
@@ -48,7 +48,7 @@ fn 数份(相对: String, 后缀: String, 次: Int) -> Int effects(file) {
   返回 份
 }
 
-fn 数行总(相对: String, 后缀: String, 次: Int) -> Int effects(file) {
+fn 数行总(相对: String, 后缀: String, 次: Int) -> Int 效果串(file) {
   若 次 > 24 { 返回 0 }
   若 is_dir(相对) == false { 返回 0 }
   定 名册 = read_dir(相对)
@@ -58,7 +58,7 @@ fn 数行总(相对: String, 后缀: String, 次: Int) -> Int effects(file) {
     定 全 = 相对 + "/" + 名册[i]
     若 is_dir(全) {
       行 = 行 + 数行总(全, 后缀, 次 + 1)
-    } else {
+    } 否则 {
       若 尾是(名册[i], 后缀) { 行 = 行 + 数行(read_text(全, "utf8")) }
     }
     i = i + 1
@@ -66,7 +66,7 @@ fn 数行总(相对: String, 后缀: String, 次: Int) -> Int effects(file) {
   返回 行
 }
 
-fn main() -> Int effects(file, process) {
+fn main() -> Int 效果串(file, process) {
   定 参们 = argv()
   var 起 = "design"
   若 len(参们) > 1 { 起 = 参们[1] }

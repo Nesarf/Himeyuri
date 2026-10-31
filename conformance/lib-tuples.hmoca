@@ -1,4 +1,4 @@
-import "../lib/tuples.hmoca"
+引入 "../lib/tuples.hmoca"
 
 fn 检(好: Bool, 号: Int) -> Int {
   若 好 {

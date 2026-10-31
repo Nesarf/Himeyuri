@@ -1,4 +1,4 @@
-import "../lib/json.hmoca"
+引入 "../lib/json.hmoca"
 
 fn 检(好: Bool, 号: Int) -> Int {
   若 好 {
