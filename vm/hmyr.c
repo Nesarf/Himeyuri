@@ -2557,6 +2557,11 @@ static void gc_标根(void) {
    * （偏移 → 值），而不是回到 Ins 数组。 */
 }
 
+/* 板子上没有调用者：只有桌面那一路的 hm_malloc 会在阈值到了之后调它，
+ * 而板子不编回收（见 design/BOARD.txt 第十一节那条边界）。
+ * 加 unused 不是因为「警告烦」，而是因为那一条挡住了同一份编译里别的警告 ——
+ * 一条常驻的警告会让真正的警告看不见。 */
+__attribute__((unused))
 static size_t gc_收集(void) {
   size_t 前 = g_gc字节;
   size_t 前数 = g_gc数;
@@ -2631,7 +2636,9 @@ static size_t gc_收集(void) {
 static Value fail(const char *code, const char *msg) {
   if (!g_failed) {
     g_failed = 1;
-    snprintf(g_fail_msg, sizeof g_fail_msg, "%s %s", code, msg);
+    /* 两个 %s 都带上精度：码最长二十来个字符，消息那一侧按目标缓冲区留余量。
+     * 不这么写，ARM 那边的 GCC 会按两个缓冲区各自的容量估出「可能截断」。 */
+    snprintf(g_fail_msg, sizeof g_fail_msg, "%.24s %.460s", code, msg);
   }
   return v_null();
 }
@@ -4840,7 +4847,10 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     }
     msg[n] = 0;
     char full[320];
-    snprintf(full, sizeof full, "this machine does not have the builtin '%s'", msg);
+    /* %.200s 而不是 %s：上面已经把 msg 截到 200 个码元，但编译器只按 g_诊s
+     * 的容量（287）估 —— 于是它报「可能截断」。把上限写进格式串，
+     * 那条警告就不再出现，而行为一个字没变。 */
+    snprintf(full, sizeof full, "this machine does not have the builtin '%.200s'", msg);
     fail("HMYR-行-005", full);
     return 1;
   }

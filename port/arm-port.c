@@ -102,3 +102,13 @@ void *_sbrk(ptrdiff_t 增) {
 }
 #endif
 
+/* 硬件错误：停下来，别在出错的状态里继续跑。
+ *
+ * 为什么骨架要提供它：port/startup_cm4_gnu.s 的向量表在 HardFault 那一条上
+ * 调这个名字，而 tools/arm-size.mjs 链的是这一份骨架而不是 port/board-main.c
+ * —— 后者也定义了它（那里有串口，能把一行写出去）。所以这里用 weak：
+ * 板子上真跑的那张映像用自己那份，量尺寸这一趟用这一份，两边都不缺符号。 */
+__attribute__((weak)) void hmyr_hard_fault(void) {
+  for (;;) { }
+}
+
