@@ -6,7 +6,7 @@
 //
 // 报告的形状（由 deps/color/bridge.py 写出）：
 //   { "engine": {...}, "changed_fraction": 0.969, "delta_e76": { "暗部": {...}, "中间": {...}, "高光": {...} },
-//     "image": { "has_icc": true, ... }, "target": { "name": "...", "sha256": "..." } }
+//     "image": { "has_icc": 真, ... }, "target": { "name": "...", "sha256": "..." } }
 
 
 fn 小数点的位置从(s: String, i: Int) -> Int {
@@ -30,7 +30,7 @@ fn 取整数(对象: Int, 键: String) -> Int {
 
 fn 取布尔(对象: Int, 键: String) -> Bool {
   定 v = 字段(对象, 键)
-  若 v.kind != "b" { 返回 false }
+  若 v.kind != "b" { 返回 假 }
   返回 v.value
 }
 
@@ -59,7 +59,7 @@ fn 改动比例(报告: Int) -> Int {
 
 fn 源图带ICC(报告: Int) -> Bool {
   定 图 = 字段(报告, "image")
-  若 图.kind != "o" { 返回 false }
+  若 图.kind != "o" { 返回 假 }
   返回 取布尔(图, "has_icc")
 }
 
@@ -75,7 +75,7 @@ fn 目标名字(报告: Int) -> String {
 // 阈值由调用方给，因为「多大色差算看得出来」取决于用途，不该写死在这里。
 fn 可接受(报告: Int, 阈值: Int) -> Bool {
   定 m = 三段最大(报告)
-  若 m < 0 { 返回 false }
+  若 m < 0 { 返回 假 }
   返回 m <= 阈值
 }
 

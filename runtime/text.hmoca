@@ -38,13 +38,13 @@ fn 之前(文本: String, 数: Int) -> String {
 
 // 是不是空白：空格、制表符、换行、回车。
 fn 空白(字: String) -> Bool {
-  若 字 == "" { 返回 false }
+  若 字 == "" { 返回 假 }
   定 码 = ord(字)
-  若 码 == 32 { 返回 true }
-  若 码 == 9 { 返回 true }
-  若 码 == 10 { 返回 true }
-  若 码 == 13 { 返回 true }
-  返回 false
+  若 码 == 32 { 返回 真 }
+  若 码 == 9 { 返回 真 }
+  若 码 == 10 { 返回 真 }
+  若 码 == 13 { 返回 真 }
+  返回 假
 }
 
 fn 去首空从(文本: String, 位: Int) -> Int {
@@ -115,12 +115,12 @@ fn 含(文本: String, 要: String) -> Bool {
 }
 
 fn 前缀(文本: String, 头: String) -> Bool {
-  若 len(头) > len(文本) { 返回 false }
+  若 len(头) > len(文本) { 返回 假 }
   返回 slice(文本, 0, len(头)) == 头
 }
 
 fn 后缀(文本: String, 尾: String) -> Bool {
-  若 len(尾) > len(文本) { 返回 false }
+  若 len(尾) > len(文本) { 返回 假 }
   返回 slice(文本, len(文本) - len(尾), len(文本)) == 尾
 }
 

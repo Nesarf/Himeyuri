@@ -15,7 +15,7 @@
 fn 尾是(名: String, 后缀: String) -> Bool {
   // 后缀不带点（hmoca / mjs / c），看名字最后一段是不是它。
   定 段 = split(名, ".")
-  若 len(段) < 2 { 返回 false }
+  若 len(段) < 2 { 返回 假 }
   返回 段[len(段) - 1] == 后缀
 }
 
@@ -31,7 +31,7 @@ fn 数行(内容: String) -> Int {
 // 一个目录下所有匹配后缀的文件一共多少行。深度上限 24：防环。
 fn 数(相对: String, 后缀: String, 次: Int) -> Int 效果串(file) {
   若 次 > 24 { 返回 0 }
-  若 is_dir(相对) == false { 返回 0 }
+  若 is_dir(相对) == 假 { 返回 0 }
   定 名册 = read_dir(相对)
   var 行 = 0
   var i = 0

@@ -71,9 +71,9 @@ fn skip_default(tokens: Int, i: Int) -> Int {
 
 // 参数列表：从 ( 之后开始。
 fn params(tokens: Int, i: Int, acc: Int) {
-  若 i >= len(tokens) { 返回 {list: acc, next: i, closed: false} }
+  若 i >= len(tokens) { 返回 {list: acc, next: i, closed: 假} }
   定 t = tokens[i]
-  若 is_punct(t, ")") { 返回 {list: acc, next: i + 1, closed: true} }
+  若 is_punct(t, ")") { 返回 {list: acc, next: i + 1, closed: 真} }
   若 is_punct(t, ",") { 返回 params(tokens, i + 1, acc) }
   若 is_word(t, "own") || is_word(t, "borrow") { 返回 params(tokens, i + 1, acc) }
 
@@ -90,7 +90,7 @@ fn params(tokens: Int, i: Int, acc: Int) {
     }
     返回 params(tokens, i + 1, acc)
   }
-  返回 {list: acc, next: i + 1, closed: false}
+  返回 {list: acc, next: i + 1, closed: 假}
 }
 
 // 效果列表：效果串( 之后。函数名不能叫 效果串——它是关键字，所以这里叫 effect_list。
@@ -105,20 +105,20 @@ fn effect_list(tokens: Int, i: Int, acc: Int) {
 
 // 主体：签名之后一直读到末尾（体没有被切开，见文件头）。
 fn has_body(tokens: Int, i: Int) -> Bool {
-  若 i >= len(tokens) { 返回 false }
-  若 is_punct(tokens[i], "{") { 返回 true }
+  若 i >= len(tokens) { 返回 假 }
+  若 is_punct(tokens[i], "{") { 返回 真 }
   返回 has_body(tokens, i + 1)
 }
 
 // 宿主入口：读一份「函数声明」的 token 流。
 fn read_signature(tokens: Int) -> Int {
-  返回 signature(tokens, 0, false)
+  返回 signature(tokens, 0, 假)
 }
 
 fn signature_at(tokens: Int, i: Int, is_pub: Bool) {
   若 i >= len(tokens) { 返回 {node: {kind: "误", text: ""}, next: i} }
   定 t = tokens[i]
-  若 is_word(t, "pub") { 返回 signature_at(tokens, i + 1, true) }
+  若 is_word(t, "pub") { 返回 signature_at(tokens, i + 1, 真) }
   若 !is_word(t, "fn") { 返回 {node: {kind: "误", text: t.text}, next: i + 1} }
   若 i + 1 >= len(tokens) { 返回 {node: {kind: "误", text: "fn"}, next: i + 1} }
   定 name = tokens[i + 1].text

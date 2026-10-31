@@ -36,8 +36,8 @@ fn 并行跑(命令们: Int, 超时秒: Int) -> Int 效果串(process, file) {
   write_text(列表路径(), 拼列表(命令们), "utf8")
   定 r = run_program("powershell", ("-NoProfile", "-STA", "-File", 并行脚本(),
     "-List", 列表路径(), "-Out", 结果路径(), "-TimeoutSec", str(超时秒)), 120000, "utf8")
-  若 r.code != 0 { 返回 {ok: false, text: r.stderr} }
-  返回 {ok: true, text: read_text(结果路径(), "utf8"), 报: r.stdout}
+  若 r.code != 0 { 返回 {ok: 假, text: r.stderr} }
+  返回 {ok: 真, text: read_text(结果路径(), "utf8"), 报: r.stdout}
 }
 
 fn main() -> Int 效果串(process, file) {

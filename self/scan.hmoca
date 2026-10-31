@@ -26,9 +26,9 @@ fn skip_space(s: String, i: Int) -> Int {
 
 // 在 s 的 from 处，是否以 p 开头。
 fn starts_with(s: String, from: Int, p: String, k: Int) -> Bool {
-  若 k >= len(p) { 返回 true }
-  若 from + k >= len(s) { 返回 false }
-  若 s[from + k] != p[k] { 返回 false }
+  若 k >= len(p) { 返回 真 }
+  若 from + k >= len(s) { 返回 假 }
+  若 s[from + k] != p[k] { 返回 假 }
   返回 starts_with(s, from, p, k + 1)
 }
 

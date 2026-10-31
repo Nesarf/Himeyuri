@@ -75,9 +75,9 @@ pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String
     定 语名册 = 走文件("runtime")
     var j = 0
     当 j < len(语名册) {
-      var 要 = false
-      若 以尾(语名册[j], ".hmoca") { 要 = true }
-      若 以尾(语名册[j], ".hmoks") || 以尾(语名册[j], ".hmtn") { 要 = true }
+      var 要 = 假
+      若 以尾(语名册[j], ".hmoca") { 要 = 真 }
+      若 以尾(语名册[j], ".hmoks") || 以尾(语名册[j], ".hmtn") { 要 = 真 }
       若 要 { 路们 = 收一件(路们, "runtime", (语名册[j],)) }
       j = j + 1
     }
@@ -125,14 +125,14 @@ pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String
 
 fn main() -> Int 效果串(file, process) {
   定 参 = argv()
-  var 要压 = false
+  var 要压 = 假
   var 附加路 = ""
   var 附加名 = "manifest.json"
   var 位置 = ()
   var i = 0
   当 i < len(参) {
     若 参[i] == "--压" {
-      要压 = true
+      要压 = 真
       i = i + 1
     } 否则 {
       若 参[i] == "--附加" && i + 2 < len(参) {

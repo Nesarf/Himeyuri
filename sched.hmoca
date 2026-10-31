@@ -12,7 +12,7 @@ fn 空轮() -> Int {
 }
 
 fn 加(轮: Int, 名: String) -> Int {
-  返回 {tasks: 轮.tasks + ({name: 名, state: (), done: false, failed: false, steps: 0},),
+  返回 {tasks: 轮.tasks + ({name: 名, state: (), done: 假, failed: 假, steps: 0},),
           下一个位: 轮.下一个位, 轮数: 轮.轮数}
 }
 
@@ -25,7 +25,7 @@ fn 任务数(轮: Int) -> Int {
 fn 找下一个从(轮: Int, i: Int) -> Int {
   若 i >= len(轮.tasks) { 返回 -1 }
   定 位 = (轮.下一个位 + i) % len(轮.tasks)
-  若 轮.tasks[位].done == false { 返回 位 }
+  若 轮.tasks[位].done == 假 { 返回 位 }
   返回 找下一个从(轮, i + 1)
 }
 
@@ -45,7 +45,7 @@ fn 状态(轮: Int, 位: Int) -> Int {
 }
 
 fn 完成了(轮: Int, 位: Int) -> Bool {
-  若 位 < 0 || 位 >= len(轮.tasks) { 返回 true }
+  若 位 < 0 || 位 >= len(轮.tasks) { 返回 真 }
   返回 轮.tasks[位].done
 }
 
@@ -55,7 +55,7 @@ fn 步数(轮: Int, 位: Int) -> Int {
 }
 
 fn 失败了吗(轮: Int, 位: Int) -> Bool {
-  若 位 < 0 || 位 >= len(轮.tasks) { 返回 false }
+  若 位 < 0 || 位 >= len(轮.tasks) { 返回 假 }
   返回 轮.tasks[位].failed
 }
 
@@ -63,7 +63,7 @@ fn 剩余(轮: Int) -> Int {
   var 数 = 0
   var i = 0
   当 i < len(轮.tasks) {
-    若 轮.tasks[i].done == false { 数 = 数 + 1 }
+    若 轮.tasks[i].done == 假 { 数 = 数 + 1 }
     i = i + 1
   }
   返回 数
@@ -88,7 +88,7 @@ fn 记(轮: Int, 位: Int, 新状态: Int, 完成: Bool, 失败: Bool) -> Int {
 // 取消一个任务：它不再被轮到。而它的子任务由任务树那边负责（task.hmyr 的 取消），
 // 这一层不重复实现那条规矩——两处各管一件事。
 fn 取消(轮: Int, 位: Int) -> Int {
-  返回 记(轮, 位, 状态(轮, 位), true, false)
+  返回 记(轮, 位, 状态(轮, 位), 真, 假)
 }
 
 fn main() -> Int {

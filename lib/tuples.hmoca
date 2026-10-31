@@ -12,18 +12,18 @@
 fn 插入(t: (Int,), x: Int) -> (Int,) {
   var 出 = ()
   var i = 0
-  var 放 = false
+  var 放 = 假
   当 i < len(t) {
-    若 放 == false {
+    若 放 == 假 {
       若 x <= t[i] {
         出 = 出 + (x,)
-        放 = true
+        放 = 真
       }
     }
     出 = 出 + (t[i],)
     i = i + 1
   }
-  若 放 == false {
+  若 放 == 假 {
     出 = 出 + (x,)
   }
   返回 出
@@ -94,11 +94,11 @@ fn 含(t: (Int,), x: Int) -> Bool {
   var i = 0
   当 i < len(t) {
     若 t[i] == x {
-      返回 true
+      返回 真
     }
     i = i + 1
   }
-  返回 false
+  返回 假
 }
 
 // 子段：起止都在下标位置上，越界的部分自然被跳过。
@@ -124,18 +124,18 @@ fn 接起来(t: (Int,), u: (Int,)) -> (Int,) {
 fn 串插入(t: (String,), x: String) -> (String,) {
   var 出 = ()
   var i = 0
-  var 放 = false
+  var 放 = 假
   当 i < len(t) {
-    若 放 == false {
+    若 放 == 假 {
       若 x <= t[i] {
         出 = 出 + (x,)
-        放 = true
+        放 = 真
       }
     }
     出 = 出 + (t[i],)
     i = i + 1
   }
-  若 放 == false {
+  若 放 == 假 {
     出 = 出 + (x,)
   }
   返回 出
@@ -155,9 +155,9 @@ fn 串含(t: (String,), x: String) -> Bool {
   var i = 0
   当 i < len(t) {
     若 t[i] == x {
-      返回 true
+      返回 真
     }
     i = i + 1
   }
-  返回 false
+  返回 假
 }

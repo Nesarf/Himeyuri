@@ -23,8 +23,8 @@ fn 挂(树: Int, 名: String, 父: Int) -> Int {
 
 // 一个集合里有某个 id 吗。
 fn 含从(集: Int, id: Int, i: Int) -> Bool {
-  若 i >= len(集) { 返回 false }
-  若 集[i] == id { 返回 true }
+  若 i >= len(集) { 返回 假 }
+  若 集[i] == id { 返回 真 }
   返回 含从(集, id, i + 1)
 }
 
@@ -38,14 +38,14 @@ fn 含(集: Int, id: Int) -> Bool {
 // 这样不必递归——深度不随树的深度增长，而宽树也只是多扫几遍。
 fn 子树(树: Int, id: Int) -> Int {
   var 收 = (id,)
-  var 变 = true
+  var 变 = 真
   当 变 {
-    变 = false
+    变 = 假
     var i = 0
     当 i < len(树) {
-      若 含(收, 树[i].parent) && 含(收, 树[i].id) == false {
+      若 含(收, 树[i].parent) && 含(收, 树[i].id) == 假 {
         收 = 收 + (树[i].id,)
-        变 = true
+        变 = 真
       }
       i = i + 1
     }
@@ -59,8 +59,8 @@ fn 子树(树: Int, id: Int) -> Int {
 // 而 id 是记录里的字段、不随位置变。判据必须按 id 查，否则取消一个任务之后
 // 别的表面会错位显示——那种 bug 只会在真窗口里才被发现。
 fn 有id从(树: Int, id: Int, i: Int) -> Bool {
-  若 i >= len(树) { 返回 false }
-  若 树[i].id == id { 返回 true }
+  若 i >= len(树) { 返回 假 }
+  若 树[i].id == id { 返回 真 }
   返回 有id从(树, id, i + 1)
 }
 
@@ -75,7 +75,7 @@ fn 取消(树: Int, id: Int) -> Int {
   var 留 = ()
   var i = 0
   当 i < len(树) {
-    若 含(去, 树[i].id) == false { 留 = 留 + (树[i],) }
+    若 含(去, 树[i].id) == 假 { 留 = 留 + (树[i],) }
     i = i + 1
   }
   返回 留

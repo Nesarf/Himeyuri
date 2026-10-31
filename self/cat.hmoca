@@ -6,7 +6,7 @@
 // 用法：hmyr self/cat.hmyr < 某个文件
 
 fn main() -> Int {
-  var 继续 = true
+  var 继续 = 真
   当 继续 {
     定 r = read_stdin_line()
     若 len(r.行) > 0 {
@@ -15,7 +15,7 @@ fn main() -> Int {
       // 空行也是行：照原样写一个换行，不然它会和 EOF 混在一起。
       print(chr(10))
     }
-    若 r.结束 { 继续 = false }
+    若 r.结束 { 继续 = 假 }
   }
   返回 0
 }

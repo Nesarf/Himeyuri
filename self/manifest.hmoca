@@ -19,12 +19,12 @@
 引入 "../json.hmoca"
 
 fn 以头(s: String, 头: String) -> Bool {
-  若 len(s) < len(头) { 返回 false }
+  若 len(s) < len(头) { 返回 假 }
   返回 slice(s, 0, len(头)) == 头
 }
 
 pub fn 以尾(s: String, 尾: String) -> Bool {
-  若 len(s) < len(尾) { 返回 false }
+  若 len(s) < len(尾) { 返回 假 }
   返回 slice(s, len(s) - len(尾), len(s)) == 尾
 }
 
@@ -139,7 +139,7 @@ fn 首行(s: String) {
 // 读 .git/HEAD（`ref: refs/heads/main`），再读它指的那份 ref；detached HEAD 时
 // HEAD 里直接就是 sha。两条路都只读文本，所以不需要新内建，也不需要起进程问 git。
 fn 短路哈希() 效果串(file) {
-  若 file_exists(".git/HEAD") == false { 返回 "unknown" }
+  若 file_exists(".git/HEAD") == 假 { 返回 "unknown" }
   定 头 = 首行(read_text(".git/HEAD"))
   若 以头(头, "ref: ") {
     定 路 = ".git/" + slice(头, 5, len(头))
@@ -161,7 +161,7 @@ fn 缩进数(s: String) -> Int {
 }
 
 fn 是名字首(s: String) -> Bool {
-  若 len(s) == 0 { 返回 false }
+  若 len(s) == 0 { 返回 假 }
   定 c = ord(slice(s, 0, 1))
   返回 c >= 97 && c <= 122 || c == 95
 }
@@ -169,13 +169,13 @@ fn 是名字首(s: String) -> Bool {
 fn 含冒号(s: String) -> Bool { 返回 len(split(s, ":")) > 1 }
 
 fn 含子串(s: String, 片: String) -> Bool {
-  若 len(片) > len(s) { 返回 false }
+  若 len(片) > len(s) { 返回 假 }
   var i = 0
   当 i + len(片) <= len(s) {
-    若 slice(s, i, i + len(片)) == 片 { 返回 true }
+    若 slice(s, i, i + len(片)) == 片 { 返回 真 }
     i = i + 1
   }
-  返回 false
+  返回 假
 }
 
 fn 行号含(s: String, 片: String) -> Int {
@@ -193,14 +193,14 @@ fn 行号含(s: String, 片: String) -> Int {
 // 这不是解析器，是一处「够用的括号配对」——数出来的是声明，不是求值。
 fn 内置数() 效果串(file) {
   定 行批 = split(read_text("src/eval.mjs"), chr(10))
-  var 在内 = false
+  var 在内 = 假
   var n = 0
   var i = 0
   当 i < len(行批) {
     定 行 = 行批[i]
     若 在内 {
       若 以头(行, "}") {
-        在内 = false
+        在内 = 假
       } 否则 {
         定 净 = 去头空(行)
         // 缩进必须恰好两格：函数体里那些四格缩进的行也带冒号（三元表达式的冒号），
@@ -208,7 +208,7 @@ fn 内置数() 效果串(file) {
         若 缩进数(行) == 2 && 是名字首(净) && 含冒号(净) { n = n + 1 }
       }
     } 否则 {
-      若 以头(行, "const BUILTINS = {") { 在内 = true }
+      若 以头(行, "const BUILTINS = {") { 在内 = 真 }
     }
     i = i + 1
   }
@@ -239,10 +239,10 @@ fn 抽标识符(行: String) {
 fn 已在(集: Int, 词: String) -> Bool {
   var i = 0
   当 i < len(集) {
-    若 集[i] == 词 { 返回 true }
+    若 集[i] == 词 { 返回 真 }
     i = i + 1
   }
-  返回 false
+  返回 假
 }
 
 // 插入排序：十五项的规模，写它比想「要不要建一个更聪明的」便宜。
@@ -289,7 +289,7 @@ fn 最小集() 效果串(file) {
       当 k < len(词们) {
         定 词 = 词们[k]
         若 词 != "file" && 词 != "process" && 词 != "thread" {
-          若 已在(集, 词) == false { 集 = 集 + (词,) }
+          若 已在(集, 词) == 假 { 集 = 集 + (词,) }
         }
         k = k + 1
       }

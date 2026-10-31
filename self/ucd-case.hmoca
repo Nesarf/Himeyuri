@@ -48,16 +48,16 @@ fn 十六进制写法(n: Int) -> String {
 fn 修剪(文: String) -> String {
   var 起 = 0
   var 止 = len(文)
-  var 走 = true
+  var 走 = 真
   当 起 < 止 && 走 {
     定 c = 文[起]
-    若 c == " " || c == chr(9) || c == chr(13) { 起 = 起 + 1 } 否则 { 走 = false }
+    若 c == " " || c == chr(9) || c == chr(13) { 起 = 起 + 1 } 否则 { 走 = 假 }
   }
   var 完 = 止
-  var 走2 = true
+  var 走2 = 真
   当 完 > 起 && 走2 {
     定 c = 文[完 - 1]
-    若 c == " " || c == chr(9) || c == chr(13) { 完 = 完 - 1 } 否则 { 走2 = false }
+    若 c == " " || c == chr(9) || c == chr(13) { 完 = 完 - 1 } 否则 { 走2 = 假 }
   }
   返回 slice(文, 起, 完)
 }
@@ -107,7 +107,7 @@ fn 收(完整: Int, 简单: Int) -> Int {
   定 简键 = index_keys(简单)
   var j = 0
   当 j < len(简键) {
-    若 index_has(完整, 简键[j]) == false { 全部 = 全部 + (to_int(简键[j]),) }
+    若 index_has(完整, 简键[j]) == 假 { 全部 = 全部 + (to_int(简键[j]),) }
     j = j + 1
   }
 
@@ -119,13 +119,13 @@ fn 收(完整: Int, 简单: Int) -> Int {
   当 a < n {
     定 当前 = 排[a]
     var b = a - 1
-    var 走 = true
+    var 走 = 真
     当 b >= 0 && 走 {
       若 排[b] > 当前 {
         设(排, b + 1, 排[b])
         b = b - 1
       } 否则 {
-        走 = false
+        走 = 假
       }
     }
     设(排, b + 1, 当前)
@@ -138,19 +138,19 @@ fn 收(完整: Int, 简单: Int) -> Int {
     定 cp = 排[k]
     若 cp < 55296 || cp > 57343 {
       var 映 = ()
-      var 有 = false
+      var 有 = 假
       若 index_has(完整, str(cp)) {
         映 = index_get(完整, str(cp))
-        有 = true
+        有 = 真
       }
-      若 有 == false && index_has(简单, str(cp)) {
+      若 有 == 假 && index_has(简单, str(cp)) {
         映 = index_get(简单, str(cp))
-        有 = true
+        有 = 真
       }
       若 有 && len(映) > 0 {
-        var 同 = false
-        若 len(映) == 1 && 映[0] == cp { 同 = true }
-        若 同 == false {
+        var 同 = 假
+        若 len(映) == 1 && 映[0] == cp { 同 = 真 }
+        若 同 == 假 {
           定 单元 = 成单元(映)
           若 len(单元) <= 3 { 列 = 列 + ((cp, 单元),) }
         }
@@ -252,13 +252,13 @@ fn 收区间(数据目录: String, 名字: String) -> Int 效果串(file) {
   当 a < len(列) {
     定 当前 = 列[a]
     var b = a - 1
-    var 走 = true
+    var 走 = 真
     当 b >= 0 && 走 {
       若 列[b][0] > 当前[0] {
         列 = 只改(列, b + 1, 列[b])
         b = b - 1
       } 否则 {
-        走 = false
+        走 = 假
       }
     }
     列 = 只改(列, b + 1, 当前)
@@ -287,14 +287,14 @@ fn main() -> Int 效果串(file, process) {
       若 len(段) >= 15 {
         // 区间标记那几行（<CJK Ideograph, First> 这种）没有大小写，跳过。
         定 名 = 段[1]
-        var 跳 = false
+        var 跳 = 假
         若 len(名) > 0 {
           若 名[0] == "<" {
             定 逗 = split(名, ",")
-            若 len(逗) > 1 { 跳 = true }
+            若 len(逗) > 1 { 跳 = 真 }
           }
         }
-        若 跳 == false {
+        若 跳 == 假 {
           定 cp = 十六进制值(段[0])
           定 上 = 修剪(段[12])
           定 下 = 修剪(段[13])

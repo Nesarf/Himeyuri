@@ -17,18 +17,18 @@
 // 一个字符是不是空白。空白只有四种，而它们都不能用「或」连起来。
 fn 空白一(c: String) -> Bool {
   若 c == " " {
-    返回 true
+    返回 真
   }
   若 c == "\t" {
-    返回 true
+    返回 真
   }
   若 c == "\n" {
-    返回 true
+    返回 真
   }
   若 c == "\r" {
-    返回 true
+    返回 真
   }
-  返回 false
+  返回 假
 }
 
 fn 大写(s: String) -> String {
@@ -43,28 +43,28 @@ fn 小写(s: String) -> String {
 fn 修剪(s: String) -> String {
   定 n = len(s)
   var 起 = 0
-  var 走 = true
+  var 走 = 真
   当 走 {
     若 起 >= n {
-      走 = false
+      走 = 假
     } 否则 {
       若 空白一(s[起]) {
         起 = 起 + 1
       } 否则 {
-        走 = false
+        走 = 假
       }
     }
   }
   var 止 = n
-  走 = true
+  走 = 真
   当 走 {
     若 止 <= 起 {
-      走 = false
+      走 = 假
     } 否则 {
       若 空白一(s[止 - 1]) {
         止 = 止 - 1
       } 否则 {
-        走 = false
+        走 = 假
       }
     }
   }
@@ -79,18 +79,18 @@ fn 匹配在(s: String, 起: Int, 子: String) -> Bool {
   定 n = len(s)
   定 m = len(子)
   若 起 < 0 {
-    返回 false
+    返回 假
   }
   若 起 + m > n {
-    返回 false
+    返回 假
   }
   var i = 0
-  var 好 = true
+  var 好 = 真
   当 i < m {
     若 s[起 + i] == 子[i] {
       i = i + 1
     } 否则 {
-      好 = false
+      好 = 假
       i = m
     }
   }
@@ -116,10 +116,10 @@ fn 查找(s: String, 子: String) -> Int {
     返回 -1
   }
   var i = 0
-  var 有 = true
+  var 有 = 真
   当 有 {
     若 i > n - m {
-      有 = false
+      有 = 假
     } 否则 {
       若 匹配在(s, i, 子) {
         返回 i
@@ -133,9 +133,9 @@ fn 查找(s: String, 子: String) -> Int {
 
 fn 含(s: String, 子: String) -> Bool {
   若 查找(s, 子) >= 0 {
-    返回 true
+    返回 真
   }
-  返回 false
+  返回 假
 }
 
 fn 重复(s: String, 次: Int) -> String {
@@ -157,10 +157,10 @@ fn 替换(s: String, 旧: String, 新: String) -> String {
   定 m = len(旧)
   var 出 = ""
   var i = 0
-  var 走 = true
+  var 走 = 真
   当 走 {
     若 i >= n {
-      走 = false
+      走 = 假
     } 否则 {
       若 匹配在(s, i, 旧) {
         出 = 出 + 新
@@ -201,10 +201,10 @@ fn 十六进制(n: Int) -> String {
   定 位 = "0123456789abcdef"
   var 出 = ""
   var 余 = n
-  var 走 = true
+  var 走 = 真
   当 走 {
     若 余 == 0 {
-      走 = false
+      走 = 假
     } 否则 {
       定 个 = 余 % 16
       出 = slice(位, 个, 个 + 1) + 出
@@ -230,10 +230,10 @@ fn 切分(s: String, 分隔: String) -> (String,) {
   定 n = len(s)
   var i = 0
   var 起 = 0
-  var 走 = true
+  var 走 = 真
   当 走 {
     若 i > n - m {
-      走 = false
+      走 = 假
     } 否则 {
       若 匹配在(s, i, 分隔) {
         出 = 出 + (slice(s, 起, i),)

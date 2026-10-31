@@ -20,19 +20,19 @@
 fn 去首尾(行: String) -> String {
   var 起 = 0
   var 止 = len(行)
-  var 左 = true
+  var 左 = 真
   当 起 < 止 && 左 {
-    若 行[起] == " " || 行[起] == chr(9) || 行[起] == chr(13) { 起 = 起 + 1 } 否则 { 左 = false }
+    若 行[起] == " " || 行[起] == chr(9) || 行[起] == chr(13) { 起 = 起 + 1 } 否则 { 左 = 假 }
   }
-  var 右 = true
+  var 右 = 真
   当 止 > 起 && 右 {
-    若 行[止 - 1] == " " || 行[止 - 1] == chr(9) || 行[止 - 1] == chr(13) { 止 = 止 - 1 } 否则 { 右 = false }
+    若 行[止 - 1] == " " || 行[止 - 1] == chr(9) || 行[止 - 1] == chr(13) { 止 = 止 - 1 } 否则 { 右 = 假 }
   }
   返回 slice(行, 起, 止)
 }
 
 fn 以(文: String, 前: String) -> Bool {
-  若 len(文) < len(前) { 返回 false }
+  若 len(文) < len(前) { 返回 假 }
   返回 slice(文, 0, len(前)) == 前
 }
 
@@ -97,8 +97,8 @@ fn 打印(e: Int, 父: Int, 是右: Bool) -> String {
   若 e.kind == "字" { 返回 e.text }
   若 e.kind == "名" { 返回 e.text }
   定 本 = 优先(e.op)
-  定 左 = 打印(e.left, 本, false)
-  定 右 = 打印(e.right, 本, true)
+  定 左 = 打印(e.left, 本, 假)
+  定 右 = 打印(e.right, 本, 真)
   定 文 = 左 + " " + e.op + " " + 右
   若 本 < 父 { 返回 "(" + 文 + ")" }
   若 是右 && 本 == 父 { 返回 "(" + 文 + ")" }
@@ -107,33 +107,33 @@ fn 打印(e: Int, 父: Int, 是右: Bool) -> String {
 
 fn main() -> Int {
   定 参 = argv()
-  var 是表达式 = false
+  var 是表达式 = 假
   var i = 0
   当 i < len(参) {
-    若 参[i] == "--expr" { 是表达式 = true }
+    若 参[i] == "--expr" { 是表达式 = 真 }
     i = i + 1
   }
   若 是表达式 {
-    var 跑 = true
+    var 跑 = 真
     当 跑 {
       定 r = read_stdin_line()
       若 len(r.行) > 0 {
         定 t = parse(r.行)
-        print(打印(t.node, 0, false) + chr(10))
+        print(打印(t.node, 0, 假) + chr(10))
       }
-      若 r.结束 { 跑 = false }
+      若 r.结束 { 跑 = 假 }
     }
     返回 0
   }
   var 源 = ""
-  var 继续 = true
+  var 继续 = 真
   当 继续 {
     定 r = read_stdin_line()
     若 r.结束 {
       // 末尾那一行：有内容就接上，没有就不再补换行 —— 补了会让每跑一次多一个空行，
       // 而「打印两次与打印一次一样」正是这一支要许的承诺。
       若 len(r.行) > 0 { 源 = 源 + r.行 }
-      继续 = false
+      继续 = 假
     } 否则 {
       源 = 源 + r.行 + chr(10)
     }

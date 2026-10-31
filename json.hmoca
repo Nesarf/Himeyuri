@@ -55,7 +55,7 @@ fn 读数字从(s: String, i: Int, acc: String, 有点: Bool) {
   若 i >= len(s) { 返回 (收数字(acc), i) }
   定 c = s[i]
   若 是数字字符(c) { 返回 读数字从(s, i + 1, acc + c, 有点) }
-  若 c == "." && 有点 == false { 返回 读数字从(s, i + 1, acc + ".", true) }
+  若 c == "." && 有点 == 假 { 返回 读数字从(s, i + 1, acc + ".", 真) }
   返回 (收数字(acc), i)
 }
 
@@ -65,8 +65,8 @@ fn 收数字(原文: String) {
 }
 
 fn 含点从(s: String, i: Int) -> Bool {
-  若 i >= len(s) { 返回 false }
-  若 s[i] == "." { 返回 true }
+  若 i >= len(s) { 返回 假 }
+  若 s[i] == "." { 返回 真 }
   返回 含点从(s, i + 1)
 }
 
@@ -77,7 +77,7 @@ fn 含点(s: String) -> Bool {
 
 
 
-// 字面量：true / false / null
+// 字面量：真 / 假 / null
 fn 读字面量(s: String, i: Int, 字: String, 值: Int) {
   若 i + len(字) > len(s) { 返回 ({kind: "err", text: "字面量不完整：" + 字}, i) }
   定 片 = slice(s, i, i + len(字))
@@ -94,16 +94,16 @@ fn 读值(s: String, i: Int) {
   若 c == "\"" { 返回 读字符串(s, j + 1) }
   若 c == "{" { 返回 读对象(s, j + 1, ()) }
   若 c == "[" { 返回 读数组(s, j + 1, ()) }
-  若 c == "t" { 返回 读字面量(s, j, "true", ({kind: "b", value: true})) }
-  若 c == "f" { 返回 读字面量(s, j, "false", ({kind: "b", value: false})) }
+  若 c == "t" { 返回 读字面量(s, j, "true", ({kind: "b", value: 真})) }
+  若 c == "f" { 返回 读字面量(s, j, "false", ({kind: "b", value: 假})) }
   若 c == "n" { 返回 读字面量(s, j, "null", {kind: "null"}) }
   // 负号要单独吃：读数字从只认数字字符，遇到负号会立刻收工，于是 -7 会变成 0。
   若 c == "-" {
-    定 后半 = 读数字从(s, j + 1, "", false)
+    定 后半 = 读数字从(s, j + 1, "", 假)
     若 后半[0].kind == "f" { 返回 ({kind: "f", value: "-" + 后半[0].value}, 后半[1]) }
     返回 ({kind: "n", value: 0 - 后半[0].value}, 后半[1])
   }
-  若 是数字字符(c) { 返回 读数字从(s, j, "", false) }
+  若 是数字字符(c) { 返回 读数字从(s, j, "", 假) }
   返回 ({kind: "err", text: "不认识的字符：" + c}, j + 1)
 }
 

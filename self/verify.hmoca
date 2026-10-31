@@ -86,7 +86,7 @@ fn 重建文本(行批: Int, dig: Int) {
   var i = 0
   当 i < len(行批) {
     var 取 = i != dig
-    若 i == len(行批) - 1 && 行批[i] == "" { 取 = false }
+    若 i == len(行批) - 1 && 行批[i] == "" { 取 = 假 }
     若 取 {
       定 原行 = 行批[i]
       var 行 = 原行
@@ -112,7 +112,7 @@ fn 重建文本(行批: Int, dig: Int) {
 // 一件：标签（用来印）、路（要读的文件）、写（清单里写的哈希前十六位）、
 // 行（那一行的原文 —— 不通过时一起印出来，证据跟着结论走）。
 fn 验一件(标签: String, 路: String, 写: String, 对: Int, 错: Int, 缺: Int, 说: String, 行: String) 效果串(file) {
-  若 file_exists(路) == false {
+  若 file_exists(路) == 假 {
     返回 {对: 对, 错: 错, 缺: 缺 + 1, 说: 说 + "  [缺] " + 标签 + chr(10)}
   }
   定 算 = 前16(sha256(read_bytes(路)))
@@ -181,7 +181,7 @@ fn main() -> Int 效果串(file, process) {
   print(说)
   print("  对得上 " + str(对) + " 项 · 不对 " + str(错) + " 项 · 缺 " + str(缺) + " 项" + chr(10))
 
-  var 整份对 = true
+  var 整份对 = 真
   定 码 = 行号(文, "digest")
   若 码 < 0 {
     print("  清单里没有 digest，整份这一步跳过" + chr(10))
@@ -196,7 +196,7 @@ fn main() -> Int 效果串(file, process) {
         print("  整份的 digest 对得上（重算 " + str(len(重建)) + " 字符）" + chr(10))
       } 否则 {
         print("  整份的 digest 对不上：写着 " + 写 + "，算出来 " + 算 + chr(10))
-        整份对 = false
+        整份对 = 假
       }
     }
   }

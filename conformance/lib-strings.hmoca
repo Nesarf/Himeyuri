@@ -38,7 +38,7 @@ fn main() -> Int {
   若 g != 0 {
     返回 g
   }
-  定 h = 检(开始于("hello", "lo") == false, 8)
+  定 h = 检(开始于("hello", "lo") == 假, 8)
   若 h != 0 {
     返回 h
   }
@@ -46,7 +46,7 @@ fn main() -> Int {
   若 i != 0 {
     返回 i
   }
-  定 j = 检(结束于("hello", "he") == false, 10)
+  定 j = 检(结束于("hello", "he") == 假, 10)
   若 j != 0 {
     返回 j
   }
@@ -62,7 +62,7 @@ fn main() -> Int {
   若 m != 0 {
     返回 m
   }
-  定 n = 检(含("hello", "xyz") == false, 14)
+  定 n = 检(含("hello", "xyz") == 假, 14)
   若 n != 0 {
     返回 n
   }

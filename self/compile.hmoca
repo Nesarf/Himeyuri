@@ -118,100 +118,100 @@ fn 找槽(名表: Int, 名: String) -> Int {
 //
 // 这张表要与 src/bytecode.mjs 的 内置名、src/vm-builtins.mjs 与 vm/hmyr.c 里那一套对齐。
 fn 是内置(名: String) -> Bool {
-  若 名 == "abs" { 返回 true }
-  若 名 == "argv" { 返回 true }
-  若 名 == "chr" { 返回 true }
+  若 名 == "abs" { 返回 真 }
+  若 名 == "argv" { 返回 真 }
+  若 名 == "chr" { 返回 真 }
   // 可变数组：编译期认这两个名字，运行时落到 vm/hmyr.c 的 name_is 上。
-  若 名 == "数组" { 返回 true }
-  若 名 == "设" { 返回 true }
+  若 名 == "数组" { 返回 真 }
+  若 名 == "设" { 返回 真 }
   // 位运算：八个别名，名字带前缀以免与用户函数同名。
-  若 名 == "位与" { 返回 true }
-  若 名 == "位或" { 返回 true }
-  若 名 == "位异或" { 返回 true }
-  若 名 == "位非" { 返回 true }
-  若 名 == "位右移" { 返回 true }
-  若 名 == "位加" { 返回 true }
-  若 名 == "位循环右移" { 返回 true }
-  若 名 == "位循环左移" { 返回 true }
-  若 名 == "field_get" { 返回 true }
-  若 名 == "field_has" { 返回 true }
-  若 名 == "field_names" { 返回 true }
-  若 名 == "file_exists" { 返回 true }
-  若 名 == "floor" { 返回 true }
-  若 名 == "int" { 返回 true }
-  若 名 == "校验和" { 返回 true }
-  若 名 == "is_dir" { 返回 true }
-  若 名 == "is_letter" { 返回 true }
-  若 名 == "is_mark" { 返回 true }
-  若 名 == "len" { 返回 true }
-  若 名 == "max" { 返回 true }
-  若 名 == "min" { 返回 true }
-  若 名 == "nfc" { 返回 true }
-  若 名 == "ord" { 返回 true }
-  若 名 == "print" { 返回 true }
-  若 名 == "print_err" { 返回 true }
-  若 名 == "read_dir" { 返回 true }
-  若 名 == "read_text" { 返回 true }
-  若 名 == "record_new" { 返回 true }
-  若 名 == "slice" { 返回 true }
-  若 名 == "str" { 返回 true }
-  若 名 == "to_int" { 返回 true }
-  若 名 == "to_lower" { 返回 true }
-  若 名 == "to_upper" { 返回 true }
-  若 名 == "write_text" { 返回 true }
-  若 名 == "write_bytes" { 返回 true }
-  若 名 == "f64_bytes" { 返回 true }
-  若 名 == "pack_value" { 返回 true }
+  若 名 == "位与" { 返回 真 }
+  若 名 == "位或" { 返回 真 }
+  若 名 == "位异或" { 返回 真 }
+  若 名 == "位非" { 返回 真 }
+  若 名 == "位右移" { 返回 真 }
+  若 名 == "位加" { 返回 真 }
+  若 名 == "位循环右移" { 返回 真 }
+  若 名 == "位循环左移" { 返回 真 }
+  若 名 == "field_get" { 返回 真 }
+  若 名 == "field_has" { 返回 真 }
+  若 名 == "field_names" { 返回 真 }
+  若 名 == "file_exists" { 返回 真 }
+  若 名 == "floor" { 返回 真 }
+  若 名 == "int" { 返回 真 }
+  若 名 == "校验和" { 返回 真 }
+  若 名 == "is_dir" { 返回 真 }
+  若 名 == "is_letter" { 返回 真 }
+  若 名 == "is_mark" { 返回 真 }
+  若 名 == "len" { 返回 真 }
+  若 名 == "max" { 返回 真 }
+  若 名 == "min" { 返回 真 }
+  若 名 == "nfc" { 返回 真 }
+  若 名 == "ord" { 返回 真 }
+  若 名 == "print" { 返回 真 }
+  若 名 == "print_err" { 返回 真 }
+  若 名 == "read_dir" { 返回 真 }
+  若 名 == "read_text" { 返回 真 }
+  若 名 == "record_new" { 返回 真 }
+  若 名 == "slice" { 返回 真 }
+  若 名 == "str" { 返回 真 }
+  若 名 == "to_int" { 返回 真 }
+  若 名 == "to_lower" { 返回 真 }
+  若 名 == "to_upper" { 返回 真 }
+  若 名 == "write_text" { 返回 真 }
+  若 名 == "write_bytes" { 返回 真 }
+  若 名 == "f64_bytes" { 返回 真 }
+  若 名 == "pack_value" { 返回 真 }
   // 补：宿主那份名单有、这张表以前漏掉的。2026-10-25 一次补齐。
   // 依据是 tools/seed-gap.mjs：它量的正是「种子认得哪些内置」，而种子就是这个函数的字节码。
-  若 名 == "arena" { 返回 true }
-  若 名 == "owned" { 返回 true }
-  若 名 == "bytes_view" { 返回 true }
-  若 名 == "view_len" { 返回 true }
-  若 名 == "view_get" { 返回 true }
-  若 名 == "view_set" { 返回 true }
-  若 名 == "fmt_number" { 返回 true }
-  若 名 == "bytes_to_text" { 返回 true }
-  若 名 == "chdir" { 返回 true }
-  若 名 == "console_codepage" { 返回 true }
-  若 名 == "cwd" { 返回 true }
-  若 名 == "home_dir" { 返回 true }
-  若 名 == "index_get" { 返回 true }
-  若 名 == "index_has" { 返回 true }
-  若 名 == "index_keys" { 返回 true }
-  若 名 == "index_len" { 返回 true }
-  若 名 == "index_new" { 返回 true }
-  若 名 == "index_set" { 返回 true }
-  若 名 == "key_available" { 返回 true }
-  若 名 == "key_push" { 返回 true }
-  若 名 == "key_read" { 返回 true }
-  若 名 == "key_start" { 返回 true }
-  若 名 == "locale_current" { 返回 true }
-  若 名 == "locale_env" { 返回 true }
-  若 名 == "locale_set" { 返回 true }
-  若 名 == "now_ms" { 返回 true }
-  若 名 == "python_path" { 返回 true }
-  若 名 == "read_bytes" { 返回 true }
-  若 名 == "read_line" { 返回 true }
-  若 名 == "read_lines" { 返回 true }
-  若 名 == "read_stdin_bytes" { 返回 true }
-  若 名 == "read_stdin_line" { 返回 true }
-  若 名 == "repo_path" { 返回 true }
-  若 名 == "run_program" { 返回 true }
-  若 名 == "sleep_ms" { 返回 true }
-  若 名 == "split" { 返回 true }
-  若 名 == "temp_path" { 返回 true }
-  若 名 == "term_clear" { 返回 true }
-  若 名 == "term_color" { 返回 true }
-  若 名 == "term_escape" { 返回 true }
-  若 名 == "term_hide" { 返回 true }
-  若 名 == "term_show" { 返回 true }
-  若 名 == "term_size" { 返回 true }
-  若 名 == "thr_cancel" { 返回 true }
-  若 名 == "thr_count" { 返回 true }
-  若 名 == "thr_join" { 返回 true }
-  若 名 == "thr_spawn" { 返回 true }
-  返回 false
+  若 名 == "arena" { 返回 真 }
+  若 名 == "owned" { 返回 真 }
+  若 名 == "bytes_view" { 返回 真 }
+  若 名 == "view_len" { 返回 真 }
+  若 名 == "view_get" { 返回 真 }
+  若 名 == "view_set" { 返回 真 }
+  若 名 == "fmt_number" { 返回 真 }
+  若 名 == "bytes_to_text" { 返回 真 }
+  若 名 == "chdir" { 返回 真 }
+  若 名 == "console_codepage" { 返回 真 }
+  若 名 == "cwd" { 返回 真 }
+  若 名 == "home_dir" { 返回 真 }
+  若 名 == "index_get" { 返回 真 }
+  若 名 == "index_has" { 返回 真 }
+  若 名 == "index_keys" { 返回 真 }
+  若 名 == "index_len" { 返回 真 }
+  若 名 == "index_new" { 返回 真 }
+  若 名 == "index_set" { 返回 真 }
+  若 名 == "key_available" { 返回 真 }
+  若 名 == "key_push" { 返回 真 }
+  若 名 == "key_read" { 返回 真 }
+  若 名 == "key_start" { 返回 真 }
+  若 名 == "locale_current" { 返回 真 }
+  若 名 == "locale_env" { 返回 真 }
+  若 名 == "locale_set" { 返回 真 }
+  若 名 == "now_ms" { 返回 真 }
+  若 名 == "python_path" { 返回 真 }
+  若 名 == "read_bytes" { 返回 真 }
+  若 名 == "read_line" { 返回 真 }
+  若 名 == "read_lines" { 返回 真 }
+  若 名 == "read_stdin_bytes" { 返回 真 }
+  若 名 == "read_stdin_line" { 返回 真 }
+  若 名 == "repo_path" { 返回 真 }
+  若 名 == "run_program" { 返回 真 }
+  若 名 == "sleep_ms" { 返回 真 }
+  若 名 == "split" { 返回 真 }
+  若 名 == "temp_path" { 返回 真 }
+  若 名 == "term_clear" { 返回 真 }
+  若 名 == "term_color" { 返回 真 }
+  若 名 == "term_escape" { 返回 真 }
+  若 名 == "term_hide" { 返回 真 }
+  若 名 == "term_show" { 返回 真 }
+  若 名 == "term_size" { 返回 真 }
+  若 名 == "thr_cancel" { 返回 真 }
+  若 名 == "thr_count" { 返回 真 }
+  若 名 == "thr_join" { 返回 真 }
+  若 名 == "thr_spawn" { 返回 真 }
+  返回 假
 }
 
 fn 二元码(op: String) -> String {  若 op == "+" { 返回 "加" }
@@ -236,19 +236,19 @@ fn 二元码(op: String) -> String {  若 op == "+" { 返回 "加" }
 // 两条路对同一份源码给出两种答案，是最难查的那一类：你以为自己在查算术。
 fn 数字值(s: String) -> Int {
   var i = 0
-  var 负 = false
+  var 负 = 假
   若 i < len(s) {
     若 s[i] == "-" {
-      负 = true
+      负 = 真
       i = i + 1
     }
   }
   var 整 = 0
   var 小 = 0
   var 小长 = 0
-  var 在整 = true
-  var 在指 = false
-  var 指负 = false
+  var 在整 = 真
+  var 在指 = 假
+  var 指负 = 假
   var 指数 = 0
   当 i < len(s) {
     定 c = s[i]
@@ -268,11 +268,11 @@ fn 数字值(s: String) -> Int {
         }
       }
     }
-    若 c == "." { 在整 = false }
-    若 c == "e" { 在指 = true }
-    若 c == "E" { 在指 = true }
+    若 c == "." { 在整 = 假 }
+    若 c == "e" { 在指 = 真 }
+    若 c == "E" { 在指 = 真 }
     若 c == "-" {
-      若 在指 { 指负 = true }
+      若 在指 { 指负 = 真 }
     }
     i = i + 1
   }
@@ -307,23 +307,23 @@ fn 数字值(s: String) -> Int {
 fn 表达(节点: Int, 状态: Int) {
   定 种 = 节点.kind
   若 种 == "字" && 节点.type == "int" {
-    返回 {ok: true, 状态: 发(状态, {op: "常量", a: 数字值(节点.text)})}
+    返回 {ok: 真, 状态: 发(状态, {op: "常量", a: 数字值(节点.text)})}
   }
   若 种 == "字" && 节点.type == "string" {
-    返回 {ok: true, 状态: 发(状态, {op: "常量", a: 节点.text})}
+    返回 {ok: 真, 状态: 发(状态, {op: "常量", a: 节点.text})}
   }
   若 种 == "名" {
-    // true 与 false 到这一步是「一个名字」：自举的切词器把关键字一律当成标识符
+    // 真 与 假 到这一步是「一个名字」：自举的切词器把关键字一律当成标识符
     // （见 lex.hmyr 开头那段）。求值器里有这个特判，编译器也要有 ——
-    // 少了它的症状是「没有这个槽：true」，而那句话会让你去查作用域。
-    若 节点.text == "true" { 返回 {ok: true, 状态: 发(状态, {op: "常量", a: true})} }
-    若 节点.text == "false" { 返回 {ok: true, 状态: 发(状态, {op: "常量", a: false})} }
+    // 少了它的症状是「没有这个槽：真」，而那句话会让你去查作用域。
+    若 节点.text == "true" { 返回 {ok: 真, 状态: 发(状态, {op: "常量", a: 真})} }
+    若 节点.text == "false" { 返回 {ok: 真, 状态: 发(状态, {op: "常量", a: 假})} }
     定 号 = 找槽(状态.名表, 节点.text)
     // 槽里没有就是全局：模块级 常量 走这一条。宿主那一份（src/bytecode.mjs）
     // 一直是这么做的 —— 「若 (!有) 发 GLOBAL」—— 而这一份少了它，于是任何读
     // 模块级常量的函数都编不出来，报的却是「没有这个槽」，那句话会让人去查作用域。
-    若 号 < 0 { 返回 {ok: true, 状态: 发(状态, {op: "全域取", a: 节点.text})} }
-    返回 {ok: true, 状态: 发(状态, {op: "取", a: 号})}
+    若 号 < 0 { 返回 {ok: 真, 状态: 发(状态, {op: "全域取", a: 节点.text})} }
+    返回 {ok: 真, 状态: 发(状态, {op: "取", a: 号})}
   }
   若 种 == "二元" {
     // 短路那两个不是一条指令的事：左操作数算出之后留在栈上，
@@ -332,19 +332,19 @@ fn 表达(节点: Int, 状态: Int) {
     若 节点.op == "&&" { 返回 编短路(节点, 状态, "假跳留") }
     若 节点.op == "||" { 返回 编短路(节点, 状态, "真跳留") }
     定 l = 表达(节点.left, 状态)
-    若 l.ok == false { 返回 l }
+    若 l.ok == 假 { 返回 l }
     定 r = 表达(节点.right, l.状态)
-    若 r.ok == false { 返回 r }
+    若 r.ok == 假 { 返回 r }
     定 码 = 二元码(节点.op)
-    若 码 == "" { 返回 {ok: false, 错: "不认的二元运算：" + 节点.op} }
-    返回 {ok: true, 状态: 发(r.状态, {op: 码})}
+    若 码 == "" { 返回 {ok: 假, 错: "不认的二元运算：" + 节点.op} }
+    返回 {ok: 真, 状态: 发(r.状态, {op: 码})}
   }
   若 种 == "一元" {
     定 o = 表达(节点.operand, 状态)
-    若 o.ok == false { 返回 o }
-    若 节点.op == "-" { 返回 {ok: true, 状态: 发(o.状态, {op: "负"})} }
-    若 节点.op == "!" { 返回 {ok: true, 状态: 发(o.状态, {op: "非"})} }
-    返回 {ok: false, 错: "不认的一元运算：" + 节点.op}
+    若 o.ok == 假 { 返回 o }
+    若 节点.op == "-" { 返回 {ok: 真, 状态: 发(o.状态, {op: "负"})} }
+    若 节点.op == "!" { 返回 {ok: 真, 状态: 发(o.状态, {op: "非"})} }
+    返回 {ok: 假, 错: "不认的一元运算：" + 节点.op}
   }
   若 种 == "调用" {
     // 方法调用（a.alloc(16)）：主先压栈，参数按序压，最后一条 CALLM。
@@ -352,51 +352,51 @@ fn 表达(节点: Int, 状态: Int) {
     // 而这一点由 selfvmcompile 那套盯着。
     若 节点.callee.kind == "字段" {
       定 主 = 表达(节点.callee.target, 状态)
-      若 主.ok == false { 返回 主 }
+      若 主.ok == 假 { 返回 主 }
       定 方的参 = 编实参(节点.args, 主.状态, 0)
-      若 方的参.ok == false { 返回 方的参 }
-      返回 {ok: true, 状态: 发(方的参.状态, {op: "调方法", a: 节点.callee.name, b: len(节点.args)})}
+      若 方的参.ok == 假 { 返回 方的参 }
+      返回 {ok: 真, 状态: 发(方的参.状态, {op: "调方法", a: 节点.callee.name, b: len(节点.args)})}
     }
     定 参 = 编实参(节点.args, 状态, 0)
-    若 参.ok == false { 返回 参 }
+    若 参.ok == 假 { 返回 参 }
     若 是内置(节点.callee.text) {
-      返回 {ok: true, 状态: 发(参.状态, {op: "调内置", a: 节点.callee.text, b: len(节点.args)})}
+      返回 {ok: 真, 状态: 发(参.状态, {op: "调内置", a: 节点.callee.text, b: len(节点.args)})}
     }
-    返回 {ok: true, 状态: 发(参.状态, {op: "调函数", a: 节点.callee.text, b: len(节点.args)})}
+    返回 {ok: 真, 状态: 发(参.状态, {op: "调函数", a: 节点.callee.text, b: len(节点.args)})}
   }
   若 种 == "组" {
     定 项 = 编实参(节点.items, 状态, 0)
-    若 项.ok == false { 返回 项 }
-    返回 {ok: true, 状态: 发(项.状态, {op: "组", a: len(节点.items)})}
+    若 项.ok == 假 { 返回 项 }
+    返回 {ok: 真, 状态: 发(项.状态, {op: "组", a: len(节点.items)})}
   }
   若 种 == "记录" {
     返回 编记录(节点.fields, 状态, 0)
   }
   若 种 == "字段" {
     定 t = 表达(节点.target, 状态)
-    若 t.ok == false { 返回 t }
-    返回 {ok: true, 状态: 发(t.状态, {op: "字段", a: 节点.name})}
+    若 t.ok == 假 { 返回 t }
+    返回 {ok: 真, 状态: 发(t.状态, {op: "字段", a: 节点.name})}
   }
   若 种 == "索引" {
     定 t = 表达(节点.target, 状态)
-    若 t.ok == false { 返回 t }
+    若 t.ok == 假 { 返回 t }
     定 i = 表达(节点.index, t.状态)
-    若 i.ok == false { 返回 i }
-    返回 {ok: true, 状态: 发(i.状态, {op: "索引"})}
+    若 i.ok == 假 { 返回 i }
+    返回 {ok: 真, 状态: 发(i.状态, {op: "索引"})}
   }
-  返回 {ok: false, 错: "这一版还编不了这种表达式：" + 种}
+  返回 {ok: 假, 错: "这一版还编不了这种表达式：" + 种}
 }
 
 // 记录：先把每个字段的值编出来（按顺序压栈），再发一条 RECORD 带名字表。
 fn 编记录(字段们: Int, 状态: Int, i: Int) -> Int {
   若 i >= len(字段们) { 返回 发记录(状态, 字段们, 0, ()) }
   定 r = 表达(字段们[i].value, 状态)
-  若 r.ok == false { 返回 r }
+  若 r.ok == 假 { 返回 r }
   返回 编记录(字段们, r.状态, i + 1)
 }
 
 fn 发记录(状态: Int, 字段们: Int, i: Int, 名册: Int) {
-  若 i >= len(字段们) { 返回 {ok: true, 状态: 发(状态, {op: "记录", a: 名册})} }
+  若 i >= len(字段们) { 返回 {ok: 真, 状态: 发(状态, {op: "记录", a: 名册})} }
   返回 发记录(状态, 字段们, i + 1, 名册 + (字段们[i].name,))
 }
 
@@ -414,11 +414,11 @@ fn 发记录(状态: Int, 字段们: Int, i: Int, 名册: Int) {
 // `Keep` 那两条指令的语义是：跳走时不动栈顶，不跳时弹掉它。
 fn 编短路(节点: Int, 状态: Int, 码: String) {
   定 l = 表达(节点.left, 状态)
-  若 l.ok == false { 返回 l }
+  若 l.ok == 假 { 返回 l }
   定 位短 = 码长(l.状态)
   定 s1 = 发(l.状态, {op: 码, a: 0 - 1})
   定 r = 表达(节点.right, s1)
-  若 r.ok == false { 返回 r }
+  若 r.ok == 假 { 返回 r }
   定 s2 = 发(r.状态, {op: "布尔"})
   定 位过 = 码长(s2)
   定 s3 = 发(s2, {op: "跳", a: 0 - 1})
@@ -427,12 +427,12 @@ fn 编短路(节点: Int, 状态: Int, 码: String) {
   定 过 = 码长(s4)
   定 修1 = 改位(s4, 位短, {op: 码, a: 补})
   定 修2 = 改位(修1, 位过, {op: "跳", a: 过})
-  返回 {ok: true, 状态: 修2, 结束: false}
+  返回 {ok: 真, 状态: 修2, 结束: 假}
 }
 
-fn 编实参(们: Int, 状态: Int, i: Int) {  若 i >= len(们) { 返回 {ok: true, 状态: 状态} }
+fn 编实参(们: Int, 状态: Int, i: Int) {  若 i >= len(们) { 返回 {ok: 真, 状态: 状态} }
   定 r = 表达(们[i], 状态)
-  若 r.ok == false { 返回 r }
+  若 r.ok == 假 { 返回 r }
   返回 编实参(们, r.状态, i + 1)
 }
 
@@ -441,15 +441,15 @@ fn 语句(节点: Int, 状态: Int) {
   定 种 = 节点.kind
   若 种 == "返回" {
     定 v = 表达(节点.value, 状态)
-    若 v.ok == false { 返回 v }
-    返回 {ok: true, 状态: 发(v.状态, {op: "返回"}), 结束: true}
+    若 v.ok == 假 { 返回 v }
+    返回 {ok: 真, 状态: 发(v.状态, {op: "返回"}), 结束: 真}
   }
   若 种 == "定" || 种 == "变" {
     定 v = 表达(节点.value, 状态)
-    若 v.ok == false { 返回 v }
+    若 v.ok == 假 { 返回 v }
     定 号 = v.状态.槽
     定 记过 = 状态(v.状态.块, v.状态.小, 号 + 1, v.状态.名表 + ((节点.name, 号),))
-    返回 {ok: true, 状态: 发(记过, {op: "存", a: 号, b: 种 == "变"}), 结束: false}
+    返回 {ok: 真, 状态: 发(记过, {op: "存", a: 号, b: 种 == "变"}), 结束: 假}
   }
   若 种 == "赋值" {
     定 号 = 找槽(状态.名表, 节点.name)
@@ -457,19 +457,19 @@ fn 语句(节点: Int, 状态: Int) {
     // 宿主那一份（src/bytecode.mjs）也是这么做的 —— 两台编译器给同一份字节流。
     若 号 < 0 {
       定 v = 表达(节点.value, 状态)
-      若 v.ok == false { 返回 v }
-      返回 {ok: true, 状态: 发(v.状态, {op: "全域存", a: 节点.name}), 结束: false}
+      若 v.ok == 假 { 返回 v }
+      返回 {ok: 真, 状态: 发(v.状态, {op: "全域存", a: 节点.name}), 结束: 假}
     }
     定 v = 表达(节点.value, 状态)
-    若 v.ok == false { 返回 v }
-    返回 {ok: true, 状态: 发(v.状态, {op: "赋值", a: 号}), 结束: false}
+    若 v.ok == 假 { 返回 v }
+    返回 {ok: 真, 状态: 发(v.状态, {op: "赋值", a: 号}), 结束: 假}
   }
   若 种 == "表达式语句" {
     // 表达式语句：只编表达式，丢不丢值由 编块 决定 —— 它知道这是不是最后一条。
     // 早先在这里无条件发 POP，于是 若 的真支里多出一条，字节流与 JS 那侧对不上。
     定 v = 表达(节点.value, 状态)
-    若 v.ok == false { 返回 v }
-    返回 {ok: true, 状态: v.状态, 结束: false}
+    若 v.ok == 假 { 返回 v }
+    返回 {ok: 真, 状态: v.状态, 结束: 假}
   }
   若 种 == "若" {
     返回 编如果(节点, 状态)
@@ -479,20 +479,20 @@ fn 语句(节点: Int, 状态: Int) {
     // 起点的位置要记下来，而目标要回填 —— 与 若 同一个做法。
     定 起 = 码长(状态)
     定 c = 表达(节点.cond, 状态)
-    若 c.ok == false { 返回 c }
+    若 c.ok == 假 { 返回 c }
     定 位跳尾 = 码长(c.状态)
     定 s1 = 发(c.状态, {op: "假跳", a: 0 - 1})
     定 体 = 编块不留值(节点.body, s1, 0)
-    若 体.ok == false { 返回 体 }
+    若 体.ok == 假 { 返回 体 }
     定 s2 = 发(体.状态, {op: "跳", a: 起})
     // 当 整个算出一个值（空），与 JS 那一份一致；而 JS 那边它是「表达式语句」，
     // 所以值还要丢掉 —— 两条合起来才是对的字节。
     定 尾 = 码长(s2)
     定 s3 = 发(发(s2, {op: "常量", a: ()}), {op: "弃"})
     定 修 = 改位(s3, 位跳尾, {op: "假跳", a: 尾})
-    返回 {ok: true, 状态: 修, 结束: false}
+    返回 {ok: 真, 状态: 修, 结束: 假}
   }
-  返回 {ok: false, 错: "这一版还编不了这种语句：" + 种}
+  返回 {ok: 假, 错: "这一版还编不了这种语句：" + 种}
 }
 
 // 在某个位置上把指令换掉。元组不可变，所以是重建。
@@ -513,27 +513,27 @@ fn 换(码: Int, 位: Int, 新: Int) -> Int {
 // 「两位打包者交出同样的字节」，所以连「怎么写」都要对齐，不只是「算出什么」。
 fn 编如果(节点: Int, 状态: Int) {
   定 c = 表达(节点.cond, 状态)
-  若 c.ok == false { 返回 c }
+  若 c.ok == 假 { 返回 c }
   定 位跳假 = 码长(c.状态)
   定 s1 = 发(c.状态, {op: "假跳", a: 0 - 1})
-  定 真 = 编块(节点.then, s1, 0)
-  若 真.ok == false { 返回 真 }
-  定 位跳尾 = 码长(真.状态)
-  定 s2 = 发(真.状态, {op: "跳", a: 0 - 1})
+  定 真支 = 编块(节点.then, s1, 0)
+  若 真支.ok == 假 { 返回 真支 }
+  定 位跳尾 = 码长(真支.状态)
+  定 s2 = 发(真支.状态, {op: "跳", a: 0 - 1})
   定 假起 = 码长(s2)
-  var 假 = s2
+  var 假支 = s2
   若 len(节点.otherwise) > 0 {
     定 r = 编块(节点.otherwise, s2, 0)
-    若 r.ok == false { 返回 r }
-    假 = r.状态
+    若 r.ok == 假 { 返回 r }
+    假支 = r.状态
   } 否则 {
-    假 = 发(s2, {op: "常量", a: ()})
+    假支 = 发(s2, {op: "常量", a: ()})
   }
-  定 位尾 = 码长(假)
-  定 s3 = 发(假, {op: "弃"})
+  定 位尾 = 码长(假支)
+  定 s3 = 发(假支, {op: "弃"})
   定 修1 = 改位(s3, 位跳假, {op: "假跳", a: 假起})
   定 修2 = 改位(修1, 位跳尾, {op: "跳", a: 位尾})
-  返回 {ok: true, 状态: 修2, 结束: false}
+  返回 {ok: 真, 状态: 修2, 结束: 假}
 }
 
 // 逐条编语句，**一条都不留值**。
@@ -541,10 +541,10 @@ fn 编如果(节点: Int, 状态: Int) {
 // 当 的体用这一份：循环体里每条表达式语句的值都要丢掉，包括最后一条 ——
 // 留一个值在栈上，下一轮循环就会把它当成新压进来的东西。
 fn 编块不留值(语句们: Int, 状态: Int, i: Int) {
-  若 i >= len(语句们) { 返回 {ok: true, 状态: 状态, 结束: false} }
+  若 i >= len(语句们) { 返回 {ok: 真, 状态: 状态, 结束: 假} }
   定 r = 语句(语句们[i], 状态)
-  若 r.ok == false { 返回 r }
-  若 r.结束 { 返回 {ok: true, 状态: r.状态, 结束: true} }
+  若 r.ok == 假 { 返回 r }
+  若 r.结束 { 返回 {ok: 真, 状态: r.状态, 结束: 真} }
   var 下 = r.状态
   若 语句们[i].kind == "表达式语句" {
     下 = 发(下, {op: "弃"})
@@ -558,10 +558,10 @@ fn 编块不留值(语句们: Int, 状态: Int, i: Int) {
 // 由调用它的人决定怎么处理（若 的收尾 POP、函数的 RET、块的末尾）。
 // 这是 JS 那一份的规矩，而这一层要的是两位打包者交出同样的字节。
 fn 编块(语句们: Int, 状态: Int, i: Int) {
-  若 i >= len(语句们) { 返回 {ok: true, 状态: 状态, 结束: false} }
+  若 i >= len(语句们) { 返回 {ok: 真, 状态: 状态, 结束: 假} }
   定 r = 语句(语句们[i], 状态)
-  若 r.ok == false { 返回 r }
-  若 r.结束 { 返回 {ok: true, 状态: r.状态, 结束: true} }
+  若 r.ok == 假 { 返回 r }
+  若 r.结束 { 返回 {ok: 真, 状态: r.状态, 结束: 真} }
   var 下 = r.状态
   若 i + 1 < len(语句们) && 语句们[i].kind == "表达式语句" {
     下 = 发(下, {op: "弃"})
@@ -581,15 +581,15 @@ fn 编函数(函数: Int) {
     i = i + 1
   }
   定 r = 编块(体, 状态((), (), len(参名册), 名表), 0)
-  若 r.ok == false { 返回 {ok: false, 错: 名 + "：" + r.错} }
+  若 r.ok == 假 { 返回 {ok: 假, 错: 名 + "：" + r.错} }
   定 码 = 拼平(r.状态) + ({op: "常量", a: ()}, {op: "返回"})
-  返回 {ok: true, 函数: {名: 名, 参数量: len(参名册), 槽数: r.状态.槽, 效果: (), 码: 码}}
+  返回 {ok: 真, 函数: {名: 名, 参数量: len(参名册), 槽数: r.状态.槽, 效果: (), 码: 码}}
 }
 
 fn 编函数族(函数族: Int, i: Int, acc: Int) {
-  若 i >= len(函数族) { 返回 {ok: true, 函数族: acc} }
+  若 i >= len(函数族) { 返回 {ok: 真, 函数族: acc} }
   定 r = 编函数(函数族[i])
-  若 r.ok == false { 返回 r }
+  若 r.ok == 假 { 返回 r }
   返回 编函数族(函数族, i + 1, acc + (r.函数,))
 }
 
@@ -597,18 +597,18 @@ fn 编函数族(函数族: Int, i: Int, acc: Int) {
 // 它们被收进一个零参数的函数，机器在调 main 之前跑它一次 —— 名字与宿主那一份
 // （src/bytecode.mjs 的 顶层段名）是同一串，改一处要两处一起改。
 fn 编常量们(常量们: Int, i: Int, 状态们: Int) {
-  若 i >= len(常量们) { 返回 {ok: true, 状态: 状态们} }
+  若 i >= len(常量们) { 返回 {ok: 真, 状态: 状态们} }
   定 项 = 常量们[i]
   定 r = 表达(项[1], 状态们)
-  若 r.ok == false { 返回 {ok: false, 错: "常量 " + 项[0] + "：" + r.错} }
+  若 r.ok == 假 { 返回 {ok: 假, 错: "常量 " + 项[0] + "：" + r.错} }
   返回 编常量们(常量们, i + 1, 发(r.状态, {op: "全域存", a: 项[0]}))
 }
 
 fn 编顶层段(常量们: Int) {
   定 r = 编常量们(常量们, 0, 状态((), (), 0, ()))
-  若 r.ok == false { 返回 r }
+  若 r.ok == 假 { 返回 r }
   定 码 = 拼平(r.状态) + ({op: "常量", a: ()}, {op: "返回"})
-  返回 {ok: true, 函数: {名: "__hmyr_top__", 参数量: 0, 槽数: r.状态.槽, 效果: (), 码: 码}}
+  返回 {ok: 真, 函数: {名: "__hmyr_top__", 参数量: 0, 槽数: r.状态.槽, 效果: (), 码: 码}}
 }
 
 // 入口：源码 → 函数表。
@@ -620,18 +620,18 @@ fn 编顶层段(常量们: Int) {
 pub fn 编源码(源码: String) -> Int {
   定 声明们 = parse_decls(scan_lines(源码))
   定 r = 编函数族(声明们.fns, 0, ())
-  若 r.ok == false { 返回 r }
+  若 r.ok == 假 { 返回 r }
   若 len(声明们.consts) == 0 { 返回 r }
   定 顶 = 编顶层段(声明们.consts)
-  若 顶.ok == false { 返回 顶 }
+  若 顶.ok == 假 { 返回 顶 }
   定 合起来的函数族 = r.函数族 + (顶.函数,)
-  定 带顶层段 = {ok: true, 函数族: 合起来的函数族}
+  定 带顶层段 = {ok: 真, 函数族: 合起来的函数族}
   返回 带顶层段
 }
 
 fn main() -> Int {
   定 r = 编源码("fn 加(a: Int, b: Int) -> Int {" + chr(10) + "  return a + b" + chr(10) + "}" + chr(10))
-  若 r.ok == false {
+  若 r.ok == 假 {
     print("错：" + r.错)
     返回 1
   }

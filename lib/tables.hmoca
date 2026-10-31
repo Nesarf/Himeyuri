@@ -84,7 +84,7 @@ fn 空表() -> Int {
 
 fn 是空表(t: Int) -> Bool {
   若 有几件(t) == 0 {
-    返回 true
+    返回 真
   }
-  返回 false
+  返回 假
 }

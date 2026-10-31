@@ -20,21 +20,21 @@
 // 环境是键值对的元组（与 json.hmyr 那边同一个表示）：记录的字段名必须是标识符，
 // 而环境里的名字来自程序本身，所以用对表。
 //
-// 结果统一包成 {ok: true, value} 或 {ok: false, text}——这样错误一路往上走，
+// 结果统一包成 {ok: 真, value} 或 {ok: 假, text}——这样错误一路往上走，
 // 不会被当成一个值参与计算。这一点比「返回特殊值」可靠。
 
 fn 好(v: Int) {
-  返回 {ok: true, value: v}
+  返回 {ok: 真, value: v}
 }
 
 fn 坏(t: String) {
-  返回 {ok: false, text: t}
+  返回 {ok: 假, text: t}
 }
 
 // 查环境从后往前：后定义要覆盖先定义。正着找会拿到旧值，那是个安静的错。
 fn 查找到(环境: Int, 名: String, i: Int) {
-  若 i < 0 { 返回 {found: false, value: ()} }
-  若 环境[i][0] == 名 { 返回 {found: true, value: 环境[i][1]} }
+  若 i < 0 { 返回 {found: 假, value: ()} }
+  若 环境[i][0] == 名 { 返回 {found: 真, value: 环境[i][1]} }
   返回 查找到(环境, 名, i - 1)
 }
 
@@ -55,8 +55,8 @@ fn 名字们(t: Int) -> String {
 }
 
 fn 求二元(op: String, a: Int, b: Int) -> Int {
-  若 a.ok == false { 返回 a }
-  若 b.ok == false { 返回 b }
+  若 a.ok == 假 { 返回 a }
+  若 b.ok == 假 { 返回 b }
   定 x = a.value
   定 y = b.value
   若 op == "+" { 返回 好(x + y) }
@@ -76,15 +76,15 @@ fn 求二元(op: String, a: Int, b: Int) -> Int {
   // （原地那句话是「这里不短路」，而它让整个词法器的边界检查失效 ——
   //   见 design/BOARD.txt 第三十五节，以及 test/launcher.test.mjs 里那两条判据。）
   若 op == "&&" {
-    若 x == false { 返回 好(false) }
-    若 y == false { 返回 好(false) }
-    返回 好(true)
+    若 x == 假 { 返回 好(假) }
+    若 y == 假 { 返回 好(假) }
+    返回 好(真)
   }
   若 op == "||" {
-    若 x == false {
-      若 y == false { 返回 好(false) }
+    若 x == 假 {
+      若 y == 假 { 返回 好(假) }
     }
-    返回 好(true)
+    返回 好(真)
   }
   // 走到这里说明链那一层交来的 op 不是它写的那些字符串之一。
   // 若它是一个节点记录，把它的 kind 说出来 —— 「[object Object]」什么都不告诉人，
@@ -97,7 +97,7 @@ fn 求二元(op: String, a: Int, b: Int) -> Int {
 }
 
 fn 求一元(op: String, a: Int) -> Int {
-  若 a.ok == false { 返回 a }
+  若 a.ok == 假 { 返回 a }
   若 op == "-" { 返回 好(0 - a.value) }
   若 op == "!" { 返回 好(!a.value) }
   返回 坏("不认识的一元运算符：" + op)
@@ -107,7 +107,7 @@ fn 求一元(op: String, a: Int) -> Int {
 fn 求参数从(节点们: Int, 环境: Int, i: Int, acc: Int) -> Int {
   若 i >= len(节点们) { 返回 好(acc) }
   定 一个 = 求值(节点们[i], 环境)
-  若 一个.ok == false { 返回 一个 }
+  若 一个.ok == 假 { 返回 一个 }
   返回 求参数从(节点们, 环境, i + 1, acc + (一个.value,))
 }
 
@@ -124,8 +124,8 @@ fn 求参数(节点们: Int, 环境: Int) -> Int {
 // 先这样，因为真正的词法作用域要等闭包那一层；这一点写在明处，不装作已经是词法作用域。
 // 一个效果名在不在这一串里。
 fn 效在(效们: Int, 名: String, i: Int) -> Bool {
-  若 i >= len(效们) { 返回 false }
-  若 效们[i] == 名 { 返回 true }
+  若 i >= len(效们) { 返回 假 }
+  若 效们[i] == 名 { 返回 真 }
   返回 效在(效们, 名, i + 1)
 }
 
@@ -135,7 +135,7 @@ fn 缺效果从(要的: Int, 有的: Int, i: Int) -> String {
   // realtime 是档位，不是权限 —— 它不沿调用链传（design/MEMORY.txt 第 3 节那处将就）。
   // 传下去的话，每个调用实时函数的人都要声明自己也在实时档位上，而那不是真的。
   若 要的[i] == "realtime" { 返回 缺效果从(要的, 有的, i + 1) }
-  若 效在(有的, 要的[i], 0) == false { 返回 要的[i] }
+  若 效在(有的, 要的[i], 0) == 假 { 返回 要的[i] }
   返回 缺效果从(要的, 有的, i + 1)
 }
 
@@ -167,8 +167,8 @@ fn 要效果(环境: Int, 效: String, 名: String) -> String {
 // 一个区：{"种": "区", "关": 0/1, "下一个": 下一块号, "活": 活着的块数, "块1": 块, ...}
 // 一个块：{"种": "块", "zone": "arena"/"managed", "size": 字节数, "live": 0/1, "号": 块号}
 //
-// 「这是不是区或块」用 index_has(x, "种") 判：它对任何值都安全 —— 不是索引就交回 false，
-// 记录也交回 false（记录不是 Map，见 src/eval.mjs 的 index_has）。所以不必另加 is_index。
+// 「这是不是区或块」用 index_has(x, "种") 判：它对任何值都安全 —— 不是索引就交回 假，
+// 记录也交回 假（记录不是 Map，见 src/eval.mjs 的 index_has）。所以不必另加 is_index。
 //
 // 与宿主那一份（src/eval.mjs 的 arena）的差别只有表示：那边是 JS 对象，这边是索引。
 // 判据是「两台机器的判词一样」，不是「两台机器的内部一样」。
@@ -176,10 +176,10 @@ fn 要效果(环境: Int, 效: String, 名: String) -> String {
 // 每 每组 位插一个逗号，只动整数部分。
 // 三条规矩：分组看档案、小数点是句点、负号前置 —— 所以它只改整数部分的分隔符。
 fn 加千分位(文: String, 每组: Int) -> String {
-  var 负 = false
+  var 负 = 假
   var 体 = 文
   若 len(文) > 0 && slice(文, 0, 1) == "-" {
-    负 = true
+    负 = 真
     // slice 的第三个参数是「止」不是「长」—— 写成 len(文) - 1 会吃掉最后一位，
     // 而那正是第一版的样子（-1234567 变成了 -12,3456）。
     体 = slice(文, 1, len(文))
@@ -286,7 +286,7 @@ fn 收回来(区: Int, 块: Int) -> Int {
 }
 
 // 方法分派。这一版只认区上的方法 —— 别的值当主时给一句说得清的话，不崩：
-// 而它不会崩的理由是 index_has 对不是索引的值交回 false，而不是抛。
+// 而它不会崩的理由是 index_has 对不是索引的值交回 假，而不是抛。
 fn 求方法(环境: Int, 主: Int, 名: String, 参: Int) -> Int {
   // 块上的方法：存与取。块的上下文只有它自己，所以这两支必须挂在块上。
   若 index_has(主, "kind") {
@@ -348,7 +348,7 @@ fn 求方法(环境: Int, 主: Int, 名: String, 参: Int) -> Int {
       返回 坏("持有格上没有这个方法：" + 名)
     }
   }
-  若 index_has(主, "种") == false { 返回 坏("这一版只认区与块上的方法：" + 名) }
+  若 index_has(主, "种") == 假 { 返回 坏("这一版只认区与块上的方法：" + 名) }
   若 index_get(主, "种") != "区" { 返回 坏("这一版只认区与块上的方法：" + 名) }
   若 名 == "alloc" {
     若 len(参) != 1 { 返回 坏("alloc 要一个参数") }
@@ -372,15 +372,15 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   // 别的值当主时求方法给的是一句话，不是崩 —— 见那边对 index_has 的说明。
   若 节点.callee.kind == "字段" {
     定 主 = 求值(节点.callee.target, 环境)
-    若 主.ok == false { 返回 主 }
+    若 主.ok == 假 { 返回 主 }
     定 参 = 求参数(节点.args, 环境)
-    若 参.ok == false { 返回 参 }
+    若 参.ok == 假 { 返回 参 }
     返回 求方法(环境, 主.value, 节点.callee.name, 参.value)
   }
   若 节点.callee.kind != "名" { 返回 坏("这一版只认按名字调用") }
   定 名 = 节点.callee.text
   定 参 = 求参数(节点.args, 环境)
-  若 参.ok == false { 返回 参 }
+  若 参.ok == 假 { 返回 参 }
   定 值簇 = 参.value
   若 名 == "len" {
     若 len(值簇) != 1 { 返回 坏("len 要一个参数") }
@@ -481,13 +481,13 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   }
   若 名 == "view_len" {
     若 len(值簇) != 1 { 返回 坏("view_len 要一个参数") }
-    若 index_has(值簇[0], "kind") == false { 返回 坏("HMYR-行-019 view_len: 这不是窗口") }
+    若 index_has(值簇[0], "kind") == 假 { 返回 坏("HMYR-行-019 view_len: 这不是窗口") }
     若 index_get(值簇[0], "kind") != "view" { 返回 坏("HMYR-行-019 view_len: 这不是窗口") }
     返回 好(index_get(值簇[0], "长"))
   }
   若 名 == "view_get" {
     若 len(值簇) != 2 { 返回 坏("view_get 要两个参数") }
-    若 index_has(值簇[0], "kind") == false { 返回 坏("HMYR-行-019 view_get: 这不是窗口") }
+    若 index_has(值簇[0], "kind") == 假 { 返回 坏("HMYR-行-019 view_get: 这不是窗口") }
     若 index_get(值簇[0], "kind") != "view" { 返回 坏("HMYR-行-019 view_get: 这不是窗口") }
     定 长 = index_get(值簇[0], "长")
     定 i = to_int(值簇[1])
@@ -497,7 +497,7 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   }
   若 名 == "view_set" {
     若 len(值簇) != 3 { 返回 坏("view_set 要三个参数") }
-    若 index_has(值簇[0], "kind") == false { 返回 坏("HMYR-行-019 view_set: 这不是窗口") }
+    若 index_has(值簇[0], "kind") == 假 { 返回 坏("HMYR-行-019 view_set: 这不是窗口") }
     若 index_get(值簇[0], "kind") != "view" { 返回 坏("HMYR-行-019 view_set: 这不是窗口") }
     定 长 = index_get(值簇[0], "长")
     定 i = to_int(值簇[1])
@@ -886,7 +886,7 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     返回 好(index_keys(值簇[0]))
   }
   定 找 = 查找(环境, "fn:" + 名)
-  若 找.found == false { 返回 坏("没有这个函数：" + 名) }
+  若 找.found == 假 { 返回 坏("没有这个函数：" + 名) }
   // 找.value 是 (参数名册, 语句们, 效果名册)。绑参数要在**新的一层**上绑，
   // 而不是在调用者的环境上——否则函数的局部名字会漏回外面，
   // 而那是一门语言里最难查的一类错。
@@ -904,11 +904,11 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
   // 只到帧级，不到块级 —— 这门语言没有块钩子，而「一次调用一圈」是能写进判据的最小形状。
   定 全 = 查找(环境, "全局")
   var 上一帧 = ()
-  var 有表 = false
+  var 有表 = 假
   若 全.found {
     上一帧 = index_get(全.value, "持有格们")
     index_set(全.value, "持有格们", ())
-    有表 = true
+    有表 = 真
   }
   定 r = 执行块(体内, 更新(体环境, "效果", 子效))
   var 本帧 = ()
@@ -917,8 +917,8 @@ fn 求调用(节点: Int, 环境: Int) -> Int {
     index_set(全.value, "持有格们", 上一帧)
     关本帧持有格从(本帧, 0)
   }
-  若 r.ok == false { 返回 坏(r.text) }
-  若 r.done == true { 返回 好(r.value) }
+  若 r.ok == 假 { 返回 坏(r.text) }
+  若 r.done == 真 { 返回 好(r.value) }
   返回 好(())
 }
 
@@ -1018,17 +1018,17 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
   若 种 == "int" { 返回 好(to_int(节点.text)) }
   若 种 == "字" && 节点.type == "int" { 返回 好(数字值(节点.text)) }
   若 种 == "字" && 节点.type == "string" { 返回 好(节点.text) }
-  // nil：这门语言没有 null，空元组就是它。而求值器要认得出 {kind: "nil"} 这种节点，
+  // 空：这门语言没有 null，空元组就是它。而求值器要认得出 {kind: "nil"} 这种节点，
   // 因为 stmt.hmyr 用它在「返回 不带值」时占位。
   若 种 == "nil" { 返回 好(()) }
   若 种 == "名" {
     // 布尔字面量：自举那一层的切词器把关键字一律当成标识符（见 lex.hmyr 开头那段），
-    // 于是 true 与 false 到这一步是「一个名字」。要在这里把它们认回来，
-    // 否则目标程序里写一个 true 就会报「没有这个名字：true」。
+    // 于是 真 与 假 到这一步是「一个名字」。要在这里把它们认回来，
+    // 否则目标程序里写一个 真 就会报「没有这个名字：真」。
     // 这两个词是语言的关键字，不可能是用户起的名字，所以先认它们没有歧义。
     若 节点.text == "true" { 返回 好(1 == 1) }
     若 节点.text == "false" { 返回 好(1 == 2) }
-    // nil 同理：宿主把那两个字当关键字，自举这一层得自己认回来。
+    // 空 同理：宿主把那两个字当关键字，自举这一层得自己认回来。
     若 节点.text == "nil" { 返回 好(()) }
     定 r = 查找(环境, 节点.text)
     若 r.found { 返回 好(r.value) }
@@ -1051,14 +1051,14 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
     // 短路是规范的一部分，所以这一条不是优化，是补语义。
     若 节点.op == "&&" {
       定 左 = 求值(节点.left, 环境)
-      若 左.ok == false { 返回 左 }
-      若 左.value == false { 返回 好(false) }
+      若 左.ok == 假 { 返回 左 }
+      若 左.value == 假 { 返回 好(假) }
       返回 求值(节点.right, 环境)
     }
     若 节点.op == "||" {
       定 左 = 求值(节点.left, 环境)
-      若 左.ok == false { 返回 左 }
-      若 左.value == true { 返回 好(true) }
+      若 左.ok == 假 { 返回 左 }
+      若 左.value == 真 { 返回 好(真) }
       返回 求值(节点.right, 环境)
     }
     返回 求二元(节点.op, 求值(节点.left, 环境), 求值(节点.right, 环境))
@@ -1067,9 +1067,9 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
   若 种 == "调用" { 返回 求调用(节点, 环境) }
   若 种 == "索引" {
     定 标 = 求值(节点.target, 环境)
-    若 标.ok == false { 返回 标 }
+    若 标.ok == 假 { 返回 标 }
     定 位 = 求值(节点.index, 环境)
-    若 位.ok == false { 返回 位 }
+    若 位.ok == 假 { 返回 位 }
     // 越界要自己报，不能交给机器去决定（2026-11-01）。
     //
     // 为什么：这一句原来是 好(标.value[位.value])，于是「越界」这件事交由各台机器
@@ -1086,10 +1086,10 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
     // 不能写 标.value[节点.name]：下标只收数字，而这里字段名是个变量。
     // 先问再取：field_get 取不到会抛（有编号），而这里接不住异常，所以先问 field_has。
     定 标 = 求值(节点.target, 环境)
-    若 标.ok == false { 返回 标 }
+    若 标.ok == 假 { 返回 标 }
     若 field_has(标.value, 节点.name) { 返回 好(field_get(标.value, 节点.name)) }
     // 区与块是索引，它们的字段也要能读（b.zone / b.size / b.live）。
-    // index_has 对不是索引的值交回 false 而不是抛，所以这一句对记录与别的值都安全。
+    // index_has 对不是索引的值交回 假 而不是抛，所以这一句对记录与别的值都安全。
     // 记录先问、索引后问：同名时记录赢，这样「记录」这个意思不被索引借走。
     若 index_has(标.value, 节点.name) { 返回 好(index_get(标.value, 节点.name)) }
     返回 坏("没有这个字段：" + 节点.name)
@@ -1103,7 +1103,7 @@ pub fn 求值(节点: Int, 环境: Int) -> Int {
 // 一段节点求值并直接把结果打成文字。给示例与测试用。
 fn 求值成文字(节点: Int, 环境: Int) -> String {
   定 r = 求值(节点, 环境)
-  若 r.ok == false { 返回 "错：" + r.text }
+  若 r.ok == 假 { 返回 "错：" + r.text }
   返回 str(r.value)
 }
 
@@ -1114,9 +1114,9 @@ fn 求值成文字(节点: Int, 环境: Int) -> String {
 // 查找从后往前，于是后定义自然覆盖先定义。
 //
 // 执行的结果统一成一个记录：
-//   {ok: true,  env: 新环境, done: false, value: ()}     正常走完
-//   {ok: true,  env: 新环境, done: true,  value: 返回值}  遇到 返回
-//   {ok: false, env: (),     done: true,  text: 原因}     出错（done 也是真：不能再往下走）
+//   {ok: 真,  env: 新环境, done: 假, value: ()}     正常走完
+//   {ok: 真,  env: 新环境, done: 真,  value: 返回值}  遇到 返回
+//   {ok: 假, env: (),     done: 真,  text: 原因}     出错（done 也是真：不能再往下走）
 
 // 绑参数：把 值簇 挨个绑到 名册 上，交回一层新环境。
 // 「新的一层」这件事在 执行块 里由它自己管（它把 定 绑在局部），
@@ -1159,19 +1159,19 @@ fn 改在(环境: Int, 到: Int, 值: Int) {
 }
 
 fn 好执行(环境: Int, 完成: Bool, 值: Int) {
-  返回 {ok: true, env: 环境, done: 完成, value: 值}
+  返回 {ok: 真, env: 环境, done: 完成, value: 值}
 }
 
 fn 坏执行(原因: String) {
-  返回 {ok: false, env: (), done: true, text: 原因}
+  返回 {ok: 假, env: (), done: 真, text: 原因}
 }
 
 fn 执行(节点: Int, 环境: Int) -> Int {
   定 种 = 节点.kind
   若 种 == "定" || 种 == "变" {
     定 v = 求值(节点.value, 环境)
-    若 v.ok == false { 返回 坏执行(v.text) }
-    返回 好执行(更新(环境, 节点.name, v.value), false, ())
+    若 v.ok == 假 { 返回 坏执行(v.text) }
+    返回 好执行(更新(环境, 节点.name, v.value), 假, ())
   }
   若 种 == "赋值" {
     // 模块级 常量 在装进环境时留了一条只读标记（见 装常量从）。
@@ -1182,39 +1182,39 @@ fn 执行(节点: Int, 环境: Int) -> Int {
     若 全.found {
       若 index_has(全.value, 节点.name) {
         定 v0 = 求值(节点.value, 环境)
-        若 v0.ok == false { 返回 坏执行(v0.text) }
+        若 v0.ok == 假 { 返回 坏执行(v0.text) }
         index_set(全.value, 节点.name, v0.value)
-        返回 好执行(环境, false, ())
+        返回 好执行(环境, 假, ())
       }
     }
     定 位 = 末位(环境, 节点.name, 0, -1)
     若 位 < 0 { 返回 坏执行("不能给没声明过的名字赋值：" + 节点.name) }
     定 v = 求值(节点.value, 环境)
-    若 v.ok == false { 返回 坏执行(v.text) }
+    若 v.ok == 假 { 返回 坏执行(v.text) }
     // 改那一条，而不是追加一条 —— 见 改在 的注释。
-    返回 好执行(改在(环境, 位, v.value), false, ())
+    返回 好执行(改在(环境, 位, v.value), 假, ())
   }
   若 种 == "表达式语句" {
     定 v = 求值(节点.value, 环境)
-    若 v.ok == false { 返回 坏执行(v.text) }
-    返回 好执行(环境, false, ())
+    若 v.ok == 假 { 返回 坏执行(v.text) }
+    返回 好执行(环境, 假, ())
   }
   若 种 == "返回" {
     // 无值时那个位置是 {kind: "nil"}，于是这一层只看 kind——不用 len 去探，
     // 因为值也可能是一个记录，而 len 只收字符串与元组。
-    若 节点.value.kind == "nil" { 返回 好执行(环境, true, ()) }
+    若 节点.value.kind == "nil" { 返回 好执行(环境, 真, ()) }
     定 v = 求值(节点.value, 环境)
-    若 v.ok == false { 返回 坏执行(v.text) }
-    返回 好执行(环境, true, v.value)
+    若 v.ok == 假 { 返回 坏执行(v.text) }
+    返回 好执行(环境, 真, v.value)
   }
   若 种 == "若" {
     定 c = 求值(节点.cond, 环境)
-    若 c.ok == false { 返回 坏执行(c.text) }
-    若 c.value != false {
-      若 len(节点.then) == 0 { 返回 好执行(环境, false, ()) }
+    若 c.ok == 假 { 返回 坏执行(c.text) }
+    若 c.value != 假 {
+      若 len(节点.then) == 0 { 返回 好执行(环境, 假, ()) }
       返回 执行块(节点.then, 环境)
     }
-    若 len(节点.otherwise) == 0 { 返回 好执行(环境, false, ()) }
+    若 len(节点.otherwise) == 0 { 返回 好执行(环境, 假, ()) }
     返回 执行块(节点.otherwise, 环境)
   }
   若 种 == "当" { 返回 执行反复(节点, 环境, 0) }
@@ -1227,19 +1227,19 @@ fn 执行(节点: Int, 环境: Int) -> Int {
 fn 执行反复(节点: Int, 环境: Int, 次数: Int) -> Int {
   若 次数 >= 1000000 { 返回 坏执行("while 跑过一百万次还没结束") }
   定 c = 求值(节点.cond, 环境)
-  若 c.ok == false { 返回 坏执行(c.text) }
-  若 c.value == false { 返回 好执行(环境, false, ()) }
+  若 c.ok == 假 { 返回 坏执行(c.text) }
+  若 c.value == 假 { 返回 好执行(环境, 假, ()) }
   定 r = 执行块(节点.body, 环境)
-  若 r.ok == false { 返回 坏执行(r.text) }
-  若 r.done == true { 返回 r }
+  若 r.ok == 假 { 返回 坏执行(r.text) }
+  若 r.done == 真 { 返回 r }
   返回 执行反复(节点, r.env, 次数 + 1)
 }
 
 fn 执行块从(语句们: Int, 环境: Int, i: Int) -> Int {
-  若 i >= len(语句们) { 返回 好执行(环境, false, ()) }
+  若 i >= len(语句们) { 返回 好执行(环境, 假, ()) }
   定 r = 执行(语句们[i], 环境)
-  若 r.ok == false { 返回 r }
-  若 r.done == true { 返回 r }
+  若 r.ok == 假 { 返回 r }
+  若 r.done == 真 { 返回 r }
   返回 执行块从(语句们, r.env, i + 1)
 }
 
@@ -1292,7 +1292,7 @@ fn 装常量从(环境: Int, 常量们: Int, i: Int) -> Int {
   定 项 = 常量们[i]
   若 len(项) < 2 { 返回 装常量从(环境, 常量们, i + 1) }
   定 值 = 求值(项[1], 环境)
-  若 值.ok == false { 返回 装常量从(环境, 常量们, i + 1) }
+  若 值.ok == 假 { 返回 装常量从(环境, 常量们, i + 1) }
   // 第三项是「可写吗」：没有这一项、或它是 0，就是 常量。
   //
   // 可写的（var）进那张共享的小表；不可写的留在环境里，并留一条只读标记。
@@ -1350,13 +1350,13 @@ fn 求字段从(字段们: Int, 环境: Int, i: Int, acc: Int) -> Int {
   若 i >= len(字段们) { 返回 好(acc) }
   定 字段 = 字段们[i]
   定 v = 求值(字段.value, 环境)
-  若 v.ok == false { 返回 v }
+  若 v.ok == 假 { 返回 v }
   返回 求字段从(字段们, 环境, i + 1, acc + ((字段.name, v.value),))
 }
 
 fn 求记录(节点: Int, 环境: Int) -> Int {
   定 里 = 求字段从(节点.fields, 环境, 0, ())
-  若 里.ok == false { 返回 里 }
+  若 里.ok == 假 { 返回 里 }
   返回 好(record_new(里.value))
 }
 

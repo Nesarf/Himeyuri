@@ -46,6 +46,7 @@ const 关键字别名 = {
   效果串: "effects", 引入: "import",
   否则: "else", 常量: "const", 借用: "borrow", 拥有: "own",
   作: "as", 托管: "managed", 要求: "requires", 保证: "ensures", 不变式: "invariant",
+  真: "true", 假: "false", 空: "nil", 效果: "effect",
 };
 
 export const 切 = (源) => {

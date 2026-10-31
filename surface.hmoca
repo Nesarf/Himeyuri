@@ -95,13 +95,13 @@ fn 脚本路径() -> String {
 // 呈现到某个后端，并且**会真的动世界**（native 要起一个进程）。
 // 与上面的 呈现 分开：那一个是纯的，只交出字符串；这一个要 process 效果。
 fn 呈现进程(后端: String, 布: Int, 文字: String) -> Int 效果串(process) {
-  若 后端 == "term" { 返回 {ok: true, text: 呈现("term", 布)} }
+  若 后端 == "term" { 返回 {ok: 真, text: 呈现("term", 布)} }
   若 后端 == "native" {
     定 r = run_program("powershell", ("-NoProfile", "-STA", "-File", 脚本路径(),
       "-Width", "640", "-Height", "400", "-Text", 文字, "-NoShow"), 20000, "utf8")
-    返回 {ok: true, text: "退出码 " + str(r.code) + " · " + r.stdout}
+    返回 {ok: 真, text: "退出码 " + str(r.code) + " · " + r.stdout}
   }
-  返回 {ok: false, text: "没有这个后端：" + 后端}
+  返回 {ok: 假, text: "没有这个后端：" + 后端}
 }
 
 // 呈现一张图像（像素布导出的 PNG）。与 呈现进程 分开一个入口，
@@ -112,7 +112,7 @@ fn 呈现图像(后端: String, 图像路径: String) -> Int 效果串(process) 
       "-Image", 图像路径, "-NoShow"), 20000, "utf8")
     返回 {ok: r.code == 0, text: r.stdout + r.stderr}
   }
-  返回 {ok: false, text: "这个后端还不呈现图像：" + 后端}
+  返回 {ok: 假, text: "这个后端还不呈现图像：" + 后端}
 }
 
 fn main() -> Int 效果串(process) {

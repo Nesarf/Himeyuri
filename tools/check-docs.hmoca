@@ -22,56 +22,56 @@
 
 fn 是文档(名: String) -> Bool {
   定 n = len(名)
-  若 n >= 4 && slice(名, n - 4, n) == ".txt" { 返回 true }
-  若 n >= 4 && slice(名, n - 4, n) == ".rst" { 返回 true }
-  若 n >= 5 && slice(名, n - 5, n) == ".adoc" { 返回 true }
-  返回 false
+  若 n >= 4 && slice(名, n - 4, n) == ".txt" { 返回 真 }
+  若 n >= 4 && slice(名, n - 4, n) == ".rst" { 返回 真 }
+  若 n >= 5 && slice(名, n - 5, n) == ".adoc" { 返回 真 }
+  返回 假
 }
 
 fn 要跳过(名: String) -> Bool {
-  若 名 == "node_modules" { 返回 true }
-  若 名 == ".git" { 返回 true }
-  若 名 == "build" { 返回 true }
-  若 名 == "data" { 返回 true }
-  若 名 == "swap" { 返回 true }
+  若 名 == "node_modules" { 返回 真 }
+  若 名 == ".git" { 返回 真 }
+  若 名 == "build" { 返回 真 }
+  若 名 == "data" { 返回 真 }
+  若 名 == "swap" { 返回 真 }
   // 点开头的一律跳过：2026-11-02 实测，这一份从 . 起走的时候进了 .tmp-crc-* 与
   // .tmp-readdir-*（测试留下的临时目录），深度在那里面耗掉一半，于是 design/ 只
   // 查到两份就停了 —— 19 份对 JS 版的 61 份，差的就是这些。测试的临时目录不是文档。
-  若 len(名) > 0 && slice(名, 0, 1) == "." { 返回 true }
+  若 len(名) > 0 && slice(名, 0, 1) == "." { 返回 真 }
   // ucd 是码点表（runtime/ucd/codepoints.txt 有 42 MB），conformance 下是 Unihan 与
   // NFC 的对照表（29 MB 与 17 MB）—— 都是数据，不是我们写下的文档。
   //
   // 旧那一份只跳了 data/，于是这些也被扫进去了；它用正则，快得看不出代价。
   // 这一份是手写扫描，一跑就撞步限（HMYR-R0102）—— 于是这条「跳什么」第一次
   // 变成了必须说清的事，而不是一个碰巧够用的省略。
-  若 名 == "ucd" { 返回 true }
-  若 名 == "conformance" { 返回 true }
-  返回 false
+  若 名 == "ucd" { 返回 真 }
+  若 名 == "conformance" { 返回 真 }
+  返回 假
 }
 
 fn 有片(文: String, 片: String) -> Bool {
   定 片长 = len(片)
-  若 片长 == 0 { 返回 true }
+  若 片长 == 0 { 返回 真 }
   var i = 0
   当 i + 片长 <= len(文) {
-    若 slice(文, i, i + 片长) == 片 { 返回 true }
+    若 slice(文, i, i + 片长) == 片 { 返回 真 }
     i = i + 1
   }
-  返回 false
+  返回 假
 }
 
 fn 行首是(行: String, 头: String) -> Bool {
-  若 len(行) < len(头) { 返回 false }
+  若 len(行) < len(头) { 返回 假 }
   返回 slice(行, 0, len(头)) == 头
 }
 
 fn 含(们: Int, 值: String) -> Bool {
   var i = 0
   当 i < len(们) {
-    若 们[i] == 值 { 返回 true }
+    若 们[i] == 值 { 返回 真 }
     i = i + 1
   }
-  返回 false
+  返回 假
 }
 
 // 行首那一列的记号。都不命中就交回空串。
@@ -100,7 +100,7 @@ fn 行记号们(文: String) -> Int {
     定 到尾 = i == len(文)
     若 到尾 || 文[i] == chr(10) {
       定 记 = 行记号(slice(文, 起, i))
-      若 记 != "" && 含(出, 记) == false { 出 = 出 + (记,) }
+      若 记 != "" && 含(出, 记) == 假 { 出 = 出 + (记,) }
       起 = i + 1
     }
     i = i + 1
@@ -117,9 +117,9 @@ fn 行内记号们(文: String) -> Int {
     定 到尾 = i == len(文)
     若 到尾 || 文[i] == chr(10) {
       定 行 = slice(文, 起, i)
-      若 含(出, "bold marker") == false && 有片(行, "**") { 出 = 出 + ("bold marker",) }
-      若 含(出, "backtick code span") == false && 有片(行, "`") { 出 = 出 + ("backtick code span",) }
-      若 含(出, "inline link") == false && 有片(行, "](") && 有片(行, "[") { 出 = 出 + ("inline link",) }
+      若 含(出, "bold marker") == 假 && 有片(行, "**") { 出 = 出 + ("bold marker",) }
+      若 含(出, "backtick code span") == 假 && 有片(行, "`") { 出 = 出 + ("backtick code span",) }
+      若 含(出, "inline link") == 假 && 有片(行, "](") && 有片(行, "[") { 出 = 出 + ("inline link",) }
       起 = i + 1
     }
     i = i + 1
@@ -145,7 +145,7 @@ fn 走(路径: String, 出: Int, 次: Int) -> Int 效果串(file) {
   var i = 0
   当 i < len(名册) {
     定 名 = 名册[i]
-    若 要跳过(名) == false {
+    若 要跳过(名) == 假 {
       定 全 = 路径 + "/" + 名
       若 is_dir(全) {
         收 = 走(全, 收, 次 + 1)

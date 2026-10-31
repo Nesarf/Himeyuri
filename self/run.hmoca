@@ -22,7 +22,7 @@ fn 跑(源码: String) -> String {
   定 tokens = scan(源码)
   定 树 = chain(tokens)
   定 r = 求值(树.node, ())
-  若 r.ok == false { 返回 "求值错：" + r.text }
+  若 r.ok == 假 { 返回 "求值错：" + r.text }
   返回 str(r.value)
 }
 
@@ -50,13 +50,13 @@ fn 跳到行尾(s: String, i: Int) -> Int {
 }
 
 fn 行首是声明从(s: String, i: Int) -> Bool {
-  若 i >= len(s) { 返回 false }
+  若 i >= len(s) { 返回 假 }
   定 c = s[i]
   若 c == " " || c == "\t" || c == "\n" || c == "\r" { 返回 行首是声明从(s, i + 1) }
   // 注释行要跳过。一份文件以注释开头是常态，而「以注释开头」不等于「不是声明」。
   若 c == "/" && i + 1 < len(s) && s[i + 1] == "/" { 返回 行首是声明从(s, 跳到行尾(s, i)) }
-  若 i + 1 < len(s) && s[i] == "f" && s[i + 1] == "n" { 返回 true }
-  返回 false
+  若 i + 1 < len(s) && s[i] == "f" && s[i + 1] == "n" { 返回 真 }
+  返回 假
 }
 
 fn 行首是声明(s: String) -> Bool {
@@ -79,15 +79,15 @@ fn 跑程序文字(源码: String) -> String {
     定 选 = 选函数(全部.fns, "main")
     定 体 = 选[2]   // 声明现在是（名字, 参数名册, 语句们），语句们是第三件
     定 r = 跑程序带常量与参(体, 全部.fns, 全部.consts, (), ())
-    若 r.ok == false { 返回 "错：" + r.text }
+    若 r.ok == 假 { 返回 "错：" + r.text }
     返回 str(r.value)
   }
   定 有壳 = "fn main() -> Int {\n" + 源码 + "\n}\n"
   定 tokens = scan_lines(有壳)
   定 体 = parse_body(tokens)
-  若 体.found == false { 返回 "错：找不到函数体" }
+  若 体.found == 假 { 返回 "错：找不到函数体" }
   定 r = 跑程序(体.list)
-  若 r.ok == false { 返回 "错：" + r.text }
+  若 r.ok == 假 { 返回 "错：" + r.text }
   返回 str(r.value)
 }
 
@@ -110,7 +110,7 @@ fn 只解析(源码: String) -> String {
   定 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
   定 tokens = scan_lines(有壳)
   定 体 = parse_body(tokens)
-  若 体.found == false { 返回 "错：找不到函数体" }
+  若 体.found == 假 { 返回 "错：找不到函数体" }
   返回 "ok 1"
 }
 
@@ -125,11 +125,11 @@ fn 只解析(源码: String) -> String {
 // 这一条 引入 是不是一个「路径」：宿主那边只有 ./、../、盘符与绝对路径才算文件，
 // 其余的（例如 引入 "某个包"）留给包管理器，记一笔 HMYR-載-002 就过去了，不算缺文件。
 fn 是路径(s: String) -> Bool {
-  若 len(s) >= 2 && slice(s, 0, 2) == "./" { 返回 true }
-  若 len(s) >= 3 && slice(s, 0, 3) == "../" { 返回 true }
-  若 len(s) >= 2 && slice(s, 1, 2) == ":" { 返回 true }
-  若 len(s) >= 1 && slice(s, 0, 1) == "/" { 返回 true }
-  返回 false
+  若 len(s) >= 2 && slice(s, 0, 2) == "./" { 返回 真 }
+  若 len(s) >= 3 && slice(s, 0, 3) == "../" { 返回 真 }
+  若 len(s) >= 2 && slice(s, 1, 2) == ":" { 返回 真 }
+  若 len(s) >= 1 && slice(s, 0, 1) == "/" { 返回 真 }
+  返回 假
 }
 
 fn 加载走(目录: String, 相对: String, 栈: Int, 已载: Int) 效果串(file) {
@@ -139,7 +139,7 @@ fn 加载走(目录: String, 相对: String, 栈: Int, 已载: Int) 效果串(fi
   //
   // 不成形状的（比如 std/io 里的斜杠）交给包管理器：宿主在那里报 HMYR-載-002 并跳过，
   // 这里也跳过，因为「不是文件」与「缺文件」是两件事。
-  若 是路径(相对) == false && 是绝对(相对) == false && 是包名字(相对) == false {
+  若 是路径(相对) == 假 && 是绝对(相对) == 假 && 是包名字(相对) == 假 {
     返回 {已载: 已载, 错: ""}
   }
   定 路 = 解析路(目录, 相对)
@@ -148,7 +148,7 @@ fn 加载走(目录: String, 相对: String, 栈: Int, 已载: Int) 效果串(fi
   // （2026-11-01 实测：调换之后 selfmod 那条环用例才重新通过）。
   若 含路(栈, 路, 0) { 返回 {已载: 已载, 错: "HMYR-載-001 " + 路} }
   若 含路(已载, 路, 0) { 返回 {已载: 已载, 错: ""} }
-  若 file_exists(路) == false { 返回 {已载: 已载, 错: "HMYR-載-003 " + 路} }
+  若 file_exists(路) == 假 { 返回 {已载: 已载, 错: "HMYR-載-003 " + 路} }
   // 读源码、扫它引了谁，然后递归 —— 这一层只负责「顺序」。
   //
   // 为什么这里不调 只解析（2026-11-01 量出来的）：它只用来报 E0100（这文件语法错），
@@ -170,7 +170,7 @@ fn 加载走(目录: String, 相对: String, 栈: Int, 已载: Int) 效果串(fi
   定 子 = 加载多(目录部分(路), 找导入们(源码), 0, 栈 + (路,), 已载)
   var 已 = 子.已载
   var 错 = 子.错
-  若 错 == "" && 含路(已, 路, 0) == false { 已 = 已 + (路,) }
+  若 错 == "" && 含路(已, 路, 0) == 假 { 已 = 已 + (路,) }
   返回 {已载: 已, 错: 错}
 }
 
@@ -182,7 +182,7 @@ fn 加载多(目录: String, 路们: Int, i: Int, 栈: Int, 已载: Int) 效果�
   // 这一道门与 加载走 开头那道要一起改（2026-11-02）：只改后者的话，包名在进
   // 加载走 之前就被这里滤掉了，症状是 order 里没有包 —— 而 pkg-manifest 与
   // owned-check 的那三条判据全在包上，它们一起红，看起来像检查坏了。
-  若 是路径(路们[i]) == false && 是绝对(路们[i]) == false && 是包名字(路们[i]) == false {
+  若 是路径(路们[i]) == 假 && 是绝对(路们[i]) == 假 && 是包名字(路们[i]) == 假 {
     返回 加载多(目录, 路们, i + 1, 栈, 已载)
   }
   定 r = 加载走(目录, 路们[i], 栈, 已载)
@@ -224,15 +224,15 @@ fn 翻表达式(n: Int) {
     若 n.type == "int" {
       返回 {kind: "字", type: "int", value: 数字值(n.text), raw: n.text, text: n.text, line: 行(n), column: 列(n)}
     }
-    返回 {kind: "字", type: "string", value: n.text, raw: false, text: n.text, line: 行(n), column: 列(n)}
+    返回 {kind: "字", type: "string", value: n.text, raw: 假, text: n.text, line: 行(n), column: 列(n)}
   }
   若 n.kind == "名" {
-    // true 与 false 在这一侧是标识符（词法把关键字也归在 ident 里），在宿主那边是字面量。
-    // 不转的话，宿主会去找一个叫 false 的名字 —— 报 HMYR-行-005，而那句话听起来像拼写错误。
-    若 n.text == "true" { 返回 {kind: "字", type: "bool", value: true, raw: false, text: n.text, line: 行(n), column: 列(n)} }
-    若 n.text == "false" { 返回 {kind: "字", type: "bool", value: false, raw: false, text: n.text, line: 行(n), column: 列(n)} }
-    // nil 在宿主那边是一个字面量（type "nil"、值 null），不是名字。
-    若 n.text == "nil" { 返回 {kind: "字", type: "nil", value: (), raw: false, text: n.text, line: 行(n), column: 列(n)} }
+    // 真 与 假 在这一侧是标识符（词法把关键字也归在 ident 里），在宿主那边是字面量。
+    // 不转的话，宿主会去找一个叫 假 的名字 —— 报 HMYR-行-005，而那句话听起来像拼写错误。
+    若 n.text == "true" { 返回 {kind: "字", type: "bool", value: 真, raw: 假, text: n.text, line: 行(n), column: 列(n)} }
+    若 n.text == "false" { 返回 {kind: "字", type: "bool", value: 假, raw: 假, text: n.text, line: 行(n), column: 列(n)} }
+    // 空 在宿主那边是一个字面量（type "nil"、值 null），不是名字。
+    若 n.text == "nil" { 返回 {kind: "字", type: "nil", value: (), raw: 假, text: n.text, line: 行(n), column: 列(n)} }
     返回 {kind: "名", name: n.text, text: n.text, line: 行(n), column: 列(n)}
   }
   若 n.kind == "二元" {
@@ -431,9 +431,9 @@ fn 造整棵(入口: String) 效果串(file) {
   // 入口也要过 当路径：桥传进来的是 examples/board-spec.hmoca 这种仓库相对路径，
   // 不以 ./ 开头 —— 而 加载走 现在按 引入 说明的三种形状判（路径 / 绝对 / 包名），
   // 含斜杠的裸路径会被当成「不成形状」丢掉，于是整棵树是空的、而 ok 还是真
-  // （2026-11-02 实测：桥的 loadUnit 交回 ok=true 而 order=0、modules=0）。
+  // （2026-11-02 实测：桥的 loadUnit 交回 ok=真 而 order=0、modules=0）。
   定 r = 加载走(".", 当路径(入口), (), ())
-  若 r.错 != "" { 返回 {ok: false, 错: r.错, 模块族: (), 路径们: ()} }
+  若 r.错 != "" { 返回 {ok: 假, 错: r.错, 模块族: (), 路径们: ()} }
   var 模块族 = ()
   var i = 0
   当 i < len(r.已载) {
@@ -442,7 +442,7 @@ fn 造整棵(入口: String) 效果串(file) {
     i = i + 1
   }
   // 路径与模块一起交回去：宿主 loader 的 order 是路径，桥要能照原样说同一个序列。
-  返回 {ok: true, 错: "", 模块族: 模块族, 路径们: r.已载}
+  返回 {ok: 真, 错: "", 模块族: 模块族, 路径们: r.已载}
 }
 
 // 只解析、不求值，交回声明树。
@@ -635,7 +635,7 @@ fn 跑模块族(源码们: Int, 参们: Int) -> String {
   若 len(选) > 3 { 主效 = 选[3] }
   定 常量们 = 合并常量从((), 源码们, 0)
   定 r = 跑程序带常量与参(选[2], 函数族, 常量们, 参们, 主效)
-  若 r.ok == false { 返回 "错：" + r.text }
+  若 r.ok == 假 { 返回 "错：" + r.text }
   返回 str(r.value)
 }
 
@@ -659,8 +659,8 @@ fn 拼路径(目录: String, 相对: String) -> String {
 }
 
 fn 含路(已读: Int, 路: String, i: Int) -> Bool {
-  若 i >= len(已读) { 返回 false }
-  若 已读[i] == 路 { 返回 true }
+  若 i >= len(已读) { 返回 假 }
+  若 已读[i] == 路 { 返回 真 }
   返回 含路(已读, 路, i + 1)
 }
 
@@ -688,33 +688,33 @@ fn 目录部分(路: String) -> String {
 
 // 绝对路径：以 / 开头，或者第二个字符是盘符冒号。它不该再拼一次目录。
 fn 是绝对(相对: String) -> Bool {
-  若 len(相对) >= 1 && slice(相对, 0, 1) == "/" { 返回 true }
-  若 len(相对) >= 2 && slice(相对, 1, 2) == ":" { 返回 true }
-  返回 false
+  若 len(相对) >= 1 && slice(相对, 0, 1) == "/" { 返回 真 }
+  若 len(相对) >= 2 && slice(相对, 1, 2) == ":" { 返回 真 }
+  返回 假
 }
 
 // 一条 引入 说明是不是「路径」：./ ../ 开头的、绝对路径。其余（形如一个名字）是包名。
 // 与宿主 loader 的判据同一条。
 fn 是路径(相对: String) -> Bool {
-  若 len(相对) >= 2 && slice(相对, 0, 2) == "./" { 返回 true }
-  若 len(相对) >= 3 && slice(相对, 0, 3) == "../" { 返回 true }
-  若 是绝对(相对) { 返回 true }
-  返回 false
+  若 len(相对) >= 2 && slice(相对, 0, 2) == "./" { 返回 真 }
+  若 len(相对) >= 3 && slice(相对, 0, 3) == "../" { 返回 真 }
+  若 是绝对(相对) { 返回 真 }
+  返回 假
 }
 
 // 像不像一个包名：不以数字、连字符或点开头，且整段不含斜杠。
 // 与宿主那条正则同一条意思（名字里允许非 ASCII —— 这门语言的标识符本来就允许）。
 // 不成形状的东西（std/io 这种）不是包名，是包管理器将来的事。
 fn 是包名字(s: String) -> Bool {
-  若 len(s) == 0 { 返回 false }
-  若 is_digit(s[0]) { 返回 false }
-  若 s[0] == "-" || s[0] == "." { 返回 false }
+  若 len(s) == 0 { 返回 假 }
+  若 is_digit(s[0]) { 返回 假 }
+  若 s[0] == "-" || s[0] == "." { 返回 假 }
   var i = 0
   当 i < len(s) {
-    若 s[i] == "/" { 返回 false }
+    若 s[i] == "/" { 返回 假 }
     i = i + 1
   }
-  返回 true
+  返回 真
 }
 
 // 从某个目录往上找「包根」：最外层的那个含 hmyr.hmkit 的目录。
@@ -743,7 +743,7 @@ fn 读一棵(目录: String, 相对: String, 已读: Int, 源码们: Int) 效果
   若 含路(已读, 路, 0) { 返回 {已读: 已读, 源码们: 源码们} }
   // 不在就跳过：引一个可选文件不该让整个程序死。那与以前启动器的行为一致——
   // 而那件事以前靠宿主那边的 existsSync 做着。
-  若 file_exists(路) == false { 返回 {已读: 已读 + (路,), 源码们: 源码们} }
+  若 file_exists(路) == 假 { 返回 {已读: 已读 + (路,), 源码们: 源码们} }
   定 源码 = read_text(路, "utf8")
   // 子模块的 引入 相对**它自己**的目录，不是相对顶层目标。
   返回 读多从(目录部分(路), 找导入们(源码), 0, 已读 + (路,), 源码们 + (源码,))
@@ -780,18 +780,18 @@ fn 跑文件入口(目录: String, 目标: String, 参们: Int) 效果串(file, 
   // 这道转换不是谨慎，是分工：入口这一层负责「从哪一个绝对文件开始」，
   // 底下那一层只负责「相对它怎么找」。
   var 全 = 路
-  若 是绝对(路) == false { 全 = 拼路径(cwd(), 路) }
-  若 file_exists(全) == false {
-    返回 {ok: false, 文字: "HMYR-內-011 cannot read '" + 全 + "': no such file"}
+  若 是绝对(路) == 假 { 全 = 拼路径(cwd(), 路) }
+  若 file_exists(全) == 假 {
+    返回 {ok: 假, 文字: "HMYR-內-011 cannot read '" + 全 + "': no such file"}
   }
   // 这里传 全（拼好的绝对路径），不是 目标。
   // 理由：解析路 会把「不像路径的名字」当包名，而入口文件的名字常常正是那样
   // （main.hmoca）。传绝对路径就绕过了那一条判断。
   定 读 = 读一棵(目录, 全, (), ())
   若 len(读.源码们) == 0 {
-    返回 {ok: false, 文字: "HMYR-內-011 nothing read from '" + 全 + "'"}
+    返回 {ok: 假, 文字: "HMYR-內-011 nothing read from '" + 全 + "'"}
   }
-  返回 {ok: true, 文字: 跑模块族(读.源码们, 参们)}
+  返回 {ok: 真, 文字: 跑模块族(读.源码们, 参们)}
 }
 
 // ---- 命令行入口：第三步的第一半 ----
@@ -834,7 +834,7 @@ fn 命令行入口() -> Int 效果串(process, file) {
   }
   定 目标 = 参们[1]
   定 果 = 跑文件入口(拆目录(目标), 拆名字(目标), 目标程序参数(参们, 1, ()))
-  若 果.ok == false {
+  若 果.ok == 假 {
     print_err(果.文字 + chr(10))
     返回 1
   }

@@ -33,7 +33,7 @@ fn 转移(态: String, 动作: String) -> Int {
 
 fn main() -> Int 效果串(process, file) {
   var 没读到 = read_stdin_line()
-  当 没读到.结束 == false {
+  当 没读到.结束 == 假 {
     定 行 = 没读到.行
     若 len(行) > 0 {
       // 一行两段，中间一个空格。切法用手写的，因为 split 空分隔会留空段。

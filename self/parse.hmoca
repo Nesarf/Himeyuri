@@ -22,8 +22,8 @@ fn letters() -> String {
 }
 
 fn in_set(ch: String, set: String, i: Int) -> Bool {
-  若 i >= len(set) { 返回 false }
-  若 ch == set[i] { 返回 true }
+  若 i >= len(set) { 返回 假 }
+  若 ch == set[i] { 返回 真 }
   返回 in_set(ch, set, i + 1)
 }
 

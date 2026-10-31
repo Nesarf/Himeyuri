@@ -24,8 +24,8 @@ fn digits() -> String {
 
 // ch 是否出现在 set 里。深度等于 set 的长度。
 fn in_set(ch: String, set: String, i: Int) -> Bool {
-  若 i >= len(set) { 返回 false }
-  若 ch == set[i] { 返回 true }
+  若 i >= len(set) { 返回 假 }
+  若 ch == set[i] { 返回 真 }
   返回 in_set(ch, set, i + 1)
 }
 
@@ -90,9 +90,9 @@ fn skip_block(s: String, i: Int) -> Int {
 // 「手写版越界交回空、内置版截断」造成的。
 
 fn starts_with(s: String, from: Int, p: String, k: Int) -> Bool {
-  若 k >= len(p) { 返回 true }
-  若 from + k >= len(s) { 返回 false }
-  若 s[from + k] != p[k] { 返回 false }
+  若 k >= len(p) { 返回 真 }
+  若 from + k >= len(s) { 返回 假 }
+  若 s[from + k] != p[k] { 返回 假 }
   返回 starts_with(s, from, p, k + 1)
 }
 
@@ -130,6 +130,10 @@ fn 关键字归一(词: String) -> String {
   若 词 == "要求" { 返回 "requires" }
   若 词 == "保证" { 返回 "ensures" }
   若 词 == "不变式" { 返回 "invariant" }
+  若 词 == "真" { 返回 "true" }
+  若 词 == "假" { 返回 "false" }
+  若 词 == "空" { 返回 "nil" }
+  若 词 == "效果" { 返回 "effect" }
   返回 词
 }
 
@@ -168,9 +172,9 @@ fn read_number(s: String, i: Int, acc: String) -> {next: Int, text: String} {
 // 症状是「修剪不认制表符」，看起来像库里写错了。
 // 认五个：n、t、r、反斜杠、引号；别的一律原样留两个字符，不猜。
 fn read_string(s: String, i: Int, acc: String) {
-  若 i >= len(s) { 返回 {next: i, text: acc, closed: false} }
-  若 s[i] == "\"" { 返回 {next: i + 1, text: acc, closed: true} }
-  若 s[i] == "\n" { 返回 {next: i, text: acc, closed: false} }
+  若 i >= len(s) { 返回 {next: i, text: acc, closed: 假} }
+  若 s[i] == "\"" { 返回 {next: i + 1, text: acc, closed: 真} }
+  若 s[i] == "\n" { 返回 {next: i, text: acc, closed: 假} }
   若 s[i] == "\\" { 返回 read_escape(s, i, acc) }
   返回 read_string(s, i + 1, acc + s[i])
 }
@@ -333,12 +337,12 @@ fn 补位置(tokens: Int, 源码: String) {
 }
 
 pub fn scan(text: String) {
-  返回 补位置(收段(tokenize(text, 0, (), (), false)), text)
+  返回 补位置(收段(tokenize(text, 0, (), (), 假)), text)
 }
 
 // 保留换行的入口：语句边界由此而来。旧入口保持原样，六处既有对拍不受影响。
 pub fn scan_lines(text: String) {
-  返回 补位置(收段(tokenize(text, 0, (), (), true)), text)
+  返回 补位置(收段(tokenize(text, 0, (), (), 真)), text)
 }
 
 fn main() -> Int {

@@ -29,7 +29,7 @@
 //   hmyr self/ittgn.hmoca --取 <包> <成员名> <输出文件>
 
 fn 以尾(s: String, 尾: String) -> Bool {
-  若 len(s) < len(尾) { 返回 false }
+  若 len(s) < len(尾) { 返回 假 }
   返回 slice(s, len(s) - len(尾), len(s)) == 尾
 }
 

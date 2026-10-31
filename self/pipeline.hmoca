@@ -83,13 +83,13 @@ fn check(source: String) {
 
 // 两个元组是否逐项相同。
 fn same_list(a: Int, b: Int) -> Bool {
-  若 len(a) != len(b) { 返回 false }
+  若 len(a) != len(b) { 返回 假 }
   返回 same_each(a, b, 0)
 }
 
 fn same_each(a: Int, b: Int, i: Int) -> Bool {
-  若 i >= len(a) { 返回 true }
-  若 a[i] != b[i] { 返回 false }
+  若 i >= len(a) { 返回 真 }
+  若 a[i] != b[i] { 返回 假 }
   返回 same_each(a, b, i + 1)
 }
 

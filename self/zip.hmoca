@@ -247,9 +247,9 @@ fn 找匹配(字节串: Int, i: Int) {
   var j = 起
   当 j < i {
     var 长 = 0
-    var 继续 = true
+    var 继续 = 真
     当 继续 && 长 < 258 && i + 长 < 总 && j + 长 < 总 {
-      若 字节串[i + 长] == 字节串[j + 长] { 长 = 长 + 1 } 否则 { 继续 = false }
+      若 字节串[i + 长] == 字节串[j + 长] { 长 = 长 + 1 } 否则 { 继续 = 假 }
     }
     若 长 > 最 {
       最 = 长
@@ -354,12 +354,12 @@ pub fn 成员(路: String, 名: String, 压: Bool, 偏移: Int) 效果串(file) 
 
 fn main() -> Int 效果串(file) {
   定 参 = argv()
-  var 压 = false
-  var 多 = false
+  var 压 = 假
+  var 多 = 假
   var i = 0
   当 i < len(参) {
-    若 参[i] == "--压" { 压 = true }
-    若 参[i] == "--多" { 多 = true }
+    若 参[i] == "--压" { 压 = 真 }
+    若 参[i] == "--多" { 多 = 真 }
     i = i + 1
   }
   若 多 {
