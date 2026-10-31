@@ -5,7 +5,7 @@
 import "../self/curve.hmoca"
 
 fn main() -> Int effects(process) {
-  let 哈 = sha512字节((97, 98, 99))
+  定 哈 = sha512字节((97, 98, 99))
   print(成十六进制(模L长(哈)) + chr(10))
-  return 0
+  返回 0
 }

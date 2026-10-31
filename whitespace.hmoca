@@ -18,98 +18,98 @@
 
 // 去掉行尾的一串空格与制表符。
 fn 去尾从(行: String, 末: Int) -> Int {
-  if 末 <= 0 { return 0 }
-  let 字 = 行[末 - 1]
-  if 字 == " " { return 去尾从(行, 末 - 1) }
-  if 字 == chr(9) { return 去尾从(行, 末 - 1) }
-  return 末
+  若 末 <= 0 { 返回 0 }
+  定 字 = 行[末 - 1]
+  若 字 == " " { 返回 去尾从(行, 末 - 1) }
+  若 字 == chr(9) { 返回 去尾从(行, 末 - 1) }
+  返回 末
 }
 
 fn 去尾(行: String) -> String {
-  return slice(行, 0, 去尾从(行, len(行)))
+  返回 slice(行, 0, 去尾从(行, len(行)))
 }
 
 // 把一个制表符换成两个空格。为什么是两个而不是八个：
 // 这一版的读者是自己，而两个空格是这门语言里缩进的既定宽度。
 fn 展制表从(行: String, i: Int, acc: String) -> String {
-  if i >= len(行) { return acc }
-  if 行[i] == chr(9) { return 展制表从(行, i + 1, acc + "  ") }
-  return 展制表从(行, i + 1, acc + 行[i])
+  若 i >= len(行) { 返回 acc }
+  若 行[i] == chr(9) { 返回 展制表从(行, i + 1, acc + "  ") }
+  返回 展制表从(行, i + 1, acc + 行[i])
 }
 
 fn 展制表(行: String) -> String {
-  return 展制表从(行, 0, "")
+  返回 展制表从(行, 0, "")
 }
 
 fn 一行(行: String) -> String {
-  return 展制表(去尾(行))
+  返回 展制表(去尾(行))
 }
 
 // 压空行：连续两个以上的空行压成一个。
 fn 压空行从(行批: Int, i: Int, 上空白: Bool, acc: Int) -> Int {
-  if i >= len(行批) { return acc }
-  let 行 = 行批[i]
-  let 是空白 = len(行) == 0
-  if 是空白 && 上空白 { return 压空行从(行批, i + 1, true, acc) }
-  return 压空行从(行批, i + 1, 是空白, acc + (行,))
+  若 i >= len(行批) { 返回 acc }
+  定 行 = 行批[i]
+  定 是空白 = len(行) == 0
+  若 是空白 && 上空白 { 返回 压空行从(行批, i + 1, true, acc) }
+  返回 压空行从(行批, i + 1, 是空白, acc + (行,))
 }
 
 fn 压空行(行批: Int) -> Int {
-  return 压空行从(行批, 0, false, ())
+  返回 压空行从(行批, 0, false, ())
 }
 
 // 拆行：按换行切成一段一段（不保留换行符本身）。
 fn 拆行从(文本: String, i: Int, 起: Int, acc: Int) -> Int {
-  if i >= len(文本) { return acc + (slice(文本, 起, len(文本)),) }
-  if 文本[i] == chr(10) {
-    let 行 = slice(文本, 起, i)
-    return 拆行从(文本, i + 1, i + 1, acc + (行,))
+  若 i >= len(文本) { 返回 acc + (slice(文本, 起, len(文本)),) }
+  若 文本[i] == chr(10) {
+    定 行 = slice(文本, 起, i)
+    返回 拆行从(文本, i + 1, i + 1, acc + (行,))
   }
-  return 拆行从(文本, i + 1, 起, acc)
+  返回 拆行从(文本, i + 1, 起, acc)
 }
 
 fn 拆行(文本: String) -> Int {
-  if 文本 == "" { return () }
-  return 拆行从(文本, 0, 0, ())
+  若 文本 == "" { 返回 () }
+  返回 拆行从(文本, 0, 0, ())
 }
 
 // 逐行做「一行」那件事。
 fn 行批加工从(行批: Int, i: Int, acc: Int) -> Int {
-  if i >= len(行批) { return acc }
-  return 行批加工从(行批, i + 1, acc + (一行(行批[i]),))
+  若 i >= len(行批) { 返回 acc }
+  返回 行批加工从(行批, i + 1, acc + (一行(行批[i]),))
 }
 
 // 拼回去：每行之后一个换行，末尾再留一个（文件总以换行结尾）。
 fn 拼行从(行批: Int, i: Int, acc: String) -> String {
-  if i >= len(行批) { return acc }
-  return 拼行从(行批, i + 1, acc + 行批[i] + chr(10))
+  若 i >= len(行批) { 返回 acc }
+  返回 拼行从(行批, i + 1, acc + 行批[i] + chr(10))
 }
 
 // 去掉末尾的空行。为什么需要它：拼回去时每一行后面都补一个换行，
 // 所以「末尾那一行是空的」会变成一个多余的空行——而那就是幂等不成立的原因。
 fn 去末空从(行批: Int, 末: Int) -> Int {
-  if 末 <= 0 { return 0 }
-  if len(行批[末 - 1]) == 0 { return 去末空从(行批, 末 - 1) }
-  return 末
+  若 末 <= 0 { 返回 0 }
+  若 len(行批[末 - 1]) == 0 { 返回 去末空从(行批, 末 - 1) }
+  返回 末
 }
 
 fn 取头从(行批: Int, i: Int, 末: Int, acc: Int) -> Int {
-  if i >= 末 { return acc }
-  return 取头从(行批, i + 1, 末, acc + (行批[i],))
+  若 i >= 末 { 返回 acc }
+  返回 取头从(行批, i + 1, 末, acc + (行批[i],))
 }
 
 fn 去末空(行批: Int) -> Int {
-  return 取头从(行批, 0, 去末空从(行批, len(行批)), ())
+  返回 取头从(行批, 0, 去末空从(行批, len(行批)), ())
 }
 
 // 规范化整份源码。
 fn 规范化(文本: String) -> String {
-  let 行批 = 去末空(压空行(行批加工从(拆行(文本), 0, ())))
-  return 拼行从(行批, 0, "")
+  定 行批 = 去末空(压空行(行批加工从(拆行(文本), 0, ())))
+  返回 拼行从(行批, 0, "")
 }
 
 fn main() -> Int {
-  let 例 = "fn main() {\n\tprint(\"hi\")   \n\n\n  return 0\n}"
+  定 例 = "fn main() {\n\tprint(\"hi\")   \n\n\n  return 0\n}"
   print("原文：\n" + 例 + "\n---\n规范化：\n" + 规范化(例))
-  return 0
+  返回 0
 }

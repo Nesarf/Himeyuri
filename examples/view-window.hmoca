@@ -12,25 +12,25 @@
 // （最小求值器）上是缺的，于是程序会停在中途。2026-10-28 补上之后，
 // 这一份才敢写全 —— 示例要能跑完，而跑不完的示例会把缺口教成写法。
 fn main() -> Int effects(file, process) {
-  let 路 = "D:/himeyuri/data/ucd/Blocks.txt"
-  let 字节 = read_bytes(路)
+  定 路 = "D:/himeyuri/data/ucd/Blocks.txt"
+  定 字节 = read_bytes(路)
   print("文件字节数：" + str(len(字节)) + chr(10))
 
   // 首八字节：一个窗口，不复制那十一 KB。
-  let 头 = bytes_view(字节, 0, 8)
+  定 头 = bytes_view(字节, 0, 8)
   print("首八字节：")
   var i = 0
-  while i < view_len(头) {
+  当 i < view_len(头) {
     print(str(view_get(头, i)) + " ")
     i = i + 1
   }
   print(chr(10))
 
   // 尾巴那一小段：同一个源，另一个窗口。窗口不复制，所以两个可以同时存在。
-  let 尾 = bytes_view(字节, len(字节) - 4, 4)
+  定 尾 = bytes_view(字节, len(字节) - 4, 4)
   print("末四字节：")
   var j = 0
-  while j < view_len(尾) {
+  当 j < view_len(尾) {
     print(str(view_get(尾, j)) + " ")
     j = j + 1
   }
@@ -41,5 +41,5 @@ fn main() -> Int effects(file, process) {
 
   // 越界会以 HMYR-R0152 停下程序 —— 所以它不写在示例里：示例要能跑完。
   // 窗口的长度由 view_len 说，别拿源的长度去猜它。
-  return 0
+  返回 0
 }

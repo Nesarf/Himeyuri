@@ -14,108 +14,108 @@
 // 边界写在明处：只认 + - * / % 与括号，不认一元负号，不认比较与逻辑运算。
 
 fn digits() -> String {
-  return "0123456789"
+  返回 "0123456789"
 }
 
 fn letters() -> String {
-  return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
+  返回 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
 }
 
 fn in_set(ch: String, set: String, i: Int) -> Bool {
-  if i >= len(set) { return false }
-  if ch == set[i] { return true }
-  return in_set(ch, set, i + 1)
+  若 i >= len(set) { 返回 false }
+  若 ch == set[i] { 返回 true }
+  返回 in_set(ch, set, i + 1)
 }
 
 fn is_digit_c(c: String) -> Bool {
-  return in_set(c, digits(), 0)
+  返回 in_set(c, digits(), 0)
 }
 
 fn is_alpha_c(c: String) -> Bool {
-  return in_set(c, letters(), 0)
+  返回 in_set(c, letters(), 0)
 }
 
 fn is_ident_c(c: String) -> Bool {
-  return is_alpha_c(c) || is_digit_c(c)
+  返回 is_alpha_c(c) || is_digit_c(c)
 }
 
 fn skip_sp(s: String, i: Int) -> Int {
-  if i >= len(s) { return i }
-  if s[i] == " " || s[i] == "\t" { return skip_sp(s, i + 1) }
-  return i
+  若 i >= len(s) { 返回 i }
+  若 s[i] == " " || s[i] == "\t" { 返回 skip_sp(s, i + 1) }
+  返回 i
 }
 
 fn read_num(s: String, i: Int, acc: String) {
-  if i >= len(s) { return {next: i, text: acc} }
-  if is_digit_c(s[i]) { return read_num(s, i + 1, acc + s[i]) }
-  return {next: i, text: acc}
+  若 i >= len(s) { 返回 {next: i, text: acc} }
+  若 is_digit_c(s[i]) { 返回 read_num(s, i + 1, acc + s[i]) }
+  返回 {next: i, text: acc}
 }
 
 fn read_name(s: String, i: Int, acc: String) {
-  if i >= len(s) { return {next: i, text: acc} }
-  if is_ident_c(s[i]) { return read_name(s, i + 1, acc + s[i]) }
-  return {next: i, text: acc}
+  若 i >= len(s) { 返回 {next: i, text: acc} }
+  若 is_ident_c(s[i]) { 返回 read_name(s, i + 1, acc + s[i]) }
+  返回 {next: i, text: acc}
 }
 
 // 原子：括号、整数、标识符。括号里的解析回到最低优先级那一层。
 fn parse_atom(s: String, i: Int) {
-  let j = skip_sp(s, i)
-  if j >= len(s) { return {node: {kind: "误", text: ""}, next: j} }
-  let c = s[j]
-  if c == "(" {
-    let inner = parse_add(s, j + 1)
-    let k = skip_sp(s, inner.next)
-    if k < len(s) && s[k] == ")" { return {node: inner.node, next: k + 1} }
-    return {node: inner.node, next: k}
+  定 j = skip_sp(s, i)
+  若 j >= len(s) { 返回 {node: {kind: "误", text: ""}, next: j} }
+  定 c = s[j]
+  若 c == "(" {
+    定 inner = parse_add(s, j + 1)
+    定 k = skip_sp(s, inner.next)
+    若 k < len(s) && s[k] == ")" { 返回 {node: inner.node, next: k + 1} }
+    返回 {node: inner.node, next: k}
   }
-  if is_digit_c(c) {
-    let got = read_num(s, j, "")
-    return {node: {kind: "字", type: "int", text: got.text}, next: got.next}
+  若 is_digit_c(c) {
+    定 got = read_num(s, j, "")
+    返回 {node: {kind: "字", type: "int", text: got.text}, next: got.next}
   }
-  if is_alpha_c(c) {
-    let got = read_name(s, j, "")
-    return {node: {kind: "名", text: got.text}, next: got.next}
+  若 is_alpha_c(c) {
+    定 got = read_name(s, j, "")
+    返回 {node: {kind: "名", text: got.text}, next: got.next}
   }
-  return {node: {kind: "误", text: c}, next: j + 1}
+  返回 {node: {kind: "误", text: c}, next: j + 1}
 }
 
 // 乘除一层：左结合，靠尾递归累积，层数不随运算个数增长。
 fn mul_tail(s: String, i: Int, left: Int) {
-  let j = skip_sp(s, i)
-  if j >= len(s) { return {node: left, next: j} }
-  let c = s[j]
-  if c == "*" || c == "/" || c == "%" {
-    let right = parse_atom(s, j + 1)
-    return mul_tail(s, right.next, {kind: "二元", op: c, left: left, right: right.node})
+  定 j = skip_sp(s, i)
+  若 j >= len(s) { 返回 {node: left, next: j} }
+  定 c = s[j]
+  若 c == "*" || c == "/" || c == "%" {
+    定 right = parse_atom(s, j + 1)
+    返回 mul_tail(s, right.next, {kind: "二元", op: c, left: left, right: right.node})
   }
-  return {node: left, next: j}
+  返回 {node: left, next: j}
 }
 
 fn parse_mul(s: String, i: Int) -> Int {
-  let left = parse_atom(s, i)
-  return mul_tail(s, left.next, left.node)
+  定 left = parse_atom(s, i)
+  返回 mul_tail(s, left.next, left.node)
 }
 
 // 加减一层：同样左结合。
 fn add_tail(s: String, i: Int, left: Int) {
-  let j = skip_sp(s, i)
-  if j >= len(s) { return {node: left, next: j} }
-  let c = s[j]
-  if c == "+" || c == "-" {
-    let right = parse_mul(s, j + 1)
-    return add_tail(s, right.next, {kind: "二元", op: c, left: left, right: right.node})
+  定 j = skip_sp(s, i)
+  若 j >= len(s) { 返回 {node: left, next: j} }
+  定 c = s[j]
+  若 c == "+" || c == "-" {
+    定 right = parse_mul(s, j + 1)
+    返回 add_tail(s, right.next, {kind: "二元", op: c, left: left, right: right.node})
   }
-  return {node: left, next: j}
+  返回 {node: left, next: j}
 }
 
 fn parse_add(s: String, i: Int) -> Int {
-  let left = parse_mul(s, i)
-  return add_tail(s, left.next, left.node)
+  定 left = parse_mul(s, i)
+  返回 add_tail(s, left.next, left.node)
 }
 
 // 宿主入口：解析一个表达式，返回 {node, next}。
 pub fn parse(text: String) -> Int {
-  return parse_add(text, 0)
+  返回 parse_add(text, 0)
 }
 
 // 这里原有一个演示用的 main（打印 1 + 2 * 3 的两个运算符）。

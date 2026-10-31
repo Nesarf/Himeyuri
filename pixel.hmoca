@@ -8,93 +8,93 @@
 // 「导出成 PNG」不在这里：那要动世界，交给一个子进程（与 native 后端同一个做法）。
 
 fn 空行从(列: Int, i: Int, acc: Int) -> Int {
-  if i >= 列 { return acc }
-  return 空行从(列, i + 1, acc + (0,))
+  若 i >= 列 { 返回 acc }
+  返回 空行从(列, i + 1, acc + (0,))
 }
 
 fn 空行(列: Int) -> Int {
-  return 空行从(列, 0, ())
+  返回 空行从(列, 0, ())
 }
 
 fn 空行批从(行: Int, 列: Int, i: Int, acc: Int) -> Int {
-  if i >= 行 { return acc }
-  return 空行批从(行, 列, i + 1, acc + (空行(列),))
+  若 i >= 行 { 返回 acc }
+  返回 空行批从(行, 列, i + 1, acc + (空行(列),))
 }
 
 fn 空行批(行: Int, 列: Int) -> Int {
-  return 空行批从(行, 列, 0, ())
+  返回 空行批从(行, 列, 0, ())
 }
 
 fn 新布(宽: Int, 高: Int) -> Int {
-  return {w: 宽, h: 高, 行批: 空行批(高, 宽)}
+  返回 {w: 宽, h: 高, 行批: 空行批(高, 宽)}
 }
 
 // 换掉一行的第 x 列。深度等于行宽，所以很宽的布会先撞上调用深度上限——
 // 这是刻意的：与其悄悄画歪，不如报出来。
 fn 换点从(行: Int, x: Int, 色: Int, i: Int, acc: Int) -> Int {
-  if i >= len(行) { return acc }
-  if i == x { return 换点从(行, x, 色, i + 1, acc + (色,)) }
-  return 换点从(行, x, 色, i + 1, acc + (行[i],))
+  若 i >= len(行) { 返回 acc }
+  若 i == x { 返回 换点从(行, x, 色, i + 1, acc + (色,)) }
+  返回 换点从(行, x, 色, i + 1, acc + (行[i],))
 }
 
 fn 换行批从(布: Int, y: Int, 新行: Int, i: Int, acc: Int) -> Int {
-  if i >= len(布.行批) { return acc }
-  if i == y { return 换行批从(布, y, 新行, i + 1, acc + (新行,)) }
-  return 换行批从(布, y, 新行, i + 1, acc + (布.行批[i],))
+  若 i >= len(布.行批) { 返回 acc }
+  若 i == y { 返回 换行批从(布, y, 新行, i + 1, acc + (新行,)) }
+  返回 换行批从(布, y, 新行, i + 1, acc + (布.行批[i],))
 }
 
 // 写一个点。越界就原样交回——不报错，因为「画到边界外」在绘图里是常态。
 fn 写点(布: Int, x: Int, y: Int, 色: Int) -> Int {
-  if x < 0 || x >= 布.w || y < 0 || y >= 布.h { return 布 }
-  return {w: 布.w, h: 布.h, 行批: 换行批从(布, y, 换点从(布.行批[y], x, 色, 0, ()), 0, ())}
+  若 x < 0 || x >= 布.w || y < 0 || y >= 布.h { 返回 布 }
+  返回 {w: 布.w, h: 布.h, 行批: 换行批从(布, y, 换点从(布.行批[y], x, 色, 0, ()), 0, ())}
 }
 
-// 填一条横线。用 while 而不是递归：一条线可能很长，而深度不该跟着长度长。
+// 填一条横线。用 当 而不是递归：一条线可能很长，而深度不该跟着长度长。
 fn 填横(布: Int, x: Int, y: Int, 长: Int, 色: Int) -> Int {
   var 布 = 布
   var i = 0
-  while i < 长 {
+  当 i < 长 {
     布 = 写点(布, x + i, y, 色)
     i = i + 1
   }
-  return 布
+  返回 布
 }
 
 // 填一个矩形。
 fn 填矩形(布: Int, x: Int, y: Int, 宽: Int, 高: Int, 色: Int) -> Int {
   var 布 = 布
   var i = 0
-  while i < 高 {
+  当 i < 高 {
     布 = 填横(布, x, y + i, 宽, 色)
     i = i + 1
   }
-  return 布
+  返回 布
 }
 
 fn 取点(布: Int, x: Int, y: Int) -> Int {
-  if x < 0 || x >= 布.w || y < 0 || y >= 布.h { return -1 }
-  return 布.行批[y][x]
+  若 x < 0 || x >= 布.w || y < 0 || y >= 布.h { 返回 -1 }
+  返回 布.行批[y][x]
 }
 
 // 导出成文本：一行一行，每行用逗号分开的颜色码。
 // 交给子进程去变成 PNG——这一层不碰文件，也不碰图像库。
 fn 行文字从(行: Int, i: Int, acc: String) -> String {
-  if i >= len(行) { return acc }
-  if i == 0 { return 行文字从(行, 1, str(行[0])) }
-  return 行文字从(行, i + 1, acc + "," + str(行[i]))
+  若 i >= len(行) { 返回 acc }
+  若 i == 0 { 返回 行文字从(行, 1, str(行[0])) }
+  返回 行文字从(行, i + 1, acc + "," + str(行[i]))
 }
 
 fn 行文字(行: Int) -> String {
-  return 行文字从(行, 0, "")
+  返回 行文字从(行, 0, "")
 }
 
 fn 成文本从(布: Int, i: Int, acc: String) -> String {
-  if i >= len(布.行批) { return acc }
-  return 成文本从(布, i + 1, acc + 行文字(布.行批[i]) + "\n")
+  若 i >= len(布.行批) { 返回 acc }
+  返回 成文本从(布, i + 1, acc + 行文字(布.行批[i]) + "\n")
 }
 
 fn 成文本(布: Int) -> String {
-  return "w " + str(布.w) + "\n" + "h " + str(布.h) + "\n" + 成文本从(布, 0, "")
+  返回 "w " + str(布.w) + "\n" + "h " + str(布.h) + "\n" + 成文本从(布, 0, "")
 }
 
 // ---- 导出 ----
@@ -103,18 +103,18 @@ fn 成文本(布: Int) -> String {
 // 所以这一个函数声明两个效果——它确实两个都用。
 
 fn 导出脚本() -> String {
-  return repo_path("deps/surface/png.py")
+  返回 repo_path("deps/surface/png.py")
 }
 
 fn 导出(布: Int, 中间文本: String, 目标: String) -> Int effects(process, file) {
   write_text(中间文本, 成文本(布), "utf8")
-  let r = run_program(python_path(), (导出脚本(), 中间文本, 目标), 30000, "utf8")
-  return {ok: r.code == 0, text: r.stdout + r.stderr}
+  定 r = run_program(python_path(), (导出脚本(), 中间文本, 目标), 30000, "utf8")
+  返回 {ok: r.code == 0, text: r.stdout + r.stderr}
 }
 
 fn main() -> Int {
-  let 布 = 填矩形(新布(8, 6), 1, 1, 4, 3, 16711680)
+  定 布 = 填矩形(新布(8, 6), 1, 1, 4, 3, 16711680)
   print("尺寸 " + str(布.w) + "x" + str(布.h) + "\n")
   print("左上 " + str(取点(布, 0, 0)) + " · 矩形里 " + str(取点(布, 2, 2)) + "\n")
-  return 0
+  返回 0
 }

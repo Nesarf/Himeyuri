@@ -3,144 +3,144 @@ import "../lib/strings.hmoca"
 // 一条断言：通过了交回 0，不通过交回它的编号。
 // 编号而不是布尔，是为了在启动器上跑的时候，失败能说出是哪一条。
 fn 检(好: Bool, 号: Int) -> Int {
-  if 好 {
-    return 0
+  若 好 {
+    返回 0
   }
-  return 号
+  返回 号
 }
 
 fn main() -> Int {
-  let a = 检(大写("abc") == "ABC", 1)
-  if a != 0 {
-    return a
+  定 a = 检(大写("abc") == "ABC", 1)
+  若 a != 0 {
+    返回 a
   }
-  let b = 检(小写("ABC") == "abc", 2)
-  if b != 0 {
-    return b
+  定 b = 检(小写("ABC") == "abc", 2)
+  若 b != 0 {
+    返回 b
   }
-  let c = 检(大写("aBc1") == "ABC1", 3)
-  if c != 0 {
-    return c
+  定 c = 检(大写("aBc1") == "ABC1", 3)
+  若 c != 0 {
+    返回 c
   }
-  let d = 检(修剪("  ab  ") == "ab", 4)
-  if d != 0 {
-    return d
+  定 d = 检(修剪("  ab  ") == "ab", 4)
+  若 d != 0 {
+    返回 d
   }
-  let e = 检(修剪("\t\nab\r\n") == "ab", 5)
-  if e != 0 {
-    return e
+  定 e = 检(修剪("\t\nab\r\n") == "ab", 5)
+  若 e != 0 {
+    返回 e
   }
-  let f = 检(修剪("   ") == "", 6)
-  if f != 0 {
-    return f
+  定 f = 检(修剪("   ") == "", 6)
+  若 f != 0 {
+    返回 f
   }
-  let g = 检(开始于("hello", "he"), 7)
-  if g != 0 {
-    return g
+  定 g = 检(开始于("hello", "he"), 7)
+  若 g != 0 {
+    返回 g
   }
-  let h = 检(开始于("hello", "lo") == false, 8)
-  if h != 0 {
-    return h
+  定 h = 检(开始于("hello", "lo") == false, 8)
+  若 h != 0 {
+    返回 h
   }
-  let i = 检(结束于("hello", "lo"), 9)
-  if i != 0 {
-    return i
+  定 i = 检(结束于("hello", "lo"), 9)
+  若 i != 0 {
+    返回 i
   }
-  let j = 检(结束于("hello", "he") == false, 10)
-  if j != 0 {
-    return j
+  定 j = 检(结束于("hello", "he") == false, 10)
+  若 j != 0 {
+    返回 j
   }
-  let k = 检(查找("hello", "ll") == 2, 11)
-  if k != 0 {
-    return k
+  定 k = 检(查找("hello", "ll") == 2, 11)
+  若 k != 0 {
+    返回 k
   }
-  let l = 检(查找("hello", "x") == 0 - 1, 12)
-  if l != 0 {
-    return l
+  定 l = 检(查找("hello", "x") == 0 - 1, 12)
+  若 l != 0 {
+    返回 l
   }
-  let m = 检(含("hello", "ell"), 13)
-  if m != 0 {
-    return m
+  定 m = 检(含("hello", "ell"), 13)
+  若 m != 0 {
+    返回 m
   }
-  let n = 检(含("hello", "xyz") == false, 14)
-  if n != 0 {
-    return n
+  定 n = 检(含("hello", "xyz") == false, 14)
+  若 n != 0 {
+    返回 n
   }
-  let o = 检(重复("ab", 3) == "ababab", 15)
-  if o != 0 {
-    return o
+  定 o = 检(重复("ab", 3) == "ababab", 15)
+  若 o != 0 {
+    返回 o
   }
-  let p = 检(替换("a-b-c", "-", "+") == "a+b+c", 16)
-  if p != 0 {
-    return p
+  定 p = 检(替换("a-b-c", "-", "+") == "a+b+c", 16)
+  若 p != 0 {
+    返回 p
   }
-  let q = 检(替换("aaa", "aa", "b") == "ba", 17)
-  if q != 0 {
-    return q
+  定 q = 检(替换("aaa", "aa", "b") == "ba", 17)
+  若 q != 0 {
+    返回 q
   }
-  let r = 检(左填("7", 3, "0") == "007", 18)
-  if r != 0 {
-    return r
+  定 r = 检(左填("7", 3, "0") == "007", 18)
+  若 r != 0 {
+    返回 r
   }
-  let s = 检(右填("7", 3, ".") == "7..", 19)
-  if s != 0 {
-    return s
+  定 s = 检(右填("7", 3, ".") == "7..", 19)
+  若 s != 0 {
+    返回 s
   }
-  let t = 检(十六进制(255) == "ff", 20)
-  if t != 0 {
-    return t
+  定 t = 检(十六进制(255) == "ff", 20)
+  若 t != 0 {
+    返回 t
   }
-  let u = 检(十六进制(0) == "0", 21)
-  if u != 0 {
-    return u
+  定 u = 检(十六进制(0) == "0", 21)
+  若 u != 0 {
+    返回 u
   }
-  let v = 检(十六进制(4096) == "1000", 22)
-  if v != 0 {
-    return v
+  定 v = 检(十六进制(4096) == "1000", 22)
+  若 v != 0 {
+    返回 v
   }
   // 切分与连接。段数是运行时的，而返回类型只写了 (String,)：类型系统不校验元组长度，
   // 这一条钉的是行为，不是类型。
-  let 段 = 切分("a-b-c", "-")
-  let w = 检(len(段) == 3, 23)
-  if w != 0 {
-    return w
+  定 段 = 切分("a-b-c", "-")
+  定 w = 检(len(段) == 3, 23)
+  若 w != 0 {
+    返回 w
   }
-  let x = 检(段[0] == "a", 24)
-  if x != 0 {
-    return x
+  定 x = 检(段[0] == "a", 24)
+  若 x != 0 {
+    返回 x
   }
-  let y = 检(段[2] == "c", 25)
-  if y != 0 {
-    return y
+  定 y = 检(段[2] == "c", 25)
+  若 y != 0 {
+    返回 y
   }
-  let z = 检(len(切分("abc", "-")) == 1, 26)
-  if z != 0 {
-    return z
+  定 z = 检(len(切分("abc", "-")) == 1, 26)
+  若 z != 0 {
+    返回 z
   }
-  let 空段 = 切分("a--b", "-")
-  let aa = 检(len(空段) == 3, 27)
-  if aa != 0 {
-    return aa
+  定 空段 = 切分("a--b", "-")
+  定 aa = 检(len(空段) == 3, 27)
+  若 aa != 0 {
+    返回 aa
   }
-  let ab = 检(空段[1] == "", 28)
-  if ab != 0 {
-    return ab
+  定 ab = 检(空段[1] == "", 28)
+  若 ab != 0 {
+    返回 ab
   }
-  let ac = 检(连接(段, "-") == "a-b-c", 29)
-  if ac != 0 {
-    return ac
+  定 ac = 检(连接(段, "-") == "a-b-c", 29)
+  若 ac != 0 {
+    返回 ac
   }
-  let ad = 检(连接((), "-") == "", 30)
-  if ad != 0 {
-    return ad
+  定 ad = 检(连接((), "-") == "", 30)
+  若 ad != 0 {
+    返回 ad
   }
-  let ae = 检(len(分行("a\nb")) == 2, 31)
-  if ae != 0 {
-    return ae
+  定 ae = 检(len(分行("a\nb")) == 2, 31)
+  若 ae != 0 {
+    返回 ae
   }
-  let af = 检(切分("abc", "")[0] == "abc", 32)
-  if af != 0 {
-    return af
+  定 af = 检(切分("abc", "")[0] == "abc", 32)
+  若 af != 0 {
+    返回 af
   }
-  return 0
+  返回 0
 }

@@ -15,7 +15,7 @@ import "./manifest.hmoca"
 import "./package.hmoca"
 
 fn 数字(s: String) -> String {
-  return s
+  返回 s
 }
 
 // 一行一行攒成一段文字：每行后面带换行，末尾再切掉一个。
@@ -23,11 +23,11 @@ fn 拼行(行集: Int) {
   var 块 = ()
   var 一段 = ""
   var i = 0
-  while i < len(行集) {
+  当 i < len(行集) {
     一段 = 一段 + 行集[i] + chr(10)
     i = i + 1
   }
-  return slice(一段, 0, len(一段) - 1)
+  返回 slice(一段, 0, len(一段) - 1)
 }
 
 fn 说明书(标: String, 包名: String, 清单名: String) effects(file) {
@@ -78,35 +78,35 @@ fn 说明书(标: String, 包名: String, 清单名: String) effects(file) {
   行 = 行 + ("      单个文件几十兆，而这份语言把一串字节表示成每个字节一个值。",)
   行 = 行 + ("      几十兆读进来就是几千万个值，先撞内存上限，所以它们不进包。",)
   行 = 行 + ("      要的话从仓库取，或者用 tools/ucd.mjs 与 tools/ucd-nfc.mjs 重新生成。",)
-  return 拼行(行) + chr(10)
+  返回 拼行(行) + chr(10)
 }
 
 fn 发布(标: String, 出目录: String) effects(file, process) {
   // 目录不存在时，write_text 会抛 HMYR-內-012 —— 那句话对写程序的人是够用的，对跑发布的人
   // 不够。所以这里先挡一下，把「先建目录」说清楚。
-  if !is_dir(出目录) {
+  若 !is_dir(出目录) {
     print("  输出目录 " + 出目录 + " 不在。先建它，再跑这一条。" + chr(10))
-    return 1
+    返回 1
   }
-  let 清单路 = 出目录 + "/manifest.json"
-  let 包名 = "himeyuri-" + 标 + ".zip"
-  let 包路 = 出目录 + "/" + 包名
-  let 说明路 = 出目录 + "/release-notes.md"
+  定 清单路 = 出目录 + "/manifest.json"
+  定 包名 = "himeyuri-" + 标 + ".zip"
+  定 包路 = 出目录 + "/" + 包名
+  定 说明路 = 出目录 + "/release-notes.md"
 
   // 一、清单
   print("  一、造清单 → " + 清单路 + chr(10))
-  let 码 = 主(清单路)
-  if 码 != 0 {
+  定 码 = 主(清单路)
+  若 码 != 0 {
     print("  清单没造出来，发布中止。" + chr(10))
-    return 1
+    返回 1
   }
 
   // 二、归档。清单自己也被收进去 —— 解包即得清单，包内外是同一批字节。
   print("  二、打包 → " + 包路 + chr(10))
-  let 码二 = 打包带(包路, "", false, 清单路, "manifest.json")
-  if 码二 != 0 {
+  定 码二 = 打包带(包路, "", false, 清单路, "manifest.json")
+  若 码二 != 0 {
     print("  包没打出来，发布中止。" + chr(10))
-    return 1
+    返回 1
   }
 
   // 三、说明书
@@ -120,17 +120,17 @@ fn 发布(标: String, 出目录: String) effects(file, process) {
   print("" + chr(10))
   print("  真发不在这里做 —— gh release create 要一张 GitHub 令牌，" + chr(10))
   print("  而凭据不该进语言运行时。用 tools/release.mjs，或者手工跑 gh。" + chr(10))
-  return 0
+  返回 0
 }
 
 fn main() -> Int effects(file, process) {
-  let 参 = argv()
-  if len(参) < 2 {
+  定 参 = argv()
+  若 len(参) < 2 {
     print("用法：hmyr self/release.hmyr <tag> [输出目录]" + chr(10))
     print("  tag 是这一次的名字，例如 v0.1.0；输出目录缺省是 dist。" + chr(10))
-    return 2
+    返回 2
   }
   var 出目录 = "dist"
-  if len(参) > 2 { 出目录 = 参[2] }
-  return 发布(参[1], 出目录)
+  若 len(参) > 2 { 出目录 = 参[2] }
+  返回 发布(参[1], 出目录)
 }

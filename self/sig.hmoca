@@ -20,11 +20,11 @@ import "./lex.hmoca"
 // 另一条边界：参数里的默认值会被跳过（记录里不保留），返回类型只保留名字与可空标记。
 
 fn is_word(t: Int, w: String) -> Bool {
-  return t.kind == "ident" && t.text == w
+  返回 t.kind == "ident" && t.text == w
 }
 
 fn is_punct(t: Int, ch: String) -> Bool {
-  return t.kind == "punct" && t.text == ch
+  返回 t.kind == "punct" && t.text == ch
 }
 
 // 类型的边界：从 i 开始，交回类型之后的位置。
@@ -34,116 +34,116 @@ fn is_punct(t: Int, ch: String) -> Bool {
 // 连接(段们: (String,), 分隔: String) 只解析出一个参数 —— 错误消息是
 // 「参数个数不对：连接 要 1 个，给了 2」，看起来像调用写错了。
 fn 括号到(tokens: Int, i: Int, 深: Int) -> Int {
-  if i >= len(tokens) { return i }
-  if is_punct(tokens[i], "(") { return 括号到(tokens, i + 1, 深 + 1) }
-  if is_punct(tokens[i], ")") {
-    if 深 <= 1 { return i + 1 }
-    return 括号到(tokens, i + 1, 深 - 1)
+  若 i >= len(tokens) { 返回 i }
+  若 is_punct(tokens[i], "(") { 返回 括号到(tokens, i + 1, 深 + 1) }
+  若 is_punct(tokens[i], ")") {
+    若 深 <= 1 { 返回 i + 1 }
+    返回 括号到(tokens, i + 1, 深 - 1)
   }
-  return 括号到(tokens, i + 1, 深)
+  返回 括号到(tokens, i + 1, 深)
 }
 
 fn type_end(tokens: Int, i: Int) -> Int {
-  if i >= len(tokens) { return i }
-  if is_punct(tokens[i], "(") { return 括号到(tokens, i, 0) }
+  若 i >= len(tokens) { 返回 i }
+  若 is_punct(tokens[i], "(") { 返回 括号到(tokens, i, 0) }
   var j = i + 1
-  if j < len(tokens) && is_punct(tokens[j], "?") { j = j + 1 }
-  return j
+  若 j < len(tokens) && is_punct(tokens[j], "?") { j = j + 1 }
+  返回 j
 }
 
 // 把一段 token 的文字拼起来当类型名。元组类型就拼成它写下的样子。
 fn type_text(tokens: Int, 起: Int, 止: Int) -> String {
   var 出 = ""
   var i = 起
-  while i < 止 {
+  当 i < 止 {
     出 = 出 + tokens[i].text
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 // 跳过默认值：从 = 之后一直跳到 , 或 ) 之前。
 fn skip_default(tokens: Int, i: Int) -> Int {
-  if i >= len(tokens) { return i }
-  if is_punct(tokens[i], ",") || is_punct(tokens[i], ")") { return i }
-  return skip_default(tokens, i + 1)
+  若 i >= len(tokens) { 返回 i }
+  若 is_punct(tokens[i], ",") || is_punct(tokens[i], ")") { 返回 i }
+  返回 skip_default(tokens, i + 1)
 }
 
 // 参数列表：从 ( 之后开始。
 fn params(tokens: Int, i: Int, acc: Int) {
-  if i >= len(tokens) { return {list: acc, next: i, closed: false} }
-  let t = tokens[i]
-  if is_punct(t, ")") { return {list: acc, next: i + 1, closed: true} }
-  if is_punct(t, ",") { return params(tokens, i + 1, acc) }
-  if is_word(t, "own") || is_word(t, "borrow") { return params(tokens, i + 1, acc) }
+  若 i >= len(tokens) { 返回 {list: acc, next: i, closed: false} }
+  定 t = tokens[i]
+  若 is_punct(t, ")") { 返回 {list: acc, next: i + 1, closed: true} }
+  若 is_punct(t, ",") { 返回 params(tokens, i + 1, acc) }
+  若 is_word(t, "own") || is_word(t, "borrow") { 返回 params(tokens, i + 1, acc) }
 
-  if t.kind == "ident" {
-    let name = t.text
-    if i + 1 < len(tokens) && is_punct(tokens[i + 1], ":") {
-      let 类止 = type_end(tokens, i + 2)
-      let ty = type_text(tokens, i + 2, 类止)
+  若 t.kind == "ident" {
+    定 name = t.text
+    若 i + 1 < len(tokens) && is_punct(tokens[i + 1], ":") {
+      定 类止 = type_end(tokens, i + 2)
+      定 ty = type_text(tokens, i + 2, 类止)
       var next = 类止
-      if next < len(tokens) && is_punct(tokens[next], "=") {
+      若 next < len(tokens) && is_punct(tokens[next], "=") {
         next = skip_default(tokens, next + 1)
       }
-      return params(tokens, next, acc + ({name: name, type: ty},))
+      返回 params(tokens, next, acc + ({name: name, type: ty},))
     }
-    return params(tokens, i + 1, acc)
+    返回 params(tokens, i + 1, acc)
   }
-  return {list: acc, next: i + 1, closed: false}
+  返回 {list: acc, next: i + 1, closed: false}
 }
 
 // 效果列表：effects( 之后。函数名不能叫 effects——它是关键字，所以这里叫 effect_list。
 fn effect_list(tokens: Int, i: Int, acc: Int) {
-  if i >= len(tokens) { return {list: acc, next: i} }
-  let t = tokens[i]
-  if is_punct(t, ")") { return {list: acc, next: i + 1} }
-  if is_punct(t, ",") { return effect_list(tokens, i + 1, acc) }
-  if t.kind == "ident" { return effect_list(tokens, i + 1, acc + (t.text,)) }
-  return effect_list(tokens, i + 1, acc)
+  若 i >= len(tokens) { 返回 {list: acc, next: i} }
+  定 t = tokens[i]
+  若 is_punct(t, ")") { 返回 {list: acc, next: i + 1} }
+  若 is_punct(t, ",") { 返回 effect_list(tokens, i + 1, acc) }
+  若 t.kind == "ident" { 返回 effect_list(tokens, i + 1, acc + (t.text,)) }
+  返回 effect_list(tokens, i + 1, acc)
 }
 
 // 主体：签名之后一直读到末尾（体没有被切开，见文件头）。
 fn has_body(tokens: Int, i: Int) -> Bool {
-  if i >= len(tokens) { return false }
-  if is_punct(tokens[i], "{") { return true }
-  return has_body(tokens, i + 1)
+  若 i >= len(tokens) { 返回 false }
+  若 is_punct(tokens[i], "{") { 返回 true }
+  返回 has_body(tokens, i + 1)
 }
 
 // 宿主入口：读一份「函数声明」的 token 流。
 fn read_signature(tokens: Int) -> Int {
-  return signature(tokens, 0, false)
+  返回 signature(tokens, 0, false)
 }
 
 fn signature_at(tokens: Int, i: Int, is_pub: Bool) {
-  if i >= len(tokens) { return {node: {kind: "误", text: ""}, next: i} }
-  let t = tokens[i]
-  if is_word(t, "pub") { return signature_at(tokens, i + 1, true) }
-  if !is_word(t, "fn") { return {node: {kind: "误", text: t.text}, next: i + 1} }
-  if i + 1 >= len(tokens) { return {node: {kind: "误", text: "fn"}, next: i + 1} }
-  let name = tokens[i + 1].text
+  若 i >= len(tokens) { 返回 {node: {kind: "误", text: ""}, next: i} }
+  定 t = tokens[i]
+  若 is_word(t, "pub") { 返回 signature_at(tokens, i + 1, true) }
+  若 !is_word(t, "fn") { 返回 {node: {kind: "误", text: t.text}, next: i + 1} }
+  若 i + 1 >= len(tokens) { 返回 {node: {kind: "误", text: "fn"}, next: i + 1} }
+  定 name = tokens[i + 1].text
   // 声明在源码里的位置：名字那个 token 的码元偏移。要行列时由调用方按原文换算。
-  let 起 = tokens[i + 1].at
-  if i + 2 >= len(tokens) || !is_punct(tokens[i + 2], "(") {
-    return {node: {kind: "误", text: "fn " + name}, next: i + 1}
+  定 起 = tokens[i + 1].at
+  若 i + 2 >= len(tokens) || !is_punct(tokens[i + 2], "(") {
+    返回 {node: {kind: "误", text: "fn " + name}, next: i + 1}
   }
-  let got = params(tokens, i + 3, ())
+  定 got = params(tokens, i + 3, ())
   var at = got.next
-  // returns 与 eff 都会被改写，所以是 var——let 不可变是这门语言的规则。
+  // returns 与 eff 都会被改写，所以是 var——定 不可变是这门语言的规则。
   var returns = ""
-  if at < len(tokens) && is_punct(tokens[at], "->") {
+  若 at < len(tokens) && is_punct(tokens[at], "->") {
     // 返回类型也用同一对帮手：它可能带括号（元组类型），也可能带可空标记。
-    let 止 = type_end(tokens, at + 1)
+    定 止 = type_end(tokens, at + 1)
     returns = type_text(tokens, at + 1, 止)
     at = 止
   }
   var eff = ()
-  if at < len(tokens) && is_word(tokens[at], "effects") && at + 1 < len(tokens) && is_punct(tokens[at + 1], "(") {
-    let e = effect_list(tokens, at + 2, ())
+  若 at < len(tokens) && is_word(tokens[at], "effects") && at + 1 < len(tokens) && is_punct(tokens[at + 1], "(") {
+    定 e = effect_list(tokens, at + 2, ())
     eff = e.list
     at = e.next
   }
-  return {
+  返回 {
     node: {
       kind: "fn",
       at: 起,
@@ -160,48 +160,48 @@ fn signature_at(tokens: Int, i: Int, is_pub: Bool) {
 
 // 只要记录的那一版：read_signature 与测试用它。
 fn signature(tokens: Int, i: Int, is_pub: Bool) {
-  return signature_at(tokens, i, is_pub).node
+  返回 signature_at(tokens, i, is_pub).node
 }
 
 // 跳过一个函数体：从签名之后的位置开始，找第一个 { 并配平到它的 }。
 // 只在 hasBody 为真时调用 —— 没有体的时候「第一个 {」是下一个函数的，跳过去就少读一个声明。
 fn 跳体(tokens: Int, i: Int) -> Int {
   var k = i
-  while k < len(tokens) {
-    if is_punct(tokens[k], "{") {
+  当 k < len(tokens) {
+    若 is_punct(tokens[k], "{") {
       var 深 = 0
-      while k < len(tokens) {
-        if is_punct(tokens[k], "{") { 深 = 深 + 1 }
-        if is_punct(tokens[k], "}") {
+      当 k < len(tokens) {
+        若 is_punct(tokens[k], "{") { 深 = 深 + 1 }
+        若 is_punct(tokens[k], "}") {
           深 = 深 - 1
-          if 深 == 0 { return k + 1 }
+          若 深 == 0 { 返回 k + 1 }
         }
         k = k + 1
       }
-      return k
+      返回 k
     }
     k = k + 1
   }
-  return k
+  返回 k
 }
 
 // 整份源码里的所有函数声明，按出现顺序。语言服务器的 documentSymbol 用它。
 pub fn all_signatures(tokens: Int) -> Int {
   var 列 = ()
   var i = 0
-  while i < len(tokens) {
-    let 是公 = is_word(tokens[i], "pub")
+  当 i < len(tokens) {
+    定 是公 = is_word(tokens[i], "pub")
     var 起 = i
-    if 是公 { 起 = i + 1 }
-    if 起 < len(tokens) && is_word(tokens[起], "fn") {
-      let r = signature_at(tokens, i, 是公)
-      if r.node.kind == "fn" { 列 = 列 + (r.node,) }
-      if r.node.kind == "fn" && r.node.hasBody { i = 跳体(tokens, r.next) } else { i = r.next }
+    若 是公 { 起 = i + 1 }
+    若 起 < len(tokens) && is_word(tokens[起], "fn") {
+      定 r = signature_at(tokens, i, 是公)
+      若 r.node.kind == "fn" { 列 = 列 + (r.node,) }
+      若 r.node.kind == "fn" && r.node.hasBody { i = 跳体(tokens, r.next) } else { i = r.next }
     } else {
       i = i + 1
     }
   }
-  return 列
+  返回 列
 }
 
 // 这里原有一个演示用的 main。删掉它是因为 self/lsp.hmyr 要 import 这一份 ——

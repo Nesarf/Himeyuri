@@ -82,10 +82,16 @@ for (const 名 of ["dist", "node_modules", ".git"]) {
 console.log("");
 console.log("三、能再生成的（不进仓库）");
 for (const [名, n] of 能重来) console.log("  " + 名.padEnd(12) + MB(n) + " MB");
-ok("dist 里只有一份归档（旧的该清掉）", (() => {
+// 上限是两份，不是一份（2026-11-02 改）。原来写「只有一份，旧的该清掉」，
+// 而那个前提不成立：test/release.test.mjs 每次跑都会调 tools/release.mjs，
+// 而 release.mjs 把归档写进仓库的 dist/，名字带当天日期。于是「今天的 + 上一次的」
+// 是跑过一次发布链之后的正常状态，「只有一份」只在从来没跑过的时候成立。
+// 两份之上才要清，那说明有更早的没被覆盖。要根治得让 release 认一个输出目录，
+// 那是另一件事 —— 记在这里，而不是悄悄把线放宽一点就当没事。
+ok("dist 里的归档不超过两份（今天的一份与上一次的一份）", (() => {
   const 路 = path.join(ROOT, "dist");
   if (!fs.existsSync(路)) return true;
-  return fs.readdirSync(路).filter((f) => f.endsWith(".zip")).length <= 1;
+  return fs.readdirSync(路).filter((f) => f.endsWith(".zip")).length <= 2;
 })(), String(fs.existsSync(path.join(ROOT, "dist")) ? fs.readdirSync(path.join(ROOT, "dist")).filter((f) => f.endsWith(".zip")).length : 0));
 
 console.log("");

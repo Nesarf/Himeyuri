@@ -15,20 +15,20 @@ import "../lib/json.hmoca"
 import "./sig.hmoca"
 
 fn 是长度行(行: String) -> Bool {
-  if len(行) < 16 { return false }
-  return slice(行, 0, 15) == "Content-Length:"
+  若 len(行) < 16 { 返回 false }
+  返回 slice(行, 0, 15) == "Content-Length:"
 }
 
 // " 123" → 123。只看数字，别的字符跳过。
 fn 数值(文: String) -> Int {
   var v = 0
   var i = 0
-  while i < len(文) {
-    let o = ord(文[i])
-    if o >= 48 && o <= 57 { v = v * 10 + (o - 48) }
+  当 i < len(文) {
+    定 o = ord(文[i])
+    若 o >= 48 && o <= 57 { v = v * 10 + (o - 48) }
     i = i + 1
   }
-  return v
+  返回 v
 }
 
 // 读一条消息：头先读到空行为止，体按长度读。交回 {体, 结束}。
@@ -36,40 +36,40 @@ fn 读消息() {
   var 长 = 0 - 1
   var 继续 = true
   var 完 = false
-  while 继续 {
-    let r = read_stdin_line()
-    if r.结束 {
+  当 继续 {
+    定 r = read_stdin_line()
+    若 r.结束 {
       完 = true
       继续 = false
-    } else if len(r.行) == 0 {
+    } else 若 len(r.行) == 0 {
       继续 = false
-    } else if 是长度行(r.行) {
+    } else 若 是长度行(r.行) {
       长 = 数值(slice(r.行, 15, len(r.行)))
     }
   }
-  if 完 { return {体: "", 结束: true} }
-  if 长 < 0 { return {体: "", 结束: true} }
-  let b = read_stdin_bytes(长)
-  return {体: bytes_to_text(b.字节串), 结束: b.结束}
+  若 完 { 返回 {体: "", 结束: true} }
+  若 长 < 0 { 返回 {体: "", 结束: true} }
+  定 b = read_stdin_bytes(长)
+  返回 {体: bytes_to_text(b.字节串), 结束: b.结束}
 }
 
 // 从 JSON 对象里取一个键。找不到交回空。
 // 键是裸字符串（写对表那一支就是这么写的），值才是带标记的记录。
 fn 取(对象: Int, 键: String) {
-  if !field_has(对象, "对象") { return {空: 1} }
-  let 对们 = 对象.对象
+  若 !field_has(对象, "对象") { 返回 {空: 1} }
+  定 对们 = 对象.对象
   var i = 0
-  while i < len(对们) {
-    if 对们[i][0] == 键 { return 对们[i][1] }
+  当 i < len(对们) {
+    若 对们[i][0] == 键 { 返回 对们[i][1] }
     i = i + 1
   }
-  return {空: 1}
+  返回 {空: 1}
 }
 
 fn 取串(对象: Int, 键: String) -> String {
-  let v = 取(对象, 键)
-  if field_has(v, "串") { return v.串 }
-  return ""
+  定 v = 取(对象, 键)
+  若 field_has(v, "串") { 返回 v.串 }
+  返回 ""
 }
 
 // 一段文本按 UTF-8 编码要几个字节。Content-Length 数的是字节，而 len 数的是码元 ——
@@ -79,58 +79,58 @@ fn 取串(对象: Int, 键: String) -> String {
 fn utf8字节数(文: String) -> Int {
   var 数 = 0
   var i = 0
-  while i < len(文) {
-    let o = ord(文[i])
+  当 i < len(文) {
+    定 o = ord(文[i])
     var 宽 = 3
     var 是头 = false
-    if o < 0x80 { 宽 = 1 }
-    if o >= 0x80 && o < 0x800 { 宽 = 2 }
-    if o >= 0xD800 && o <= 0xDBFF {
+    若 o < 0x80 { 宽 = 1 }
+    若 o >= 0x80 && o < 0x800 { 宽 = 2 }
+    若 o >= 0xD800 && o <= 0xDBFF {
       宽 = 4
       是头 = true
     }
     数 = 数 + 宽
-    if 是头 { i = i + 1 }
+    若 是头 { i = i + 1 }
     i = i + 1
   }
-  return 数
+  返回 数
 }
 
 fn 应答(id: Int, 结果: Int) -> String {
-  return 生成({对象: (("jsonrpc", {串: "2.0"}), ("id", id), ("result", 结果))})
+  返回 生成({对象: (("jsonrpc", {串: "2.0"}), ("id", id), ("result", 结果))})
 }
 
 fn 应答错(id: Int, 码: Int, 话: String) -> String {
-  return 生成({对象: (("jsonrpc", {串: "2.0"}), ("id", id), ("error", {对象: (("code", {数: 码}), ("message", {串: 话}))}))})
+  返回 生成({对象: (("jsonrpc", {串: "2.0"}), ("id", id), ("error", {对象: (("code", {数: 码}), ("message", {串: 话}))}))})
 }
 
 // 一个字符算不算「词里的字」。中文与全角都算 —— 这门语言的标识符允许它们。
 fn 是词字(c: String) -> Bool {
-  let o = ord(c)
-  if o >= 48 && o <= 57 { return true }
-  if o >= 65 && o <= 90 { return true }
-  if o >= 97 && o <= 122 { return true }
-  if o >= 128 { return true }
-  return c == "_"
+  定 o = ord(c)
+  若 o >= 48 && o <= 57 { 返回 true }
+  若 o >= 65 && o <= 90 { 返回 true }
+  若 o >= 97 && o <= 122 { 返回 true }
+  若 o >= 128 { 返回 true }
+  返回 c == "_"
 }
 
 // 按行列从原文里取出那个词。位置给的是零基行列，与 LSP 一致。
 fn 词在(文本: String, 行: Int, 列: Int) -> String {
-  let 行批 = split(文本, chr(10))
-  if 行 >= len(行批) { return "" }
-  let 该行 = 行批[行]
+  定 行批 = split(文本, chr(10))
+  若 行 >= len(行批) { 返回 "" }
+  定 该行 = 行批[行]
   var 起 = 列
   var 左停 = false
-  while 起 > 0 && !左停 {
-    if 是词字(该行[起 - 1]) { 起 = 起 - 1 } else { 左停 = true }
+  当 起 > 0 && !左停 {
+    若 是词字(该行[起 - 1]) { 起 = 起 - 1 } else { 左停 = true }
   }
   var 止 = 列
   var 右停 = false
-  while 止 < len(该行) && !右停 {
-    if 是词字(该行[止]) { 止 = 止 + 1 } else { 右停 = true }
+  当 止 < len(该行) && !右停 {
+    若 是词字(该行[止]) { 止 = 止 + 1 } else { 右停 = true }
   }
-  if 止 <= 起 { return "" }
-  return slice(该行, 起, 止)
+  若 止 <= 起 { 返回 "" }
+  返回 slice(该行, 起, 止)
 }
 
 // 码元偏移换成行列。LSP 的 range 要行列，而 token 只记偏移。
@@ -139,9 +139,9 @@ fn at转行列(文本: String, at: Int) {
   var 列 = 0
   var i = 0
   var 止 = at
-  if 止 > len(文本) { 止 = len(文本) }
-  while i < 止 {
-    if 文本[i] == chr(10) {
+  若 止 > len(文本) { 止 = len(文本) }
+  当 i < 止 {
+    若 文本[i] == chr(10) {
       行 = 行 + 1
       列 = 0
     } else {
@@ -149,37 +149,37 @@ fn at转行列(文本: String, at: Int) {
     }
     i = i + 1
   }
-  return {行: 行, 列: 列}
+  返回 {行: 行, 列: 列}
 }
 
 fn 取数(对象: Int, 键: String) -> Int {
-  let v = 取(对象, 键)
-  if field_has(v, "数") { return v.数 }
-  return 0
+  定 v = 取(对象, 键)
+  若 field_has(v, "数") { 返回 v.数 }
+  返回 0
 }
 
 fn 找签名(列: Int, 名: String) {
   var i = 0
-  while i < len(列) {
-    if 列[i].name == 名 { return 列[i] }
+  当 i < len(列) {
+    若 列[i].name == 名 { 返回 列[i] }
     i = i + 1
   }
-  return {空: 1}
+  返回 {空: 1}
 }
 
 // 一条签名排成一行：悬浮签名要的就是这一行。
 fn 签名文字(签: Int) -> String {
   var 文 = "fn " + 签.name + "("
   var i = 0
-  while i < len(签.params) {
-    if i > 0 { 文 = 文 + ", " }
+  当 i < len(签.params) {
+    若 i > 0 { 文 = 文 + ", " }
     文 = 文 + 签.params[i].name
-    if len(签.params[i].type) > 0 { 文 = 文 + ": " + 签.params[i].type }
+    若 len(签.params[i].type) > 0 { 文 = 文 + ": " + 签.params[i].type }
     i = i + 1
   }
   文 = 文 + ")"
-  if len(签.returns) > 0 { 文 = 文 + " -> " + 签.returns }
-  return 文
+  若 len(签.returns) > 0 { 文 = 文 + " -> " + 签.returns }
+  返回 文
 }
 
 
@@ -187,20 +187,20 @@ fn 签名文字(签: Int) -> String {
 // 位置是零宽度的（起止都给 character 0）—— 与 src/lsp.mjs 同一条规矩：
 // 签名只记「声明从哪个码元开始」，行内宽度它没有，编一个出来比留空更糟。
 fn 符号表(文本: String, 地址: String) {
-  let tokens = scan(文本)
-  let 列 = all_signatures(tokens)
+  定 tokens = scan(文本)
+  定 列 = all_signatures(tokens)
   var 出 = ()
   var i = 0
-  while i < len(列) {
-    let 名 = 列[i].name
-    let 位 = at转行列(文本, 列[i].at)
-    let 点 = {对象: (("line", {数: 位.行}), ("character", {数: 0}))}
-    let 范围 = {对象: (("start", 点), ("end", 点))}
-    let 地位 = {对象: (("uri", {串: 地址}), ("range", 范围))}
+  当 i < len(列) {
+    定 名 = 列[i].name
+    定 位 = at转行列(文本, 列[i].at)
+    定 点 = {对象: (("line", {数: 位.行}), ("character", {数: 0}))}
+    定 范围 = {对象: (("start", 点), ("end", 点))}
+    定 地位 = {对象: (("uri", {串: 地址}), ("range", 范围))}
     出 = 出 + ({对象: (("name", {串: 名}), ("kind", {数: 12}), ("location", 地位))},)
     i = i + 1
   }
-  return {数组: 出}
+  返回 {数组: 出}
 }
 
 // 补全的候选：这份文档里的声明。与 src/lsp.mjs 那一份同一条约定 ——
@@ -208,16 +208,16 @@ fn 符号表(文本: String, 地址: String) {
 // 两张表各自成立，混用会让编辑器把函数显示成变量。
 // 不做前缀过滤：那是客户端的事，编辑器会按已经敲下的几个字自己筛。
 fn 补全表(文本: String) {
-  let 列 = all_signatures(scan(文本))
+  定 列 = all_signatures(scan(文本))
   var 出 = ()
   var i = 0
-  while i < len(列) {
-    let 签 = 列[i]
-    let 一项 = {对象: (("label", {串: 签.name}), ("kind", {数: 3}), ("detail", {串: 签名文字(签)}))}
+  当 i < len(列) {
+    定 签 = 列[i]
+    定 一项 = {对象: (("label", {串: 签.name}), ("kind", {数: 3}), ("detail", {串: 签名文字(签)}))}
     出 = 出 + (一项,)
     i = i + 1
   }
-  return {对象: (("isIncomplete", {假: 1}), ("items", {数组: 出}))}
+  返回 {对象: (("isIncomplete", {假: 1}), ("items", {数组: 出}))}
 }
 
 // ---- 跨模块：uri 与路径 ----
@@ -225,150 +225,150 @@ fn 补全表(文本: String) {
 // file:///E:/a/b.hmyr → E:/a/b.hmyr（Windows 那个开头的斜杠要去掉）
 // file:///tmp/x.hmyr  → /tmp/x.hmyr（在那里它本来就该在）
 fn 地址转路径(地址: String) -> String {
-  if len(地址) <= 7 { return "" }
+  若 len(地址) <= 7 { 返回 "" }
   var 路 = slice(地址, 7, len(地址))
-  if len(路) >= 3 {
-    if 路[0] == "/" && 路[2] == ":" { 路 = slice(路, 1, len(路)) }
+  若 len(路) >= 3 {
+    若 路[0] == "/" && 路[2] == ":" { 路 = slice(路, 1, len(路)) }
   }
-  return 路
+  返回 路
 }
 
 fn 目录名(路: String) -> String {
   var i = len(路) - 1
-  while i >= 0 {
-    if 路[i] == "/" { return slice(路, 0, i) }
+  当 i >= 0 {
+    若 路[i] == "/" { 返回 slice(路, 0, i) }
     i = i - 1
   }
-  return ""
+  返回 ""
 }
 
 // import 的路径相对当前文件所在目录，与加载器同一条规矩。
 fn 拼导入(基: String, 相对: String) -> String {
   var 名 = 相对
-  if len(名) >= 2 {
-    if slice(名, 0, 2) == "./" { 名 = slice(名, 2, len(名)) }
+  若 len(名) >= 2 {
+    若 slice(名, 0, 2) == "./" { 名 = slice(名, 2, len(名)) }
   }
-  return 目录名(基) + "/" + 名
+  返回 目录名(基) + "/" + 名
 }
 
 // 一份文本里的 import 路径们。关键字在词法里是 ident，后面那一个必须是字符串。
 fn 导入路们(文本: String) -> Int {
-  let tokens = scan(文本)
+  定 tokens = scan(文本)
   var 出 = ()
   var i = 0
-  while i < len(tokens) {
-    if tokens[i].kind == "ident" && tokens[i].text == "import" {
-      if i + 1 < len(tokens) {
-        if tokens[i + 1].kind == "string" { 出 = 出 + (tokens[i + 1].text,) }
+  当 i < len(tokens) {
+    若 tokens[i].kind == "ident" && tokens[i].text == "import" {
+      若 i + 1 < len(tokens) {
+        若 tokens[i + 1].kind == "string" { 出 = 出 + (tokens[i + 1].text,) }
       }
     }
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 // 一份文件的签名册。读不了就交回空元组 —— 问了一个打不开的文件不是错误。
 fn 文件签名册(路: String) -> Int {
   var 出 = ()
-  if file_exists(路) { 出 = all_signatures(scan(read_text(路))) }
-  return 出
+  若 file_exists(路) { 出 = all_signatures(scan(read_text(路))) }
+  返回 出
 }
 
 // 一个签名在它自己那份文本里的位置。
 fn 地位(地址: String, 那份: String, 签: Int) {
-  let 位 = at转行列(那份, 签.at)
-  let 起 = {对象: (("line", {数: 位.行}), ("character", {数: 位.列}))}
-  let 止 = {对象: (("line", {数: 位.行}), ("character", {数: 位.列 + len(签.name)}))}
-  let 范围 = {对象: (("start", 起), ("end", 止))}
-  return {对象: (("uri", {串: 地址}), ("range", 范围))}
+  定 位 = at转行列(那份, 签.at)
+  定 起 = {对象: (("line", {数: 位.行}), ("character", {数: 位.列}))}
+  定 止 = {对象: (("line", {数: 位.行}), ("character", {数: 位.列 + len(签.name)}))}
+  定 范围 = {对象: (("start", 起), ("end", 止))}
+  返回 {对象: (("uri", {串: 地址}), ("range", 范围))}
 }
 
 // 处理一条消息：交回 {文, 停, 文本}。文本是「当前打开的文档」——
 // didOpen 送来它，documentSymbol 用它。状态在这一层过一手，因为语言里没有可变的全局。
 fn 处理(体: String, 文本: String) effects(file) {
-  let p = 解析(体)
-  if !p.ok { return {文: "", 停: false, 文本: 文本} }
-  let 值 = p.值
-  let 方法 = 取串(值, "method")
-  let id = 取(值, "id")
-  if 方法 == "initialize" {
-    let 能力 = {对象: (("textDocumentSync", {数: 1}), ("hoverProvider", {真: 1}), ("documentSymbolProvider", {真: 1}), ("definitionProvider", {真: 1}), ("completionProvider", {对象: (("resolveProvider", {假: 1}),)}))}
-    let 己 = {对象: (("name", {串: "himeyuri"}), ("version", {串: "0.1.0-m8"}))}
-    return {文: 应答(id, {对象: (("capabilities", 能力), ("serverInfo", 己))}), 停: false, 文本: 文本}
+  定 p = 解析(体)
+  若 !p.ok { 返回 {文: "", 停: false, 文本: 文本} }
+  定 值 = p.值
+  定 方法 = 取串(值, "method")
+  定 id = 取(值, "id")
+  若 方法 == "initialize" {
+    定 能力 = {对象: (("textDocumentSync", {数: 1}), ("hoverProvider", {真: 1}), ("documentSymbolProvider", {真: 1}), ("definitionProvider", {真: 1}), ("completionProvider", {对象: (("resolveProvider", {假: 1}),)}))}
+    定 己 = {对象: (("name", {串: "himeyuri"}), ("version", {串: "0.1.0-m8"}))}
+    返回 {文: 应答(id, {对象: (("capabilities", 能力), ("serverInfo", 己))}), 停: false, 文本: 文本}
   }
-  if 方法 == "textDocument/didOpen" {
-    let 文档 = 取(取(值, "params"), "textDocument")
-    return {文: "", 停: false, 文本: 取串(文档, "text")}
+  若 方法 == "textDocument/didOpen" {
+    定 文档 = 取(取(值, "params"), "textDocument")
+    返回 {文: "", 停: false, 文本: 取串(文档, "text")}
   }
-  if 方法 == "textDocument/documentSymbol" {
-    let 址 = 取串(取(取(值, "params"), "textDocument"), "uri")
-    return {文: 应答(id, 符号表(文本, 址)), 停: false, 文本: 文本}
+  若 方法 == "textDocument/documentSymbol" {
+    定 址 = 取串(取(取(值, "params"), "textDocument"), "uri")
+    返回 {文: 应答(id, 符号表(文本, 址)), 停: false, 文本: 文本}
   }
-  if 方法 == "textDocument/completion" {
-    return {文: 应答(id, 补全表(文本)), 停: false, 文本: 文本}
+  若 方法 == "textDocument/completion" {
+    返回 {文: 应答(id, 补全表(文本)), 停: false, 文本: 文本}
   }
-  if 方法 == "textDocument/definition" {
-    let 位 = 取(取(值, "params"), "position")
-    let 名 = 词在(文本, 取数(位, "line"), 取数(位, "character"))
-    if len(名) == 0 { return {文: 应答(id, {空: 1}), 停: false, 文本: 文本} }
-    let 地址 = 取串(取(取(值, "params"), "textDocument"), "uri")
-    let 签 = 找签名(all_signatures(scan(文本)), 名)
-    if !field_has(签, "空") {
-      return {文: 应答(id, 地位(地址, 文本, 签)), 停: false, 文本: 文本}
+  若 方法 == "textDocument/definition" {
+    定 位 = 取(取(值, "params"), "position")
+    定 名 = 词在(文本, 取数(位, "line"), 取数(位, "character"))
+    若 len(名) == 0 { 返回 {文: 应答(id, {空: 1}), 停: false, 文本: 文本} }
+    定 地址 = 取串(取(取(值, "params"), "textDocument"), "uri")
+    定 签 = 找签名(all_signatures(scan(文本)), 名)
+    若 !field_has(签, "空") {
+      返回 {文: 应答(id, 地位(地址, 文本, 签)), 停: false, 文本: 文本}
     }
     // 跨模块：本地没有，就按 import 去目标文件里找。
     // 本地优先 —— 与 src/lsp.mjs 同一条规矩：同名符号优先离得近的那一个。
-    let 基 = 地址转路径(地址)
-    let 路们 = 导入路们(文本)
+    定 基 = 地址转路径(地址)
+    定 路们 = 导入路们(文本)
     var i = 0
-    while i < len(路们) {
-      let 目标 = 拼导入(基, 路们[i])
-      let 命中 = 找签名(文件签名册(目标), 名)
-      if !field_has(命中, "空") {
-        let 那份 = read_text(目标)
+    当 i < len(路们) {
+      定 目标 = 拼导入(基, 路们[i])
+      定 命中 = 找签名(文件签名册(目标), 名)
+      若 !field_has(命中, "空") {
+        定 那份 = read_text(目标)
         var 址 = "file:///" + 目标
-        if len(目标) > 0 {
-          if 目标[0] == "/" { 址 = "file://" + 目标 }
+        若 len(目标) > 0 {
+          若 目标[0] == "/" { 址 = "file://" + 目标 }
         }
-        return {文: 应答(id, 地位(址, 那份, 命中)), 停: false, 文本: 文本}
+        返回 {文: 应答(id, 地位(址, 那份, 命中)), 停: false, 文本: 文本}
       }
       i = i + 1
     }
-    return {文: 应答(id, {空: 1}), 停: false, 文本: 文本}
+    返回 {文: 应答(id, {空: 1}), 停: false, 文本: 文本}
   }
-  if 方法 == "textDocument/hover" {
-    let 位 = 取(取(值, "params"), "position")
-    let 名 = 词在(文本, 取数(位, "line"), 取数(位, "character"))
-    if len(名) == 0 { return {文: 应答(id, {空: 1}), 停: false, 文本: 文本} }
-    let 签 = 找签名(all_signatures(scan(文本)), 名)
-    if field_has(签, "空") { return {文: 应答(id, {空: 1}), 停: false, 文本: 文本} }
-    let 内 = {对象: (("kind", {串: "plaintext"}), ("value", {串: 签名文字(签)}))}
-    return {文: 应答(id, {对象: (("contents", 内),)}), 停: false, 文本: 文本}
+  若 方法 == "textDocument/hover" {
+    定 位 = 取(取(值, "params"), "position")
+    定 名 = 词在(文本, 取数(位, "line"), 取数(位, "character"))
+    若 len(名) == 0 { 返回 {文: 应答(id, {空: 1}), 停: false, 文本: 文本} }
+    定 签 = 找签名(all_signatures(scan(文本)), 名)
+    若 field_has(签, "空") { 返回 {文: 应答(id, {空: 1}), 停: false, 文本: 文本} }
+    定 内 = {对象: (("kind", {串: "plaintext"}), ("value", {串: 签名文字(签)}))}
+    返回 {文: 应答(id, {对象: (("contents", 内),)}), 停: false, 文本: 文本}
   }
-  if 方法 == "shutdown" {
-    return {文: 应答(id, {空: 1}), 停: false, 文本: 文本}
+  若 方法 == "shutdown" {
+    返回 {文: 应答(id, {空: 1}), 停: false, 文本: 文本}
   }
-  if 方法 == "exit" {
-    return {文: "", 停: true, 文本: 文本}
+  若 方法 == "exit" {
+    返回 {文: "", 停: true, 文本: 文本}
   }
-  return {文: 应答错(id, 0 - 32601, "method not found"), 停: false, 文本: 文本}
+  返回 {文: 应答错(id, 0 - 32601, "method not found"), 停: false, 文本: 文本}
 }
 
 fn main() -> Int effects(file) {
   var 跑 = true
   var 文本 = ""
-  while 跑 {
-    let m = 读消息()
-    if m.结束 {
+  当 跑 {
+    定 m = 读消息()
+    若 m.结束 {
       跑 = false
     } else {
-      let r = 处理(m.体, 文本)
+      定 r = 处理(m.体, 文本)
       文本 = r.文本
-      if len(r.文) > 0 {
+      若 len(r.文) > 0 {
         print("Content-Length: " + str(utf8字节数(r.文)) + "\r\n\r\n" + r.文)
       }
-      if r.停 { 跑 = false }
+      若 r.停 { 跑 = false }
     }
   }
-  return 0
+  返回 0
 }

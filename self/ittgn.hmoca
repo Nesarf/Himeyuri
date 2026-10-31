@@ -29,8 +29,8 @@
 //   hmyr self/ittgn.hmoca --取 <包> <成员名> <输出文件>
 
 fn 以尾(s: String, 尾: String) -> Bool {
-  if len(s) < len(尾) { return false }
-  return slice(s, len(s) - len(尾), len(s)) == 尾
+  若 len(s) < len(尾) { 返回 false }
+  返回 slice(s, len(s) - len(尾), len(s)) == 尾
 }
 
 // 成员名归一：容器里存的是「包内路径」，而人给的常是宿主路径（E:\a\b）。
@@ -39,25 +39,25 @@ fn 以尾(s: String, 尾: String) -> Bool {
 fn 归一名(s: String) -> String {
   var 出 = ""
   var i = 0
-  if len(s) >= 2 && slice(s, 1, 2) == ":" { i = 2 }
-  while i < len(s) {
-    let c = slice(s, i, i + 1)
-    if c == "\\" { 出 = 出 + "/" } else { 出 = 出 + c }
+  若 len(s) >= 2 && slice(s, 1, 2) == ":" { i = 2 }
+  当 i < len(s) {
+    定 c = slice(s, i, i + 1)
+    若 c == "\\" { 出 = 出 + "/" } else { 出 = 出 + c }
     i = i + 1
   }
   var j = 0
-  while j < len(出) && slice(出, j, j + 1) == "/" { j = j + 1 }
-  return slice(出, j, len(出))
+  当 j < len(出) && slice(出, j, j + 1) == "/" { j = j + 1 }
+  返回 slice(出, j, len(出))
 }
 
 fn 斜杠数(s: String) -> Int {
   var n = 0
   var i = 0
-  while i < len(s) {
-    if slice(s, i, i + 1) == "/" { n = n + 1 }
+  当 i < len(s) {
+    若 slice(s, i, i + 1) == "/" { n = n + 1 }
     i = i + 1
   }
-  return n
+  返回 n
 }
 
 // 码点 → UTF-8 字节。手写而不是找现成的：容器要存的是「字节」，
@@ -65,15 +65,15 @@ fn 斜杠数(s: String) -> Int {
 fn 串UTF8(s: String) {
   var 出 = ()
   var i = 0
-  while i < len(s) {
-    let cp = ord(slice(s, i, i + 1))
-    if cp < 128 {
+  当 i < len(s) {
+    定 cp = ord(slice(s, i, i + 1))
+    若 cp < 128 {
       出 = 出 + (cp,)
     } else {
-      if cp < 2048 {
+      若 cp < 2048 {
         出 = 出 + (192 + (cp - (cp % 64)) / 64, 128 + cp % 64)
       } else {
-        if cp < 65536 {
+        若 cp < 65536 {
           出 = 出 + (224 + (cp - (cp % 4096)) / 4096, 128 + ((cp - (cp % 64)) / 64) % 64, 128 + cp % 64)
         } else {
           出 = 出 + (240 + (cp - (cp % 262144)) / 262144, 128 + ((cp - (cp % 4096)) / 4096) % 64, 128 + ((cp - (cp % 64)) / 64) % 64, 128 + cp % 64)
@@ -82,25 +82,25 @@ fn 串UTF8(s: String) {
     }
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 // UTF-8 字节 → 码点 → 字符串。与上面那一份成对。
 fn UTF8串(字节串, 起: Int, 止: Int) -> String {
   var s = ""
   var i = 起
-  while i < 止 {
-    let b0 = 字节串[i]
+  当 i < 止 {
+    定 b0 = 字节串[i]
     var cp = 0
     var 续 = 0
-    if b0 < 128 {
+    若 b0 < 128 {
       cp = b0
     } else {
-      if (b0 - (b0 % 32)) / 32 == 6 {
+      若 (b0 - (b0 % 32)) / 32 == 6 {
         cp = b0 % 32
         续 = 1
       } else {
-        if (b0 - (b0 % 16)) / 16 == 14 {
+        若 (b0 - (b0 % 16)) / 16 == 14 {
           cp = b0 % 16
           续 = 2
         } else {
@@ -111,14 +111,14 @@ fn UTF8串(字节串, 起: Int, 止: Int) -> String {
     }
     i = i + 1
     var k = 0
-    while k < 续 && i < 止 {
+    当 k < 续 && i < 止 {
       cp = cp * 64 + (字节串[i] % 64)
       i = i + 1
       k = k + 1
     }
     s = s + chr(cp)
   }
-  return s
+  返回 s
 }
 
 // 切一段字节。为什么不写 slice(字节串, 起, 止)：最小求值器那边的 slice 只认
@@ -128,148 +128,148 @@ fn UTF8串(字节串, 起: Int, 止: Int) -> String {
 fn 字节段(字节串, 起: Int, 止: Int) {
   var 出 = ()
   var i = 起
-  while i < 止 {
+  当 i < 止 {
     出 = 出 + (字节串[i],)
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 fn 小16(n: Int) {
-  return (n % 256, ((n - (n % 256)) / 256) % 256)
+  返回 (n % 256, ((n - (n % 256)) / 256) % 256)
 }
 
 fn 小32(n: Int) {
-  let 一 = n % 256
-  let 二 = ((n - 一) / 256) % 256
-  let 三 = ((n - 一 - 二 * 256) / 65536) % 256
-  let 四 = (n - 一 - 二 * 256 - 三 * 65536) / 16777216
-  return (一, 二, 三, 四)
+  定 一 = n % 256
+  定 二 = ((n - 一) / 256) % 256
+  定 三 = ((n - 一 - 二 * 256) / 65536) % 256
+  定 四 = (n - 一 - 二 * 256 - 三 * 65536) / 16777216
+  返回 (一, 二, 三, 四)
 }
 
 fn 读16(字节串, 位: Int) -> Int {
-  return 字节串[位] + 字节串[位 + 1] * 256
+  返回 字节串[位] + 字节串[位 + 1] * 256
 }
 
 fn 读32(字节串, 位: Int) -> Int {
-  return 字节串[位] + 字节串[位 + 1] * 256 + 字节串[位 + 2] * 65536 + 字节串[位 + 3] * 16777216
+  返回 字节串[位] + 字节串[位 + 1] * 256 + 字节串[位 + 2] * 65536 + 字节串[位 + 3] * 16777216
 }
 
 // 扫一遍成员表：交回每项的 (名, 数据起, 数据止)。
 fn 扫(字节串) {
-  if len(字节串) < 12 { return () }
-  let 数 = 读16(字节串, 10)
+  若 len(字节串) < 12 { 返回 () }
+  定 数 = 读16(字节串, 10)
   var 出 = ()
   var 位 = 12
   var i = 0
-  while i < 数 {
-    let 名长 = 读16(字节串, 位)
-    let 名 = UTF8串(字节串, 位 + 2, 位 + 2 + 名长)
-    let 长位 = 位 + 2 + 名长
-    let 数据长 = 读32(字节串, 长位)
-    let 起 = 长位 + 4
+  当 i < 数 {
+    定 名长 = 读16(字节串, 位)
+    定 名 = UTF8串(字节串, 位 + 2, 位 + 2 + 名长)
+    定 长位 = 位 + 2 + 名长
+    定 数据长 = 读32(字节串, 长位)
+    定 起 = 长位 + 4
     出 = 出 + ((名, 起, 起 + 数据长),)
     位 = 起 + 数据长
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 fn 装(包路: String, 文件们) -> Int effects(file) {
   var i = 0
-  while i < len(文件们) {
-    let 名 = 归一名(文件们[i])
-    if 以尾(名, ".hmsnp") || 以尾(名, ".hmhsr") {
+  当 i < len(文件们) {
+    定 名 = 归一名(文件们[i])
+    若 以尾(名, ".hmsnp") || 以尾(名, ".hmhsr") {
       print("HMYR-器-001 容器里不能放 " + 名 + "：入口是容器的逻辑，不是成员" + chr(10))
-      return 4
+      返回 4
     }
-    if 斜杠数(名) + 1 > 12 {
+    若 斜杠数(名) + 1 > 12 {
       print("HMYR-器-002 层太深：" + 名 + " 是第 " + str(斜杠数(名) + 1) + " 层，上限 12" + chr(10))
-      return 4
+      返回 4
     }
     i = i + 1
   }
   var 段们 = (串UTF8("HMYRITTGN"), (1,), 小16(len(文件们)))
   i = 0
-  while i < len(文件们) {
-    let 原始 = 文件们[i]
-    let 名 = 归一名(原始)
-    let 名字节 = 串UTF8(名)
-    let 数据 = read_bytes(原始)
+  当 i < len(文件们) {
+    定 原始 = 文件们[i]
+    定 名 = 归一名(原始)
+    定 名字节 = 串UTF8(名)
+    定 数据 = read_bytes(原始)
     段们 = 段们 + (小16(len(名字节)), 名字节, 小32(len(数据)), 数据)
     i = i + 1
   }
   write_bytes(包路, 段们)
   print("装了 " + str(len(文件们)) + " 个成员 → " + 包路 + chr(10))
-  return 0
+  返回 0
 }
 
 fn 列(包路: String) -> Int effects(file) {
-  let 字节串 = read_bytes(包路)
-  if len(字节串) < 12 || UTF8串(字节串, 0, 9) != "HMYRITTGN" {
+  定 字节串 = read_bytes(包路)
+  若 len(字节串) < 12 || UTF8串(字节串, 0, 9) != "HMYRITTGN" {
     print("HMYR-器-003 这不是容器：" + 包路 + chr(10))
-    return 4
+    返回 4
   }
-  let 成员们 = 扫(字节串)
+  定 成员们 = 扫(字节串)
   var i = 0
-  while i < len(成员们) {
-    let 一 = 成员们[i]
+  当 i < len(成员们) {
+    定 一 = 成员们[i]
     print(一[0] + "  " + str(一[2] - 一[1]) + " 字节" + chr(10))
     i = i + 1
   }
-  return 0
+  返回 0
 }
 
 fn 取(包路: String, 名: String, 出: String) -> Int effects(file) {
-  let 字节串 = read_bytes(包路)
-  if len(字节串) < 12 || UTF8串(字节串, 0, 9) != "HMYRITTGN" {
+  定 字节串 = read_bytes(包路)
+  若 len(字节串) < 12 || UTF8串(字节串, 0, 9) != "HMYRITTGN" {
     print("HMYR-器-003 这不是容器：" + 包路 + chr(10))
-    return 4
+    返回 4
   }
-  let 成员们 = 扫(字节串)
+  定 成员们 = 扫(字节串)
   var i = 0
-  while i < len(成员们) {
-    let 一 = 成员们[i]
-    if 一[0] == 名 {
+  当 i < len(成员们) {
+    定 一 = 成员们[i]
+    若 一[0] == 名 {
       write_bytes(出, (字节段(字节串, 一[1], 一[2]),))
       print("取了 " + 名 + " → " + 出 + chr(10))
-      return 0
+      返回 0
     }
     i = i + 1
   }
   print("HMYR-器-004 没有这个成员：" + 名 + chr(10))
-  return 4
+  返回 4
 }
 
 fn main() -> Int effects(file, process) {
-  let 参 = argv()
-  if len(参) < 3 {
+  定 参 = argv()
+  若 len(参) < 3 {
     print("用法：hmyr self/ittgn.hmoca --装 <包> <文件...> | --列 <包> | --取 <包> <成员> <输出>" + chr(10))
-    return 2
+    返回 2
   }
-  if 参[1] == "--装" {
-    if len(参) < 4 {
+  若 参[1] == "--装" {
+    若 len(参) < 4 {
       print("--装 要给一个包和至少一个文件" + chr(10))
-      return 2
+      返回 2
     }
     var 文件们 = ()
     var i = 3
-    while i < len(参) {
+    当 i < len(参) {
       文件们 = 文件们 + (参[i],)
       i = i + 1
     }
-    return 装(参[2], 文件们)
+    返回 装(参[2], 文件们)
   }
-  if 参[1] == "--列" {
-    return 列(参[2])
+  若 参[1] == "--列" {
+    返回 列(参[2])
   }
-  if 参[1] == "--取" {
-    if len(参) < 5 {
+  若 参[1] == "--取" {
+    若 len(参) < 5 {
       print("--取 要给一个包、一个成员名和一个输出" + chr(10))
-      return 2
+      返回 2
     }
-    return 取(参[2], 参[3], 参[4])
+    返回 取(参[2], 参[3], 参[4])
   }
   print("不认识的子命令：" + 参[1] + chr(10))
-  return 2
+  返回 2
 }

@@ -15,16 +15,16 @@ import "./run.hmoca"
 //
 // 这一条是这一轮最贵的一课：之前所有的 print 都不出现，是因为程序根本没跑到 main。
 fn 命令行入口() -> Int effects(process, file) {
-  let 参们 = argv()
-  if len(参们) < 3 {
+  定 参们 = argv()
+  若 len(参们) < 3 {
     print("用法：adapter.hmoca <目录> <相对路径>" + chr(10))
-    return 1
+    返回 1
   }
   print(加载顺序公开(参们[1], 参们[2]))
-  return 0
+  返回 0
 }
 
 fn main() -> Int effects(process) {
   print("adapter：请带 <目录> <相对路径> 两个参数" + chr(10))
-  return 0
+  返回 0
 }

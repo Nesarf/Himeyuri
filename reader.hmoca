@@ -17,71 +17,71 @@
 
 // 字母、数字与下划线：一个记号的字符集。中文也算字母（这门语言允许中文标识符）。
 fn 是字(码: Int) -> Bool {
-  if 码 >= 48 && 码 <= 57 { return true }        // 0-9
-  if 码 >= 65 && 码 <= 90 { return true }        // A-Z
-  if 码 >= 97 && 码 <= 122 { return true }       // a-z
-  if 码 == 95 { return true }                    // 下划线
-  if 码 >= 19968 { return true }                // 中日韩统一表意（足够这一层用）
-  return false
+  若 码 >= 48 && 码 <= 57 { 返回 true }        // 0-9
+  若 码 >= 65 && 码 <= 90 { 返回 true }        // A-Z
+  若 码 >= 97 && 码 <= 122 { 返回 true }       // a-z
+  若 码 == 95 { 返回 true }                    // 下划线
+  若 码 >= 19968 { 返回 true }                // 中日韩统一表意（足够这一层用）
+  返回 false
 }
 
 fn 字吗(文本: String, 位: Int) -> Bool {
-  if 位 < 0 || 位 >= len(文本) { return false }
-  return 是字(ord(文本[位]))
+  若 位 < 0 || 位 >= len(文本) { 返回 false }
+  返回 是字(ord(文本[位]))
 }
 
 // 从 位 开始的那一段，是不是正好是 记号，而且它的两边不在更大的记号里。
 fn 整记号(源码: String, 位: Int, 记号: String) -> Bool {
-  if len(记号) == 0 { return false }
-  if 位 + len(记号) > len(源码) { return false }
-  if slice(源码, 位, 位 + len(记号)) != 记号 { return false }
-  if 字吗(源码, 位 - 1) { return false }
-  if 字吗(源码, 位 + len(记号)) { return false }
-  return true
+  若 len(记号) == 0 { 返回 false }
+  若 位 + len(记号) > len(源码) { 返回 false }
+  若 slice(源码, 位, 位 + len(记号)) != 记号 { 返回 false }
+  若 字吗(源码, 位 - 1) { 返回 false }
+  若 字吗(源码, 位 + len(记号)) { 返回 false }
+  返回 true
 }
 
 // 用一条规则扫一遍。扫到整记号就换掉，然后从换完的地方继续——
 // 于是同一条规则不会在它自己的展开结果里再命中一次（那样会无限展开）。
 fn 扫一遍从(源码: String, 位: Int, 记号: String, 展开成: String, acc: String) -> String {
-  if 位 >= len(源码) { return acc }
-  if 整记号(源码, 位, 记号) {
-    return 扫一遍从(源码, 位 + len(记号), 记号, 展开成, acc + 展开成)
+  若 位 >= len(源码) { 返回 acc }
+  若 整记号(源码, 位, 记号) {
+    返回 扫一遍从(源码, 位 + len(记号), 记号, 展开成, acc + 展开成)
   }
-  return 扫一遍从(源码, 位 + 1, 记号, 展开成, acc + 源码[位])
+  返回 扫一遍从(源码, 位 + 1, 记号, 展开成, acc + 源码[位])
 }
 
 fn 扫一遍(源码: String, 记号: String, 展开成: String) -> String {
-  return 扫一遍从(源码, 0, 记号, 展开成, "")
+  返回 扫一遍从(源码, 0, 记号, 展开成, "")
 }
 
 // 把一整张规则表按顺序用上去。
 fn 展开从(源码: String, 规则们: Int, i: Int) -> String {
-  if i >= len(规则们) { return 源码 }
-  let 规 = 规则们[i]
-  return 展开从(扫一遍(源码, 规[0], 规[1]), 规则们, i + 1)
+  若 i >= len(规则们) { 返回 源码 }
+  定 规 = 规则们[i]
+  返回 展开从(扫一遍(源码, 规[0], 规[1]), 规则们, i + 1)
 }
 
 fn 展开(源码: String, 规则们: Int) -> String {
-  return 展开从(源码, 规则们, 0)
+  返回 展开从(源码, 规则们, 0)
 }
 
 // 反过来问：这份源码里有没有哪条规则的记号？工具（LSP、格式化器）用这一条
 // 决定「这个文件要不要先展开再读」——而那正是「规则是数据」的好处。
 fn 用到从(源码: String, 记号: String, 位: Int) -> Bool {
-  if 位 >= len(源码) { return false }
-  if 整记号(源码, 位, 记号) { return true }
-  return 用到从(源码, 记号, 位 + 1)
+  若 位 >= len(源码) { 返回 false }
+  若 整记号(源码, 位, 记号) { 返回 true }
+  返回 用到从(源码, 记号, 位 + 1)
 }
 
 fn 用到(源码: String, 规则们: Int, i: Int) -> Bool {
-  if i >= len(规则们) { return false }
-  if 用到从(源码, 规则们[i][0], 0) { return true }
-  return 用到(源码, 规则们, i + 1)
+  若 i >= len(规则们) { 返回 false }
+  若 用到从(源码, 规则们[i][0], 0) { 返回 true }
+  返回 用到(源码, 规则们, i + 1)
 }
 
 fn main() -> Int {
-  let 规则们 = (("每当", "while"), ("否则", "if"))
-  let 例 = "fn main() -> Int {\n  var i = 0\n  每当 i < 3 {\n    i = i + 1\n  }\n  return i\n}\n"
+  定 规则们 = (("每当", "while"), ("否则", "if"))
+  定 例 = "fn main() -> Int {\n  var i = 0\n  每当 i < 3 {\n    i = i + 1\n  }\n  return i\n}\n"
   print("原文：\n" + 例 + "展开之后：\n" + 展开(例, 规则们))
-  return 0
+  返回 0
 }

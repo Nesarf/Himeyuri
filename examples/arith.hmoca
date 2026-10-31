@@ -1,12 +1,12 @@
 fn 加(a: Int, b: Int) -> Int {
-  return a + b
+  返回 a + b
 }
 
 fn 阶(n: Int) -> Int {
-  if n <= 1 {
-    return 1
+  若 n <= 1 {
+    返回 1
   }
-  return n * 阶(n - 1)
+  返回 n * 阶(n - 1)
 }
 
 fn main() -> Int {
@@ -14,11 +14,11 @@ fn main() -> Int {
   print(" ")
   print(str(阶(5)))
   print(" ")
-  let t = (1, 2, 3)
+  定 t = (1, 2, 3)
   print(str(len(t)))
   print(" ")
-  let r = {a: 7, b: "琥珀"}
+  定 r = {a: 7, b: "琥珀"}
   print(str(r.a))
   print(r.b)
-  return 0
+  返回 0
 }

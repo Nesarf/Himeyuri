@@ -9,52 +9,52 @@
 
 fn note(key: Int, start: Int, length: Int) -> Int {
   // 一个音符：音高、起点、长度（单位是 tick）
-  return (key, start, length)
+  返回 (key, start, length)
 }
 
 fn track(name: String, notes: Int) -> Int {
-  return {name: name, notes: notes}
+  返回 {name: name, notes: notes}
 }
 
 fn strip(name: String, gain: Int, pan: Int) -> Int {
-  return {name: name, gain: gain, pan: pan}
+  返回 {name: name, gain: gain, pan: pan}
 }
 
 fn main() -> Int {
-  let lead = (
+  定 lead = (
     note(69, 0, 480),
     note(71, 480, 480),
     note(72, 960, 480),
     note(74, 1440, 480)
   )
-  let bass = (
+  定 bass = (
     note(45, 0, 960),
     note(43, 960, 960)
   )
-  let drums = (
+  定 drums = (
     note(36, 0, 120),
     note(38, 480, 120),
     note(36, 960, 120),
     note(38, 1440, 120)
   )
 
-  let score = {
+  定 score = {
     ppq: 480,
     tempo: 120,
     title: "湯の岡",
     tracks: (track("lead", lead), track("bass", bass), track("drums", drums))
   }
 
-  let mix = {
+  定 mix = {
     strips: (strip("lead", -3, -20), strip("bass", -6, 0), strip("drums", -1, 0)),
     master: {gain: -1, ceiling: -1}
   }
 
-  let timbre = {
+  定 timbre = {
     name: "kohane-lead",
     engine: "subtractive",
     params: {cutoff: 4200, resonance: 30, attack: 5, release: 220}
   }
 
-  return {score: score, mix: mix, timbre: timbre}
+  返回 {score: score, mix: mix, timbre: timbre}
 }

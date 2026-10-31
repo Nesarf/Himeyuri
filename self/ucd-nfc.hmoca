@@ -5,7 +5,7 @@
 //
 // 一路上修掉的四处，都记在 design/INDEX.txt：
 //   一、`v - (v / 16) * 16` 在双精度下会算出负的极小值 —— 改成 `v % 16` 加 floor；
-//   二、`let` 声明又赋值（槽 38 的 首类）—— 编译器开 HMYR_SLOTS=1 一查即知；
+//   二、`定` 声明又赋值（槽 38 的 首类）—— 编译器开 HMYR_SLOTS=1 一查即知；
 //   三、栈的「弹出」用了 slice —— 而 slice 对元组切的是它写成文字之后的字符串，
 //       于是元组变成 "["（全分解因此只收六条）—— 改成递归；
 //   四、插入排序里「当前不必后移」时把 b 减到 -1，于是它被写到位置 0 —— 改成标志跳出。
@@ -24,38 +24,38 @@
 fn 十六进制值(文: String) -> Int {
   var v = 0
   var i = 0
-  while i < len(文) {
-    let c = 文[i]
+  当 i < len(文) {
+    定 c = 文[i]
     var d = 0 - 1
     var k = 0
-    while k < 10 {
-      if c == "0123456789"[k] { d = k }
+    当 k < 10 {
+      若 c == "0123456789"[k] { d = k }
       k = k + 1
     }
     var k2 = 0
-    while k2 < 6 {
-      if c == "abcdef"[k2] { d = 10 + k2 }
-      if c == "ABCDEF"[k2] { d = 10 + k2 }
+    当 k2 < 6 {
+      若 c == "abcdef"[k2] { d = 10 + k2 }
+      若 c == "ABCDEF"[k2] { d = 10 + k2 }
       k2 = k2 + 1
     }
-    if d >= 0 { v = v * 16 + d }
+    若 d >= 0 { v = v * 16 + d }
     i = i + 1
   }
-  return v
+  返回 v
 }
 
 fn 十六进制写法(n: Int) -> String {
-  if n == 0 { return "0" }
-  let 表 = "0123456789ABCDEF"
+  若 n == 0 { 返回 "0" }
+  定 表 = "0123456789ABCDEF"
   var 出 = ""
   var v = n
   // 取模与 floor 都要用：这一门语言的数字只有双精度，`v - (v / 16) * 16` 在浮点除法不精确时
   // 会算出负的极小值（实测 -2e-323），而它当下标就是越界。
-  while v > 0 {
+  当 v > 0 {
     出 = 表[v % 16] + 出
     v = floor(v / 16)
   }
-  return 出
+  返回 出
 }
 
 // 去首尾空白
@@ -63,17 +63,17 @@ fn 修剪(文: String) -> String {
   var 起 = 0
   var 止 = len(文)
   var 走 = true
-  while 起 < 止 && 走 {
-    let c = 文[起]
-    if c == " " || c == chr(9) || c == chr(13) { 起 = 起 + 1 } else { 走 = false }
+  当 起 < 止 && 走 {
+    定 c = 文[起]
+    若 c == " " || c == chr(9) || c == chr(13) { 起 = 起 + 1 } else { 走 = false }
   }
   var 完 = 止
   var 走2 = true
-  while 完 > 起 && 走2 {
-    let c = 文[完 - 1]
-    if c == " " || c == chr(9) || c == chr(13) { 完 = 完 - 1 } else { 走2 = false }
+  当 完 > 起 && 走2 {
+    定 c = 文[完 - 1]
+    若 c == " " || c == chr(9) || c == chr(13) { 完 = 完 - 1 } else { 走2 = false }
   }
-  return slice(文, 起, 完)
+  返回 slice(文, 起, 完)
 }
 
 // 按空格切开，丢掉空段。分解那一列是一串十六进制码点。
@@ -81,12 +81,12 @@ fn 切码点(文: String) -> Int {
   var 出 = ()
   var 部 = split(文, " ")
   var i = 0
-  while i < len(部) {
-    let 段 = 修剪(部[i])
-    if len(段) > 0 { 出 = 出 + (十六进制值(段),) }
+  当 i < len(部) {
+    定 段 = 修剪(部[i])
+    若 len(段) > 0 { 出 = 出 + (十六进制值(段),) }
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 // 把一条分解展开到底。
@@ -95,49 +95,49 @@ fn 切码点(文: String) -> Int {
 // 文字再切（slice((7,8,9),0,1) 交回 "["），于是「弹出栈顶」那一步会把元组变成字符串。
 // 递归没有这个动作，累积仍走元组拼接，而每一份分解都很短。
 fn 全展开(cp: Int, 直表: Int, 出: Int) -> Int {
-  if index_has(直表, str(cp)) {
-    let 部 = index_get(直表, str(cp))
+  若 index_has(直表, str(cp)) {
+    定 部 = index_get(直表, str(cp))
     var acc = 出
     var k = 0
-    while k < len(部) {
+    当 k < len(部) {
       acc = 全展开(部[k], 直表, acc)
       k = k + 1
     }
-    return acc
+    返回 acc
   }
-  return 出 + (cp,)
+  返回 出 + (cp,)
 }
 
 fn main() -> Int effects(file, process) {
-  let 参 = argv()
+  定 参 = argv()
   // 参[0] 是脚本自己的路径；真实参数从 1 起（与第一支同一套规矩）
   var 数据目录 = "data/ucd"
-  if len(参) > 1 { 数据目录 = 参[1] }
+  若 len(参) > 1 { 数据目录 = 参[1] }
   var 出文件 = "vm/ucd-nfc.h"
-  if len(参) > 2 { 出文件 = 参[2] }
+  若 len(参) > 2 { 出文件 = 参[2] }
 
-  let 源码 = read_text(数据目录 + "/UnicodeData.txt")
+  定 源码 = read_text(数据目录 + "/UnicodeData.txt")
 
   var 直分解 = index_new()      // 码点 → 分解后的元组
   var 组合类 = index_new()      // 码点 → 组合类
   // 码点列表用可变数组：元组拼接是 O(n²)，这份语料有好几万行，走不到一半就撞步数上限。
-  let 行批 = split(源码, chr(10))
+  定 行批 = split(源码, chr(10))
   var 序列 = 数组(行批)         // 长度够用，实际填 序数 个
   var 序数 = 0
 
   var i = 0
-  while i < len(行批) {
-    let 行 = 行批[i]
-    if len(行) > 0 {
-      let 段 = split(行, ";")
-      if len(段) >= 15 {
-        let cp = 十六进制值(段[0])
-        let ccc = to_int(段[3])
-        if ccc != 0 { 组合类 = index_set(组合类, str(cp), ccc) }
-        let 分 = 修剪(段[5])
-        if len(分) > 0 {
+  当 i < len(行批) {
+    定 行 = 行批[i]
+    若 len(行) > 0 {
+      定 段 = split(行, ";")
+      若 len(段) >= 15 {
+        定 cp = 十六进制值(段[0])
+        定 ccc = to_int(段[3])
+        若 ccc != 0 { 组合类 = index_set(组合类, str(cp), ccc) }
+        定 分 = 修剪(段[5])
+        若 len(分) > 0 {
           // 兼容分解（尖括号开头）不属于 NFC
-          if 分[0] != "<" {
+          若 分[0] != "<" {
             直分解 = index_set(直分解, str(cp), 切码点(分))
             设(序列, 序数, cp)
             序数 = 序数 + 1
@@ -152,30 +152,30 @@ fn main() -> Int effects(file, process) {
   var 全分解 = index_new()
   var 最长 = 0
   var j = 0
-  while j < 序数 {
-    let cp = 序列[j]
-    let 全 = 全展开(cp, 直分解, ())
-    if len(全) <= 8 {
+  当 j < 序数 {
+    定 cp = 序列[j]
+    定 全 = 全展开(cp, 直分解, ())
+    若 len(全) <= 8 {
       全分解 = index_set(全分解, str(cp), 全)
-      if len(全) > 最长 { 最长 = len(全) }
+      若 len(全) > 最长 { 最长 = len(全) }
     }
     j = j + 1
   }
   // ---- 排除表 ----
-  let 排文 = read_text(数据目录 + "/CompositionExclusions.txt")
+  定 排文 = read_text(数据目录 + "/CompositionExclusions.txt")
   var 排掉 = index_new()
-  let 排们 = split(排文, chr(10))
+  定 排们 = split(排文, chr(10))
   var m = 0
-  while m < len(排们) {
+  当 m < len(排们) {
     var 净 = 排们[m]
     // 去掉注释
-    let 井 = split(净, "#")
-    if len(井) > 0 { 净 = 修剪(井[0]) }
-    if len(净) > 0 {
-      let 首 = split(净, " ")
-      if len(首) > 0 {
-        let 段 = 修剪(首[0])
-        if len(段) > 0 { 排掉 = index_set(排掉, str(十六进制值(段)), 1) }
+    定 井 = split(净, "#")
+    若 len(井) > 0 { 净 = 修剪(井[0]) }
+    若 len(净) > 0 {
+      定 首 = split(净, " ")
+      若 len(首) > 0 {
+        定 段 = 修剪(首[0])
+        若 len(段) > 0 { 排掉 = index_set(排掉, str(十六进制值(段)), 1) }
       }
     }
     m = m + 1
@@ -185,14 +185,14 @@ fn main() -> Int effects(file, process) {
   var 组合 = 数组(行批)
   var 组合数 = 0
   var n = 0
-  while n < 序数 {
-    let cp = 序列[n]
-    let 直 = index_get(直分解, str(cp))
-    if len(直) == 2 {
-      if index_has(排掉, str(cp)) == false {
+  当 n < 序数 {
+    定 cp = 序列[n]
+    定 直 = index_get(直分解, str(cp))
+    若 len(直) == 2 {
+      若 index_has(排掉, str(cp)) == false {
         var 首类 = 0
-        if index_has(组合类, str(直[0])) { 首类 = index_get(组合类, str(直[0])) }
-        if 首类 == 0 {
+        若 index_has(组合类, str(直[0])) { 首类 = index_get(组合类, str(直[0])) }
+        若 首类 == 0 {
           设(组合, 组合数, (直[0], 直[1], cp))
           组合数 = 组合数 + 1
         }
@@ -202,18 +202,18 @@ fn main() -> Int effects(file, process) {
   }
   // 插入排序：数组交换是 O(1)，而组合对约一千条 —— 这一步原来是冒泡加元组重建，走不动
   var a = 1
-  while a < 组合数 {
-    let 当前 = 组合[a]
+  当 a < 组合数 {
+    定 当前 = 组合[a]
     var b = a - 1
     var 走 = true
     // 由标志跳出，不能把 b 减到 -1 —— 那样「当前本不必移动」的情形会被写到位置 0，
     // 于是已排好的前半段被覆盖（实测：三百多条组合对里出现重复行，顺序也乱了）。
-    while b >= 0 && 走 {
-      let 看 = 组合[b]
+    当 b >= 0 && 走 {
+      定 看 = 组合[b]
       var 大 = false
-      if 看[0] > 当前[0] { 大 = true }
-      if 看[0] == 当前[0] && 看[1] > 当前[1] { 大 = true }
-      if 大 {
+      若 看[0] > 当前[0] { 大 = true }
+      若 看[0] == 当前[0] && 看[1] > 当前[1] { 大 = true }
+      若 大 {
         设(组合, b + 1, 看)
         b = b - 1
       } else {
@@ -243,19 +243,19 @@ fn main() -> Int effects(file, process) {
 
   文本 = 文本 + "static const HmyrDecompEntry ucd_decomp[] = {\n"
   var p = 0
-  while p < 序数 {
-    let cp = 序列[p]
-    if index_has(全分解, str(cp)) {
-      let 全 = index_get(全分解, str(cp))
+  当 p < 序数 {
+    定 cp = 序列[p]
+    若 index_has(全分解, str(cp)) {
+      定 全 = index_get(全分解, str(cp))
       // 四个变量代替「用 slice 改元组」—— 原因同上：slice 对元组评的是文字。
       var 填0 = 0
       var 填1 = 0
       var 填2 = 0
       var 填3 = 0
-      if len(全) > 0 { 填0 = 全[0] }
-      if len(全) > 1 { 填1 = 全[1] }
-      if len(全) > 2 { 填2 = 全[2] }
-      if len(全) > 3 { 填3 = 全[3] }
+      若 len(全) > 0 { 填0 = 全[0] }
+      若 len(全) > 1 { 填1 = 全[1] }
+      若 len(全) > 2 { 填2 = 全[2] }
+      若 len(全) > 3 { 填3 = 全[3] }
       文本 = 文本 + "  {0x" + 十六进制写法(cp) + "u, " + str(len(全)) + "u, {"
       文本 = 文本 + "0x" + 十六进制写法(填0) + "u, 0x" + 十六进制写法(填1) + "u, "
       文本 = 文本 + "0x" + 十六进制写法(填2) + "u, 0x" + 十六进制写法(填3) + "u}},\n"
@@ -266,10 +266,10 @@ fn main() -> Int effects(file, process) {
   文本 = 文本 + "static const size_t ucd_decomp_count = " + str(index_len(全分解)) + ";\n\n"
 
   文本 = 文本 + "static const HmyrCccEntry ucd_ccc[] = {\n"
-  let 类键 = index_keys(组合类)
+  定 类键 = index_keys(组合类)
   var r = 0
-  while r < len(类键) {
-    let 键 = 类键[r]
+  当 r < len(类键) {
+    定 键 = 类键[r]
     文本 = 文本 + "  {0x" + 十六进制写法(to_int(键)) + "u, " + str(index_get(组合类, 键)) + "u},\n"
     r = r + 1
   }
@@ -278,8 +278,8 @@ fn main() -> Int effects(file, process) {
 
   文本 = 文本 + "static const HmyrCompEntry ucd_comp[] = {\n"
   var s = 0
-  while s < 组合数 {
-    let 条 = 组合[s]
+  当 s < 组合数 {
+    定 条 = 组合[s]
     文本 = 文本 + "  {0x" + 十六进制写法(条[0]) + "u, 0x" + 十六进制写法(条[1]) + "u, 0x" + 十六进制写法(条[2]) + "u},\n"
     s = s + 1
   }
@@ -293,5 +293,5 @@ fn main() -> Int effects(file, process) {
   print("组合类 " + str(index_len(组合类)) + " 条")
   print("组合对 " + str(组合数) + " 个（排除表 " + str(index_len(排掉)) + " 个）")
   print("→ " + 出文件 + "  " + str(len(文本) / 1024) + " KB")
-  return 0
+  返回 0
 }

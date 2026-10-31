@@ -130,7 +130,9 @@ console.log("\narrows and the spec's own example");
   const 子集源 = fs.readFileSync(path.join(ROOT, "src/subset-lex.mjs"), "utf8");
   const 自举源 = fs.readFileSync(path.join(ROOT, "self/lex.hmoca"), "utf8");
   const 子集块 = /const 关键字别名 = \{([^}]*)\}/.exec(子集源);
-  const 自举对 = [...自举源.matchAll(/if 词 == "([^"]+)" \{ return "([^"]+)" \}/g)].map((m) => [m[1], m[2]]);
+  // 两种写法都认：这张表本身也在 self/lex.hmoca 里，而那个文件的关键字已经换成汉字了。
+  // 先写死英文那一种，于是在源码换成「若 / 返回」之后它一条都找不到 —— 判据自己成了旧形状。
+  const 自举对 = [...自举源.matchAll(/(?:if|若) 词 == "([^"]+)" \{ (?:return|返回) "([^"]+)" \}/g)].map((m) => [m[1], m[2]]);
   ok("子集那一份关键字别名表在", !!子集块, "");
   ok("自举那一份关键字归一表在", 自举对.length > 0, String(自举对.length));
   const 归 = (对) => JSON.stringify(Object.entries(对).sort());

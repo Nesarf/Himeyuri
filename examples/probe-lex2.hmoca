@@ -6,9 +6,9 @@
 import "../self/lex.hmoca"
 
 fn 试(源码: String) -> Int effects(process) {
-  let t = scan_lines(源码)
+  定 t = scan_lines(源码)
   print("好 长" + str(len(源码)) + " 词" + str(len(t)) + chr(10))
-  return 0
+  返回 0
 }
 
 fn main() -> Int effects(process) {
@@ -21,5 +21,5 @@ fn main() -> Int effects(process) {
   试("fn m(\n")
   试("fn m()\n")
   试("fn m() {\n")
-  return 0
+  返回 0
 }

@@ -3,10 +3,10 @@ import "./chain.hmoca"
 // 用 Himeyuri 写的第六件：语句级解析。
 //
 // 前一件（chain.hmyr）只把**一个表达式**读成树；这一件把它抬到**一行语句**：
-//   let x = <表达式>   -> {kind: "定", name, value}
+//   定 x = <表达式>   -> {kind: "定", name, value}
 //   var x = <表达式>   -> {kind: "变", name, value}
-//   return <表达式>    -> {kind: "返回", value}
-//   return（不带值）    -> {kind: "返回", value: {kind: "nil"}}
+//   返回 <表达式>    -> {kind: "返回", value}
+//   返回（不带值）    -> {kind: "返回", value: {kind: "nil"}}
 //     用 nil 节点而不是空元组：空元组是一个**值**，而「没有值」不是值。两者混在一起，
 //     求值器就分不清 len 该不该收它。
 //   <表达式>           -> {kind: "表达式语句", value}
@@ -16,131 +16,131 @@ import "./chain.hmoca"
 // 关键字在词法里都是 ident（这条边界写在 lex.hmyr 的文件头），所以这里用 text 判断。
 
 pub fn is_word(t: Int, w: String) -> Bool {
-  return t.kind == "ident" && t.text == w
+  返回 t.kind == "ident" && t.text == w
 }
 
 // 从第 i 个 token 起，交给链的最外层继续读。
 // 最外层是逻辑那两级（|| 与 &&）—— 用 compare 会漏掉它们，
-// 而漏掉的样子是「语法层报的错：if」。
+// 而漏掉的样子是「语法层报的错：若」。
 fn from_here(tokens: Int, i: Int) -> Int {
-  return logic(tokens, i)
+  返回 logic(tokens, i)
 }
 
 fn binding(tokens: Int, i: Int, keyword: String) {
-  let 位 = tokens[i]
-  if i + 2 >= len(tokens) {
-    return {node: {kind: "误", text: keyword, line: 位.line, column: 位.column}, next: i}
+  定 位 = tokens[i]
+  若 i + 2 >= len(tokens) {
+    返回 {node: {kind: "误", text: keyword, line: 位.line, column: 位.column}, next: i}
   }
-  let name = tokens[i + 1]
-  let sign = tokens[i + 2]
-  if name.kind != "ident" || sign.kind != "punct" || sign.text != "=" {
-    return {node: {kind: "误", text: keyword + " " + name.text, line: 位.line, column: 位.column}, next: i + 1}
+  定 name = tokens[i + 1]
+  定 sign = tokens[i + 2]
+  若 name.kind != "ident" || sign.kind != "punct" || sign.text != "=" {
+    返回 {node: {kind: "误", text: keyword + " " + name.text, line: 位.line, column: 位.column}, next: i + 1}
   }
-  let got = from_here(tokens, i + 3)
-  if keyword == "let" {
-    return {node: {kind: "定", name: name.text, value: got.node, line: 位.line, column: 位.column}, next: got.next}
+  定 got = from_here(tokens, i + 3)
+  若 keyword == "let" {
+    返回 {node: {kind: "定", name: name.text, value: got.node, line: 位.line, column: 位.column}, next: got.next}
   }
-  return {node: {kind: "变", name: name.text, value: got.node, line: 位.line, column: 位.column}, next: got.next}
+  返回 {node: {kind: "变", name: name.text, value: got.node, line: 位.line, column: 位.column}, next: got.next}
 }
 
 fn statement(tokens: Int, i: Int) {
-  if i >= len(tokens) {
-    return {node: {kind: "误", text: "", line: 0, column: 0}, next: i}
+  若 i >= len(tokens) {
+    返回 {node: {kind: "误", text: "", line: 0, column: 0}, next: i}
   }
-  let t = tokens[i]
-  if is_word(t, "let") || is_word(t, "var") {
-    return binding(tokens, i, t.text)
+  定 t = tokens[i]
+  若 is_word(t, "let") || is_word(t, "var") {
+    返回 binding(tokens, i, t.text)
   }
-  if is_word(t, "if") { return parse_if(tokens, i + 1) }
-  if is_word(t, "while") { return parse_while(tokens, i + 1) }
-  if is_word(t, "return") {
-    if i + 1 >= len(tokens) {
-      return {node: {kind: "返回", value: {kind: "nil"}, line: t.line, column: t.column}, next: i + 1}
+  若 is_word(t, "if") { 返回 parse_if(tokens, i + 1) }
+  若 is_word(t, "while") { 返回 parse_while(tokens, i + 1) }
+  若 is_word(t, "return") {
+    若 i + 1 >= len(tokens) {
+      返回 {node: {kind: "返回", value: {kind: "nil"}, line: t.line, column: t.column}, next: i + 1}
     }
-    // return 之后可能先有一个换行，然后是跨行的表达式（return ( 换行 元素... ））。
-    let got = from_here(tokens, skip_newlines(tokens, i + 1))
-    return {node: {kind: "返回", value: got.node, line: t.line, column: t.column}, next: got.next}
+    // 返回 之后可能先有一个换行，然后是跨行的表达式（返回 ( 换行 元素... ））。
+    定 got = from_here(tokens, skip_newlines(tokens, i + 1))
+    返回 {node: {kind: "返回", value: got.node, line: t.line, column: t.column}, next: got.next}
   }
-  let got = from_here(tokens, i)
+  定 got = from_here(tokens, i)
   // 赋值是语句而不是表达式：形状是「裸名字 = 表达式」。
   // 词法把 = 与 == 留成不同的 token，所以比较不会被误读成赋值。
-  if got.node.kind == "名" && got.next < len(tokens) && is_punct(tokens[got.next], "=") {
-    let value = from_here(tokens, got.next + 1)
-    return {node: {kind: "赋值", name: got.node.text, value: value.node, line: got.node.line, column: got.node.column}, next: value.next}
+  若 got.node.kind == "名" && got.next < len(tokens) && is_punct(tokens[got.next], "=") {
+    定 value = from_here(tokens, got.next + 1)
+    返回 {node: {kind: "赋值", name: got.node.text, value: value.node, line: got.node.line, column: got.node.column}, next: value.next}
   }
-  return {node: {kind: "表达式语句", value: got.node, line: t.line, column: t.column}, next: got.next}
+  返回 {node: {kind: "表达式语句", value: got.node, line: t.line, column: t.column}, next: got.next}
 }
 
 // 跳过换行：块内的语句之间有换行，它们只是分隔，不是内容。
 fn skip_newlines(tokens: Int, i: Int) -> Int {
-  if i < len(tokens) && tokens[i].kind == "newline" { return skip_newlines(tokens, i + 1) }
-  return i
+  若 i < len(tokens) && tokens[i].kind == "newline" { 返回 skip_newlines(tokens, i + 1) }
+  返回 i
 }
 
 // 一个花括号块：逐条读语句，直到右花括号。每条语句各自独立递归，所以深度是「块内语句数」与
 // 「单条语句的深度」相加，不是相乘。
 fn block(tokens: Int, i: Int) {
-  let at = skip_newlines(tokens, i)
-  if at >= len(tokens) { return {list: (), next: at} }
-  if is_punct(tokens[at], "}") { return {list: (), next: at + 1} }
-  let one = statement(tokens, at)
-  let rest = block(tokens, one.next)
-  return {list: (one.node,) + rest.list, next: rest.next}
+  定 at = skip_newlines(tokens, i)
+  若 at >= len(tokens) { 返回 {list: (), next: at} }
+  若 is_punct(tokens[at], "}") { 返回 {list: (), next: at + 1} }
+  定 one = statement(tokens, at)
+  定 rest = block(tokens, one.next)
+  返回 {list: (one.node,) + rest.list, next: rest.next}
 }
 
-// if：条件是一个表达式，然后是一个块，可选 else（块或单条语句）。
+// 若：条件是一个表达式，然后是一个块，可选 else（块或单条语句）。
 fn parse_if(tokens: Int, i: Int) {
-  // 「if 这个节点在哪」= if 关键字在哪。调用方传进来的是关键字之后那一位，
+  // 「若 这个节点在哪」= 若 关键字在哪。调用方传进来的是关键字之后那一位，
   // 所以往回看一格；位置与宿主那边同一个规矩（If 记关键字的位置）。
   var 位 = tokens[0]
-  if i > 0 { 位 = tokens[i - 1] }
-  let cond = from_here(tokens, i)
-  let at = skip_newlines(tokens, cond.next)
-  if at >= len(tokens) || !is_punct(tokens[at], "{") {
-    return {node: {kind: "误", text: "if", line: 位.line, column: 位.column}, next: at}
+  若 i > 0 { 位 = tokens[i - 1] }
+  定 cond = from_here(tokens, i)
+  定 at = skip_newlines(tokens, cond.next)
+  若 at >= len(tokens) || !is_punct(tokens[at], "{") {
+    返回 {node: {kind: "误", text: "if", line: 位.line, column: 位.column}, next: at}
   }
-  let then = block(tokens, at + 1)
+  定 then = block(tokens, at + 1)
   var otherwise = ()
   var next = skip_newlines(tokens, then.next)
-  if next < len(tokens) && is_word(tokens[next], "else") {
-    let e = skip_newlines(tokens, next + 1)
-    if e < len(tokens) && is_punct(tokens[e], "{") {
-      let other = block(tokens, e + 1)
+  若 next < len(tokens) && is_word(tokens[next], "else") {
+    定 e = skip_newlines(tokens, next + 1)
+    若 e < len(tokens) && is_punct(tokens[e], "{") {
+      定 other = block(tokens, e + 1)
       otherwise = other.list
       next = other.next
     } else {
-      let one = statement(tokens, e)
+      定 one = statement(tokens, e)
       otherwise = (one.node,)
       next = one.next
     }
   }
-  return {node: {kind: "若", cond: cond.node, then: then.list, otherwise: otherwise, line: 位.line, column: 位.column}, next: next}
+  返回 {node: {kind: "若", cond: cond.node, then: then.list, otherwise: otherwise, line: 位.line, column: 位.column}, next: next}
 }
 
-// while：条件是一个表达式，然后是一个块。
-// 与 if 相比它没有 else——而「什么时候停」由条件说，这一层不管。
+// 当：条件是一个表达式，然后是一个块。
+// 与 若 相比它没有 else——而「什么时候停」由条件说，这一层不管。
 fn parse_while(tokens: Int, i: Int) {
   var 位 = tokens[0]
-  if i > 0 { 位 = tokens[i - 1] }
-  let cond = from_here(tokens, i)
-  let at = skip_newlines(tokens, cond.next)
-  if at >= len(tokens) || !is_punct(tokens[at], "{") {
-    return {node: {kind: "误", text: "while", line: 位.line, column: 位.column}, next: at}
+  若 i > 0 { 位 = tokens[i - 1] }
+  定 cond = from_here(tokens, i)
+  定 at = skip_newlines(tokens, cond.next)
+  若 at >= len(tokens) || !is_punct(tokens[at], "{") {
+    返回 {node: {kind: "误", text: "while", line: 位.line, column: 位.column}, next: at}
   }
-  let body = block(tokens, at + 1)
-  return {node: {kind: "当", cond: cond.node, body: body.list, line: 位.line, column: 位.column}, next: body.next}
+  定 body = block(tokens, at + 1)
+  返回 {node: {kind: "当", cond: cond.node, body: body.list, line: 位.line, column: 位.column}, next: body.next}
 }
 
 // 宿主入口：读一条语句。
 pub fn parse_statement(tokens: Int) -> Int {
-  return statement(tokens, 0)
+  返回 statement(tokens, 0)
 }
 
 fn main() -> Int {
   // 手工造几个 token，验证最小的一步能走
-  let tokens = ({kind: "ident", text: "let"}, {kind: "ident", text: "x"}, {kind: "punct", text: "="}, {kind: "int", text: "7"})
-  let one = parse_statement(tokens)
+  定 tokens = ({kind: "ident", text: "let"}, {kind: "ident", text: "x"}, {kind: "punct", text: "="}, {kind: "int", text: "7"})
+  定 one = parse_statement(tokens)
   print(one.node.kind)
   print(one.node.name)
-  return 0
+  返回 0
 }

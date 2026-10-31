@@ -17,64 +17,64 @@
 //
 // 用法：hmyr tools/doc-stats.hmoca [目录]
 fn 尾是(名: String, 后缀: String) -> Bool {
-  let 段 = split(名, ".")
-  if len(段) < 2 { return false }
-  return 段[len(段) - 1] == 后缀
+  定 段 = split(名, ".")
+  若 len(段) < 2 { 返回 false }
+  返回 段[len(段) - 1] == 后缀
 }
 
 fn 数行(内容: String) -> Int {
-  let 段 = split(内容, chr(10))
-  if len(段) > 0 {
-    if 段[len(段) - 1] == "" { return len(段) - 1 }
+  定 段 = split(内容, chr(10))
+  若 len(段) > 0 {
+    若 段[len(段) - 1] == "" { 返回 len(段) - 1 }
   }
-  return len(段)
+  返回 len(段)
 }
 
 fn 数份(相对: String, 后缀: String, 次: Int) -> Int effects(file) {
-  if 次 > 24 { return 0 }
-  if is_dir(相对) == false { return 0 }
-  let 名册 = read_dir(相对)
+  若 次 > 24 { 返回 0 }
+  若 is_dir(相对) == false { 返回 0 }
+  定 名册 = read_dir(相对)
   var 份 = 0
   var i = 0
-  while i < len(名册) {
-    let 全 = 相对 + "/" + 名册[i]
-    if is_dir(全) {
+  当 i < len(名册) {
+    定 全 = 相对 + "/" + 名册[i]
+    若 is_dir(全) {
       份 = 份 + 数份(全, 后缀, 次 + 1)
     } else {
-      if 尾是(名册[i], 后缀) { 份 = 份 + 1 }
+      若 尾是(名册[i], 后缀) { 份 = 份 + 1 }
     }
     i = i + 1
   }
-  return 份
+  返回 份
 }
 
 fn 数行总(相对: String, 后缀: String, 次: Int) -> Int effects(file) {
-  if 次 > 24 { return 0 }
-  if is_dir(相对) == false { return 0 }
-  let 名册 = read_dir(相对)
+  若 次 > 24 { 返回 0 }
+  若 is_dir(相对) == false { 返回 0 }
+  定 名册 = read_dir(相对)
   var 行 = 0
   var i = 0
-  while i < len(名册) {
-    let 全 = 相对 + "/" + 名册[i]
-    if is_dir(全) {
+  当 i < len(名册) {
+    定 全 = 相对 + "/" + 名册[i]
+    若 is_dir(全) {
       行 = 行 + 数行总(全, 后缀, 次 + 1)
     } else {
-      if 尾是(名册[i], 后缀) { 行 = 行 + 数行(read_text(全, "utf8")) }
+      若 尾是(名册[i], 后缀) { 行 = 行 + 数行(read_text(全, "utf8")) }
     }
     i = i + 1
   }
-  return 行
+  返回 行
 }
 
 fn main() -> Int effects(file, process) {
-  let 参们 = argv()
+  定 参们 = argv()
   var 起 = "design"
-  if len(参们) > 1 { 起 = 参们[1] }
-  let 份 = 数份(起, "txt", 0)
-  let 行 = 数行总(起, "txt", 0)
+  若 len(参们) > 1 { 起 = 参们[1] }
+  定 份 = 数份(起, "txt", 0)
+  定 行 = 数行总(起, "txt", 0)
   print(起 + "/ 下的 .txt：" + str(份) + " 份，" + str(行) + " 行" + chr(10))
-  if 份 > 0 {
+  若 份 > 0 {
     print("平均 " + str(floor(行 / 份)) + " 行一份" + chr(10))
   }
-  return 0
+  返回 0
 }

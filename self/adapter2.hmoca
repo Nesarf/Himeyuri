@@ -5,5 +5,5 @@ import "./run.hmoca"
 
 fn main() -> Int effects(process) {
   print("self 里的最小探针跑起来了" + chr(10))
-  return 0
+  返回 0
 }

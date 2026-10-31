@@ -13,84 +13,84 @@
 fn 十六进制值(文: String) -> Int {
   var v = 0
   var i = 0
-  while i < len(文) {
-    let c = 文[i]
+  当 i < len(文) {
+    定 c = 文[i]
     var d = 0 - 1
     var k = 0
-    while k < 10 {
-      if c == "0123456789"[k] { d = k }
+    当 k < 10 {
+      若 c == "0123456789"[k] { d = k }
       k = k + 1
     }
     var k2 = 0
-    while k2 < 6 {
-      if c == "abcdef"[k2] { d = 10 + k2 }
-      if c == "ABCDEF"[k2] { d = 10 + k2 }
+    当 k2 < 6 {
+      若 c == "abcdef"[k2] { d = 10 + k2 }
+      若 c == "ABCDEF"[k2] { d = 10 + k2 }
       k2 = k2 + 1
     }
-    if d >= 0 { v = v * 16 + d }
+    若 d >= 0 { v = v * 16 + d }
     i = i + 1
   }
-  return v
+  返回 v
 }
 
 fn 十六进制写法(n: Int) -> String {
-  if n == 0 { return "0" }
-  let 表 = "0123456789ABCDEF"
+  若 n == 0 { 返回 "0" }
+  定 表 = "0123456789ABCDEF"
   var 出 = ""
   var v = n
-  while v > 0 {
+  当 v > 0 {
     出 = 表[v % 16] + 出
     v = floor(v / 16)
   }
-  return 出
+  返回 出
 }
 
 fn 修剪(文: String) -> String {
   var 起 = 0
   var 止 = len(文)
   var 走 = true
-  while 起 < 止 && 走 {
-    let c = 文[起]
-    if c == " " || c == chr(9) || c == chr(13) { 起 = 起 + 1 } else { 走 = false }
+  当 起 < 止 && 走 {
+    定 c = 文[起]
+    若 c == " " || c == chr(9) || c == chr(13) { 起 = 起 + 1 } else { 走 = false }
   }
   var 完 = 止
   var 走2 = true
-  while 完 > 起 && 走2 {
-    let c = 文[完 - 1]
-    if c == " " || c == chr(9) || c == chr(13) { 完 = 完 - 1 } else { 走2 = false }
+  当 完 > 起 && 走2 {
+    定 c = 文[完 - 1]
+    若 c == " " || c == chr(9) || c == chr(13) { 完 = 完 - 1 } else { 走2 = false }
   }
-  return slice(文, 起, 完)
+  返回 slice(文, 起, 完)
 }
 
 // 一串十六进制码点（空格分隔）→ 元组。空串给空元组。
 fn 切码点(文: String) -> Int {
   var 出 = ()
-  if len(文) == 0 { return 出 }
-  let 部 = split(文, " ")
+  若 len(文) == 0 { 返回 出 }
+  定 部 = split(文, " ")
   var i = 0
-  while i < len(部) {
-    let 段 = 修剪(部[i])
-    if len(段) > 0 { 出 = 出 + (十六进制值(段),) }
+  当 i < len(部) {
+    定 段 = 修剪(部[i])
+    若 len(段) > 0 { 出 = 出 + (十六进制值(段),) }
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 // 码点 → UTF-16 单元。语言里的字符串就是按单元算的，所以表里存单元。
 fn 成单元(码点们: Int) -> Int {
   var 出 = ()
   var i = 0
-  while i < len(码点们) {
-    let c = 码点们[i]
-    if c <= 65535 {
+  当 i < len(码点们) {
+    定 c = 码点们[i]
+    若 c <= 65535 {
       出 = 出 + (c,)
     } else {
-      let 差 = c - 65536
+      定 差 = c - 65536
       出 = 出 + (55296 + floor(差 / 1024), 56320 + (差 % 1024))
     }
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 // 把两个索引合起来：完整映射优先，否则简单映射；与自身相同的丢掉；代理区跳过。
@@ -98,30 +98,30 @@ fn 成单元(码点们: Int) -> Int {
 fn 收(完整: Int, 简单: Int) -> Int {
   // 先把两边的键并起来。键是字符串形式的码点，这里要按数值排，所以转回数字。
   var 全部 = ()
-  let 完键 = index_keys(完整)
+  定 完键 = index_keys(完整)
   var i = 0
-  while i < len(完键) {
+  当 i < len(完键) {
     全部 = 全部 + (to_int(完键[i]),)
     i = i + 1
   }
-  let 简键 = index_keys(简单)
+  定 简键 = index_keys(简单)
   var j = 0
-  while j < len(简键) {
-    if index_has(完整, 简键[j]) == false { 全部 = 全部 + (to_int(简键[j]),) }
+  当 j < len(简键) {
+    若 index_has(完整, 简键[j]) == false { 全部 = 全部 + (to_int(简键[j]),) }
     j = j + 1
   }
 
   // 排序在可变数组上做：`只改` 每次都重建整个元组，用它做插入排序是三次方，
   // 实测三千条就要跑六分钟。数组的交换是 O(1)。
-  let 排 = 数组(全部)
-  let n = len(全部)
+  定 排 = 数组(全部)
+  定 n = len(全部)
   var a = 1
-  while a < n {
-    let 当前 = 排[a]
+  当 a < n {
+    定 当前 = 排[a]
     var b = a - 1
     var 走 = true
-    while b >= 0 && 走 {
-      if 排[b] > 当前 {
+    当 b >= 0 && 走 {
+      若 排[b] > 当前 {
         设(排, b + 1, 排[b])
         b = b - 1
       } else {
@@ -134,113 +134,113 @@ fn 收(完整: Int, 简单: Int) -> Int {
 
   var 列 = ()
   var k = 0
-  while k < n {
-    let cp = 排[k]
-    if cp < 55296 || cp > 57343 {
+  当 k < n {
+    定 cp = 排[k]
+    若 cp < 55296 || cp > 57343 {
       var 映 = ()
       var 有 = false
-      if index_has(完整, str(cp)) {
+      若 index_has(完整, str(cp)) {
         映 = index_get(完整, str(cp))
         有 = true
       }
-      if 有 == false && index_has(简单, str(cp)) {
+      若 有 == false && index_has(简单, str(cp)) {
         映 = index_get(简单, str(cp))
         有 = true
       }
-      if 有 && len(映) > 0 {
+      若 有 && len(映) > 0 {
         var 同 = false
-        if len(映) == 1 && 映[0] == cp { 同 = true }
-        if 同 == false {
-          let 单元 = 成单元(映)
-          if len(单元) <= 3 { 列 = 列 + ((cp, 单元),) }
+        若 len(映) == 1 && 映[0] == cp { 同 = true }
+        若 同 == false {
+          定 单元 = 成单元(映)
+          若 len(单元) <= 3 { 列 = 列 + ((cp, 单元),) }
         }
       }
     }
     k = k + 1
   }
-  return 列
+  返回 列
 }
 // 只改一个位置的元组：slice 对元组不可用，所以逐个取出来重拼。
 fn 只改(t: Int, 位: Int, 值: Int) -> Int {
   var 出 = ()
   var i = 0
-  while i < len(t) {
-    if i == 位 { 出 = 出 + (值,) } else { 出 = 出 + (t[i],) }
+  当 i < len(t) {
+    若 i == 位 { 出 = 出 + (值,) } else { 出 = 出 + (t[i],) }
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 fn 写映射(名: String, 列: Int, 说明: String) -> String {
   var 行批 = ""
   var i = 0
-  while i < len(列) {
-    let 条 = 列[i]
-    let cp = 条[0]
-    let 单元 = 条[1]
+  当 i < len(列) {
+    定 条 = 列[i]
+    定 cp = 条[0]
+    定 单元 = 条[1]
     var 填0 = 0
     var 填1 = 0
     var 填2 = 0
-    if len(单元) > 0 { 填0 = 单元[0] }
-    if len(单元) > 1 { 填1 = 单元[1] }
-    if len(单元) > 2 { 填2 = 单元[2] }
+    若 len(单元) > 0 { 填0 = 单元[0] }
+    若 len(单元) > 1 { 填1 = 单元[1] }
+    若 len(单元) > 2 { 填2 = 单元[2] }
     // 这门语言没有跨行的 + 续行：一个表达式写完，长的就分几步接。
     var 行 = "  {0x" + 十六进制写法(cp) + "u, " + str(len(单元)) + "u, {0x" + 十六进制写法(填0)
     行 = 行 + "u, 0x" + 十六进制写法(填1) + "u, 0x" + 十六进制写法(填2) + "u}},"
-    if i == 0 { 行批 = 行 } else { 行批 = 行批 + chr(10) + 行 }
+    若 i == 0 { 行批 = 行 } else { 行批 = 行批 + chr(10) + 行 }
     i = i + 1
   }
   var 头 = "/* " + 说明 + chr(10) + " *" + chr(10) + " * 按码点升序，二分查找。" + str(len(列)) + " 条。" + chr(10)
   头 = 头 + " */" + chr(10) + "static const HmyrCaseEntry " + 名 + "[] = {" + chr(10) + 行批 + chr(10)
   头 = 头 + "};" + chr(10) + chr(10) + "static const size_t " + 名 + "_count = " + str(len(列)) + ";" + chr(10)
-  return 头
+  返回 头
 }
 
 fn 写区间(名: String, 列: Int, 说明: String) -> String {
   var 行批 = ""
   var 平 = ()
   var i = 0
-  while i < len(列) {
-    let 条 = 列[i]
+  当 i < len(列) {
+    定 条 = 列[i]
     平 = 平 + (条[0], 条[1])
     i = i + 1
   }
   var p = 0
-  while p < len(平) {
+  当 p < len(平) {
     var 行 = "  "
     var k = 0
-    while k < 8 && p + k < len(平) {
-      if k > 0 { 行 = 行 + ", " }
+    当 k < 8 && p + k < len(平) {
+      若 k > 0 { 行 = 行 + ", " }
       行 = 行 + "0x" + 十六进制写法(平[p + k]) + "u"
       k = k + 1
     }
     行 = 行 + ","
-    if p == 0 { 行批 = 行 } else { 行批 = 行批 + chr(10) + 行 }
+    若 p == 0 { 行批 = 行 } else { 行批 = 行批 + chr(10) + 行 }
     p = p + 8
   }
   var 头 = "/* " + 说明 + chr(10) + " *" + chr(10) + " * 每两个数一段：起、止，两端都含。" + str(len(列)) + " 段。" + chr(10)
   头 = 头 + " */" + chr(10) + "static const uint32_t " + 名 + "[] = {" + chr(10) + 行批 + chr(10)
   头 = 头 + "};" + chr(10) + chr(10) + "static const size_t " + 名 + "_count = " + str(len(列)) + ";" + chr(10)
-  return 头
+  返回 头
 }
 
 fn 收区间(数据目录: String, 名字: String) -> Int effects(file) {
   var 列 = ()
-  let 文 = read_text(数据目录 + "/DerivedCoreProperties.txt")
-  let 行批 = split(文, chr(10))
+  定 文 = read_text(数据目录 + "/DerivedCoreProperties.txt")
+  定 行批 = split(文, chr(10))
   var i = 0
-  while i < len(行批) {
-    let 净行 = split(行批[i], "#")
+  当 i < len(行批) {
+    定 净行 = split(行批[i], "#")
     var 净 = ""
-    if len(净行) > 0 { 净 = 修剪(净行[0]) }
-    if len(净) > 0 {
-      let 段 = split(净, ";")
-      if len(段) >= 2 {
-        if 修剪(段[1]) == 名字 {
-          let 范围 = split(修剪(段[0]), "..")
-          let 起 = 十六进制值(修剪(范围[0]))
+    若 len(净行) > 0 { 净 = 修剪(净行[0]) }
+    若 len(净) > 0 {
+      定 段 = split(净, ";")
+      若 len(段) >= 2 {
+        若 修剪(段[1]) == 名字 {
+          定 范围 = split(修剪(段[0]), "..")
+          定 起 = 十六进制值(修剪(范围[0]))
           var 止 = 起
-          if len(范围) > 1 { 止 = 十六进制值(修剪(范围[1])) }
+          若 len(范围) > 1 { 止 = 十六进制值(修剪(范围[1])) }
           列 = 列 + ((起, 止),)
         }
       }
@@ -249,12 +249,12 @@ fn 收区间(数据目录: String, 名字: String) -> Int effects(file) {
   }
   // 按起点升序（插入排序，同上）
   var a = 1
-  while a < len(列) {
-    let 当前 = 列[a]
+  当 a < len(列) {
+    定 当前 = 列[a]
     var b = a - 1
     var 走 = true
-    while b >= 0 && 走 {
-      if 列[b][0] > 当前[0] {
+    当 b >= 0 && 走 {
+      若 列[b][0] > 当前[0] {
         列 = 只改(列, b + 1, 列[b])
         b = b - 1
       } else {
@@ -264,42 +264,42 @@ fn 收区间(数据目录: String, 名字: String) -> Int effects(file) {
     列 = 只改(列, b + 1, 当前)
     a = a + 1
   }
-  return 列
+  返回 列
 }
 
 fn main() -> Int effects(file, process) {
-  let 参 = argv()
+  定 参 = argv()
   var 数据目录 = "data/ucd"
-  if len(参) > 1 { 数据目录 = 参[1] }
+  若 len(参) > 1 { 数据目录 = 参[1] }
   var 出文件 = "vm/ucd-case.h"
-  if len(参) > 2 { 出文件 = 参[2] }
+  若 len(参) > 2 { 出文件 = 参[2] }
 
   // ---- 一、简单映射（UnicodeData 的第十二、十三段） ----
   var 简单上 = index_new()
   var 简单下 = index_new()
-  let 文 = read_text(数据目录 + "/UnicodeData.txt")
-  let 行批 = split(文, chr(10))
+  定 文 = read_text(数据目录 + "/UnicodeData.txt")
+  定 行批 = split(文, chr(10))
   var i = 0
-  while i < len(行批) {
-    let 行 = 行批[i]
-    if len(行) > 0 {
-      let 段 = split(行, ";")
-      if len(段) >= 15 {
+  当 i < len(行批) {
+    定 行 = 行批[i]
+    若 len(行) > 0 {
+      定 段 = split(行, ";")
+      若 len(段) >= 15 {
         // 区间标记那几行（<CJK Ideograph, First> 这种）没有大小写，跳过。
-        let 名 = 段[1]
+        定 名 = 段[1]
         var 跳 = false
-        if len(名) > 0 {
-          if 名[0] == "<" {
-            let 逗 = split(名, ",")
-            if len(逗) > 1 { 跳 = true }
+        若 len(名) > 0 {
+          若 名[0] == "<" {
+            定 逗 = split(名, ",")
+            若 len(逗) > 1 { 跳 = true }
           }
         }
-        if 跳 == false {
-          let cp = 十六进制值(段[0])
-          let 上 = 修剪(段[12])
-          let 下 = 修剪(段[13])
-          if len(上) > 0 { 简单上 = index_set(简单上, str(cp), 切码点(上)) }
-          if len(下) > 0 { 简单下 = index_set(简单下, str(cp), 切码点(下)) }
+        若 跳 == false {
+          定 cp = 十六进制值(段[0])
+          定 上 = 修剪(段[12])
+          定 下 = 修剪(段[13])
+          若 len(上) > 0 { 简单上 = index_set(简单上, str(cp), 切码点(上)) }
+          若 len(下) > 0 { 简单下 = index_set(简单下, str(cp), 切码点(下)) }
         }
       }
     }
@@ -309,23 +309,23 @@ fn main() -> Int effects(file, process) {
   // ---- 二、完整映射（SpecialCasing 里无条件的那几条） ----
   var 完整上 = index_new()
   var 完整下 = index_new()
-  let 特文 = read_text(数据目录 + "/SpecialCasing.txt")
-  let 特行批 = split(特文, chr(10))
+  定 特文 = read_text(数据目录 + "/SpecialCasing.txt")
+  定 特行批 = split(特文, chr(10))
   var j = 0
-  while j < len(特行批) {
-    let 井 = split(特行批[j], "#")
+  当 j < len(特行批) {
+    定 井 = split(特行批[j], "#")
     var 净 = ""
-    if len(井) > 0 { 净 = 修剪(井[0]) }
-    if len(净) > 0 {
-      let 段 = split(净, ";")
-      if len(段) >= 5 {
+    若 len(井) > 0 { 净 = 修剪(井[0]) }
+    若 len(净) > 0 {
+      定 段 = split(净, ";")
+      若 len(段) >= 5 {
         // 带条件的那几条（地区规则）不管：第五段非空就跳过。
-        if 修剪(段[4]) == "" {
-          let cp = 十六进制值(修剪(段[0]))
-          let 下 = 切码点(修剪(段[1]))
-          let 上 = 切码点(修剪(段[3]))
-          if len(上) > 0 { 完整上 = index_set(完整上, str(cp), 上) }
-          if len(下) > 0 { 完整下 = index_set(完整下, str(cp), 下) }
+        若 修剪(段[4]) == "" {
+          定 cp = 十六进制值(修剪(段[0]))
+          定 下 = 切码点(修剪(段[1]))
+          定 上 = 切码点(修剪(段[3]))
+          若 len(上) > 0 { 完整上 = index_set(完整上, str(cp), 上) }
+          若 len(下) > 0 { 完整下 = index_set(完整下, str(cp), 下) }
         }
       }
     }
@@ -333,12 +333,12 @@ fn main() -> Int effects(file, process) {
   }
 
   // ---- 三、合起来 ----
-  let 大写 = 收(完整上, 简单上)
-  let 小写 = 收(完整下, 简单下)
+  定 大写 = 收(完整上, 简单上)
+  定 小写 = 收(完整下, 简单下)
 
   // ---- 四、两个属性区间 ----
-  let 区有 = 收区间(数据目录, "Cased")
-  let 区可 = 收区间(数据目录, "Case_Ignorable")
+  定 区有 = 收区间(数据目录, "Cased")
+  定 区可 = 收区间(数据目录, "Case_Ignorable")
 
   // ---- 五、写出来 ----
   var 文本 = "/* Unicode 的大小写表，C 那台机器用。" + chr(10)
@@ -369,19 +369,19 @@ fn main() -> Int effects(file, process) {
 
   var 多上 = 0
   var m1 = 0
-  while m1 < len(大写) {
-    if len(大写[m1][1]) > 1 { 多上 = 多上 + 1 }
+  当 m1 < len(大写) {
+    若 len(大写[m1][1]) > 1 { 多上 = 多上 + 1 }
     m1 = m1 + 1
   }
   var 多下 = 0
   var m2 = 0
-  while m2 < len(小写) {
-    if len(小写[m2][1]) > 1 { 多下 = 多下 + 1 }
+  当 m2 < len(小写) {
+    若 len(小写[m2][1]) > 1 { 多下 = 多下 + 1 }
     m2 = m2 + 1
   }
   print("大写映射 " + str(len(大写)) + " 条（其中多单元 " + str(多上) + " 条）" + chr(10))
   print("小写映射 " + str(len(小写)) + " 条（其中多单元 " + str(多下) + " 条）" + chr(10))
   print("有大小写 " + str(len(区有)) + " 段；大小写可忽略 " + str(len(区可)) + " 段" + chr(10))
   print("→ " + 出文件 + "  " + str(len(文本) / 1024) + " KB" + chr(10))
-  return 0
+  返回 0
 }

@@ -15,50 +15,50 @@
 //       static const unsigned int <符号名>_len = N;
 
 fn 十六(字节: Int) -> String {
-  let 表 = "0123456789abcdef"
-  let 高 = (字节 - (字节 % 16)) / 16
-  let 低 = 字节 % 16
-  return 表[高] + 表[低]
+  定 表 = "0123456789abcdef"
+  定 高 = (字节 - (字节 % 16)) / 16
+  定 低 = 字节 % 16
+  返回 表[高] + 表[低]
 }
 
 // 折半拼接：与 self/compile.hmyr 的 拼两半 同一个形状，也一样不用除法。
 fn 拼(行批: Int, 起: Int, 止: Int) -> String {
-  if 止 - 起 <= 1 { return 行批[起] }
+  若 止 - 起 <= 1 { 返回 行批[起] }
   var 左 = 起
   var 右 = 止
-  while 右 - 左 > 2 {
+  当 右 - 左 > 2 {
     左 = 左 + 1
     右 = 右 - 1
   }
-  let 中 = 左 + 1
-  return 拼(行批, 起, 中) + 拼(行批, 中, 止)
+  定 中 = 左 + 1
+  返回 拼(行批, 起, 中) + 拼(行批, 中, 止)
 }
 
 fn main() -> Int effects(file) {
-  let 参 = argv()
-  if len(参) < 4 {
+  定 参 = argv()
+  若 len(参) < 4 {
     print("用法：hmyr self/embed.hmyr <字节码文件> <输出.c> <符号名>" + chr(10))
-    return 2
+    返回 2
   }
-  let 字节串 = read_bytes(参[1])
-  let 数 = len(字节串)
+  定 字节串 = read_bytes(参[1])
+  定 数 = len(字节串)
   var 行批 = ()
   var i = 0
-  while i < 数 {
+  当 i < 数 {
     var 行 = "  "
     var 列 = 0
-    while 列 < 12 && i < 数 {
+    当 列 < 12 && i < 数 {
       行 = 行 + "0x" + 十六(to_int(字节串[i]))
-      if i + 1 < 数 { 行 = 行 + ", " }
+      若 i + 1 < 数 { 行 = 行 + ", " }
       i = i + 1
       列 = 列 + 1
     }
     行批 = 行批 + (行 + chr(10),)
   }
-  let 头 = "/* 由 self/embed.hmyr 生成：" + str(数) + " 字节 */" + chr(10) + "static const unsigned char " + 参[3] + "[] = {" + chr(10)
-  let 尾 = "};" + chr(10) + "static const unsigned int " + 参[3] + "_len = " + str(数) + ";" + chr(10)
-  let 文 = 头 + 拼(行批, 0, len(行批)) + 尾
+  定 头 = "/* 由 self/embed.hmyr 生成：" + str(数) + " 字节 */" + chr(10) + "static const unsigned char " + 参[3] + "[] = {" + chr(10)
+  定 尾 = "};" + chr(10) + "static const unsigned int " + 参[3] + "_len = " + str(数) + ";" + chr(10)
+  定 文 = 头 + 拼(行批, 0, len(行批)) + 尾
   write_text(参[2], 文)
   print("写出 " + str(数) + " 字节" + chr(10))
-  return 0
+  返回 0
 }

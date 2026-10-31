@@ -8,5 +8,5 @@ import "./run.hmoca"
 fn main() -> Int effects(process) {
   print("只解析 -> " + 只解析公开("fn a() -> Int {\n  return 1\n}\n") + chr(10))
   print("只解析两函数 -> " + 只解析公开("fn a() -> Int {\n  return 1\n}\n\nfn b() -> Int {\n  return 2\n}\n") + chr(10))
-  return 0
+  返回 0
 }

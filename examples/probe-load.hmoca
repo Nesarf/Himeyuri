@@ -6,7 +6,7 @@
 import "../self/lex.hmoca"
 
 fn main() -> Int effects(process) {
-  let tokens = scan_lines("fn a() -> Int {\n  return 1\n}\n")
+  定 tokens = scan_lines("fn a() -> Int {\n  return 1\n}\n")
   print("自举层词法在宿主上跑通，词数=" + str(len(tokens)) + chr(10))
-  return 0
+  返回 0
 }

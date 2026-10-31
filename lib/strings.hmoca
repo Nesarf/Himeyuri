@@ -3,7 +3,7 @@
 // 它为什么长这样，先说清三件事：
 //
 //   一、没有复合条件。自举那一层的 parser 读不进两个与号，也读不进 and，
-//      所以「甲与乙」写成两层嵌套的 if —— 下面每一处范围判断都是这个形状。
+//      所以「甲与乙」写成两层嵌套的 若 —— 下面每一处范围判断都是这个形状。
 //
 //   二、没有 break。循环靠一个标志收尾，标志本身用 var 才能改。
 //
@@ -16,39 +16,39 @@
 
 // 一个字符是不是空白。空白只有四种，而它们都不能用「或」连起来。
 fn 空白一(c: String) -> Bool {
-  if c == " " {
-    return true
+  若 c == " " {
+    返回 true
   }
-  if c == "\t" {
-    return true
+  若 c == "\t" {
+    返回 true
   }
-  if c == "\n" {
-    return true
+  若 c == "\n" {
+    返回 true
   }
-  if c == "\r" {
-    return true
+  若 c == "\r" {
+    返回 true
   }
-  return false
+  返回 false
 }
 
 fn 大写(s: String) -> String {
-  return to_upper(s)
+  返回 to_upper(s)
 }
 
 fn 小写(s: String) -> String {
-  return to_lower(s)
+  返回 to_lower(s)
 }
 
 // 修剪两头的空白。
 fn 修剪(s: String) -> String {
-  let n = len(s)
+  定 n = len(s)
   var 起 = 0
   var 走 = true
-  while 走 {
-    if 起 >= n {
+  当 走 {
+    若 起 >= n {
       走 = false
     } else {
-      if 空白一(s[起]) {
+      若 空白一(s[起]) {
         起 = 起 + 1
       } else {
         走 = false
@@ -57,112 +57,112 @@ fn 修剪(s: String) -> String {
   }
   var 止 = n
   走 = true
-  while 走 {
-    if 止 <= 起 {
+  当 走 {
+    若 止 <= 起 {
       走 = false
     } else {
-      if 空白一(s[止 - 1]) {
+      若 空白一(s[止 - 1]) {
         止 = 止 - 1
       } else {
         走 = false
       }
     }
   }
-  if 起 >= 止 {
-    return ""
+  若 起 >= 止 {
+    返回 ""
   }
-  return slice(s, 起, 止)
+  返回 slice(s, 起, 止)
 }
 
 // s 从位置 起 开始是不是那一段。越界当假。
 fn 匹配在(s: String, 起: Int, 子: String) -> Bool {
-  let n = len(s)
-  let m = len(子)
-  if 起 < 0 {
-    return false
+  定 n = len(s)
+  定 m = len(子)
+  若 起 < 0 {
+    返回 false
   }
-  if 起 + m > n {
-    return false
+  若 起 + m > n {
+    返回 false
   }
   var i = 0
   var 好 = true
-  while i < m {
-    if s[起 + i] == 子[i] {
+  当 i < m {
+    若 s[起 + i] == 子[i] {
       i = i + 1
     } else {
       好 = false
       i = m
     }
   }
-  return 好
+  返回 好
 }
 
 fn 开始于(s: String, 前: String) -> Bool {
-  return 匹配在(s, 0, 前)
+  返回 匹配在(s, 0, 前)
 }
 
 fn 结束于(s: String, 后: String) -> Bool {
-  return 匹配在(s, len(s) - len(后), 后)
+  返回 匹配在(s, len(s) - len(后), 后)
 }
 
 // 找子串，交回下标；没有就交回 -1。
 fn 查找(s: String, 子: String) -> Int {
-  let n = len(s)
-  let m = len(子)
-  if m == 0 {
-    return 0
+  定 n = len(s)
+  定 m = len(子)
+  若 m == 0 {
+    返回 0
   }
-  if m > n {
-    return -1
+  若 m > n {
+    返回 -1
   }
   var i = 0
   var 有 = true
-  while 有 {
-    if i > n - m {
+  当 有 {
+    若 i > n - m {
       有 = false
     } else {
-      if 匹配在(s, i, 子) {
-        return i
+      若 匹配在(s, i, 子) {
+        返回 i
       } else {
         i = i + 1
       }
     }
   }
-  return -1
+  返回 -1
 }
 
 fn 含(s: String, 子: String) -> Bool {
-  if 查找(s, 子) >= 0 {
-    return true
+  若 查找(s, 子) >= 0 {
+    返回 true
   }
-  return false
+  返回 false
 }
 
 fn 重复(s: String, 次: Int) -> String {
   var 出 = ""
   var i = 0
-  while i < 次 {
+  当 i < 次 {
     出 = 出 + s
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 // 把每一处 旧 换成 新。空的老串原样交回 —— 换空串会无限长。
 fn 替换(s: String, 旧: String, 新: String) -> String {
-  if len(旧) == 0 {
-    return s
+  若 len(旧) == 0 {
+    返回 s
   }
-  let n = len(s)
-  let m = len(旧)
+  定 n = len(s)
+  定 m = len(旧)
   var 出 = ""
   var i = 0
   var 走 = true
-  while 走 {
-    if i >= n {
+  当 走 {
+    若 i >= n {
       走 = false
     } else {
-      if 匹配在(s, i, 旧) {
+      若 匹配在(s, i, 旧) {
         出 = 出 + 新
         i = i + m
       } else {
@@ -171,47 +171,47 @@ fn 替换(s: String, 旧: String, 新: String) -> String {
       }
     }
   }
-  return 出
+  返回 出
 }
 
 fn 左填(s: String, 宽: Int, 填: String) -> String {
-  let n = len(s)
-  if n >= 宽 {
-    return s
+  定 n = len(s)
+  若 n >= 宽 {
+    返回 s
   }
-  return 重复(填, 宽 - n) + s
+  返回 重复(填, 宽 - n) + s
 }
 
 fn 右填(s: String, 宽: Int, 填: String) -> String {
-  let n = len(s)
-  if n >= 宽 {
-    return s
+  定 n = len(s)
+  若 n >= 宽 {
+    返回 s
   }
-  return s + 重复(填, 宽 - n)
+  返回 s + 重复(填, 宽 - n)
 }
 
 // 一个非负整数写成十六进制。零写成 0，不补前导零 —— 补零是调用方的事。
 fn 十六进制(n: Int) -> String {
-  if n < 0 {
-    return 十六进制(0 - n)
+  若 n < 0 {
+    返回 十六进制(0 - n)
   }
-  if n == 0 {
-    return "0"
+  若 n == 0 {
+    返回 "0"
   }
-  let 位 = "0123456789abcdef"
+  定 位 = "0123456789abcdef"
   var 出 = ""
   var 余 = n
   var 走 = true
-  while 走 {
-    if 余 == 0 {
+  当 走 {
+    若 余 == 0 {
       走 = false
     } else {
-      let 个 = 余 % 16
+      定 个 = 余 % 16
       出 = slice(位, 个, 个 + 1) + 出
       余 = (余 - 个) / 16
     }
   }
-  return 出
+  返回 出
 }
 
 // 按分隔切分，交回一串段。
@@ -223,19 +223,19 @@ fn 十六进制(n: Int) -> String {
 // 空的分隔原样交回一整段：切空串会切出无数段。
 fn 切分(s: String, 分隔: String) -> (String,) {
   var 出 = ()
-  let m = len(分隔)
-  if m == 0 {
-    return (s,)
+  定 m = len(分隔)
+  若 m == 0 {
+    返回 (s,)
   }
-  let n = len(s)
+  定 n = len(s)
   var i = 0
   var 起 = 0
   var 走 = true
-  while 走 {
-    if i > n - m {
+  当 走 {
+    若 i > n - m {
       走 = false
     } else {
-      if 匹配在(s, i, 分隔) {
+      若 匹配在(s, i, 分隔) {
         出 = 出 + (slice(s, 起, i),)
         起 = i + m
         i = i + m
@@ -245,24 +245,24 @@ fn 切分(s: String, 分隔: String) -> (String,) {
     }
   }
   出 = 出 + (slice(s, 起, n),)
-  return 出
+  返回 出
 }
 
 // 按换行切。
 fn 分行(s: String) -> (String,) {
-  return 切分(s, "\n")
+  返回 切分(s, "\n")
 }
 
 // 把一串段接回去。空的段表交回空串。
 fn 连接(段们: (String,), 分隔: String) -> String {
-  if len(段们) == 0 {
-    return ""
+  若 len(段们) == 0 {
+    返回 ""
   }
   var 出 = 段们[0]
   var i = 1
-  while i < len(段们) {
+  当 i < len(段们) {
     出 = 出 + 分隔 + 段们[i]
     i = i + 1
   }
-  return 出
+  返回 出
 }

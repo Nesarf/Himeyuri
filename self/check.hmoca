@@ -10,53 +10,53 @@
 
 // 一段输出的最后一行：套件的判定就在那一行（「N passed, M failed」）。
 fn 最后一行(文: String) -> String {
-  if len(文) == 0 { return "" }
-  let 行批 = split(文, chr(10))
+  若 len(文) == 0 { 返回 "" }
+  定 行批 = split(文, chr(10))
   var i = len(行批) - 1
-  while i >= 0 {
-    let 行 = 行批[i]
-    if len(行) > 0 { return 行 }
+  当 i >= 0 {
+    定 行 = 行批[i]
+    若 len(行) > 0 { 返回 行 }
     i = i - 1
   }
-  return ""
+  返回 ""
 }
 
 fn 跑一个(名字: String, 路: String) -> Int {
-  let r = run_program("node", (路,))
-  if r.code == 0 {
+  定 r = run_program("node", (路,))
+  若 r.code == 0 {
     print("  通过  " + 名字 + "  " + 最后一行(r.stdout) + chr(10))
-    return 0
+    返回 0
   }
-  let 错 = 最后一行(r.stderr)
-  if len(错) > 0 {
+  定 错 = 最后一行(r.stderr)
+  若 len(错) > 0 {
     print("  不通过  " + 名字 + "  " + 最后一行(r.stdout) + "  " + 错 + chr(10))
   } else {
     print("  不通过  " + 名字 + "  " + 最后一行(r.stdout) + chr(10))
   }
-  return 1
+  返回 1
 }
 
 fn main() -> Int effects(file, process) {
-  let 参 = argv()
+  定 参 = argv()
   var 清单路 = "tools/suite-list.txt"
-  if len(参) > 1 { 清单路 = 参[1] }
-  let 文 = read_text(清单路)
-  let 行批 = split(文, chr(10))
+  若 len(参) > 1 { 清单路 = 参[1] }
+  定 文 = read_text(清单路)
+  定 行批 = split(文, chr(10))
   var 过 = 0
   var 败 = 0
   var i = 0
-  while i < len(行批) {
-    let 行 = 行批[i]
-    if len(行) > 0 {
-      let 列 = split(行, chr(9))
-      if len(列) >= 2 {
-        if 跑一个(列[0], 列[1]) == 0 { 过 = 过 + 1 } else { 败 = 败 + 1 }
+  当 i < len(行批) {
+    定 行 = 行批[i]
+    若 len(行) > 0 {
+      定 列 = split(行, chr(9))
+      若 len(列) >= 2 {
+        若 跑一个(列[0], 列[1]) == 0 { 过 = 过 + 1 } else { 败 = 败 + 1 }
       }
     }
     i = i + 1
   }
   print("" + chr(10))
   print(str(过) + " passed, " + str(败) + " failed" + chr(10))
-  if 败 > 0 { return 1 }
-  return 0
+  若 败 > 0 { 返回 1 }
+  返回 0
 }

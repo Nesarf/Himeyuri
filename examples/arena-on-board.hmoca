@@ -19,21 +19,21 @@
 // 三台机器跑它输出逐行相同：默认路径、--compile、C 那台；那块板子是第四台。
 // 判据在 test/zone-self.test.mjs 第九节。
 fn main() -> Int effects(process) {
-  let 区 = arena()
+  定 区 = arena()
 
   var 块数 = 0
   var 总长 = 0
   var 最宽 = 0
   var i = 0
-  while i < 20 {
-    let 块 = 区.alloc(i % 11 + 1)
+  当 i < 20 {
+    定 块 = 区.alloc(i % 11 + 1)
     块数 = 块数 + 1
     总长 = 总长 + 块.size
-    if 块.size > 最宽 { 最宽 = 块.size }
+    若 块.size > 最宽 { 最宽 = 块.size }
     i = i + 1
   }
 
-  let 报告 = 区.alloc(8)
+  定 报告 = 区.alloc(8)
   区.freeze(报告)
   报告.存(0, 块数)
 
@@ -43,5 +43,5 @@ fn main() -> Int effects(process) {
   print("关之前 held=" + str(区.held()) + chr(10))
   区.close()
   print("关之后 报告.live=" + str(报告.live) + " zone=" + 报告.zone + chr(10))
-  return 0
+  返回 0
 }

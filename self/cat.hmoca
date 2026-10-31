@@ -7,15 +7,15 @@
 
 fn main() -> Int {
   var 继续 = true
-  while 继续 {
-    let r = read_stdin_line()
-    if len(r.行) > 0 {
+  当 继续 {
+    定 r = read_stdin_line()
+    若 len(r.行) > 0 {
       print(r.行 + chr(10))
-    } else if !r.结束 {
+    } else 若 !r.结束 {
       // 空行也是行：照原样写一个换行，不然它会和 EOF 混在一起。
       print(chr(10))
     }
-    if r.结束 { 继续 = false }
+    若 r.结束 { 继续 = false }
   }
-  return 0
+  返回 0
 }

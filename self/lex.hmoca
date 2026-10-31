@@ -15,68 +15,68 @@
 // 合并那两份工具不急，但它已经不是「必须自足」，而是一份可以收的重复。
 
 fn letters() -> String {
-  return "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
+  返回 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
 }
 
 fn digits() -> String {
-  return "0123456789"
+  返回 "0123456789"
 }
 
 // ch 是否出现在 set 里。深度等于 set 的长度。
 fn in_set(ch: String, set: String, i: Int) -> Bool {
-  if i >= len(set) { return false }
-  if ch == set[i] { return true }
-  return in_set(ch, set, i + 1)
+  若 i >= len(set) { 返回 false }
+  若 ch == set[i] { 返回 true }
+  返回 in_set(ch, set, i + 1)
 }
 
 fn is_alpha(c: String) -> Bool {
   // 字母的判定交给宿主：它已经有 Unicode 的属性表，而语言自己带一份副本只会与它渐渐分叉。
   // 这一步是「用母语写这门语言」的前提——中文、日文、谚文的名字在词法里得先算一个标识符。
-  return is_letter(c)
+  返回 is_letter(c)
 }
 
 // pub 是给 run.hmoca 用的：是包名字 要判「首字符不是数字」，而那是字符分类这件事
 // 该留在词法这一层（2026-11-02）。
 pub fn is_digit(c: String) -> Bool {
-  return in_set(c, digits(), 0)
+  返回 in_set(c, digits(), 0)
 }
 
 fn is_ident_start(c: String) -> Bool {
   // 字母由宿主判定，下划线是标识符自己的字符（\p{L} 并不包含它）。
-  return is_letter(c) || c == "_"
+  返回 is_letter(c) || c == "_"
 }
 
 fn is_ident_char(c: String) -> Bool {
   // 组合记号也属于标识符：café 的两种写法都是同一个名字的候选。
   // 归一不再「是下一步」—— tokenize 在产出标识符时已经调 nfc 了（2026-11-01 改）。
-  return is_letter(c) || is_mark(c) || is_digit(c) || c == "_"
+  返回 is_letter(c) || is_mark(c) || is_digit(c) || c == "_"
 }
 
 fn is_space(c: String) -> Bool {
-  return c == " " || c == "\t" || c == "\r"
+  返回 c == " " || c == "\t" || c == "\r"
 }
 
 // 跳过空白、换行与行注释，返回下一个有意义字符的位置。
 fn skip_ws(s: String, i: Int) -> Int {
-  if i >= len(s) { return i }
+  若 i >= len(s) { 返回 i }
   // 换行不再算空白：它是语句的边界，要不要留下由 tokenize 决定。
-  if is_space(s[i]) { return skip_ws(s, i + 1) }
-  if s[i] == "/" && i + 1 < len(s) && s[i + 1] == "/" { return skip_ws(s, skip_to_eol(s, i)) }
-  if s[i] == "/" && i + 1 < len(s) && s[i + 1] == "*" { return skip_ws(s, skip_block(s, i + 2)) }
-  return i
+  若 is_space(s[i]) { 返回 skip_ws(s, i + 1) }
+  若 s[i] == "/" && i + 1 < len(s) && s[i + 1] == "/" { 返回 skip_ws(s, skip_to_eol(s, i)) }
+  若 s[i] == "/" && i + 1 < len(s) && s[i + 1] == "*" { 返回 skip_ws(s, skip_block(s, i + 2)) }
+  返回 i
 }
 
 fn skip_to_eol(s: String, i: Int) -> Int {
-  if i >= len(s) { return i }
-  if s[i] == "\n" { return i }
-  return skip_to_eol(s, i + 1)
+  若 i >= len(s) { 返回 i }
+  若 s[i] == "\n" { 返回 i }
+  返回 skip_to_eol(s, i + 1)
 }
 
 // 跳过块注释，停在收尾的 */ 之后。不处理嵌套，这条边界写在文件头。
 fn skip_block(s: String, i: Int) -> Int {
-  if i + 1 >= len(s) { return len(s) }
-  if s[i] == "*" && s[i + 1] == "/" { return i + 2 }
-  return skip_block(s, i + 1)
+  若 i + 1 >= len(s) { 返回 len(s) }
+  若 s[i] == "*" && s[i + 1] == "/" { 返回 i + 2 }
+  返回 skip_block(s, i + 1)
 }
 
 // 取一段直接用语言的内置 slice，这一层不再自己定义（2026-11-01 删）。
@@ -90,21 +90,21 @@ fn skip_block(s: String, i: Int) -> Int {
 // 「手写版越界交回空、内置版截断」造成的。
 
 fn starts_with(s: String, from: Int, p: String, k: Int) -> Bool {
-  if k >= len(p) { return true }
-  if from + k >= len(s) { return false }
-  if s[from + k] != p[k] { return false }
-  return starts_with(s, from, p, k + 1)
+  若 k >= len(p) { 返回 true }
+  若 from + k >= len(s) { 返回 false }
+  若 s[from + k] != p[k] { 返回 false }
+  返回 starts_with(s, from, p, k + 1)
 }
 
 // 读一个标识符。返回 {next, text}。
 fn read_ident(s: String, i: Int, acc: String) -> {next: Int, text: String} {
-  if i >= len(s) { return {next: i, text: acc} }
-  if is_ident_char(s[i]) { return read_ident(s, i + 1, acc + s[i]) }
-  return {next: i, text: acc}
+  若 i >= len(s) { 返回 {next: i, text: acc} }
+  若 is_ident_char(s[i]) { 返回 read_ident(s, i + 1, acc + s[i]) }
+  返回 {next: i, text: acc}
 }
 
 fn is_hex_char(c: String) -> Bool {
-  return is_digit(c) || in_set(c, "abcdefABCDEF", 0)
+  返回 is_digit(c) || in_set(c, "abcdefABCDEF", 0)
 }
 
 // 汉字关键字归一成英文那一套 —— 与 src/lexer.mjs 的 关键字别名 是同一张表。
@@ -115,20 +115,20 @@ fn is_hex_char(c: String) -> Bool {
 // 一次只收四个词，与 JS 那两张表同步：返回 若 定 当 在全部 .hmoca 里作为
 // 独立标识符出现零次，所以不会与既有名字撞。
 fn 关键字归一(词: String) -> String {
-  if 词 == "返回" { return "return" }
-  if 词 == "若" { return "if" }
-  if 词 == "定" { return "let" }
-  if 词 == "当" { return "while" }
-  return 词
+  若 词 == "返回" { 返回 "return" }
+  若 词 == "若" { 返回 "if" }
+  若 词 == "定" { 返回 "let" }
+  若 词 == "当" { 返回 "while" }
+  返回 词
 }
 
 // 进制字面量：0x / 0b / 0o 之后一律按十六进制字符集读下去。
 fn read_based(s: String, i: Int, acc: String) -> {next: Int, text: String} {
-  if i >= len(s) { return {next: i, text: acc} }
+  若 i >= len(s) { 返回 {next: i, text: acc} }
   // 下划线是分隔符，但它属于字面量的一部分（0x1_0 的原文要完整留着），
   // 否则词法先把它截断，后面再聪明也补不回来。
-  if is_hex_char(s[i]) || s[i] == "_" { return read_based(s, i + 1, acc + s[i]) }
-  return {next: i, text: acc}
+  若 is_hex_char(s[i]) || s[i] == "_" { 返回 read_based(s, i + 1, acc + s[i]) }
+  返回 {next: i, text: acc}
 }
 
 // 读一个数字（整数与小数都用同一段字面量，带下划线分隔也算）。
@@ -137,17 +137,17 @@ fn read_based(s: String, i: Int, acc: String) -> {next: Int, text: String} {
 // 1e3 会被读成「1」加一个标识符 e3 —— 那是个安静的错误：后面某一层会算出一个
 // 看起来像个数的东西。这一条与宿主 lexer.mjs 的规矩一致。
 fn read_number(s: String, i: Int, acc: String) -> {next: Int, text: String} {
-  if i >= len(s) { return {next: i, text: acc} }
-  if is_digit(s[i]) || s[i] == "_" { return read_number(s, i + 1, acc + s[i]) }
+  若 i >= len(s) { 返回 {next: i, text: acc} }
+  若 is_digit(s[i]) || s[i] == "_" { 返回 read_number(s, i + 1, acc + s[i]) }
   // 小数点后面紧跟数字时，它属于这个字面量；否则句点是标点
-  if s[i] == "." && i + 1 < len(s) && is_digit(s[i + 1]) { return read_number(s, i + 1, acc + ".") }
-  if s[i] == "e" || s[i] == "E" {
-    if i + 1 < len(s) && is_digit(s[i + 1]) { return read_number(s, i + 1, acc + "e") }
-    if i + 2 < len(s) && (s[i + 1] == "+" || s[i + 1] == "-") && is_digit(s[i + 2]) {
-      return read_number(s, i + 2, acc + "e" + s[i + 1])
+  若 s[i] == "." && i + 1 < len(s) && is_digit(s[i + 1]) { 返回 read_number(s, i + 1, acc + ".") }
+  若 s[i] == "e" || s[i] == "E" {
+    若 i + 1 < len(s) && is_digit(s[i + 1]) { 返回 read_number(s, i + 1, acc + "e") }
+    若 i + 2 < len(s) && (s[i + 1] == "+" || s[i + 1] == "-") && is_digit(s[i + 2]) {
+      返回 read_number(s, i + 2, acc + "e" + s[i + 1])
     }
   }
-  return {next: i, text: acc}
+  返回 {next: i, text: acc}
 }
 
 // 读一个字符串，停在收尾的引号上。
@@ -157,37 +157,37 @@ fn read_number(s: String, i: Int, acc: String) -> {next: Int, text: String} {
 // 症状是「修剪不认制表符」，看起来像库里写错了。
 // 认五个：n、t、r、反斜杠、引号；别的一律原样留两个字符，不猜。
 fn read_string(s: String, i: Int, acc: String) {
-  if i >= len(s) { return {next: i, text: acc, closed: false} }
-  if s[i] == "\"" { return {next: i + 1, text: acc, closed: true} }
-  if s[i] == "\n" { return {next: i, text: acc, closed: false} }
-  if s[i] == "\\" { return read_escape(s, i, acc) }
-  return read_string(s, i + 1, acc + s[i])
+  若 i >= len(s) { 返回 {next: i, text: acc, closed: false} }
+  若 s[i] == "\"" { 返回 {next: i + 1, text: acc, closed: true} }
+  若 s[i] == "\n" { 返回 {next: i, text: acc, closed: false} }
+  若 s[i] == "\\" { 返回 read_escape(s, i, acc) }
+  返回 read_string(s, i + 1, acc + s[i])
 }
 
 fn read_escape(s: String, i: Int, acc: String) -> {next: Int, text: String} {
-  if i + 1 >= len(s) { return {next: i + 1, text: acc + "\\"} }
-  let c = s[i + 1]
-  if c == "n" { return read_string(s, i + 2, acc + "\n") }
-  if c == "t" { return read_string(s, i + 2, acc + "\t") }
-  if c == "r" { return read_string(s, i + 2, acc + "\r") }
-  if c == "\\" { return read_string(s, i + 2, acc + "\\") }
-  if c == "\"" { return read_string(s, i + 2, acc + "\"") }
-  return read_string(s, i + 2, acc + "\\" + c)
+  若 i + 1 >= len(s) { 返回 {next: i + 1, text: acc + "\\"} }
+  定 c = s[i + 1]
+  若 c == "n" { 返回 read_string(s, i + 2, acc + "\n") }
+  若 c == "t" { 返回 read_string(s, i + 2, acc + "\t") }
+  若 c == "r" { 返回 read_string(s, i + 2, acc + "\r") }
+  若 c == "\\" { 返回 read_string(s, i + 2, acc + "\\") }
+  若 c == "\"" { 返回 read_string(s, i + 2, acc + "\"") }
+  返回 read_string(s, i + 2, acc + "\\" + c)
 }
 
 // 读一个标点：先看两字符的组合，再看单字符。
 fn read_punct(s: String, i: Int) -> {next: Int, text: String} {
-  let two = "-> => == != <= >= && ||"
-  let k = 0
-  return read_punct_two(s, i, two, k)
+  定 two = "-> => == != <= >= && ||"
+  定 k = 0
+  返回 read_punct_two(s, i, two, k)
 }
 
 fn read_punct_two(s: String, i: Int, two: String, k: Int) -> {next: Int, text: String} {
-  if k + 1 >= len(two) { return {next: i + 1, text: s[i] + ""} }
-  let candidate = two[k] + two[k + 1]
-  if two[k] == " " { return read_punct_two(s, i, two, k + 1) }
-  if starts_with(s, i, candidate, 0) { return {next: i + 2, text: candidate} }
-  return read_punct_two(s, i, two, k + 2)
+  若 k + 1 >= len(two) { 返回 {next: i + 1, text: s[i] + ""} }
+  定 candidate = two[k] + two[k + 1]
+  若 two[k] == " " { 返回 read_punct_two(s, i, two, k + 1) }
+  若 starts_with(s, i, candidate, 0) { 返回 {next: i + 2, text: candidate} }
+  返回 read_punct_two(s, i, two, k + 2)
 }
 
 // 主循环：读一个 token，再递归读剩下的。层数等于 token 数。
@@ -195,12 +195,12 @@ fn read_punct_two(s: String, i: Int, two: String, k: Int) -> {next: Int, text: S
 // 这一点很要紧：若让 tokenize 逐个消费换行，每一行都会多占一层递归，
 // 一百行的片段就会顶到调用深度上限——同一条边界测试正是这样被撞出来的。
 fn skip_trivia(s: String, i: Int, keep_lines: Bool) -> Int {
-  if i >= len(s) { return i }
-  if is_space(s[i]) { return skip_trivia(s, i + 1, keep_lines) }
-  if s[i] == "\n" && !keep_lines { return skip_trivia(s, i + 1, keep_lines) }
-  if s[i] == "/" && i + 1 < len(s) && s[i + 1] == "/" { return skip_trivia(s, skip_to_eol(s, i), keep_lines) }
-  if s[i] == "/" && i + 1 < len(s) && s[i + 1] == "*" { return skip_trivia(s, skip_block(s, i + 2), keep_lines) }
-  return i
+  若 i >= len(s) { 返回 i }
+  若 is_space(s[i]) { 返回 skip_trivia(s, i + 1, keep_lines) }
+  若 s[i] == "\n" && !keep_lines { 返回 skip_trivia(s, i + 1, keep_lines) }
+  若 s[i] == "/" && i + 1 < len(s) && s[i + 1] == "/" { 返回 skip_trivia(s, skip_to_eol(s, i), keep_lines) }
+  若 s[i] == "/" && i + 1 < len(s) && s[i + 1] == "*" { 返回 skip_trivia(s, skip_block(s, i + 2), keep_lines) }
+  返回 i
 }
 
 // 分块累积（2026-11-02）：token 与「带位置的 token」原来都是一路 acc + (t,)，而元组的
@@ -212,15 +212,15 @@ fn skip_trivia(s: String, i: Int, keep_lines: Bool) -> Int {
 // 128 写成字面量而不是 const 名字：模块级的 const 在字节码那条路上不在作用域里，
 // 报的是 HMYR-行-005 没有这个名字（2026-11-02 量出来的，bytecode 那套一红九项）。
 fn 攒(们: Int, 段: Int, t: Int) {
-  let 新 = 段 + (t,)
-  if len(新) >= 128 { return {们: 们 + (新,), 段: ()} }
-  return {们: 们, 段: 新}
+  定 新 = 段 + (t,)
+  若 len(新) >= 128 { 返回 {们: 们 + (新,), 段: ()} }
+  返回 {们: 们, 段: 新}
 }
 
 // 取一个范围（元组没有切片语法，所以自己走一遍；只在合并时用，量很小）。
 fn 取范围(们: Int, i: Int, 末: Int, acc: Int) {
-  if i >= 末 { return acc }
-  return 取范围(们, i + 1, 末, acc + (们[i],))
+  若 i >= 末 { 返回 acc }
+  返回 取范围(们, i + 1, 末, acc + (们[i],))
 }
 
 // 二分合并：两半各自合并好再相加，于是每一次元素只被复制 log 段数 次。
@@ -229,59 +229,59 @@ fn 取范围(们: Int, i: Int, 末: Int, acc: Int) {
 // 不是取整），而段数是奇数时 3 除 2 正好是 1.5 —— 症状是一串「not an integer literal:
 // '1.5' '4.5' '43.5'」，看起来像数字字面量出了问题，其实是在这里（2026-11-02 实测）。
 fn 合并们(段们: Int) {
-  if len(段们) == 0 { return () }
-  if len(段们) == 1 { return 段们[0] }
-  let 半 = floor(len(段们) / 2)
-  let 左 = 合并们(取范围(段们, 0, 半, ()))
-  let 右 = 合并们(取范围(段们, 半, len(段们), ()))
-  return 左 + 右
+  若 len(段们) == 0 { 返回 () }
+  若 len(段们) == 1 { 返回 段们[0] }
+  定 半 = floor(len(段们) / 2)
+  定 左 = 合并们(取范围(段们, 0, 半, ()))
+  定 右 = 合并们(取范围(段们, 半, len(段们), ()))
+  返回 左 + 右
 }
 
 // 把「段们」与「还没满的最后一段」收成一个元组。
 fn 收段(尾: Int) {
   var 段们 = 尾.们
-  if len(尾.段) > 0 { 段们 = 段们 + (尾.段,) }
-  return 合并们(段们)
+  若 len(尾.段) > 0 { 段们 = 段们 + (尾.段,) }
+  返回 合并们(段们)
 }
 
 fn tokenize(s: String, at: Int, 们: Int, 段: Int, keep_lines: Bool) {
-  let i = skip_trivia(s, at, keep_lines)
-  if i >= len(s) { return {们: 们, 段: 段} }
-  if s[i] == "\n" {
+  定 i = skip_trivia(s, at, keep_lines)
+  若 i >= len(s) { 返回 {们: 们, 段: 段} }
+  若 s[i] == "\n" {
     // 到这里只能是「保留换行」，不保留的情形已在上面被吃掉
-    let 下 = 攒(们, 段, {kind: "newline", text: "\n", at: i})
-    return tokenize(s, i + 1, 下.们, 下.段, keep_lines)
+    定 下 = 攒(们, 段, {kind: "newline", text: "\n", at: i})
+    返回 tokenize(s, i + 1, 下.们, 下.段, keep_lines)
   }
 
   // r"..." 是一个字符串，不是「标识符 r 加一个字符串」
-  if (s[i] == "r" || s[i] == "R") && i + 1 < len(s) && s[i + 1] == "\"" {
-    let raw = read_string(s, i + 2, "")
-    let 下 = 攒(们, 段, {kind: "string", text: raw.text, at: i})
-    return tokenize(s, raw.next, 下.们, 下.段, keep_lines)
+  若 (s[i] == "r" || s[i] == "R") && i + 1 < len(s) && s[i + 1] == "\"" {
+    定 raw = read_string(s, i + 2, "")
+    定 下 = 攒(们, 段, {kind: "string", text: raw.text, at: i})
+    返回 tokenize(s, raw.next, 下.们, 下.段, keep_lines)
   }
-  if is_ident_start(s[i]) {
-    let got = read_ident(s, i, "")
-    let 下 = 攒(们, 段, {kind: "ident", text: 关键字归一(nfc(got.text)), at: i})
-    return tokenize(s, got.next, 下.们, 下.段, keep_lines)
+  若 is_ident_start(s[i]) {
+    定 got = read_ident(s, i, "")
+    定 下 = 攒(们, 段, {kind: "ident", text: 关键字归一(nfc(got.text)), at: i})
+    返回 tokenize(s, got.next, 下.们, 下.段, keep_lines)
   }
-  if is_digit(s[i]) {
-    if s[i] == "0" && i + 1 < len(s) && (s[i + 1] == "x" || s[i + 1] == "X" || s[i + 1] == "b" || s[i + 1] == "B" || s[i + 1] == "o" || s[i + 1] == "O") {
-      let based = read_based(s, i + 2, slice(s, i, i + 2))
-      let 下 = 攒(们, 段, {kind: "int", text: based.text, at: i})
-      return tokenize(s, based.next, 下.们, 下.段, keep_lines)
+  若 is_digit(s[i]) {
+    若 s[i] == "0" && i + 1 < len(s) && (s[i + 1] == "x" || s[i + 1] == "X" || s[i + 1] == "b" || s[i + 1] == "B" || s[i + 1] == "o" || s[i + 1] == "O") {
+      定 based = read_based(s, i + 2, slice(s, i, i + 2))
+      定 下 = 攒(们, 段, {kind: "int", text: based.text, at: i})
+      返回 tokenize(s, based.next, 下.们, 下.段, keep_lines)
     }
-    let got = read_number(s, i, "")
-    let 下 = 攒(们, 段, {kind: "int", text: got.text, at: i})
-    return tokenize(s, got.next, 下.们, 下.段, keep_lines)
+    定 got = read_number(s, i, "")
+    定 下 = 攒(们, 段, {kind: "int", text: got.text, at: i})
+    返回 tokenize(s, got.next, 下.们, 下.段, keep_lines)
   }
-  if s[i] == "\"" {
-    let got = read_string(s, i + 1, "")
-    let 下 = 攒(们, 段, {kind: "string", text: got.text, at: i})
-    return tokenize(s, got.next, 下.们, 下.段, keep_lines)
+  若 s[i] == "\"" {
+    定 got = read_string(s, i + 1, "")
+    定 下 = 攒(们, 段, {kind: "string", text: got.text, at: i})
+    返回 tokenize(s, got.next, 下.们, 下.段, keep_lines)
   }
-  let got = read_punct(s, i)
-  let 下 = 攒(们, 段, {kind: "punct", text: got.text, at: i})
-  return tokenize(s, got.next, 下.们, 下.段, keep_lines)
+  定 got = read_punct(s, i)
+  定 下 = 攒(们, 段, {kind: "punct", text: got.text, at: i})
+  返回 tokenize(s, got.next, 下.们, 下.段, keep_lines)
 }
 
 // 给每个 token 补上行列。token 本来就带着字符偏移（at），所以这一遍只做一次线性扫描：
@@ -297,12 +297,12 @@ fn 补位置(tokens: Int, 源码: String) {
   var 列 = 1
   var 看过 = 0
   var i = 0
-  while i < len(tokens) {
-    let t = tokens[i]
-    let at = to_int(t.at)
+  当 i < len(tokens) {
+    定 t = tokens[i]
+    定 at = to_int(t.at)
     var 走 = 看过
-    while 走 < at && 走 < len(源码) {
-      if 源码[走] == chr(10) {
+    当 走 < at && 走 < len(源码) {
+      若 源码[走] == chr(10) {
         行 = 行 + 1
         列 = 1
       } else {
@@ -312,25 +312,25 @@ fn 补位置(tokens: Int, 源码: String) {
     }
     看过 = 走
     // 这一趟同样是一万三千次，也分块攒 —— 原来这里是 出 = 出 + (...)，第二个平方在它身上。
-    let 攒好 = 攒(们, 段, {kind: t.kind, text: t.text, at: at, line: 行, column: 列})
+    定 攒好 = 攒(们, 段, {kind: t.kind, text: t.text, at: at, line: 行, column: 列})
     们 = 攒好.们
     段 = 攒好.段
     i = i + 1
   }
-  if len(段) > 0 { 们 = 们 + (段,) }
-  return 合并们(们)
+  若 len(段) > 0 { 们 = 们 + (段,) }
+  返回 合并们(们)
 }
 
 pub fn scan(text: String) {
-  return 补位置(收段(tokenize(text, 0, (), (), false)), text)
+  返回 补位置(收段(tokenize(text, 0, (), (), false)), text)
 }
 
 // 保留换行的入口：语句边界由此而来。旧入口保持原样，六处既有对拍不受影响。
 pub fn scan_lines(text: String) {
-  return 补位置(收段(tokenize(text, 0, (), (), true)), text)
+  返回 补位置(收段(tokenize(text, 0, (), (), true)), text)
 }
 
 fn main() -> Int {
-  let demo = "let x = 1 + 2\n// 注释\nfn f(a: Int) -> Int { return a }"
-  return len(scan(demo))
+  定 demo = "let x = 1 + 2\n// 注释\nfn f(a: Int) -> Int { return a }"
+  返回 len(scan(demo))
 }

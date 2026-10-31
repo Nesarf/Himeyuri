@@ -1,14 +1,14 @@
 import "../runtime/ucd/blocks.hmoca"
 
 fn main() -> Int {
-  if 块名(65) != "Basic Latin" {
-    return 1
+  若 块名(65) != "Basic Latin" {
+    返回 1
   }
-  if 块名(12354) != "Hiragana" {
-    return 2
+  若 块名(12354) != "Hiragana" {
+    返回 2
   }
-  if 块名(20013) != "CJK Unified Ideographs" {
-    return 3
+  若 块名(20013) != "CJK Unified Ideographs" {
+    返回 3
   }
-  return 0
+  返回 0
 }

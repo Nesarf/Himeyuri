@@ -8,24 +8,24 @@
 // 覆盖的是 SPEC 里能一眼核对的那几条：算术、比较与布尔、控制流、递归、
 // 元组、记录、字符串。判据是「桌面上打出来的字节与板子串口上的字节逐字节相同」。
 fn 阶(n: Int) -> Int {
-  if n <= 1 {
-    return 1
+  若 n <= 1 {
+    返回 1
   }
-  return n * 阶(n - 1)
+  返回 n * 阶(n - 1)
 }
 
 fn 斐(n: Int) -> Int {
-  if n < 2 {
-    return n
+  若 n < 2 {
+    返回 n
   }
-  return 斐(n - 1) + 斐(n - 2)
+  返回 斐(n - 1) + 斐(n - 2)
 }
 
 fn 大者(a: Int, b: Int) -> Int {
-  if a > b {
-    return a
+  若 a > b {
+    返回 a
   }
-  return b
+  返回 b
 }
 
 fn main() -> Int effects(process) {
@@ -38,7 +38,7 @@ fn main() -> Int effects(process) {
   // 三、控制流
   var 和 = 0
   var i = 1
-  while i <= 100 {
+  当 i <= 100 {
     和 = 和 + i
     i = i + 1
   }
@@ -48,14 +48,14 @@ fn main() -> Int effects(process) {
   print("阶乘 " + str(阶(6)) + " 斐波那契 " + str(斐(10)) + " 大者 " + str(大者(3, 9)) + chr(10))
 
   // 五、元组
-  let t = (10, 20, 30)
+  定 t = (10, 20, 30)
   print("元组 " + str(t[0] + t[1] + t[2]) + " 长 " + str(len(t)) + chr(10))
 
   // 六、记录
-  let r = {宽: 3, 高: 4}
+  定 r = {宽: 3, 高: 4}
   print("记录 " + str(r.宽 * r.高) + chr(10))
 
   // 七、字符串：长度按码元算，拼接不丢东西
   print("字符串 " + str(len("ヒメユリ")) + " " + ("a" + "b" + "c") + chr(10))
-  return 0
+  返回 0
 }

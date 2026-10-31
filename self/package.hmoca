@@ -28,17 +28,17 @@ import "./manifest.hmoca"
 fn 收一件(路们: Int, 目录: String, 名册: Int) {
   var 出 = 路们
   var i = 0
-  while i < len(名册) {
+  当 i < len(名册) {
     出 = 出 + (目录 + "/" + 名册[i],)
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 // 名字要带自己的前缀：合并程序是「先到者赢」，而 manifest.hmyr 里也有一个 主。
 // 撞名不会报错 —— 只会安静地跑成另一个工具。这一条与 zip.hmyr 文件头那句同源。
 fn 打包(包路: String, 只收: String, 要压: Bool) effects(file, process) {
-  return 打包带(包路, 只收, 要压, "", "")
+  返回 打包带(包路, 只收, 要压, "", "")
 }
 
 // 同 打包，另外把一份「包外的清单」也收进去当成员。
@@ -60,32 +60,32 @@ pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String
   // 「拿到包的人自己验」就会在那两项上报缺。这一处是 release-loop 照出来的 ——
   // 在仓库根下验清单永远看不见它，因为那些文件本来就在仓库里。
   var 目录们 = ("src", "self", "bin", "tools", "test", "design", "examples", "assets")
-  if 只收 != "" { 目录们 = (只收,) }
+  若 只收 != "" { 目录们 = (只收,) }
   var 路们 = ()
   var d = 0
-  while d < len(目录们) {
-    if is_dir(目录们[d]) {
+  当 d < len(目录们) {
+    若 is_dir(目录们[d]) {
       路们 = 收一件(路们, 目录们[d], 走文件(目录们[d]))
     }
     d = d + 1
   }
   // runtime/：只收源码与产物，语料按后缀跳过（理由见上）。
   // 走文件 是递归的，所以 runtime/ucd/blocks.hmyr 也会进来 —— 清单里列了它。
-  if 只收 == "" {
-    let 语名册 = 走文件("runtime")
+  若 只收 == "" {
+    定 语名册 = 走文件("runtime")
     var j = 0
-    while j < len(语名册) {
+    当 j < len(语名册) {
       var 要 = false
-      if 以尾(语名册[j], ".hmoca") { 要 = true }
-      if 以尾(语名册[j], ".hmoks") || 以尾(语名册[j], ".hmtn") { 要 = true }
-      if 要 { 路们 = 收一件(路们, "runtime", (语名册[j],)) }
+      若 以尾(语名册[j], ".hmoca") { 要 = true }
+      若 以尾(语名册[j], ".hmoks") || 以尾(语名册[j], ".hmtn") { 要 = true }
+      若 要 { 路们 = 收一件(路们, "runtime", (语名册[j],)) }
       j = j + 1
     }
   }
 
-  if len(路们) == 0 {
+  若 len(路们) == 0 {
     print("  没有可收的文件" + chr(10))
-    return 1
+    返回 1
   }
 
   var 块堆 = ()
@@ -93,8 +93,8 @@ pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String
   var 偏移 = 0
   var 总原始 = 0
   var k = 0
-  while k < len(路们) {
-    let 一 = 成员(路们[k], 正规名(路们[k]), 要压, 偏移)
+  当 k < len(路们) {
+    定 一 = 成员(路们[k], 正规名(路们[k]), 要压, 偏移)
     块堆 = 块堆 + (一.块,)
     心们 = 心们 + (一.中心,)
     偏移 = 偏移 + len(一.块)
@@ -103,9 +103,9 @@ pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String
   }
   // 附加成员：发布清单自己。它不列自己（造它的时候它还不存在），
   // 所以包内的这一份与包外那一份是同一批字节。
-  if 附加路 != "" {
-    if file_exists(附加路) {
-      let 额外 = 成员(附加路, 附加名, 要压, 偏移)
+  若 附加路 != "" {
+    若 file_exists(附加路) {
+      定 额外 = 成员(附加路, 附加名, 要压, 偏移)
       块堆 = 块堆 + (额外.块,)
       心们 = 心们 + (额外.中心,)
       偏移 = 偏移 + len(额外.块)
@@ -115,27 +115,27 @@ pub fn 打包带(包路: String, 只收: String, 要压: Bool, 附加路: String
       print("  要收的 " + 附加路 + " 不在，包里不会有清单" + chr(10))
     }
   }
-  let 体 = 拼平(块堆, 0, len(块堆))
-  let 录 = 拼平(心们, 0, len(心们))
-  let 收尾 = 尾(len(块堆), len(录), 偏移)
+  定 体 = 拼平(块堆, 0, len(块堆))
+  定 录 = 拼平(心们, 0, len(心们))
+  定 收尾 = 尾(len(块堆), len(录), 偏移)
   write_bytes(包路, (体, 录, 收尾))
   print("  收了 " + str(len(块堆)) + " 个文件，原样 " + str(总原始) + " 字节 → " + str(len(体) + len(录) + len(收尾)) + " 字节的包" + chr(10))
-  return 0
+  返回 0
 }
 
 fn main() -> Int effects(file, process) {
-  let 参 = argv()
+  定 参 = argv()
   var 要压 = false
   var 附加路 = ""
   var 附加名 = "manifest.json"
   var 位置 = ()
   var i = 0
-  while i < len(参) {
-    if 参[i] == "--压" {
+  当 i < len(参) {
+    若 参[i] == "--压" {
       要压 = true
       i = i + 1
     } else {
-      if 参[i] == "--附加" && i + 2 < len(参) {
+      若 参[i] == "--附加" && i + 2 < len(参) {
         附加路 = 参[i + 1]
         附加名 = 参[i + 2]
         i = i + 3
@@ -145,10 +145,10 @@ fn main() -> Int effects(file, process) {
       }
     }
   }
-  if len(位置) < 2 {
+  若 len(位置) < 2 {
     print("用法：hmyr self/package.hmyr <包.zip> [只收这一个目录] [--压] [--附加 <路> <包内名>]" + chr(10))
-    return 2
+    返回 2
   }
-  if len(位置) > 2 { return 打包带(位置[1], 位置[2], 要压, 附加路, 附加名) }
-  return 打包带(位置[1], "", 要压, 附加路, 附加名)
+  若 len(位置) > 2 { 返回 打包带(位置[1], 位置[2], 要压, 附加路, 附加名) }
+  返回 打包带(位置[1], "", 要压, 附加路, 附加名)
 }

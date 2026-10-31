@@ -8,5 +8,5 @@ fn main() -> Int effects(process) {
   print("不带括号=" + str(1 > 2 && 3 > 4) + chr(10))
   print("或带括号=" + str((1 < 2) || (3 < 4)) + chr(10))
   print("或不带括号=" + str(1 < 2 || 3 < 4) + chr(10))
-  return 0
+  返回 0
 }

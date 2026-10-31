@@ -26,12 +26,24 @@ const 自举整 = (源) => {
 };
 const 读 = (路) => fs.readFileSync(path.join(ROOT, 路), "utf8");
 
-console.log("一、没有注释的文件：两边逐字节相同");
+console.log("一、没有注释的文件：规范之后两边相同，而汉字那一侧由自举保留");
+// 2026-11-02 起两台在关键字写法上不同，而这个不同有来源：
+//
+//   自举那台（self/fmt.hmoca）从原文按位置切片取字，所以源码里写「返回」它就印「返回」；
+//   宿主那台（src/format.mjs）从 AST 重建，而 AST 不记「关键字原来怎么写」，
+//   于是它印自己的规范形式 —— 也就是 ASCII。
+//
+// 这不是哪一个写错了，是两条路能拿到的信息不同。所以判据分两条：
+// 一、把汉字写法规范成 ASCII 之后，两边逐行相同（排版那一层是一致的）；
+// 二、自举那一侧确实保留了汉字（免得哪一天它悄悄也规范了，而这条没人看）。
+const 规范 = (s) => s.replace(/返回/g, "return").replace(/若/g, "if").replace(/定/g, "let").replace(/当/g, "while");
 for (const 路 of ["examples/arith.hmoca", "examples/over.hmoca", "examples/twice.hmoca"]) {
   const 源 = 读(路);
-  const 乙 = format(源, { quiet: true }).text;
+  const 乙 = String(format(源, { quiet: true }).text).trim();
   const 甲 = 自举整(源);
-  ok(路, 甲 === String(乙).trim(), 甲 === String(乙).trim() ? "" : "行数 " + 甲.split("\n").length + " 对 " + String(乙).split("\n").length);
+  ok(路 + "（规范之后）", 规范(甲) === 规范(乙), 规范(甲) === 规范(乙) ? "" : "行数 " + 甲.split("\n").length + " 对 " + 乙.split("\n").length);
+  const 有汉字 = /返回|若|定|当/.test(源);
+  if (有汉字) ok(路 + "（自举保留了汉字）", /返回|若|定|当/.test(甲), 甲.split("\n").slice(0, 3).join(" / "));
 }
 
 console.log("二、有注释的文件：自举那一份把注释留下，宿主那一份按设计丢弃");
@@ -42,11 +54,12 @@ console.log("二、有注释的文件：自举那一份把注释留下，宿主�
   const 乙r = format(源, { quiet: true });
   ok("自举的输出里有注释行", 甲.split("\n").some((l) => l.trim().startsWith("//")), 甲.split("\n")[0]);
   ok("宿主的输出里没有注释行", String(乙r.text).split("\n").every((l) => !l.trim().startsWith("//")));
-  // 去掉注释行与空行之后，两边应当一致
+  // 去掉注释行与空行之后，两岸应当一致 —— 关键字写法同样先规范（理由见第一节那段注释）
   const 洗 = (t) => t.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("//"));
   const a = 洗(甲), b = 洗(String(乙r.text));
-  ok("去掉注释之后两边一致", a.join("\n") === b.join("\n"),
-    a.join("\n") === b.join("\n") ? "" : "第 " + (a.findIndex((l, i) => l !== b[i]) + 1) + " 行起不同");
+  const A = 规范(a.join("\n")), B = 规范(b.join("\n"));
+  ok("去掉注释之后两边一致（关键字规范之后）", A === B,
+    A === B ? "" : "第 " + (a.findIndex((l, i) => 规范(l) !== 规范(b[i] || "")) + 1) + " 行起不同");
 }
 
 console.log("三、行尾的 carriage return 不会漏进输出");

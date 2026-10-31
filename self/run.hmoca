@@ -19,17 +19,17 @@ import "./eval.hmoca"
 // 跑一段源码，交回结果文字。语法层的错不必在这里单独拦：eval 认识 {kind: "误"}
 // 那一种节点，会把它原样带上来（实测如此，所以这里少一层分支）。
 fn 跑(源码: String) -> String {
-  let tokens = scan(源码)
-  let 树 = chain(tokens)
-  let r = 求值(树.node, ())
-  if r.ok == false { return "求值错：" + r.text }
-  return str(r.value)
+  定 tokens = scan(源码)
+  定 树 = chain(tokens)
+  定 r = 求值(树.node, ())
+  若 r.ok == false { 返回 "求值错：" + r.text }
+  返回 str(r.value)
 }
 
 // 跑一段源码并把它写出来。打印放在这里，因为这一层就是那个「调用方」。
 fn 跑并打印(源码: String) -> Int effects(process) {
   print(跑(源码) + "\n")
-  return 0
+  返回 0
 }
 
 // 跑一整段程序：scan_lines 保留换行，于是语句边界有着落；
@@ -44,23 +44,23 @@ fn 跑并打印(源码: String) -> Int effects(process) {
 // 而那句话会让人去查解析器。有 fn 的文件里照样可以有顶层 const 与 var，
 // 因为判据问的是「这一份是不是声明式程序」，不是「第一个词是什么」。
 fn 跳到行尾(s: String, i: Int) -> Int {
-  if i >= len(s) { return i }
-  if s[i] == chr(10) { return i + 1 }
-  return 跳到行尾(s, i + 1)
+  若 i >= len(s) { 返回 i }
+  若 s[i] == chr(10) { 返回 i + 1 }
+  返回 跳到行尾(s, i + 1)
 }
 
 fn 行首是声明从(s: String, i: Int) -> Bool {
-  if i >= len(s) { return false }
-  let c = s[i]
-  if c == " " || c == "\t" || c == "\n" || c == "\r" { return 行首是声明从(s, i + 1) }
+  若 i >= len(s) { 返回 false }
+  定 c = s[i]
+  若 c == " " || c == "\t" || c == "\n" || c == "\r" { 返回 行首是声明从(s, i + 1) }
   // 注释行要跳过。一份文件以注释开头是常态，而「以注释开头」不等于「不是声明」。
-  if c == "/" && i + 1 < len(s) && s[i + 1] == "/" { return 行首是声明从(s, 跳到行尾(s, i)) }
-  if i + 1 < len(s) && s[i] == "f" && s[i + 1] == "n" { return true }
-  return false
+  若 c == "/" && i + 1 < len(s) && s[i + 1] == "/" { 返回 行首是声明从(s, 跳到行尾(s, i)) }
+  若 i + 1 < len(s) && s[i] == "f" && s[i + 1] == "n" { 返回 true }
+  返回 false
 }
 
 fn 行首是声明(s: String) -> Bool {
-  return 行首是声明从(s, 0)
+  返回 行首是声明从(s, 0)
 }
 
 // 跑一整段源码。
@@ -70,25 +70,25 @@ fn 行首是声明(s: String) -> Bool {
 //
 // 两条路都交给同一个语句层，所以差别只在「壳由谁提供」。
 fn 跑程序文字(源码: String) -> String {
-  if 行首是声明(源码) {
-    let tokens = scan_lines(源码)
+  若 行首是声明(源码) {
+    定 tokens = scan_lines(源码)
     // 声明里找：有 main 就跑 main，没有就跑第一个函数。
     // 这样「一个文件里几个函数」也认得，只是还不能互相调用（求值器的调用只认内置）。
-    let 全部 = parse_decls(tokens)
-    if len(全部.fns) == 0 { return "错：声明里没有 fn" }
-    let 选 = 选函数(全部.fns, "main")
-    let 体 = 选[2]   // 声明现在是（名字, 参数名册, 语句们），语句们是第三件
-    let r = 跑程序带常量与参(体, 全部.fns, 全部.consts, (), ())
-    if r.ok == false { return "错：" + r.text }
-    return str(r.value)
+    定 全部 = parse_decls(tokens)
+    若 len(全部.fns) == 0 { 返回 "错：声明里没有 fn" }
+    定 选 = 选函数(全部.fns, "main")
+    定 体 = 选[2]   // 声明现在是（名字, 参数名册, 语句们），语句们是第三件
+    定 r = 跑程序带常量与参(体, 全部.fns, 全部.consts, (), ())
+    若 r.ok == false { 返回 "错：" + r.text }
+    返回 str(r.value)
   }
-  let 有壳 = "fn main() -> Int {\n" + 源码 + "\n}\n"
-  let tokens = scan_lines(有壳)
-  let 体 = parse_body(tokens)
-  if 体.found == false { return "错：找不到函数体" }
-  let r = 跑程序(体.list)
-  if r.ok == false { return "错：" + r.text }
-  return str(r.value)
+  定 有壳 = "fn main() -> Int {\n" + 源码 + "\n}\n"
+  定 tokens = scan_lines(有壳)
+  定 体 = parse_body(tokens)
+  若 体.found == false { 返回 "错：找不到函数体" }
+  定 r = 跑程序(体.list)
+  若 r.ok == false { 返回 "错：" + r.text }
+  返回 str(r.value)
 }
 
 // 只走「切词 + 搭树」这两步，不求值。
@@ -100,18 +100,18 @@ fn 跑程序文字(源码: String) -> String {
 // import 行先剥掉（去导入）：那不是语法的一部分，而是加载器的事；两边都不该因为
 // 「文件里有一行 import」就把树搭歪。
 fn 只解析(源码: String) -> String {
-  let 净 = 去导入(源码)
-  if 行首是声明(净) {
-    let tokens = scan_lines(净)
-    let 全部 = parse_decls(tokens)
-    if len(全部.fns) == 0 { return "错：没有认出任何 fn 声明" }
-    return "ok " + str(len(全部.fns))
+  定 净 = 去导入(源码)
+  若 行首是声明(净) {
+    定 tokens = scan_lines(净)
+    定 全部 = parse_decls(tokens)
+    若 len(全部.fns) == 0 { 返回 "错：没有认出任何 fn 声明" }
+    返回 "ok " + str(len(全部.fns))
   }
-  let 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
-  let tokens = scan_lines(有壳)
-  let 体 = parse_body(tokens)
-  if 体.found == false { return "错：找不到函数体" }
-  return "ok 1"
+  定 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
+  定 tokens = scan_lines(有壳)
+  定 体 = parse_body(tokens)
+  若 体.found == false { 返回 "错：找不到函数体" }
+  返回 "ok 1"
 }
 
 // ---- 只做「加载」：把宿主 loader 的三条承诺在这里也对齐 ----
@@ -125,11 +125,11 @@ fn 只解析(源码: String) -> String {
 // 这一条 import 是不是一个「路径」：宿主那边只有 ./、../、盘符与绝对路径才算文件，
 // 其余的（例如 import "某个包"）留给包管理器，记一笔 HMYR-載-002 就过去了，不算缺文件。
 fn 是路径(s: String) -> Bool {
-  if len(s) >= 2 && slice(s, 0, 2) == "./" { return true }
-  if len(s) >= 3 && slice(s, 0, 3) == "../" { return true }
-  if len(s) >= 2 && slice(s, 1, 2) == ":" { return true }
-  if len(s) >= 1 && slice(s, 0, 1) == "/" { return true }
-  return false
+  若 len(s) >= 2 && slice(s, 0, 2) == "./" { 返回 true }
+  若 len(s) >= 3 && slice(s, 0, 3) == "../" { 返回 true }
+  若 len(s) >= 2 && slice(s, 1, 2) == ":" { 返回 true }
+  若 len(s) >= 1 && slice(s, 0, 1) == "/" { 返回 true }
+  返回 false
 }
 
 fn 加载走(目录: String, 相对: String, 栈: Int, 已载: Int) effects(file) {
@@ -139,16 +139,16 @@ fn 加载走(目录: String, 相对: String, 栈: Int, 已载: Int) effects(file
   //
   // 不成形状的（比如 std/io 里的斜杠）交给包管理器：宿主在那里报 HMYR-載-002 并跳过，
   // 这里也跳过，因为「不是文件」与「缺文件」是两件事。
-  if 是路径(相对) == false && 是绝对(相对) == false && 是包名字(相对) == false {
-    return {已载: 已载, 错: ""}
+  若 是路径(相对) == false && 是绝对(相对) == false && 是包名字(相对) == false {
+    返回 {已载: 已载, 错: ""}
   }
-  let 路 = 解析路(目录, 相对)
+  定 路 = 解析路(目录, 相对)
   // 环先判：栈 记的是「这一条路径上走过的」，而已载 记的是「已经加载过的」。
   // 两者的顺序要紧 —— 已载 先判会把环当成「已经加载过」，于是 HMYR-載-001 永远报不出来
   // （2026-11-01 实测：调换之后 selfmod 那条环用例才重新通过）。
-  if 含路(栈, 路, 0) { return {已载: 已载, 错: "HMYR-載-001 " + 路} }
-  if 含路(已载, 路, 0) { return {已载: 已载, 错: ""} }
-  if file_exists(路) == false { return {已载: 已载, 错: "HMYR-載-003 " + 路} }
+  若 含路(栈, 路, 0) { 返回 {已载: 已载, 错: "HMYR-載-001 " + 路} }
+  若 含路(已载, 路, 0) { 返回 {已载: 已载, 错: ""} }
+  若 file_exists(路) == false { 返回 {已载: 已载, 错: "HMYR-載-003 " + 路} }
   // 读源码、扫它引了谁，然后递归 —— 这一层只负责「顺序」。
   //
   // 为什么这里不调 只解析（2026-11-01 量出来的）：它只用来报 E0100（这文件语法错），
@@ -166,28 +166,28 @@ fn 加载走(目录: String, 相对: String, 栈: Int, 已载: Int) effects(file
   // 症状不吓人但很硬：module 与 subset-load 两套的判据都是「被 import 的排在入口之前」，
   // 它们拿到的却是 ["main.hmoca","lib.hmoca"]。环靠 栈 拦，不靠 已载，所以这样改
   // 不会把环放回来（那一条由 140 行守着）。
-  let 源码 = read_text(路, "utf8")
-  let 子 = 加载多(目录部分(路), 找导入们(源码), 0, 栈 + (路,), 已载)
+  定 源码 = read_text(路, "utf8")
+  定 子 = 加载多(目录部分(路), 找导入们(源码), 0, 栈 + (路,), 已载)
   var 已 = 子.已载
   var 错 = 子.错
-  if 错 == "" && 含路(已, 路, 0) == false { 已 = 已 + (路,) }
-  return {已载: 已, 错: 错}
+  若 错 == "" && 含路(已, 路, 0) == false { 已 = 已 + (路,) }
+  返回 {已载: 已, 错: 错}
 }
 
 fn 加载多(目录: String, 路们: Int, i: Int, 栈: Int, 已载: Int) effects(file) {
-  if i >= len(路们) { return {已载: 已载, 错: ""} }
+  若 i >= len(路们) { 返回 {已载: 已载, 错: ""} }
   // 三种形状放行：路径、绝对、包名。其余的（std/io 这种）跳过 —— 报 HMYR-載-003 会把
   // 「包管理器将来的事」当成「缺文件」。
   //
   // 这一道门与 加载走 开头那道要一起改（2026-11-02）：只改后者的话，包名在进
   // 加载走 之前就被这里滤掉了，症状是 order 里没有包 —— 而 pkg-manifest 与
   // owned-check 的那三条判据全在包上，它们一起红，看起来像检查坏了。
-  if 是路径(路们[i]) == false && 是绝对(路们[i]) == false && 是包名字(路们[i]) == false {
-    return 加载多(目录, 路们, i + 1, 栈, 已载)
+  若 是路径(路们[i]) == false && 是绝对(路们[i]) == false && 是包名字(路们[i]) == false {
+    返回 加载多(目录, 路们, i + 1, 栈, 已载)
   }
-  let r = 加载走(目录, 路们[i], 栈, 已载)
-  if r.错 != "" { return {已载: r.已载, 错: r.错} }
-  return 加载多(目录, 路们, i + 1, 栈, r.已载)
+  定 r = 加载走(目录, 路们[i], 栈, 已载)
+  若 r.错 != "" { 返回 {已载: r.已载, 错: r.错} }
+  返回 加载多(目录, 路们, i + 1, 栈, r.已载)
 }
 
 // ---- 声明层：把元组包成节点 ----
@@ -199,112 +199,112 @@ fn 加载多(目录: String, 路们: Int, i: Int, 栈: Int, 已载: Int) effects
 // 这两个函数只做包装，不动解析：解析仍是 parse_decls 与 parse_body 干的活。
 // 包一层不是为了好看：Module、Fn、Block 是宿主 loader 与 runUnit 认得的那三种东西，
 // 有了它们，换掉 src/loader.mjs 才谈得上。
-// 宿主的语句层把 if 与 while 包成 ExprStmt（它把 if 当表达式，语句层再包一层）。
+// 宿主的语句层把 若 与 当 包成 ExprStmt（它把 若 当表达式，语句层再包一层）。
 // 形状要一致就得跟着包 —— 而这只在包装这一层做，解析与求值两条路一个字都不动。
 // 位置的安全读法：语法错的节点本来就可能没有位置（越界时连 token 都没有）。
 // 这里缺就填 0，而不是让一次缺字段把整棵树造失败 —— 诊断要的是「尽力说清」，不是「全有或全无」。
 fn 行(n: Int) -> Int {
-  if field_has(n, "line") { return n.line }
-  return 0
+  若 field_has(n, "line") { 返回 n.line }
+  返回 0
 }
 
 fn 列(n: Int) -> Int {
-  if field_has(n, "column") { return n.column }
-  return 0
+  若 field_has(n, "column") { 返回 n.column }
+  返回 0
 }
 // 按基读 与 数字值 在 eval.hmyr：求值器那条路也要认 0x1_0，所以它们住在那儿，
 // 这一层通过 import 直接用（这里的 翻表达式 仍在调 数字值）。
 
 // 把表达式树翻成宿主那边认的形状：Literal 补 value 与 raw，Ident 的 text 改叫 name。
 //
-// 这三件（字面量的值、空 return、Ident 的字段名）是适配器里最后的翻译。把它们挪进 HMYR，
+// 这三件（字面量的值、空 返回、Ident 的字段名）是适配器里最后的翻译。把它们挪进 HMYR，
 // 工具那一层就只剩搬运 —— 而「宿主一口吃下去」这句话才算有证据。
 fn 翻表达式(n: Int) {
-  if n.kind == "字" {
-    if n.type == "int" {
-      return {kind: "字", type: "int", value: 数字值(n.text), raw: n.text, text: n.text, line: 行(n), column: 列(n)}
+  若 n.kind == "字" {
+    若 n.type == "int" {
+      返回 {kind: "字", type: "int", value: 数字值(n.text), raw: n.text, text: n.text, line: 行(n), column: 列(n)}
     }
-    return {kind: "字", type: "string", value: n.text, raw: false, text: n.text, line: 行(n), column: 列(n)}
+    返回 {kind: "字", type: "string", value: n.text, raw: false, text: n.text, line: 行(n), column: 列(n)}
   }
-  if n.kind == "名" {
+  若 n.kind == "名" {
     // true 与 false 在这一侧是标识符（词法把关键字也归在 ident 里），在宿主那边是字面量。
     // 不转的话，宿主会去找一个叫 false 的名字 —— 报 HMYR-行-005，而那句话听起来像拼写错误。
-    if n.text == "true" { return {kind: "字", type: "bool", value: true, raw: false, text: n.text, line: 行(n), column: 列(n)} }
-    if n.text == "false" { return {kind: "字", type: "bool", value: false, raw: false, text: n.text, line: 行(n), column: 列(n)} }
+    若 n.text == "true" { 返回 {kind: "字", type: "bool", value: true, raw: false, text: n.text, line: 行(n), column: 列(n)} }
+    若 n.text == "false" { 返回 {kind: "字", type: "bool", value: false, raw: false, text: n.text, line: 行(n), column: 列(n)} }
     // nil 在宿主那边是一个字面量（type "nil"、值 null），不是名字。
-    if n.text == "nil" { return {kind: "字", type: "nil", value: (), raw: false, text: n.text, line: 行(n), column: 列(n)} }
-    return {kind: "名", name: n.text, text: n.text, line: 行(n), column: 列(n)}
+    若 n.text == "nil" { 返回 {kind: "字", type: "nil", value: (), raw: false, text: n.text, line: 行(n), column: 列(n)} }
+    返回 {kind: "名", name: n.text, text: n.text, line: 行(n), column: 列(n)}
   }
-  if n.kind == "二元" {
-    return {kind: "二元", op: n.op, left: 翻表达式(n.left), right: 翻表达式(n.right), line: 行(n), column: 列(n)}
+  若 n.kind == "二元" {
+    返回 {kind: "二元", op: n.op, left: 翻表达式(n.left), right: 翻表达式(n.right), line: 行(n), column: 列(n)}
   }
-  if n.kind == "一元" {
-    return {kind: "一元", op: n.op, operand: 翻表达式(n.operand), line: 行(n), column: 列(n)}
+  若 n.kind == "一元" {
+    返回 {kind: "一元", op: n.op, operand: 翻表达式(n.operand), line: 行(n), column: 列(n)}
   }
-  if n.kind == "调用" {
-    return {kind: "调用", callee: 翻表达式(n.callee), args: 翻表达式们(n.args, 0, ()), line: 行(n), column: 列(n)}
+  若 n.kind == "调用" {
+    返回 {kind: "调用", callee: 翻表达式(n.callee), args: 翻表达式们(n.args, 0, ()), line: 行(n), column: 列(n)}
   }
-  if n.kind == "字段" {
-    return {kind: "字段", target: 翻表达式(n.target), name: n.name, line: 行(n), column: 列(n)}
+  若 n.kind == "字段" {
+    返回 {kind: "字段", target: 翻表达式(n.target), name: n.name, line: 行(n), column: 列(n)}
   }
-  if n.kind == "索引" {
-    return {kind: "索引", target: 翻表达式(n.target), index: 翻表达式(n.index), line: 行(n), column: 列(n)}
+  若 n.kind == "索引" {
+    返回 {kind: "索引", target: 翻表达式(n.target), index: 翻表达式(n.index), line: 行(n), column: 列(n)}
   }
-  if n.kind == "组" {
-    return {kind: "组", items: 翻表达式们(n.items, 0, ()), line: 行(n), column: 列(n)}
+  若 n.kind == "组" {
+    返回 {kind: "组", items: 翻表达式们(n.items, 0, ()), line: 行(n), column: 列(n)}
   }
   // 记录字面量：字段的值也是表达式，也要翻。漏了这一步不会报错 —— 它只是把没翻过的
   // Ident 原样交给宿主，然后宿主去找一个叫 undefined 的名字。
-  if n.kind == "记录" {
-    return {kind: "记录", fields: 翻字段们(n.fields, 0, ()), line: 行(n), column: 列(n)}
+  若 n.kind == "记录" {
+    返回 {kind: "记录", fields: 翻字段们(n.fields, 0, ()), line: 行(n), column: 列(n)}
   }
-  return n
+  返回 n
 }
 
 fn 翻字段们(们: Int, i: Int, acc: Int) {
-  if i >= len(们) { return acc }
-  let f = 们[i]
-  return 翻字段们(们, i + 1, acc + ({name: f.name, value: 翻表达式(f.value)},))
+  若 i >= len(们) { 返回 acc }
+  定 f = 们[i]
+  返回 翻字段们(们, i + 1, acc + ({name: f.name, value: 翻表达式(f.value)},))
 }
 
 fn 翻表达式们(们: Int, i: Int, acc: Int) {
-  if i >= len(们) { return acc }
-  return 翻表达式们(们, i + 1, acc + (翻表达式(们[i]),))
+  若 i >= len(们) { 返回 acc }
+  返回 翻表达式们(们, i + 1, acc + (翻表达式(们[i]),))
 }
 
-// 语句里的那几个表达式字段也要翻。空 return 干脆不带 value —— 宿主读出来是 undefined，
+// 语句里的那几个表达式字段也要翻。空 返回 干脆不带 value —— 宿主读出来是 undefined，
 // 与它自己的 null 同效；而这一侧本来就没有 null 这个词。
 fn 翻语句(n: Int) {
-  if n.kind == "定" { return {kind: "定", name: n.name, value: 翻表达式(n.value), line: 行(n), column: 列(n)} }
-  if n.kind == "变" { return {kind: "变", name: n.name, value: 翻表达式(n.value), line: 行(n), column: 列(n)} }
-  if n.kind == "赋值" { return {kind: "赋值", name: n.name, value: 翻表达式(n.value), line: 行(n), column: 列(n)} }
-  if n.kind == "返回" {
-    if n.value.kind == "nil" { return {kind: "返回", line: 行(n), column: 列(n)} }
-    return {kind: "返回", value: 翻表达式(n.value), line: 行(n), column: 列(n)}
+  若 n.kind == "定" { 返回 {kind: "定", name: n.name, value: 翻表达式(n.value), line: 行(n), column: 列(n)} }
+  若 n.kind == "变" { 返回 {kind: "变", name: n.name, value: 翻表达式(n.value), line: 行(n), column: 列(n)} }
+  若 n.kind == "赋值" { 返回 {kind: "赋值", name: n.name, value: 翻表达式(n.value), line: 行(n), column: 列(n)} }
+  若 n.kind == "返回" {
+    若 n.value.kind == "nil" { 返回 {kind: "返回", line: 行(n), column: 列(n)} }
+    返回 {kind: "返回", value: 翻表达式(n.value), line: 行(n), column: 列(n)}
   }
-  if n.kind == "表达式语句" { return {kind: "表达式语句", expr: 翻表达式(n.value), line: 行(n), column: 列(n)} }
-  return n
+  若 n.kind == "表达式语句" { 返回 {kind: "表达式语句", expr: 翻表达式(n.value), line: 行(n), column: 列(n)} }
+  返回 n
 }
 
 fn 转语句们(语句们: Int, i: Int, acc: Int) {
-  if i >= len(语句们) { return acc }
-  let n = 语句们[i]
+  若 i >= len(语句们) { 返回 acc }
+  定 n = 语句们[i]
   var 出 = 翻语句(n)
   // If 与 While 在这一侧还要换字段名：cond 对 condition，then/otherwise/body 要包成 Block。
   // 解析那一层不动（求值器读的还是 cond 与语句元组），只在包装这一层翻。
-  if n.kind == "若" {
-    let 内 = {kind: "若", condition: 翻表达式(n.cond), then: 包块(n.then, n.line), otherwise: 包块(n.otherwise, n.line), line: 行(n), column: 列(n)}
+  若 n.kind == "若" {
+    定 内 = {kind: "若", condition: 翻表达式(n.cond), then: 包块(n.then, n.line), otherwise: 包块(n.otherwise, n.line), line: 行(n), column: 列(n)}
     出 = {kind: "表达式语句", expr: 内, line: 行(n), column: 列(n)}
   }
-  if n.kind == "当" {
-    let 内 = {kind: "当", condition: 翻表达式(n.cond), body: 包块(n.body, n.line), line: 行(n), column: 列(n)}
+  若 n.kind == "当" {
+    定 内 = {kind: "当", condition: 翻表达式(n.cond), body: 包块(n.body, n.line), line: 行(n), column: 列(n)}
     出 = {kind: "表达式语句", expr: 内, line: 行(n), column: 列(n)}
   }
-  return 转语句们(语句们, i + 1, acc + (出,))
+  返回 转语句们(语句们, i + 1, acc + (出,))
 }
 
 fn 包块(语句们: Int, 行: Int) {
-  return {kind: "块", statements: 转语句们(语句们, 0, ()), line: 行}
+  返回 {kind: "块", statements: 转语句们(语句们, 0, ()), line: 行}
 }
 
 // 参数名 → {name, passing}。宿主的参数是记录（带 type 与 passing），而这一侧
@@ -315,43 +315,43 @@ fn 包块(语句们: Int, 行: Int) {
 // borrow 与 own 是两个前缀词，收名 那一层把它们也当名字收进来了 —— 所以这里
 // 见到它们就把下一个名字配上去。没有前缀的参数 passing 留空。
 fn 转参数们(名册: Int, i: Int, acc: Int) {
-  if i >= len(名册) { return acc }
-  let 名 = 名册[i]
-  if 名 == "borrow" || 名 == "own" {
-    if i + 1 < len(名册) { return 转参数们(名册, i + 2, acc + ({name: 名册[i + 1], passing: 名},)) }
-    return acc
+  若 i >= len(名册) { 返回 acc }
+  定 名 = 名册[i]
+  若 名 == "borrow" || 名 == "own" {
+    若 i + 1 < len(名册) { 返回 转参数们(名册, i + 2, acc + ({name: 名册[i + 1], passing: 名},)) }
+    返回 acc
   }
-  return 转参数们(名册, i + 1, acc + ({name: 名, passing: ()},))
+  返回 转参数们(名册, i + 1, acc + ({name: 名, passing: ()},))
 }
 
 fn 包声明(声明们: Int, i: Int, acc: Int) {
-  if i >= len(声明们) { return acc }
-  let d = 声明们[i]
+  若 i >= len(声明们) { 返回 acc }
+  定 d = 声明们[i]
   var 名 = ""
   var 参 = ()
   var 句 = ()
   var 效 = ()
   var 行 = 1
   var 列 = 1
-  if len(d) > 0 { 名 = d[0] }
-  if len(d) > 1 { 参 = d[1] }
-  if len(d) > 2 { 句 = d[2] }
-  if len(d) > 3 { 效 = d[3] }
-  if len(d) > 4 { 行 = d[4] }
-  if len(d) > 5 { 列 = d[5] }
+  若 len(d) > 0 { 名 = d[0] }
+  若 len(d) > 1 { 参 = d[1] }
+  若 len(d) > 2 { 句 = d[2] }
+  若 len(d) > 3 { 效 = d[3] }
+  若 len(d) > 4 { 行 = d[4] }
+  若 len(d) > 5 { 列 = d[5] }
   // 第九件是 "macro" 的时候，第三件放的是表达式而不是语句们 —— 宏的 body 是一个
   // 表达式（src/expand.mjs 的换回按表达式走），所以这里不能包成 Block。
-  if len(d) > 8 && d[8] == "macro" {
-    return 包声明(声明们, i + 1, acc + ({kind: "宏", name: 名, params: 参, body: 句, line: 行, column: 列},))
+  若 len(d) > 8 && d[8] == "macro" {
+    返回 包声明(声明们, i + 1, acc + ({kind: "宏", name: 名, params: 参, body: 句, line: 行, column: 列},))
   }
   var 返 = ()
-  if len(d) > 6 { 返 = d[6] }
+  若 len(d) > 6 { 返 = d[6] }
   // 第八件是「这个声明是不是 pub」（self/body.hmoca 的 decls_from 现在收它）。
   var 公开 = 0
-  if len(d) > 7 { 公开 = d[7] }
-  let 体 = 包块(句, 行)
-  let 函 = {kind: "函数", name: 名, params: 转参数们(参, 0, ()), returns: 返, effects: 效, contracts: (), body: 体, pub: 公开, line: 行, column: 列}
-  return 包声明(声明们, i + 1, acc + (函,))
+  若 len(d) > 7 { 公开 = d[7] }
+  定 体 = 包块(句, 行)
+  定 函 = {kind: "函数", name: 名, params: 转参数们(参, 0, ()), returns: 返, effects: 效, contracts: (), body: 体, pub: 公开, line: 行, column: 列}
+  返回 包声明(声明们, i + 1, acc + (函,))
 }
 
 // 从 token 流里找出 import 行，包成 Import 节点。
@@ -363,26 +363,26 @@ fn 包声明(声明们: Int, i: Int, acc: Int) {
 // 模块版本：顶上那句 `rev N`。找不到就是 0（宿主那边不写 rev 是 null，
 // 而这一侧用一个数表示「不提要求」，桥再决定怎么落）。
 fn 模块版本(tokens: Int, i: Int) {
-  if i + 1 >= len(tokens) { return 0 }
-  let t = tokens[i]
+  若 i + 1 >= len(tokens) { 返回 0 }
+  定 t = tokens[i]
   // 只看模块顶上那一句：碰到 import 或声明就该停 —— 记录里的 `rev: 版` 是字段，不是版本。
-  if t.kind == "ident" && (t.text == "import" || t.text == "fn" || t.text == "let" || t.text == "var") { return 0 }
-  if t.kind == "ident" && t.text == "rev" {
-    if tokens[i + 1].kind == "int" { return to_int(tokens[i + 1].text) }
-    return 0 - 1
+  若 t.kind == "ident" && (t.text == "import" || t.text == "fn" || t.text == "let" || t.text == "var") { 返回 0 }
+  若 t.kind == "ident" && t.text == "rev" {
+    若 tokens[i + 1].kind == "int" { 返回 to_int(tokens[i + 1].text) }
+    返回 0 - 1
   }
-  return 模块版本(tokens, i + 1)
+  返回 模块版本(tokens, i + 1)
 }
 
 fn 导入节点们(tokens: Int, i: Int, acc: Int) {
-  if i >= len(tokens) { return acc }
-  let t = tokens[i]
-  if t.kind == "ident" && t.text == "import" && i + 1 < len(tokens) && tokens[i + 1].kind == "string" {
-    let s = tokens[i + 1]
+  若 i >= len(tokens) { 返回 acc }
+  定 t = tokens[i]
+  若 t.kind == "ident" && t.text == "import" && i + 1 < len(tokens) && tokens[i + 1].kind == "string" {
+    定 s = tokens[i + 1]
     // import "x.hmoca" rev N —— 不写就是 0（这一侧用 0 表示「不提要求」）。
     var 版 = 0
-    if i + 2 < len(tokens) && tokens[i + 2].kind == "ident" && tokens[i + 2].text == "rev" {
-      if i + 3 < len(tokens) && tokens[i + 3].kind == "int" { 版 = to_int(tokens[i + 3].text) } else { 版 = 0 - 1 }
+    若 i + 2 < len(tokens) && tokens[i + 2].kind == "ident" && tokens[i + 2].text == "rev" {
+      若 i + 3 < len(tokens) && tokens[i + 3].kind == "int" { 版 = to_int(tokens[i + 3].text) } else { 版 = 0 - 1 }
     }
     // as 别名：`import "x" as 名`。与 rev 可以并存而顺序不固定，所以两个位置都看。
     //
@@ -391,34 +391,34 @@ fn 导入节点们(tokens: Int, i: Int, acc: Int) {
     // （2026-11-02 实测：桥交出的 别名表 是空的）。空串与「没有」在这里是同一件事，
     // 而调用方只问真不真，所以初值用空串没有歧义。
     var 别 = ""
-    if i + 2 < len(tokens) && tokens[i + 2].kind == "ident" && tokens[i + 2].text == "as" {
-      if i + 3 < len(tokens) && tokens[i + 3].kind == "ident" { 别 = tokens[i + 3].text }
+    若 i + 2 < len(tokens) && tokens[i + 2].kind == "ident" && tokens[i + 2].text == "as" {
+      若 i + 3 < len(tokens) && tokens[i + 3].kind == "ident" { 别 = tokens[i + 3].text }
     }
-    if i + 3 < len(tokens) && tokens[i + 3].kind == "ident" && tokens[i + 3].text == "as" {
-      if i + 4 < len(tokens) && tokens[i + 4].kind == "ident" { 别 = tokens[i + 4].text }
+    若 i + 3 < len(tokens) && tokens[i + 3].kind == "ident" && tokens[i + 3].text == "as" {
+      若 i + 4 < len(tokens) && tokens[i + 4].kind == "ident" { 别 = tokens[i + 4].text }
     }
-    let 节 = {kind: "引入", path: s.text, alias: 别, rev: 版, line: t.line, column: t.column}
-    return 导入节点们(tokens, i + 2, acc + (节,))
+    定 节 = {kind: "引入", path: s.text, alias: 别, rev: 版, line: t.line, column: t.column}
+    返回 导入节点们(tokens, i + 2, acc + (节,))
   }
-  return 导入节点们(tokens, i + 1, acc)
+  返回 导入节点们(tokens, i + 1, acc)
 }
 
 // 一整个文件 → Module。有声明就按声明走；没有就照旧包一层 fn main 的壳（老用法）。
 fn 造模块(源: String) {
-  let 净 = 去导入(源)
+  定 净 = 去导入(源)
   // import 行被 去导入 剥掉了，所以找它们要用原始源码。
-  let 全toks = scan_lines(源)
-  let 导入 = 导入节点们(全toks, 0, ())
+  定 全toks = scan_lines(源)
+  定 导入 = 导入节点们(全toks, 0, ())
   // 判断「这是不是一份带声明的程序」看 parse_decls 的结果，不看第一行 —— 文件以注释开头
   // 时会误判（lex.hmyr 就是这样：第一行是注释，于是整份被当成裸语句包进 fn main 的壳）。
   // 解析用**原始** token 流：去导入 会把行号整体上移，两边就对不上位置了。
-  let 全部 = parse_decls(全toks)
-  if len(全部.fns) > 0 {
-    return {kind: "模块", imports: 导入, decls: 包声明(全部.fns, 0, ()), rev: 模块版本(全toks, 0)}
+  定 全部 = parse_decls(全toks)
+  若 len(全部.fns) > 0 {
+    返回 {kind: "模块", imports: 导入, decls: 包声明(全部.fns, 0, ()), rev: 模块版本(全toks, 0)}
   }
-  let 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
-  let 体 = parse_body(scan_lines(有壳))
-  return {kind: "模块", imports: 导入, decls: 包声明((("main", (), 体.list, (), 1, 1),), 0, ()), rev: 0}
+  定 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
+  定 体 = parse_body(scan_lines(有壳))
+  返回 {kind: "模块", imports: 导入, decls: 包声明((("main", (), 体.list, (), 1, 1),), 0, ()), rev: 0}
 }
 
 // 整棵 import 树：加载（递归、去重、环拒绝、后序）+ 造形状，一步做完。
@@ -432,17 +432,17 @@ fn 造整棵(入口: String) effects(file) {
   // 不以 ./ 开头 —— 而 加载走 现在按 import 说明的三种形状判（路径 / 绝对 / 包名），
   // 含斜杠的裸路径会被当成「不成形状」丢掉，于是整棵树是空的、而 ok 还是真
   // （2026-11-02 实测：桥的 loadUnit 交回 ok=true 而 order=0、modules=0）。
-  let r = 加载走(".", 当路径(入口), (), ())
-  if r.错 != "" { return {ok: false, 错: r.错, 模块族: (), 路径们: ()} }
+  定 r = 加载走(".", 当路径(入口), (), ())
+  若 r.错 != "" { 返回 {ok: false, 错: r.错, 模块族: (), 路径们: ()} }
   var 模块族 = ()
   var i = 0
-  while i < len(r.已载) {
-    let 源码 = read_text(r.已载[i], "utf8")
+  当 i < len(r.已载) {
+    定 源码 = read_text(r.已载[i], "utf8")
     模块族 = 模块族 + (造模块(源码),)
     i = i + 1
   }
   // 路径与模块一起交回去：宿主 loader 的 order 是路径，桥要能照原样说同一个序列。
-  return {ok: true, 错: "", 模块族: 模块族, 路径们: r.已载}
+  返回 {ok: true, 错: "", 模块族: 模块族, 路径们: r.已载}
 }
 
 // 只解析、不求值，交回声明树。
@@ -450,14 +450,14 @@ fn 造整棵(入口: String) effects(file) {
 // 量「节点位置」时用它：求值会把树丢掉，而位置在树上。函数的形状与 parse_decls 交回的
 // 一致 —— 声明是 (名字, 参数名册, 语句们)。
 fn 解析程序(源: String) {
-  let 净 = 去导入(源)
-  if 行首是声明(净) {
-    let 全部 = parse_decls(scan_lines(净))
-    return 全部.fns
+  定 净 = 去导入(源)
+  若 行首是声明(净) {
+    定 全部 = parse_decls(scan_lines(净))
+    返回 全部.fns
   }
-  let 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
-  let 体 = parse_body(scan_lines(有壳))
-  return (体.list,)
+  定 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
+  定 体 = parse_body(scan_lines(有壳))
+  返回 (体.list,)
 }
 
 // 量具与启动器传进来的是「相对当前目录的路径」，可能不写 ./ 开头（self/sign.hmoca 这样）。
@@ -465,47 +465,47 @@ fn 解析程序(源: String) {
 // 别让「包名」那条分支抓住一条本来就能读的相对路径（2026-11-02 实测：不补的话
 // self-load 那套量出空 order，四棵树一起红）。
 fn 当路径(相对: String) -> String {
-  if 是路径(相对) { return 相对 }
-  if 是绝对(相对) { return 相对 }
-  return "./" + 相对
+  若 是路径(相对) { 返回 相对 }
+  若 是绝对(相对) { 返回 相对 }
+  返回 "./" + 相对
 }
 
 // 给一个入口（相对当前目录），交回 "ok <文件数>" 或 "错 <码> <路径>"。
 fn 只加载(入口: String) -> String effects(file) {
-  let r = 加载走(".", 当路径(入口), (), ())
-  if r.错 != "" { return "错 " + r.错 }
-  return "ok " + str(len(r.已载))
+  定 r = 加载走(".", 当路径(入口), (), ())
+  若 r.错 != "" { 返回 "错 " + r.错 }
+  返回 "ok " + str(len(r.已载))
 }
 
 // 加载顺序，一行一个（相对当前目录的写法）。量具靠它逐项比宿主 loader 的 order。
 fn 加载序(入口: String) -> String effects(file) {
-  let r = 加载走(".", 当路径(入口), (), ())
-  if r.错 != "" { return "错 " + r.错 }
+  定 r = 加载走(".", 当路径(入口), (), ())
+  若 r.错 != "" { 返回 "错 " + r.错 }
   var 出 = ""
   var i = 0
-  while i < len(r.已载) {
+  当 i < len(r.已载) {
     出 = 出 + r.已载[i] + chr(10)
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 // 按名字挑一个函数；没有就叫第一个（调试单个函数时方便）。
 fn 选函数从(们: Int, 名: String, i: Int) {
-  if i >= len(们) { return () }
-  if 们[i][0] == 名 { return 们[i] }
-  return 选函数从(们, 名, i + 1)
+  若 i >= len(们) { 返回 () }
+  若 们[i][0] == 名 { 返回 们[i] }
+  返回 选函数从(们, 名, i + 1)
 }
 
 fn 选函数(们: Int, 名: String) -> Int {
-  let 有 = 选函数从(们, 名, 0)
-  if len(有) == 0 { return 们[0] }
-  return 有
+  定 有 = 选函数从(们, 名, 0)
+  若 len(有) == 0 { 返回 们[0] }
+  返回 有
 }
 
 // 跑几个模块：每一段都扫出它的声明，把函数表合起来，然后跑 main。
 //
-// 合并的规矩是「后到者覆盖先到者」——与 let 的重定义一致。
+// 合并的规矩是「后到者覆盖先到者」——与 定 的重定义一致。
 // 读文件不在这里：那是启动器（能力内核）的事，于是自举不必背上 file 效果。
 // 去掉 import 行：那些行只用来找路径，解析器不认它们。
 //
@@ -514,30 +514,30 @@ fn 选函数(们: Int, 名: String) -> Int {
 // 看着像是在别处出的错。引号里 只在「这一行是 import」时才交回路径，
 // 所以用它判断既准又省一个函数。
 fn 去导入从(行批: Int, i: Int, acc: String) -> String {
-  if i >= len(行批) { return acc }
-  let 路 = 引号里(行批[i])
-  if 路 == "" { return 去导入从(行批, i + 1, acc + 行批[i] + chr(10)) }
-  return 去导入从(行批, i + 1, acc)
+  若 i >= len(行批) { 返回 acc }
+  定 路 = 引号里(行批[i])
+  若 路 == "" { 返回 去导入从(行批, i + 1, acc + 行批[i] + chr(10)) }
+  返回 去导入从(行批, i + 1, acc)
 }
 
 fn 去导入(源码: String) -> String {
-  return 去导入从(拆行(源码), 0, "")
+  返回 去导入从(拆行(源码), 0, "")
 }
 
 fn 合并从(已收: Int, 源码们: Int, i: Int) -> Int {
-  if i >= len(源码们) { return 已收 }
-  let tokens = scan_lines(去导入(源码们[i]))
-  let 全部 = parse_decls(tokens)
-  return 合并从(已收 + 全部.fns, 源码们, i + 1)
+  若 i >= len(源码们) { 返回 已收 }
+  定 tokens = scan_lines(去导入(源码们[i]))
+  定 全部 = parse_decls(tokens)
+  返回 合并从(已收 + 全部.fns, 源码们, i + 1)
 }
 
 // 常量要单独合并：它们的值要在装环境的时候求值，而函数表里放不下那一步。
 // 顺序是 import 的顺序 —— 依赖在前，所以被依赖的常量先装。
 fn 合并常量从(已收: Int, 源码们: Int, i: Int) -> Int {
-  if i >= len(源码们) { return 已收 }
-  let tokens = scan_lines(去导入(源码们[i]))
-  let 全部 = parse_decls(tokens)
-  return 合并常量从(已收 + 全部.consts, 源码们, i + 1)
+  若 i >= len(源码们) { 返回 已收 }
+  定 tokens = scan_lines(去导入(源码们[i]))
+  定 全部 = parse_decls(tokens)
+  返回 合并常量从(已收 + 全部.consts, 源码们, i + 1)
 }
 
 // ---- 认 import：从源码里取出它引的那几个路径 ----
@@ -556,12 +556,12 @@ fn 合并常量从(已收: Int, 源码们: Int, i: Int) -> Int {
 // 循环而不是每字符递归：递归深度等于字符数，源码一大就把机器栈吃光
 // （同样的写法在 self/pack.hmyr 那里让 C 机器退出码成了 0xC00000FD）。
 fn 拆行(文本: String) {
-  if 文本 == "" { return () }
+  若 文本 == "" { 返回 () }
   var i = 0
   var 起 = 0
   var acc = ()
-  while i < len(文本) {
-    if 文本[i] == chr(10) {
+  当 i < len(文本) {
+    若 文本[i] == chr(10) {
       acc = acc + (slice(文本, 起, i),)
       i = i + 1
       起 = i
@@ -569,65 +569,65 @@ fn 拆行(文本: String) {
       i = i + 1
     }
   }
-  return acc + (slice(文本, 起, len(文本)),)
+  返回 acc + (slice(文本, 起, len(文本)),)
 }
 
 // 这一行是不是「import "..."」。是就交回引号里的那一段，不是就交回空串。
 fn 引号里(行: String) -> String {
-  let 去 = 去首(行)
-  if len(去) < 9 { return "" }
-  if slice(去, 0, 6) != "import" { return "" }
+  定 去 = 去首(行)
+  若 len(去) < 9 { 返回 "" }
+  若 slice(去, 0, 6) != "import" { 返回 "" }
   // 还要看词界：importx 的前六个字符也是 import，而它不是那件事。
   // 与词法那条规矩一样——换记号只看整个记号，不看它里面的一部分。
-  if len(去) > 6 && 去[6] != " " && 去[6] != chr(9) && 去[6] != chr(34) { return "" }
-  let 开 = 找引号(去, 6)
-  if 开 < 0 { return "" }
-  let 闭 = 找引号(去, 开 + 1)
-  if 闭 < 0 { return "" }
-  return slice(去, 开 + 1, 闭)
+  若 len(去) > 6 && 去[6] != " " && 去[6] != chr(9) && 去[6] != chr(34) { 返回 "" }
+  定 开 = 找引号(去, 6)
+  若 开 < 0 { 返回 "" }
+  定 闭 = 找引号(去, 开 + 1)
+  若 闭 < 0 { 返回 "" }
+  返回 slice(去, 开 + 1, 闭)
 }
 
 fn 去首(行: String) -> String {
-  if len(行) == 0 { return 行 }
-  if 行[0] == " " || 行[0] == chr(9) { return 去首(slice(行, 1, len(行))) }
-  return 行
+  若 len(行) == 0 { 返回 行 }
+  若 行[0] == " " || 行[0] == chr(9) { 返回 去首(slice(行, 1, len(行))) }
+  返回 行
 }
 
 fn 找引号(文本: String, 起: Int) -> Int {
-  // 这里要改 i，所以是 var 而不是 let——let 声明的东西不可变。
+  // 这里要改 i，所以是 var 而不是 定——定 声明的东西不可变。
   var i = 起
-  while i < len(文本) && 文本[i] != chr(34) { i = i + 1 }
-  if i >= len(文本) { return -1 }
-  return i
+  当 i < len(文本) && 文本[i] != chr(34) { i = i + 1 }
+  若 i >= len(文本) { 返回 -1 }
+  返回 i
 }
 
 fn 导入们从(行批: Int, i: Int, acc: Int) -> Int {
-  if i >= len(行批) { return acc }
-  let 路 = 引号里(行批[i])
-  if 路 == "" { return 导入们从(行批, i + 1, acc) }
-  return 导入们从(行批, i + 1, acc + (路,))
+  若 i >= len(行批) { 返回 acc }
+  定 路 = 引号里(行批[i])
+  若 路 == "" { 返回 导入们从(行批, i + 1, acc) }
+  返回 导入们从(行批, i + 1, acc + (路,))
 }
 
 // 一段源码里引了哪些路径，按出现的顺序。
 fn 找导入们(源码: String) -> Int {
-  return 导入们从(拆行(源码), 0, ())
+  返回 导入们从(拆行(源码), 0, ())
 }
 
 fn 跑模块族(源码们: Int, 参们: Int) -> String {
-  let 函数族 = 合并从((), 源码们, 0)
-  if len(函数族) == 0 {
+  定 函数族 = 合并从((), 源码们, 0)
+  若 len(函数族) == 0 {
     // 一个声明也没有：那它可能是裸语句（老用法）。交回那条路，而不是报「没有 fn」。
-    if len(源码们) == 0 { return "错：没有源码" }
-    return 跑程序文字(源码们[0])
+    若 len(源码们) == 0 { 返回 "错：没有源码" }
+    返回 跑程序文字(源码们[0])
   }
-  let 选 = 选函数(函数族, "main")
+  定 选 = 选函数(函数族, "main")
   // 选[3] 是 main 自己声明的效果 —— 它决定这个程序能碰什么。
   var 主效 = ()
-  if len(选) > 3 { 主效 = 选[3] }
-  let 常量们 = 合并常量从((), 源码们, 0)
-  let r = 跑程序带常量与参(选[2], 函数族, 常量们, 参们, 主效)
-  if r.ok == false { return "错：" + r.text }
-  return str(r.value)
+  若 len(选) > 3 { 主效 = 选[3] }
+  定 常量们 = 合并常量从((), 源码们, 0)
+  定 r = 跑程序带常量与参(选[2], 函数族, 常量们, 参们, 主效)
+  若 r.ok == false { 返回 "错：" + r.text }
+  返回 str(r.value)
 }
 
 // ---- 读文件：这一层以前住在宿主的启动器里 ----
@@ -641,18 +641,18 @@ fn 跑模块族(源码们: Int, 参们: Int) -> String {
 fn 拼路径(目录: String, 相对: String) -> String {
   // 绝对路径原样返回。桥与测试会把临时目录里的文件交进来，那些不在仓库下，
   // 而「相对本目录」对它们没有意义 —— 说清这条边界，比让它们安静地读失败好。
-  if len(相对) >= 2 && slice(相对, 1, 2) == ":" { return 相对 }
-  if len(相对) >= 1 && slice(相对, 0, 1) == "/" { return 相对 }
-  if len(相对) >= 2 && slice(相对, 0, 2) == "./" {
-    return 目录 + "/" + slice(相对, 2, len(相对))
+  若 len(相对) >= 2 && slice(相对, 1, 2) == ":" { 返回 相对 }
+  若 len(相对) >= 1 && slice(相对, 0, 1) == "/" { 返回 相对 }
+  若 len(相对) >= 2 && slice(相对, 0, 2) == "./" {
+    返回 目录 + "/" + slice(相对, 2, len(相对))
   }
-  return 目录 + "/" + 相对
+  返回 目录 + "/" + 相对
 }
 
 fn 含路(已读: Int, 路: String, i: Int) -> Bool {
-  if i >= len(已读) { return false }
-  if 已读[i] == 路 { return true }
-  return 含路(已读, 路, i + 1)
+  若 i >= len(已读) { 返回 false }
+  若 已读[i] == 路 { 返回 true }
+  返回 含路(已读, 路, i + 1)
 }
 
 // 读一棵：先读自己，再挨个读它引的。顺序是先序——与以前启动器那段一模一样，
@@ -662,9 +662,9 @@ fn 含路(已读: Int, 路: String, i: Int) -> Bool {
 // 效果要一层一层传：这一件调了 读一棵（要 file），于是它自己也得要。
 // 那条规矩不许在调用链中间偷偷断掉——不然「谁动世界」就说不清了。
 fn 读多从(目录: String, 路们: Int, i: Int, 已读: Int, 源码们: Int) effects(file) {
-  if i >= len(路们) { return {已读: 已读, 源码们: 源码们} }
-  let r = 读一棵(目录, 路们[i], 已读, 源码们)
-  return 读多从(目录, 路们, i + 1, r.已读, r.源码们)
+  若 i >= len(路们) { 返回 {已读: 已读, 源码们: 源码们} }
+  定 r = 读一棵(目录, 路们[i], 已读, 源码们)
+  返回 读多从(目录, 路们, i + 1, r.已读, r.源码们)
 }
 
 // 一个文件路径的目录部分：最后一个分隔符之前的那一段。没有分隔符就是 "."。
@@ -672,40 +672,40 @@ fn 读多从(目录: String, 路们: Int, i: Int, 已读: Int, 源码们: Int) e
 // 于是 lib/protocol.hmyr 里那句 import "./tuples.hmoca" 被拼成了 conformance/tuples.hmyr，
 // 文件不在就按「可选引用」跳过 —— 症状是目标程序运行时报「没有这个函数：子段」。
 fn 目录部分(路: String) -> String {
-  let i = 最后一个分隔从(路, 0, 0 - 1)
-  if i < 0 { return "." }
-  return slice(路, 0, i)
+  定 i = 最后一个分隔从(路, 0, 0 - 1)
+  若 i < 0 { 返回 "." }
+  返回 slice(路, 0, i)
 }
 
 // 绝对路径：以 / 开头，或者第二个字符是盘符冒号。它不该再拼一次目录。
 fn 是绝对(相对: String) -> Bool {
-  if len(相对) >= 1 && slice(相对, 0, 1) == "/" { return true }
-  if len(相对) >= 2 && slice(相对, 1, 2) == ":" { return true }
-  return false
+  若 len(相对) >= 1 && slice(相对, 0, 1) == "/" { 返回 true }
+  若 len(相对) >= 2 && slice(相对, 1, 2) == ":" { 返回 true }
+  返回 false
 }
 
 // 一条 import 说明是不是「路径」：./ ../ 开头的、绝对路径。其余（形如一个名字）是包名。
 // 与宿主 loader 的判据同一条。
 fn 是路径(相对: String) -> Bool {
-  if len(相对) >= 2 && slice(相对, 0, 2) == "./" { return true }
-  if len(相对) >= 3 && slice(相对, 0, 3) == "../" { return true }
-  if 是绝对(相对) { return true }
-  return false
+  若 len(相对) >= 2 && slice(相对, 0, 2) == "./" { 返回 true }
+  若 len(相对) >= 3 && slice(相对, 0, 3) == "../" { 返回 true }
+  若 是绝对(相对) { 返回 true }
+  返回 false
 }
 
 // 像不像一个包名：不以数字、连字符或点开头，且整段不含斜杠。
 // 与宿主那条正则同一条意思（名字里允许非 ASCII —— 这门语言的标识符本来就允许）。
 // 不成形状的东西（std/io 这种）不是包名，是包管理器将来的事。
 fn 是包名字(s: String) -> Bool {
-  if len(s) == 0 { return false }
-  if is_digit(s[0]) { return false }
-  if s[0] == "-" || s[0] == "." { return false }
+  若 len(s) == 0 { 返回 false }
+  若 is_digit(s[0]) { 返回 false }
+  若 s[0] == "-" || s[0] == "." { 返回 false }
   var i = 0
-  while i < len(s) {
-    if s[i] == "/" { return false }
+  当 i < len(s) {
+    若 s[i] == "/" { 返回 false }
     i = i + 1
   }
-  return true
+  返回 true
 }
 
 // 从某个目录往上找「包根」：最外层的那个含 hmyr.hmkit 的目录。
@@ -713,31 +713,31 @@ fn 是包名字(s: String) -> Bool {
 // 所以「第一个含清单的目录」会是包自己 —— 于是 import "乙包" 会被解析成
 // 甲包/乙包/index.hmoca。往上走到底、取最后遇到的那个，才是这个工程的外壳。
 fn 找包根从(目录: String, 最后: String, 次: Int) -> String effects(file) {
-  if 次 > 64 { return 最后 }
+  若 次 > 64 { 返回 最后 }
   var 记 = 最后
-  if file_exists(目录 + "/hmyr.hmkit") { 记 = 目录 }
-  let 上 = 目录部分(目录)
-  if 上 == 目录 { return 记 }
-  return 找包根从(上, 记, 次 + 1)
+  若 file_exists(目录 + "/hmyr.hmkit") { 记 = 目录 }
+  定 上 = 目录部分(目录)
+  若 上 == 目录 { 返回 记 }
+  返回 找包根从(上, 记, 次 + 1)
 }
 
 // 一个 import 说明 → 一个路径。
 // 包名的规则只有一句：包根下面的一个目录，入口是那个目录里的 index.hmoca。
 fn 解析路(目录: String, 相对: String) -> String effects(file) {
-  if 是绝对(相对) { return 相对 }
-  if 是路径(相对) { return 拼路径(目录, 相对) }
-  return 找包根从(目录, 目录, 0) + "/" + 相对 + "/index.hmoca"
+  若 是绝对(相对) { 返回 相对 }
+  若 是路径(相对) { 返回 拼路径(目录, 相对) }
+  返回 找包根从(目录, 目录, 0) + "/" + 相对 + "/index.hmoca"
 }
 
 fn 读一棵(目录: String, 相对: String, 已读: Int, 源码们: Int) effects(file) {
-  let 路 = 解析路(目录, 相对)
-  if 含路(已读, 路, 0) { return {已读: 已读, 源码们: 源码们} }
+  定 路 = 解析路(目录, 相对)
+  若 含路(已读, 路, 0) { 返回 {已读: 已读, 源码们: 源码们} }
   // 不在就跳过：引一个可选文件不该让整个程序死。那与以前启动器的行为一致——
   // 而那件事以前靠宿主那边的 existsSync 做着。
-  if file_exists(路) == false { return {已读: 已读 + (路,), 源码们: 源码们} }
-  let 源码 = read_text(路, "utf8")
+  若 file_exists(路) == false { 返回 {已读: 已读 + (路,), 源码们: 源码们} }
+  定 源码 = read_text(路, "utf8")
   // 子模块的 import 相对**它自己**的目录，不是相对顶层目标。
-  return 读多从(目录部分(路), 找导入们(源码), 0, 已读 + (路,), 源码们 + (源码,))
+  返回 读多从(目录部分(路), 找导入们(源码), 0, 已读 + (路,), 源码们 + (源码,))
 }
 
 // 启动器要的那一件事：给目录与目标名，交回跑出来的那段文字。
@@ -754,16 +754,16 @@ fn 读一棵(目录: String, 相对: String, 已读: Int, 源码们: Int) effect
 // 自举层自己看到的是 [脚本名, 目标, 其余…]（启动器递过来的是那一份），
 // 而目标程序该看到 [目标, 其余…] —— 它问的是自己的参数，不是解释器的。
 fn 目标程序参数从(参们: Int, i: Int, 出: Int) -> Int {
-  if i >= len(参们) { return 出 }
-  return 目标程序参数从(参们, i + 1, 出 + (参们[i],))
+  若 i >= len(参们) { 返回 出 }
+  返回 目标程序参数从(参们, i + 1, 出 + (参们[i],))
 }
 
 fn 目标程序参数(参们: Int, 起: Int, 出: Int) -> Int {
-  return 目标程序参数从(参们, 起, 出)
+  返回 目标程序参数从(参们, 起, 出)
 }
 
 fn 跑文件入口(目录: String, 目标: String, 参们: Int) effects(file, process) {
-  let 路 = 拼路径(目录, 目标)
+  定 路 = 拼路径(目录, 目标)
   // 先转成绝对路径，再往 读一棵 传。
   //
   // 理由是那一边还会跑一次 解析路，而它只对绝对路径原样返回 —— 相对的 ./a/b 会被
@@ -771,18 +771,18 @@ fn 跑文件入口(目录: String, 目标: String, 参们: Int) effects(file, pr
   // 这道转换不是谨慎，是分工：入口这一层负责「从哪一个绝对文件开始」，
   // 底下那一层只负责「相对它怎么找」。
   var 全 = 路
-  if 是绝对(路) == false { 全 = 拼路径(cwd(), 路) }
-  if file_exists(全) == false {
-    return {ok: false, 文字: "HMYR-內-011 cannot read '" + 全 + "': no such file"}
+  若 是绝对(路) == false { 全 = 拼路径(cwd(), 路) }
+  若 file_exists(全) == false {
+    返回 {ok: false, 文字: "HMYR-內-011 cannot read '" + 全 + "': no such file"}
   }
   // 这里传 全（拼好的绝对路径），不是 目标。
   // 理由：解析路 会把「不像路径的名字」当包名，而入口文件的名字常常正是那样
   // （main.hmoca）。传绝对路径就绕过了那一条判断。
-  let 读 = 读一棵(目录, 全, (), ())
-  if len(读.源码们) == 0 {
-    return {ok: false, 文字: "HMYR-內-011 nothing read from '" + 全 + "'"}
+  定 读 = 读一棵(目录, 全, (), ())
+  若 len(读.源码们) == 0 {
+    返回 {ok: false, 文字: "HMYR-內-011 nothing read from '" + 全 + "'"}
   }
-  return {ok: true, 文字: 跑模块族(读.源码们, 参们)}
+  返回 {ok: true, 文字: 跑模块族(读.源码们, 参们)}
 }
 
 // ---- 命令行入口：第三步的第一半 ----
@@ -794,43 +794,43 @@ fn 跑文件入口(目录: String, 目标: String, 参们: Int) effects(file, pr
 
 // 最后一个路径分隔符的位置。认 / 与反斜杠两种，因为这台机器两种都会见到。
 fn 最后一个分隔从(路: String, i: Int, 末: Int) -> Int {
-  if i >= len(路) { return 末 }
-  let c = 路[i]
-  if c == "/" || c == chr(92) { return 最后一个分隔从(路, i + 1, i) }
-  return 最后一个分隔从(路, i + 1, 末)
+  若 i >= len(路) { 返回 末 }
+  定 c = 路[i]
+  若 c == "/" || c == chr(92) { 返回 最后一个分隔从(路, i + 1, i) }
+  返回 最后一个分隔从(路, i + 1, 末)
 }
 
 fn 拆目录(路: String) -> String {
-  let at = 最后一个分隔从(路, 0, -1)
-  if at < 0 { return "." }
-  if at == 0 { return slice(路, 0, 1) }
-  return slice(路, 0, at)
+  定 at = 最后一个分隔从(路, 0, -1)
+  若 at < 0 { 返回 "." }
+  若 at == 0 { 返回 slice(路, 0, 1) }
+  返回 slice(路, 0, at)
 }
 
 fn 拆名字(路: String) -> String {
-  let at = 最后一个分隔从(路, 0, -1)
-  if at < 0 { return 路 }
-  return slice(路, at + 1, len(路))
+  定 at = 最后一个分隔从(路, 0, -1)
+  若 at < 0 { 返回 路 }
+  返回 slice(路, at + 1, len(路))
 }
 
 // 交回退出码：0 表示跑通了，1 表示读不到或跑不动，2 表示参数不对。
 // 三个码与以前那个启动器一致——换主体不该悄悄改对外行为。
 fn 命令行入口() -> Int effects(process, file) {
-  let 参们 = argv()
+  定 参们 = argv()
   // 两条通道：答案走 print，用法与失败走 print_err。
   // 分开之后，"把答案重定向出去"就不必担心顺手把用法也塞进那个文件。
-  if len(参们) < 2 {
+  若 len(参们) < 2 {
     print_err("用法：hmyr <file.hmyr>" + chr(10))
-    return 2
+    返回 2
   }
-  let 目标 = 参们[1]
-  let 果 = 跑文件入口(拆目录(目标), 拆名字(目标), 目标程序参数(参们, 1, ()))
-  if 果.ok == false {
+  定 目标 = 参们[1]
+  定 果 = 跑文件入口(拆目录(目标), 拆名字(目标), 目标程序参数(参们, 1, ()))
+  若 果.ok == false {
     print_err(果.文字 + chr(10))
-    return 1
+    返回 1
   }
   print(果.文字 + chr(10))
-  return 0
+  返回 0
 }
 
 // ---- 编自己：语法层的那一半 ----
@@ -842,14 +842,14 @@ fn 命令行入口() -> Int effects(process, file) {
 // 两半都对，才说得上「它认得自己」。
 
 fn 函数名从(函数族: Int, i: Int, acc: Int) -> Int {
-  if i >= len(函数族) { return acc }
-  return 函数名从(函数族, i + 1, acc + (函数族[i][0],))
+  若 i >= len(函数族) { 返回 acc }
+  返回 函数名从(函数族, i + 1, acc + (函数族[i][0],))
 }
 
 // 一段源码声明了哪些函数名，按出现的顺序。
 fn 函数名册(源码: String) -> Int {
-  let 全部 = parse_decls(scan_lines(源码))
-  return 函数名从(全部.fns, 0, ())
+  定 全部 = parse_decls(scan_lines(源码))
+  返回 函数名从(全部.fns, 0, ())
 }
 
 // 给适配层用的公开入口（2026-11-01）。
@@ -859,14 +859,14 @@ fn 函数名册(源码: String) -> Int {
 // subset-parse 来建，形状才自动一致（design/FULLSELF.txt 第五节）。
 // 出错时第一行以「错 」开头，后面是码与路径。
 pub fn 加载顺序公开(目录: String, 相对: String) -> String effects(file) {
-  let r = 加载走(目录, 相对, (), ())
-  if r.错 != "" { return "错 " + r.错 + chr(10) }
-  return 拼行从(r.已载, 0, "")
+  定 r = 加载走(目录, 相对, (), ())
+  若 r.错 != "" { 返回 "错 " + r.错 + chr(10) }
+  返回 拼行从(r.已载, 0, "")
 }
 
 fn 拼行从(们: Int, i: Int, acc: String) -> String {
-  if i >= len(们) { return acc }
-  return 拼行从(们, i + 1, acc + 们[i] + chr(10))
+  若 i >= len(们) { 返回 acc }
+  返回 拼行从(们, i + 1, acc + 们[i] + chr(10))
 }
 
 // 只解析 的公开入口（2026-11-01）。
@@ -874,7 +874,7 @@ fn 拼行从(们: Int, i: Int, acc: String) -> String {
 // 为什么需要它：加载走 里最后一步是 只解析，而探针要从别的模块问它一件事 ——
 // 「把一段源码认下来」这一步本身会不会撑出几百层调用。它不是 pub，所以要这一行。
 pub fn 只解析公开(源码: String) -> String {
-  return 只解析(源码)
+  返回 只解析(源码)
 }
 fn main() -> Int effects(process) {
   print("1 + 2 * 3 → " + 跑("1 + 2 * 3") + "\n")
@@ -890,9 +890,9 @@ fn main() -> Int effects(process) {
   //
   // 而它只用到子集里有的东西：求值器的调用只认内置（见上面 跑程序文字 的注释），
   // 所以这里不写用户函数调用 —— 那一条限制属于自举层，不属于规范。
-  // 它自己会 print 一行 42，那就是判据；返回值不打印，因为裸语句没有 return，
+  // 它自己会 print 一行 42，那就是判据；返回值不打印，因为裸语句没有 返回，
   // 交回来的是空元组 —— 那一条是 跑程序文字 的语义，不是这次要验的东西。
   print("新程序 →\n")
   跑程序文字("print(str(6 * 7) + chr(10))\n")
-  return 0
+  返回 0
 }

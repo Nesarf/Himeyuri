@@ -36,42 +36,42 @@ fn 是数字字符(c: String) -> Bool {
 fn 读字符串从(s: String, i: Int, acc: String) {
   if i >= len(s) { return ({kind: "err", text: "字符串没有闭合"}, i) }
   let c = s[i]
-  if c == "\"" { return ({kind: "s", value: acc}, i + 1) }
-  if c == "\\" {
-    if i + 1 >= len(s) { return ({kind: "err", text: "转义不完整"}, i) }
-    return 读字符串从(s, i + 2, acc + s[i + 1])
+  if c == "\"" { 返回 ({kind: "s", value: acc}, i + 1) }
+  若 c == "\\" {
+    若 i + 1 >= len(s) { 返回 ({kind: "err", text: "转义不完整"}, i) }
+    返回 读字符串从(s, i + 2, acc + s[i + 1])
   }
-  return 读字符串从(s, i + 1, acc + c)
+  返回 读字符串从(s, i + 1, acc + c)
 }
 
 fn 读字符串(s: String, i: Int) {
-  return 读字符串从(s, i, "")
+  返回 读字符串从(s, i, "")
 }
 
 // 数字：整数，可带负号。
 // 数字：整数或小数。小数点只认一个，读到别的字符就收工。
 // 整数给 "n"（值是整数），带小数点的给 "f"（值保留原文，免得把 0.969 悄悄读成 0）。
 fn 读数字从(s: String, i: Int, acc: String, 有点: Bool) {
-  if i >= len(s) { return (收数字(acc), i) }
-  let c = s[i]
-  if 是数字字符(c) { return 读数字从(s, i + 1, acc + c, 有点) }
-  if c == "." && 有点 == false { return 读数字从(s, i + 1, acc + ".", true) }
-  return (收数字(acc), i)
+  若 i >= len(s) { 返回 (收数字(acc), i) }
+  定 c = s[i]
+  若 是数字字符(c) { 返回 读数字从(s, i + 1, acc + c, 有点) }
+  若 c == "." && 有点 == false { 返回 读数字从(s, i + 1, acc + ".", true) }
+  返回 (收数字(acc), i)
 }
 
 fn 收数字(原文: String) {
-  if 含点(原文) { return {kind: "f", value: 原文} }
-  return {kind: "n", value: to_int(原文)}
+  若 含点(原文) { 返回 {kind: "f", value: 原文} }
+  返回 {kind: "n", value: to_int(原文)}
 }
 
 fn 含点从(s: String, i: Int) -> Bool {
-  if i >= len(s) { return false }
-  if s[i] == "." { return true }
-  return 含点从(s, i + 1)
+  若 i >= len(s) { 返回 false }
+  若 s[i] == "." { 返回 true }
+  返回 含点从(s, i + 1)
 }
 
 fn 含点(s: String) -> Bool {
-  return 含点从(s, 0)
+  返回 含点从(s, 0)
 }
 
 
@@ -79,85 +79,85 @@ fn 含点(s: String) -> Bool {
 
 // 字面量：true / false / null
 fn 读字面量(s: String, i: Int, 字: String, 值: Int) {
-  if i + len(字) > len(s) { return ({kind: "err", text: "字面量不完整：" + 字}, i) }
-  let 片 = slice(s, i, i + len(字))
-  if 片 != 字 { return ({kind: "err", text: "不认识的词：" + 片}, i) }
-  return (值, i + len(字))
+  若 i + len(字) > len(s) { 返回 ({kind: "err", text: "字面量不完整：" + 字}, i) }
+  定 片 = slice(s, i, i + len(字))
+  若 片 != 字 { 返回 ({kind: "err", text: "不认识的词：" + 片}, i) }
+  返回 (值, i + len(字))
 }
 
 
 
 fn 读值(s: String, i: Int) {
-  let j = 跳过空白(s, i)
-  if j >= len(s) { return ({kind: "err", text: "没有值"}, j) }
-  let c = s[j]
-  if c == "\"" { return 读字符串(s, j + 1) }
-  if c == "{" { return 读对象(s, j + 1, ()) }
-  if c == "[" { return 读数组(s, j + 1, ()) }
-  if c == "t" { return 读字面量(s, j, "true", ({kind: "b", value: true})) }
-  if c == "f" { return 读字面量(s, j, "false", ({kind: "b", value: false})) }
-  if c == "n" { return 读字面量(s, j, "null", {kind: "null"}) }
+  定 j = 跳过空白(s, i)
+  若 j >= len(s) { 返回 ({kind: "err", text: "没有值"}, j) }
+  定 c = s[j]
+  若 c == "\"" { 返回 读字符串(s, j + 1) }
+  若 c == "{" { 返回 读对象(s, j + 1, ()) }
+  若 c == "[" { 返回 读数组(s, j + 1, ()) }
+  若 c == "t" { 返回 读字面量(s, j, "true", ({kind: "b", value: true})) }
+  若 c == "f" { 返回 读字面量(s, j, "false", ({kind: "b", value: false})) }
+  若 c == "n" { 返回 读字面量(s, j, "null", {kind: "null"}) }
   // 负号要单独吃：读数字从只认数字字符，遇到负号会立刻收工，于是 -7 会变成 0。
-  if c == "-" {
-    let 后半 = 读数字从(s, j + 1, "", false)
-    if 后半[0].kind == "f" { return ({kind: "f", value: "-" + 后半[0].value}, 后半[1]) }
-    return ({kind: "n", value: 0 - 后半[0].value}, 后半[1])
+  若 c == "-" {
+    定 后半 = 读数字从(s, j + 1, "", false)
+    若 后半[0].kind == "f" { 返回 ({kind: "f", value: "-" + 后半[0].value}, 后半[1]) }
+    返回 ({kind: "n", value: 0 - 后半[0].value}, 后半[1])
   }
-  if 是数字字符(c) { return 读数字从(s, j, "", false) }
-  return ({kind: "err", text: "不认识的字符：" + c}, j + 1)
+  若 是数字字符(c) { 返回 读数字从(s, j, "", false) }
+  返回 ({kind: "err", text: "不认识的字符：" + c}, j + 1)
 }
 
 // 数组：[值, 值, ...]——遇到 ] 收工。
 fn 读数组从(s: String, i: Int, acc: Int) {
-  let j = 跳过空白(s, i)
-  if j >= len(s) { return ({kind: "err", text: "数组没有闭合"}, j) }
-  if s[j] == "]" { return ({kind: "a", value: acc}, j + 1) }
-  if s[j] == "," { return 读数组从(s, j + 1, acc) }
-  let 一个 = 读值(s, j)
-  if 一个[0].kind == "err" { return 一个 }
-  return 读数组从(s, 一个[1], acc + (一个[0],))
+  定 j = 跳过空白(s, i)
+  若 j >= len(s) { 返回 ({kind: "err", text: "数组没有闭合"}, j) }
+  若 s[j] == "]" { 返回 ({kind: "a", value: acc}, j + 1) }
+  若 s[j] == "," { 返回 读数组从(s, j + 1, acc) }
+  定 一个 = 读值(s, j)
+  若 一个[0].kind == "err" { 返回 一个 }
+  返回 读数组从(s, 一个[1], acc + (一个[0],))
 }
 
 fn 读数组(s: String, i: Int, acc: Int) {
-  return 读数组从(s, i, acc)
+  返回 读数组从(s, i, acc)
 }
 
 // 对象：{"键": 值, ...}——键读成字符串值，再塞进 (键, 值) 的对里。
 fn 读对象从(s: String, i: Int, acc: Int) {
-  let j = 跳过空白(s, i)
-  if j >= len(s) { return ({kind: "err", text: "对象没有闭合"}, j) }
-  if s[j] == "}" { return ({kind: "o", value: acc}, j + 1) }
-  if s[j] == "," { return 读对象从(s, j + 1, acc) }
-  if s[j] != "\"" { return ({kind: "err", text: "键必须是字符串"}, j) }
-  let 键 = 读字符串(s, j + 1)
-  if 键[0].kind == "err" { return 键 }
-  let k = 跳过空白(s, 键[1])
-  if k >= len(s) || s[k] != ":" { return ({kind: "err", text: "键后面应当是冒号"}, k) }
-  let 值 = 读值(s, k + 1)
-  if 值[0].kind == "err" { return 值 }
-  return 读对象从(s, 值[1], acc + ((键[0].value, 值[0]),))
+  定 j = 跳过空白(s, i)
+  若 j >= len(s) { 返回 ({kind: "err", text: "对象没有闭合"}, j) }
+  若 s[j] == "}" { 返回 ({kind: "o", value: acc}, j + 1) }
+  若 s[j] == "," { 返回 读对象从(s, j + 1, acc) }
+  若 s[j] != "\"" { 返回 ({kind: "err", text: "键必须是字符串"}, j) }
+  定 键 = 读字符串(s, j + 1)
+  若 键[0].kind == "err" { 返回 键 }
+  定 k = 跳过空白(s, 键[1])
+  若 k >= len(s) || s[k] != ":" { 返回 ({kind: "err", text: "键后面应当是冒号"}, k) }
+  定 值 = 读值(s, k + 1)
+  若 值[0].kind == "err" { 返回 值 }
+  返回 读对象从(s, 值[1], acc + ((键[0].value, 值[0]),))
 }
 
 fn 读对象(s: String, i: Int, acc: Int) {
-  return 读对象从(s, i, acc)
+  返回 读对象从(s, i, acc)
 }
 
 // 入口：读一段 JSON，交回 (值, 结束位置)。值带着 kind，所以调用方不必猜它是什么。
 pub fn 解析(s: String) {
-  return 读值(s, 0)
+  返回 读值(s, 0)
 }
 
 // 从对象里取一个字段。不是对象、或没有这个键，都返回 err——
 // 调用方据此拒绝，而不是拿默认值顶上。
 fn 字段从(对表: Int, 键: String, i: Int) {
-  if i >= len(对表) { return {kind: "err", text: "没有字段：" + 键} }
-  if 对表[i][0] == 键 { return 对表[i][1] }
-  return 字段从(对表, 键, i + 1)
+  若 i >= len(对表) { 返回 {kind: "err", text: "没有字段：" + 键} }
+  若 对表[i][0] == 键 { 返回 对表[i][1] }
+  返回 字段从(对表, 键, i + 1)
 }
 
 fn 字段(对象: Int, 键: String) {
-  if 对象.kind != "o" { return {kind: "err", text: "不是对象，取不到字段 " + 键} }
-  return 字段从(对象.value, 键, 0)
+  若 对象.kind != "o" { 返回 {kind: "err", text: "不是对象，取不到字段 " + 键} }
+  返回 字段从(对象.value, 键, 0)
 }
 
 
@@ -169,110 +169,110 @@ fn 字段(对象: Int, 键: String) {
 fn 转义文(s: String) -> String {
   var 出 = ""
   var i = 0
-  while i < len(s) {
-    let c = s[i]
-    if c == "\"" { 出 = 出 + "\\\"" }
-    else if c == "\\" { 出 = 出 + "\\\\" }
-    else if c == chr(10) { 出 = 出 + "\\n" }
-    else if c == chr(13) { 出 = 出 + "\\r" }
-    else if c == chr(9) { 出 = 出 + "\\t" }
+  当 i < len(s) {
+    定 c = s[i]
+    若 c == "\"" { 出 = 出 + "\\\"" }
+    else 若 c == "\\" { 出 = 出 + "\\\\" }
+    else 若 c == chr(10) { 出 = 出 + "\\n" }
+    else 若 c == chr(13) { 出 = 出 + "\\r" }
+    else 若 c == chr(9) { 出 = 出 + "\\t" }
     else { 出 = 出 + c }
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 fn 引号(s: String) -> String {
-  return "\"" + 转义文(s) + "\""
+  返回 "\"" + 转义文(s) + "\""
 }
 
 fn 缩进空(n: Int) -> String {
   var 出 = ""
   var i = 0
-  while i < n {
+  当 i < n {
     出 = 出 + "  "
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 fn 生成紧凑(值: Int) -> String {
-  if 值.kind == "n" { return str(值.value) }
-  if 值.kind == "f" { return 值.value }
-  if 值.kind == "s" { return 引号(值.value) }
-  if 值.kind == "b" {
-    if 值.value { return "true" }
-    return "false"
+  若 值.kind == "n" { 返回 str(值.value) }
+  若 值.kind == "f" { 返回 值.value }
+  若 值.kind == "s" { 返回 引号(值.value) }
+  若 值.kind == "b" {
+    若 值.value { 返回 "true" }
+    返回 "false"
   }
-  if 值.kind == "null" { return "null" }
-  if 值.kind == "a" {
+  若 值.kind == "null" { 返回 "null" }
+  若 值.kind == "a" {
     var 出 = "["
     var i = 0
-    while i < len(值.value) {
-      if i > 0 { 出 = 出 + "," }
+    当 i < len(值.value) {
+      若 i > 0 { 出 = 出 + "," }
       出 = 出 + 生成紧凑(值.value[i])
       i = i + 1
     }
-    return 出 + "]"
+    返回 出 + "]"
   }
-  if 值.kind == "o" {
+  若 值.kind == "o" {
     var 出 = "{"
     var i = 0
-    while i < len(值.value) {
-      if i > 0 { 出 = 出 + "," }
+    当 i < len(值.value) {
+      若 i > 0 { 出 = 出 + "," }
       出 = 出 + 引号(值.value[i][0]) + ":" + 生成紧凑(值.value[i][1])
       i = i + 1
     }
-    return 出 + "}"
+    返回 出 + "}"
   }
-  return "null"
+  返回 "null"
 }
 
 // 缩进形式：空容器写成 [] / {}，非空才换行。
 fn 生成缩进(值: Int, 层: Int) -> String {
-  if 值.kind == "n" { return str(值.value) }
-  if 值.kind == "f" { return 值.value }
-  if 值.kind == "s" { return 引号(值.value) }
-  if 值.kind == "b" {
-    if 值.value { return "true" }
-    return "false"
+  若 值.kind == "n" { 返回 str(值.value) }
+  若 值.kind == "f" { 返回 值.value }
+  若 值.kind == "s" { 返回 引号(值.value) }
+  若 值.kind == "b" {
+    若 值.value { 返回 "true" }
+    返回 "false"
   }
-  if 值.kind == "null" { return "null" }
-  if 值.kind == "a" {
-    if len(值.value) == 0 { return "[]" }
-    let 内 = 缩进空(层 + 1)
+  若 值.kind == "null" { 返回 "null" }
+  若 值.kind == "a" {
+    若 len(值.value) == 0 { 返回 "[]" }
+    定 内 = 缩进空(层 + 1)
     var 出 = "[" + chr(10)
     var i = 0
-    while i < len(值.value) {
+    当 i < len(值.value) {
       出 = 出 + 内 + 生成缩进(值.value[i], 层 + 1)
-      if i + 1 < len(值.value) { 出 = 出 + "," }
+      若 i + 1 < len(值.value) { 出 = 出 + "," }
       出 = 出 + chr(10)
       i = i + 1
     }
-    return 出 + 缩进空(层) + "]"
+    返回 出 + 缩进空(层) + "]"
   }
-  if 值.kind == "o" {
-    if len(值.value) == 0 { return "{}" }
-    let 内 = 缩进空(层 + 1)
+  若 值.kind == "o" {
+    若 len(值.value) == 0 { 返回 "{}" }
+    定 内 = 缩进空(层 + 1)
     var 出 = "{" + chr(10)
     var i = 0
-    while i < len(值.value) {
+    当 i < len(值.value) {
       出 = 出 + 内 + 引号(值.value[i][0]) + ": " + 生成缩进(值.value[i][1], 层 + 1)
-      if i + 1 < len(值.value) { 出 = 出 + "," }
+      若 i + 1 < len(值.value) { 出 = 出 + "," }
       出 = 出 + chr(10)
       i = i + 1
     }
-    return 出 + 缩进空(层) + "}"
+    返回 出 + 缩进空(层) + "}"
   }
-  return "null"
+  返回 "null"
 }
 
 pub fn 生成(值: Int) -> String {
-  return 生成紧凑(值)
+  返回 生成紧凑(值)
 }
 
 fn 生成二(值: Int) -> String {
-  return 生成缩进(值, 0)
+  返回 生成缩进(值, 0)
 }
 
 // ---- 串与字节 ----
@@ -285,46 +285,46 @@ fn 生成二(值: Int) -> String {
 // 这里每 1024 字节封一块，最后用两半合并折平。
 
 pub fn 拼平(块堆: Int, 起: Int, 止: Int) {
-  if 止 - 起 <= 1 { return 块堆[起] }
+  若 止 - 起 <= 1 { 返回 块堆[起] }
   var 左 = 起
   var 右 = 止
-  while 右 - 左 > 2 {
+  当 右 - 左 > 2 {
     左 = 左 + 1
     右 = 右 - 1
   }
-  let 中 = 左 + 1
-  return 拼平(块堆, 起, 中) + 拼平(块堆, 中, 止)
+  定 中 = 左 + 1
+  返回 拼平(块堆, 起, 中) + 拼平(块堆, 中, 止)
 }
 
 pub fn 从文本(s: String) {
   var 块堆 = ()
   var 块 = ()
   var i = 0
-  while i < len(s) {
-    let cp = ord(s[i])
-    if cp < 128 {
+  当 i < len(s) {
+    定 cp = ord(s[i])
+    若 cp < 128 {
       块 = 块 + (cp,)
-    } else if cp < 2048 {
+    } else 若 cp < 2048 {
       块 = 块 + (192 + (cp - cp % 64) / 64, 128 + cp % 64)
     } else {
-      let 高 = (cp - cp % 4096) / 4096
-      let 中 = ((cp - cp % 64) / 64) % 64
-      let 低 = cp % 64
+      定 高 = (cp - cp % 4096) / 4096
+      定 中 = ((cp - cp % 64) / 64) % 64
+      定 低 = cp % 64
       块 = 块 + (224 + 高, 128 + 中, 128 + 低)
     }
-    if len(块) >= 1024 {
+    若 len(块) >= 1024 {
       块堆 = 块堆 + (块,)
       块 = ()
     }
     i = i + 1
   }
-  if len(块) > 0 { 块堆 = 块堆 + (块,) }
-  if len(块堆) == 0 { return () }
-  return 拼平(块堆, 0, len(块堆))
+  若 len(块) > 0 { 块堆 = 块堆 + (块,) }
+  若 len(块堆) == 0 { 返回 () }
+  返回 拼平(块堆, 0, len(块堆))
 }
 
 fn main() -> Int {
-  let 一个 = 解析("{\"a\": 1, \"b\": [true, false]}")[0]
+  定 一个 = 解析("{\"a\": 1, \"b\": [true, false]}")[0]
   print("kind " + 一个.kind + " 字段 " + str(len(一个.value)) + "\n")
-  return 0
+  返回 0
 }

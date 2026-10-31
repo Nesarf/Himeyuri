@@ -52,8 +52,12 @@ const 宿主 = 块里的键(读("src/eval.mjs"), "const BUILTINS = {", /^ {2}([a
 const 最小 = 块里的键(读("src/minimal-eval.mjs"), "const 内置 = {", /^ {2}([a-zA-Z_][a-zA-Z0-9_]*)\s*:/);
 const 编译 = 集合里的名(读("src/bytecode.mjs"), "const 内置名 = new Set([");
 const 字节码 = 块里的键(读("src/vm-builtins.mjs"), "export const 内置表 = {", /^ {2}([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*\{/);
-const 自举 = [...读("self/eval.hmoca").matchAll(/if 名 == "([a-zA-Z_][a-zA-Z0-9_]*)"/g)].map((m) => m[1]);
-const C = [...new Set([...读("vm/hmyr.c").matchAll(/name_is\(name_idx, "([a-zA-Z_][a-zA-Z0-9_]*)"\)/g)].map((m) => m[1]))];
+// 三条正则都要认两种写法。为什么：这些表是「按源码文本抓名字」的量具，
+// 而源码本身换过关键字（if → 若、return → 返回），也换过 C 那台参数的名字
+// （name_idx → 名off）。量具跟着被量的东西一起过时，症状是整列变空 ——
+// 而空列读起来像「那台什么都没有」，不像「量具坏了」。2026-11-02 三条一起修。
+const 自举 = [...读("self/eval.hmoca").matchAll(/(?:if|若) 名 == "([a-zA-Z_][a-zA-Z0-9_]*)"/g)].map((m) => m[1]);
+const C = [...new Set([...读("vm/hmyr.c").matchAll(/name_is\((?:name_idx|名off), "([a-zA-Z_][a-zA-Z0-9_]*)"\)/g)].map((m) => m[1]))];
 // 第七处（2026-10-25 补）：自举编译器自己的「是内置」表，在 self/compile.hmyr 里。
 //
 // 为什么它必须在这一份账上：种子（bootstrap/pack.hmtn）就是它的字节码，所以这张表
@@ -64,7 +68,7 @@ const C = [...new Set([...读("vm/hmyr.c").matchAll(/name_is\(name_idx, "([a-zA-
 // 它比别的几处多一样东西：表里还有一批中文名（数组 · 设 · 位与 … 与 校验和），
 // 那些不是宿主的 BUILTINS 键，只在 C 那台的 name_is 上。所以这一处只要求
 // 「宿主有的，这里都有」，不要求反向相等。
-const 自举编译 = [...new Set([...读("self/compile.hmoca").matchAll(/if 名 == "([^"]+)" \{ return true \}/g)].map((m) => m[1]))];
+const 自举编译 = [...new Set([...读("self/compile.hmoca").matchAll(/(?:if|若) 名 == "([^"]+)" \{ (?:return|返回) true \}/g)].map((m) => m[1]))];
 
 const 去重 = (a) => [...new Set(a)].sort();
 const 宿 = 去重(宿主), 小 = 去重(最小), 编 = 去重(编译), 字 = 去重(字节码), 自 = 去重(自举), 机 = 去重(C);

@@ -1,16 +1,16 @@
 // write_text 的验收。路径从 argv 取 —— 目标程序现在看得见自己的参数了，
 // 而 argv 要 process 效果，所以 main 声明两个。
 fn main() -> Int effects(process, file) {
-  let 参 = argv()
-  let 路 = 参[1]
-  let 文 = "写着玩的"
-  let n = write_text(路, 文)
-  if n != 4 {
-    return 1
+  定 参 = argv()
+  定 路 = 参[1]
+  定 文 = "写着玩的"
+  定 n = write_text(路, 文)
+  若 n != 4 {
+    返回 1
   }
-  let 回 = read_text(路, "utf8")
-  if 回 != 文 {
-    return 2
+  定 回 = read_text(路, "utf8")
+  若 回 != 文 {
+    返回 2
   }
-  return 0
+  返回 0
 }

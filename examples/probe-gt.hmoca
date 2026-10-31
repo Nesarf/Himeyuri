@@ -6,5 +6,5 @@ fn main() -> Int effects(process) {
   print("1>2=" + str(1 > 2) + chr(10))
   print("2>1=" + str(2 > 1) + chr(10))
   print("1>=2=" + str(1 >= 2) + chr(10))
-  return 0
+  返回 0
 }

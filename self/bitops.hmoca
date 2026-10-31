@@ -8,11 +8,11 @@
 fn 倍(n: Int) -> Int {
   var v = 1
   var i = 0
-  while i < n {
+  当 i < n {
     v = v * 2
     i = i + 1
   }
-  return v
+  返回 v
 }
 
 fn 与(a: Int, b: Int) -> Int {
@@ -21,16 +21,16 @@ fn 与(a: Int, b: Int) -> Int {
   var x = a
   var y = b
   var i = 0
-  while i < 32 {
-    let 甲 = x % 2
-    let 乙 = y % 2
-    if 甲 == 1 && 乙 == 1 { 出 = 出 + 倍量 }
+  当 i < 32 {
+    定 甲 = x % 2
+    定 乙 = y % 2
+    若 甲 == 1 && 乙 == 1 { 出 = 出 + 倍量 }
     x = (x - 甲) / 2
     y = (y - 乙) / 2
     倍量 = 倍量 * 2
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 fn 或(a: Int, b: Int) -> Int {
@@ -39,16 +39,16 @@ fn 或(a: Int, b: Int) -> Int {
   var x = a
   var y = b
   var i = 0
-  while i < 32 {
-    let 甲 = x % 2
-    let 乙 = y % 2
-    if 甲 == 1 || 乙 == 1 { 出 = 出 + 倍量 }
+  当 i < 32 {
+    定 甲 = x % 2
+    定 乙 = y % 2
+    若 甲 == 1 || 乙 == 1 { 出 = 出 + 倍量 }
     x = (x - 甲) / 2
     y = (y - 乙) / 2
     倍量 = 倍量 * 2
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 fn 异或(a: Int, b: Int) -> Int {
@@ -57,46 +57,46 @@ fn 异或(a: Int, b: Int) -> Int {
   var x = a
   var y = b
   var i = 0
-  while i < 32 {
-    let 甲 = x % 2
-    let 乙 = y % 2
-    if 甲 != 乙 { 出 = 出 + 倍量 }
+  当 i < 32 {
+    定 甲 = x % 2
+    定 乙 = y % 2
+    若 甲 != 乙 { 出 = 出 + 倍量 }
     x = (x - 甲) / 2
     y = (y - 乙) / 2
     倍量 = 倍量 * 2
     i = i + 1
   }
-  return 出
+  返回 出
 }
 
 // 32 位取反：全一减它。
 fn 非(a: Int) -> Int {
-  return 4294967295 - (a % 4294967296)
+  返回 4294967295 - (a % 4294967296)
 }
 
 fn 右移(a: Int, n: Int) -> Int {
-  return (a - a % 倍(n)) / 倍(n)
+  返回 (a - a % 倍(n)) / 倍(n)
 }
 
 // 32 位加：溢出就绕回来。
 fn 加32(a: Int, b: Int) -> Int {
-  return (a + b) % 4294967296
+  返回 (a + b) % 4294967296
 }
 
 // 循环右移：低 n 位搬到高 n 位，其余右移 n 位。
 fn 循环右移(a: Int, n: Int) -> Int {
-  let 割 = 倍(n)
-  let 低 = a % 割
-  let 高 = (a - 低) / 割
-  return 低 * 倍(32 - n) + 高
+  定 割 = 倍(n)
+  定 低 = a % 割
+  定 高 = (a - 低) / 割
+  返回 低 * 倍(32 - n) + 高
 }
 
 // 循环左移：与右移相反方向，SHA-256 的 Σ 用它。
 fn 循环左移(a: Int, n: Int) -> Int {
-  let 割 = 倍(32 - n)
-  let 低 = a % 割
-  let 高 = (a - 低) / 割
-  return 低 * 倍(n) + 高
+  定 割 = 倍(32 - n)
+  定 低 = a % 割
+  定 高 = (a - 低) / 割
+  返回 低 * 倍(n) + 高
 }
 
 fn main() -> Int {
@@ -108,5 +108,5 @@ fn main() -> Int {
   print(str(加32(4294967295, 1)) + chr(10)) // 0
   print(str(循环右移(1, 1)) + chr(10))      // 2147483648
   print(str(循环左移(2147483648, 1)) + chr(10)) // 1
-  return 0
+  返回 0
 }

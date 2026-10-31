@@ -8,12 +8,12 @@ import "../self/lex.hmoca"
 import "../self/body.hmoca"
 
 fn main() -> Int effects(process) {
-  let 源码 = "fn main() -> Int {\n  print(str(6 * 7) + chr(10))\n  return 0\n}\n"
-  let tokens = scan_lines(源码)
+  定 源码 = "fn main() -> Int {\n  print(str(6 * 7) + chr(10))\n  return 0\n}\n"
+  定 tokens = scan_lines(源码)
   print("tokens=" + str(len(tokens)) + chr(10))
-  let 全部 = parse_decls(tokens)
+  定 全部 = parse_decls(tokens)
   print("fns=" + str(len(全部.fns)) + chr(10))
   print("首项=" + str(len(全部.fns[0])) + chr(10))
   print("语句们=" + str(len(全部.fns[0][2])) + chr(10))
-  return 0
+  返回 0
 }

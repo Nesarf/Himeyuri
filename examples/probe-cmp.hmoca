@@ -9,5 +9,5 @@ fn main() -> Int effects(process) {
   print("0<1=" + str(0 < 1) + chr(10))
   print("1<=1=" + str(1 <= 1) + chr(10))
   print("2<=1=" + str(2 <= 1) + chr(10))
-  return 0
+  返回 0
 }
