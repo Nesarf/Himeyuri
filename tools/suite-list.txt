@@ -3,6 +3,7 @@ parser	test/parser.test.mjs
 eval	test/eval.test.mjs
 docs	tools/check-docs.mjs
 docshmyr	test/docs-hmyr.test.mjs
+docstatshmyr	test/doc-stats-hmyr.test.mjs
 conform	tools/conformance.mjs
 kpb	test/kpb.test.mjs
 m4rt	test/kpb-roundtrip.test.mjs
