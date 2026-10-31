@@ -186,6 +186,7 @@ const SUITES = [
   ["ssh", "test/ssh.test.mjs", "SPEC M7 - the OpenSSH signature wire format: base64 decoded and every section of the SSHSIG structure matched byte for byte"],
   ["sign", "test/sign.test.mjs", "SPEC M7 - a real release signature verified by Himeyuri itself: the signed data built from PROTOCOL.sshsig section 3, and the judge refuses a message changed by one byte"],
   ["selfcov", "tools/self-coverage.mjs", "FULLSELF - the evaluator written in HMYR agrees with the host on fourteen programs"],
+  ["selfratiohmyr", "test/self-ratio-hmyr.test.mjs", "M7 - the bootstrap ratio measured twice: the JavaScript version and the HMYR one count the same lines in the same five groups, and agree on the total (skipped when the host has no C compiler)"],
   ["selfload", "tools/self-loader.mjs", "FULLSELF - the loading half: the lexer and parser written in HMYR accept the same 27 real files the host loader accepts"],
   ["selfmod", "tools/self-load.mjs", "FULLSELF - module loading semantics: four real import trees give the same order, and a missing import or a cycle is refused with the same code as the host loader"],
   ["selfpos", "tools/self-positions.mjs", "FULLSELF - the lexer's positions: six samples agree with the host lexer token for token on text, line and column"],
