@@ -164,10 +164,10 @@
   // ---- 排除表 ----
   定 排文 = read_text(数据目录 + "/CompositionExclusions.txt")
   变 排掉 = index_new()
-  定 排们 = split(排文, chr(10))
+  定 排串 = split(排文, chr(10))
   变 m = 0
-  当 m < len(排们) {
-    变 净 = 排们[m]
+  当 m < len(排串) {
+    变 净 = 排串[m]
     // 去掉注释
     定 井 = split(净, "#")
     若 len(井) > 0 { 净 = 修剪(井[0]) }

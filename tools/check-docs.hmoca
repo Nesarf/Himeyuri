@@ -163,23 +163,23 @@
   定 参册 = argv()
   变 起 = "."
   若 len(参册) > 1 { 起 = 参册[1] }
-  定 文们 = 走(起, (), 0)
+  定 文档批 = 走(起, (), 0)
   变 坏 = 0
   变 i = 0
-  当 i < len(文们) {
-    定 路 = 文们[i]
+  当 i < len(文档批) {
+    定 路 = 文档批[i]
     定 文 = read_text(路, "utf8")
-    定 记们 = 行记号们(文) + 行内记号们(文)
+    定 记号批 = 行记号们(文) + 行内记号们(文)
     定 相对 = slice(路, 2, len(路))
-    若 len(记们) == 0 {
+    若 len(记号批) == 0 {
       print("  [通过] " + 相对 + chr(10))
     } 否则 {
       坏 = 坏 + 1
-      print("  [不通过] " + 相对 + "  " + 拼(记们) + chr(10))
+      print("  [不通过] " + 相对 + "  " + 拼(记号批) + chr(10))
     }
     i = i + 1
   }
-  print(chr(10) + str(len(文们)) + " document(s) checked, " + str(坏) + " with rendering syntax" + chr(10))
+  print(chr(10) + str(len(文档批)) + " document(s) checked, " + str(坏) + " with rendering syntax" + chr(10))
   若 坏 == 0 { 返回 0 }
   返回 1
 }

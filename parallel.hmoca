@@ -19,21 +19,21 @@
   返回 repo_path("deps/surface/parallel.ps1")
 }
 
-函数 拼列表从(命令们: Int, i: Int, acc: String) -> String {
-  若 i >= len(命令们) { 返回 acc }
-  返回 拼列表从(命令们, i + 1, acc + 命令们[i] + "\n")
+函数 拼列表从(命令册: Int, i: Int, acc: String) -> String {
+  若 i >= len(命令册) { 返回 acc }
+  返回 拼列表从(命令册, i + 1, acc + 命令册[i] + "\n")
 }
 
-函数 拼列表(命令们: Int) -> String {
-  返回 拼列表从(命令们, 0, "")
+函数 拼列表(命令册: Int) -> String {
+  返回 拼列表从(命令册, 0, "")
 }
 
 // 真的同时跑。交回 {ok, text}：text 是那段 JSON，由调用方交给 json.hmyr 解析。
 //
 // 超时是**每条**的上限（脚本里逐条 Wait-Job），不是总时长——因为并行时「总时长」
 // 取决于最长的那一条，把它写死反而会误杀。
-函数 并行跑(命令们: Int, 超时秒: Int) -> Int 效果串(process, file) {
-  write_text(列表路径(), 拼列表(命令们), "utf8")
+函数 并行跑(命令册: Int, 超时秒: Int) -> Int 效果串(process, file) {
+  write_text(列表路径(), 拼列表(命令册), "utf8")
   定 r = run_program("powershell", ("-NoProfile", "-STA", "-File", 并行脚本(),
     "-List", 列表路径(), "-Out", 结果路径(), "-TimeoutSec", str(超时秒)), 120000, "utf8")
   若 r.code != 0 { 返回 {ok: 假, text: r.stderr} }

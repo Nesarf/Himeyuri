@@ -374,7 +374,7 @@
   返回 模块版本(tokens, i + 1)
 }
 
-函数 导入节点们(tokens: Int, i: Int, acc: Int) {
+函数 导入节点批(tokens: Int, i: Int, acc: Int) {
   若 i >= len(tokens) { 返回 acc }
   定 t = tokens[i]
   若 t.kind == "ident" && t.text == "import" && i + 1 < len(tokens) && tokens[i + 1].kind == "string" {
@@ -398,9 +398,9 @@
       若 i + 4 < len(tokens) && tokens[i + 4].kind == "ident" { 别 = tokens[i + 4].text }
     }
     定 节 = {kind: "引入", path: s.text, alias: 别, rev: 版, line: t.line, column: t.column}
-    返回 导入节点们(tokens, i + 2, acc + (节,))
+    返回 导入节点批(tokens, i + 2, acc + (节,))
   }
-  返回 导入节点们(tokens, i + 1, acc)
+  返回 导入节点批(tokens, i + 1, acc)
 }
 
 // 一整个文件 → Module。有声明就按声明走；没有就照旧包一层 函数 main 的壳（老用法）。
@@ -408,7 +408,7 @@
   定 净 = 去导入(源)
   // 引入 行被 去导入 剥掉了，所以找它们要用原始源码。
   定 全toks = scan_lines(源)
-  定 导入 = 导入节点们(全toks, 0, ())
+  定 导入 = 导入节点批(全toks, 0, ())
   // 判断「这是不是一份带声明的程序」看 parse_decls 的结果，不看第一行 —— 文件以注释开头
   // 时会误判（lex.hmyr 就是这样：第一行是注释，于是整份被当成裸语句包进 函数 main 的壳）。
   // 解析用**原始** token 流：去导入 会把行号整体上移，两边就对不上位置了。
