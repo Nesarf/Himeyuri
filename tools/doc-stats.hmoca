@@ -67,9 +67,9 @@
 }
 
 函数 main() -> Int 效果串(file, process) {
-  定 参们 = argv()
+  定 参册 = argv()
   变 起 = "design"
-  若 len(参们) > 1 { 起 = 参们[1] }
+  若 len(参册) > 1 { 起 = 参册[1] }
   定 份 = 数份(起, "txt", 0)
   定 行 = 数行总(起, "txt", 0)
   print(起 + "/ 下的 .txt：" + str(份) + " 份，" + str(行) + " 行" + chr(10))

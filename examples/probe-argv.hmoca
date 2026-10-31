@@ -3,11 +3,11 @@
 // 为什么（2026-11-01）：adapter 在 C 机器上报 cannot read 'D:/himeyuri'，
 // 而它拿到的目录与相对路径都是由 argv 决定的。形状写对之前，别的不必谈。
 函数 main() -> Int 效果串(process) {
-  定 参们 = argv()
-  print("len=" + str(len(参们)) + chr(10))
+  定 参册 = argv()
+  print("len=" + str(len(参册)) + chr(10))
   变 i = 0
-  当 i < len(参们) {
-    print(str(i) + "=[" + 参们[i] + "]" + chr(10))
+  当 i < len(参册) {
+    print(str(i) + "=[" + 参册[i] + "]" + chr(10))
     i = i + 1
   }
   返回 0
