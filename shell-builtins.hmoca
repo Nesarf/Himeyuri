@@ -55,7 +55,7 @@
   返回 是内建从(名, 内建清单(), 0)
 }
 
-pub 函数 认命令(行: String) -> Int {
+公开 函数 认命令(行: String) -> Int {
   定 词 = 切词(行)
   若 len(词) == 0 { 返回 {kind: "empty"} }
   定 名 = 词[0]
@@ -93,7 +93,7 @@ pub 函数 认命令(行: String) -> Int {
 // 动世界的地方带着效果声明（效果串(process)），而输出与退出只是交回一个判定——
 // 这一层不自己去 print，也不自己去 exit，因为那两件事由调用方决定。
 
-pub 函数 执行命令(判定: Int) -> Int 效果串(process) {
+公开 函数 执行命令(判定: Int) -> Int 效果串(process) {
   若 判定.kind == "empty" { 返回 {kind: "nothing"} }
   若 判定.kind == "unknown" { 返回 {kind: "external", name: 判定.name} }
   若 判定.kind == "err" { 返回 {kind: "err", text: 判定.text} }

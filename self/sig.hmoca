@@ -6,9 +6,9 @@
 // （先前漏了它，于是宿主去取 scan 时拿到空值，报错只说「读不到 params」——
 //   一条看起来像内部故障、其实是缺依赖的信息。补上依赖，信息才对得上号。）
 //
-//   [pub] 函数 名字 ( 参数… ) [-> 类型] [效果串( 效果… )] [函数体]
+//   [公开] 函数 名字 ( 参数… ) [-> 类型] [效果串( 效果… )] [函数体]
 //
-// 读成：{kind: "fn", pub, name, params, returns, 效果串, hasBody}
+// 读成：{kind: "fn", 公开, name, params, returns, 效果串, hasBody}
 //   params  : 元组，每项 {name, type}（拥有 / 借用 这类前缀会被跳过）
 //             字段名就叫 type：语言的字段名位置允许关键字，这条正是自举逼出来的。
 //
@@ -147,7 +147,7 @@
     node: {
       kind: "fn",
       at: 起,
-      pub: is_pub,
+      公开: is_pub,
       name: name,
       params: got.list,
       returns: returns,
@@ -186,7 +186,7 @@
 }
 
 // 整份源码里的所有函数声明，按出现顺序。语言服务器的 documentSymbol 用它。
-pub 函数 all_signatures(tokens: Int) -> Int {
+公开 函数 all_signatures(tokens: Int) -> Int {
   var 列 = ()
   var i = 0
   当 i < len(tokens) {

@@ -8,7 +8,7 @@
 // 深度先算好：外层「一条语句一层」（层数等于语句数），而收集一条语句时最多占「这一条自己的 token 数」
 // 那么多层。两者相加而不是相乘，所以一段百来行的体不会碰到调用深度上限。
 
-pub 函数 is_punct(t: Int, ch: String) -> Bool {
+公开 函数 is_punct(t: Int, ch: String) -> Bool {
   返回 t.kind == "punct" && t.text == ch
 }
 
@@ -121,7 +121,7 @@ pub 函数 is_punct(t: Int, ch: String) -> Bool {
 }
 
 // 宿主入口：拿整份函数声明的 token 流，读出它的体。
-pub 函数 parse_body(tokens: Int) {
+公开 函数 parse_body(tokens: Int) {
   定 at = find_body(tokens, 0)
   若 at < 0 { 返回 {list: (), next: len(tokens), found: 假} }
   定 got = each(tokens, at + 1, ())
@@ -387,17 +387,17 @@ pub 函数 parse_body(tokens: Int) {
   定 效们 = 效果们(tokens, at + 1, open)
   // 第七件是返回类型。它加在末尾，所以读 选[2] 与 选[3] 的老代码一行都不用改。
   定 返型 = 返回类型在(tokens, at + 1, open)
-  // 第八件：这个声明是不是 pub。原来不收它，于是「可见性第一步」与「命名空间」在
-  // 自举层那条路上永远看不到 pub —— 跨模块调用一律被当成私有的（2026-11-02 实测：
-  // 桥交出的 pub 恒为 假，而 namespace 那套的「写 pub 就不报」因此恒红）。
-  // pub 写在 函数 前一个记号：next_decl 只停在 函数/常量/var，所以它被跳过了。
+  // 第八件：这个声明是不是 公开。原来不收它，于是「可见性第一步」与「命名空间」在
+  // 自举层那条路上永远看不到 公开 —— 跨模块调用一律被当成私有的（2026-11-02 实测：
+  // 桥交出的 公开 恒为 假，而 namespace 那套的「写 公开 就不报」因此恒红）。
+  // 公开 写在 函数 前一个记号：next_decl 只停在 函数/常量/var，所以它被跳过了。
   var 是公开 = 0
   若 at > 0 && tokens[at - 1].kind == "ident" && tokens[at - 1].text == "pub" { 是公开 = 1 }
   返回 decls_from(tokens, got.next, acc + ((名, 参名册, got.list, 效们, 位.line, 位.column, 返型, 是公开),), 常量们)
 }
 
 // 交回 {fns: ((名字, 参数名册, 语句们, 效果名册, 行, 列), …), consts: ((名字, 值), …), next}。
-pub 函数 parse_decls(tokens: Int) -> Int {
+公开 函数 parse_decls(tokens: Int) -> Int {
   返回 decls_from(tokens, 0, (), ())
 }
 

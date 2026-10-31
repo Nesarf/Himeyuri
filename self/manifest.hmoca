@@ -23,7 +23,7 @@
   返回 slice(s, 0, len(头)) == 头
 }
 
-pub 函数 以尾(s: String, 尾: String) -> Bool {
+公开 函数 以尾(s: String, 尾: String) -> Bool {
   若 len(s) < len(尾) { 返回 假 }
   返回 slice(s, len(s) - len(尾), len(s)) == 尾
 }
@@ -99,7 +99,7 @@ pub 函数 以尾(s: String, 尾: String) -> Bool {
 // 走一个目录，交回它下面所有文件的相对路径（递归）。
 // 这一层靠 is_dir 分岔 —— read_dir 只给名字，说不了「这是不是一个目录」。
 // 元组相加在这里够用：一层几十项，深度两层。
-pub 函数 走文件(路: String) 效果串(file) {
+公开 函数 走文件(路: String) 效果串(file) {
   定 名册 = read_dir(路)
   var 文们 = ()
   var 子们 = ()
@@ -333,7 +333,7 @@ pub 函数 走文件(路: String) 效果串(file) {
   )
 }
 
-pub 函数 主(出路: String) 效果串(file, process) {
+公开 函数 主(出路: String) 效果串(file, process) {
   var 块堆 = ()
   var 块 = ""
   var 块行数 = 0

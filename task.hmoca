@@ -64,7 +64,7 @@
   返回 有id从(树, id, i + 1)
 }
 
-pub 函数 有id(树: Int, id: Int) -> Bool {
+公开 函数 有id(树: Int, id: Int) -> Bool {
   返回 有id从(树, id, 0)
 }
 
