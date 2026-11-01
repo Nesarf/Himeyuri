@@ -223,6 +223,7 @@ const SUITES = [
   ["selfif", "test/self-if.test.mjs", "SPEC M7 - if, with its blocks, read by Himeyuri"],
   ["selfcompare", "test/self-compare.test.mjs", "SPEC M7 - comparison operators, at the precedence the language declares"],
   ["selfsig", "test/self-sig.test.mjs", "SPEC M7 - function signatures read by Himeyuri agree with the JavaScript reader"],
+  ["suitelist", "test/suite-list.test.mjs", "the two suite lists agree: check-all.mjs --list and tools/suite-list.txt hold the same names, the same scripts, no duplicates, and every path that does not exist is named"],
 ];
 
 /* 清单导出：给 HMYR 写的那一份调度器（self/check.hmyr）用。
