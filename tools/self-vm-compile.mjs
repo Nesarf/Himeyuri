@@ -54,12 +54,14 @@ const 样本 = [
   ["if 与字符串", 'fn main() -> Int {\n  let s = "ab"\n  if s == "ab" {\n    print(s)\n  }\n  return len(s)\n}\n'],
   ["while 与比较", "fn main() -> Int {\n  var i = 0\n  while i < 4 {\n    i = i + 1\n  }\n  return i\n}\n"],
   ["元组与下标", "fn main() -> Int {\n  let t = (10, 20, 30)\n  return t[1]\n}\n"],
-  // 真实文件样本暂时留在这里的注释里，而不是数组里：2026-11-02 把它（self/bigint.hmoca）
-  // 加进来之后立刻抓到两个真差异 —— 一个是效果声明被硬编码成空（已修，在 self/compile.hmoca
-  // 的 编函数 里），另一个是「从十六进制」多出一条 弃（还没修，追到语句层）。
+  // 真实文件。前五份都是五行以内的小程序，而「两个编译器给同一个字节流」这条判据真正要
+  // 守的是大文件 —— 2026-11-02 加进来之后立刻抓到三处差异（效果硬编码成空、记录字段名被
+  // 归一成 effect、嵌套 若 多一个 弃），三处都修完之后 19 份真实文件逐字节相同。
   //
-  // 修完之后该把它移回数组：判据要覆盖真实文件，五行小程序守不住这一层。
-  // 在那之前它由 tools/compile-diff.mjs 反复量着，不让它消失。
+  // 选 bigint.hmoca 因为两条：336 行，且零 import（这一套的样本会被写进临时目录，
+  // 有 import 的会在那里解析不了）。curve 与 sign 现在还编不动 —— 等子集扩大之后
+  // 那两份才进得来。
+  ["真实文件 self/bigint.hmoca", fs.readFileSync(path.join(ROOT, "self/bigint.hmoca"), "utf8")],
 ];
 
 console.log("一、打包器在虚拟机上跑得动");
