@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { 是源码 } from "./file-kind.mjs";
+import { loadUnit, runUnit } from "../src/loader.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 读 = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
@@ -61,14 +61,34 @@ console.log("  有效果的内置：" + (效果行 ? 效果行.replace(/.*=\s*/,
 //
 // 那十四个名字从 design/RUNTIME.txt 里读，而不是在这里重抄一遍——
 // 抄一遍就会两处漂移，而「文档与工具对不上」正是这一路一直在修的那种事。
+// 这一面要走目录找源码文件，而判据现在交给 HMYR 那一份（tools/file-kind.hmoca）。
+//
+// 为什么是「整批问」而不是逐个问：跨层调用每一次都要一千倍的钱（那份文件头有实测），
+// 而这一趟本来就在走目录 —— 先把这一层的名字收集起来，一次交过去，是顺手的事。
+const 判据层 = loadUnit(path.join(ROOT, "tools/file-kind.hmoca"));
+if (!判据层.ok) {
+  console.error("  tools/file-kind.hmoca 装不动：" + 判据层.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
+  process.exit(2);
+}
+const 判据 = runUnit(判据层);
+const 只留源码 = (名册) => {
+  if (名册.length === 0) return [];
+  return String(判据.callFunction(判据.functions.get("只留源码"), [名册.join("\n")], null) || "")
+    .split("\n").filter(Boolean);
+};
+
 const 库文件 = [];
 const 走 = (dir) => {
   if (!fs.existsSync(dir)) return;
+  const 子目录 = [];
+  const 名字 = [];
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) 走(p);
-    else if (是源码(e.name)) 库文件.push(p);
+    if (e.isDirectory()) 子目录.push(path.join(dir, e.name));
+    else 名字.push(e.name);
   }
+  const 源码名 = new Set(只留源码(名字));
+  for (const n of 名字) if (源码名.has(n)) 库文件.push(path.join(dir, n));
+  for (const d of 子目录) 走(d);
 };
 走(path.join(ROOT, "runtime"));
 

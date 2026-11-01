@@ -94,6 +94,18 @@ const 码甲 = JS版.全部字节码后缀().join(",");
 const 码乙 = Array.from(叫("全部字节码后缀", []) || []).join(",");
 ok("全部字节码后缀 相同", 码甲 === 码乙, "JS " + 码甲 + " / HMYR " + 码乙);
 
+console.log("六、整批问");
+// 整批入口交回的是换行分隔的一串 —— 与逐个问的结果必须一样，顺序也一致。
+const 清单 = 样本.filter((n) => n.length > 0);
+const 批甲 = 清单.filter((n) => JS版.是源码(n)).join("\n");
+const 批乙 = String(叫("只留源码", [清单.join("\n")]) || "").split("\n").filter(Boolean).join("\n");
+ok("只留源码 交回同一份清单（" + 批甲.split("\n").filter(Boolean).length + " 个）", 批甲 === 批乙,
+  "JS " + JSON.stringify(批甲) + " / HMYR " + JSON.stringify(批乙));
+ok("空串交回空串", String(叫("只留源码", [""]) || "") === "", JSON.stringify(叫("只留源码", [""])));
+ok("整批里一个都不合就交回空串", String(叫("只留源码", ["design/SPEC.txt\nnoext"]) || "") === "",
+  JSON.stringify(叫("只留源码", ["design/SPEC.txt\nnoext"])));
+ok("逐行判断与逐个判断同源", 批甲 === 清单.filter((n) => JS版.是源码(n)).join("\n"));
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
