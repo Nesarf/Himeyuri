@@ -146,7 +146,7 @@ if (!层.ok) {
 //
 // 连不上要出声，报 HMYR-行-021 并以 2 退出。形状写错也报同一个编号，
 // 因为这两种的结果一样：输出没有去处。退回标准流是更坏的选择 —— 那是静默丢输出。
-import { 档位, 档预设, 档步限 } from "../tools/file-kind.mjs";
+import { 档位, 档步限, 档线程 } from "../tools/file-kind-hmyr.mjs";
 
 const 参数 = process.argv.slice(1);
 
@@ -229,7 +229,7 @@ const 解套接字 = (规) => {
 };
 
 // 档位：hmsnp 与 hmhsr 是同一份内容的两档入口，而决定行为的是名字 ——
-// 档位由后缀定，判断只有一处（tools/file-kind.mjs 的 档位）。
+// 档位由后缀定，判断只有一处（tools/file-kind.hmoca 的 档位，经 tools/file-kind-hmyr.mjs 过来）。
 // steady 走得稳：步限五百万、线程池一个；elastic 吃满硬件：步限两亿、线程不设限。
 // 没有档位（.hmoca）时保持原来那两个数 —— 普通文件的跑法不该因为多了两档而变。
 const 目标路 = 参数.slice(1).find((a) => !a.startsWith("--"));
@@ -238,7 +238,7 @@ const 档 = 档位(目标路);
 const 步限 = Number(process.env.HMYR_STEPS || 0) || 档步限(目标路);
 // 线程上限也由档位给 —— 能力层不知道谁还活着，它只收下这个数，
 // 而「活着的线程数不能超过它」这一条在 vm-builtins.mjs 的 thr_spawn 里兑现。
-const 能力 = 本机能力({ 线程上限: 档 ? 档预设[档].线程 : 0 });
+const 能力 = 本机能力({ 线程上限: 档 ? 档线程(目标路) : 0 });
 
 // 三区模型的编译期那一半（design/MEMORY.txt 第一条硬规则）。
 //
