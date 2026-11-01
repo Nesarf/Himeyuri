@@ -74,6 +74,7 @@ units	test/units.test.mjs
 ucd	test/ucd.test.mjs
 corpus	test/corpus.test.mjs
 redact	test/redact.test.mjs
+redacthmyr	test/redact-hmyr.test.mjs
 writetext	test/write-text.test.mjs
 codefile	test/code-file.test.mjs
 cvm	test/c-vm.test.mjs
