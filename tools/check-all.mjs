@@ -163,6 +163,7 @@ const SUITES = [
   // 改名第一步的验收：新名与旧名指的是同一件事，两台机器都得认两套拼法。
   // 第二步（批量 git mv）之后这一套仍然该绿 —— 那时它证明的是「旧的接了没」。
   ["names", "test/names.test.mjs", "design/FILETYPE.txt - the rename's first step: .hmyr with .hmoca, .hmyrb with .hmoks, and .hmtn for the seed, all naming the same things on both machines"],
+  ["filekindhmyr", "test/file-kind-hmyr.test.mjs", "M7 - the suffix rule written twice: tools/file-kind.mjs and tools/file-kind.hmoca answer the same on seventeen names, including the empty string, upper case, a trailing slash and the retired spellings"],
   // 两档：hmsnp 与 hmhsr 是同一份内容的两档入口，档位由名字定。
   ["profile", "test/profile.test.mjs", "design/FILETYPE.txt section four - the two entries really differ: the profile comes from the suffix, steady and elastic land on different resource presets, a plain .hmoca keeps the number it always had, and both run to the same output"],
   // 容器格式的骨架：三条规矩都是格式的一部分，所以各有判据。

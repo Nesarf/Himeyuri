@@ -141,6 +141,7 @@ elsenewline	test/else-newline.test.mjs
 selfcontained	test/self-contained.test.mjs
 seedgap	test/seed-gap.test.mjs
 names	test/names.test.mjs
+filekindhmyr	test/file-kind-hmyr.test.mjs
 profile	test/profile.test.mjs
 ittgn	test/ittgn.test.mjs
 deflate	test/deflate.test.mjs
