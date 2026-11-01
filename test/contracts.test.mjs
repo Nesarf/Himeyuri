@@ -7,13 +7,19 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { run } from "../src/eval.mjs";
 import { lex } from "../src/lexer.mjs";
 import { parse } from "../src/parser.mjs";
 import { loadUnit } from "../src/loader.mjs";
 import { 跑字节码 } from "../src/vm.mjs";
 import { 最小运行 } from "../src/minimal-eval.mjs";
+import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
+import { 写程序 } from "../src/code-file.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
@@ -177,6 +183,57 @@ console.log("十、minimal-eval 那台：开关在它上面也有意义");
   ok("与另外两台说的是同一句", 开坏.话 === "函数 取 的第 1 条 requires 不成立", JSON.stringify(开坏.话));
   const 关好 = 跑(好, false), 开好 = 跑(好, true);
   ok("契约都成立时两边输出一样", 关好.ok && 开好.ok && 关好.出 === 开好.出 && 关好.出 === "6", JSON.stringify([关好.ok, 关好.出, 开好.ok, 开好.出]));
+}
+
+console.log("十一、C 那台：契约已经在字节码里，所以它只差一个内置");
+{
+  // 这一节要说的道理很短：C 那台执行的是**已经编好的字节码**，而契约检查是编译器
+  // 编进去的。所以它不需要自己的契约实现，只需要认「契约失败」这个名字。
+  // 判据因此不是「它自己也查一遍」，而是「同一份字节在它那里给出同一个答案与同一句话」。
+  const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
+  if (!有gcc) {
+    console.log("  跳过  这台机器上没有 gcc");
+  } else {
+    const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-contract-c-"));
+    const exe = path.join(临, "hmyr.exe");
+    const cc = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+    ok("C 那台编得出来", cc.status === 0, String(cc.stderr).slice(0, 160));
+    if (cc.status === 0) {
+      const 新诊断3 = () => ({
+        items: [], errors: [], warnings: [],
+        add(severity, code, message, line, column) {
+          const one = { severity, code, message, line, column };
+          this.items.push(one);
+          if (severity === "error") this.errors.push(one);
+        },
+        error(code, message, line, column) { this.add("error", code, message, line, column); },
+        warn(code, message, line, column) { this.add("warning", code, message, line, column); },
+      });
+      const 宿主读3 = (source) => {
+        const d = 新诊断3();
+        const { ast } = parse(lex(source).tokens, { diagnostics: d });
+        return { ast, diagnostics: d };
+      };
+      const 跑 = (源, 强, 名) => {
+        const 源路 = path.join(临, 名 + ".hmoca");
+        fs.writeFileSync(源路, 源, "utf8");
+        const unit = loadUnit(源路, { reader: 宿主读3 });
+        const 程序 = 合并程序(unit.order.map((文件) => 编译模块(unit.modules.get(文件), { contracts: 强 })));
+        const 码路 = path.join(临, 名 + ".hmoks");
+        fs.writeFileSync(码路, 写程序(程序));
+        const r = spawnSync(exe, [码路], { encoding: "utf8", timeout: 120000 });
+        return { 出: String(r.stdout || "").trim(), 错: String(r.stderr || ""), 码: r.status };
+      };
+      const 好源 = "fn 取(n: Int) -> Int requires n > 0 ensures 返回值 > 0 {\n  return n * 2\n}\nfn main() -> Int {\n  print(str(取(3)))\n  return 0\n}\n";
+      const 坏源 = "fn 取(n: Int) -> Int requires n > 0 {\n  return n\n}\nfn main() -> Int {\n  print(str(取(0 - 5)))\n  return 0\n}\n";
+      const 关坏 = 跑(坏源, false, "关坏"), 开坏 = 跑(坏源, true, "开坏");
+      ok("关档跑得过去", 关坏.码 === 0 && 关坏.出 === "-5", JSON.stringify([关坏.码, 关坏.出]));
+      ok("开档停在 HMYR-契-001", 开坏.码 === 1 && 开坏.错.includes("HMYR-契-001"), JSON.stringify([开坏.码, 开坏.错.slice(0, 80)]));
+      ok("消息与 JS 那三台同一句", 开坏.错.includes("函数 取 的第 1 条 requires 不成立"), JSON.stringify(开坏.错.slice(0, 80)));
+      const 关好 = 跑(好源, false, "关好"), 开好 = 跑(好源, true, "开好");
+      ok("契约都成立时两台输出一样", 关好.出 === "6" && 开好.出 === "6", JSON.stringify([关好.出, 开好.出]));
+    }
+  }
 }
 
 console.log("");

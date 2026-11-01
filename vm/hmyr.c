@@ -3197,6 +3197,20 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     value_to_text(args[0], out);
     return 1;
   }
+  if (name_is16(名off, (const uint16_t[]){0x5951, 0x7EA6, 0x5931, 0x8D25}, 4)) {  /* 契约失败 */
+    /* 契约不成立时停下（design/CONTRACTS.txt）。码与消息都是编译器写进常量的字面量，
+     * 所以这一条只是个「带着指定码停机」的出口：它不判断什么，也不决定查不查 ——
+     * 要不要查由编译器决定（编不编那一段），与 JS 那一侧的内置同一条分工。
+     * 于是这一台不必有自己的契约实现：它执行的是已经编好的字节码。 */
+    if (nargs != 2) { fail("HMYR-行-002", "契约失败 wants a code and a message"); return 1; }
+    if (args[0].tag != T_STR || args[1].tag != T_STR) { fail("HMYR-行-013", "契约失败 wants two strings"); return 1; }
+    char *码 = utf16_to_utf8(args[0].s, args[0].slen);
+    char *话 = utf16_to_utf8(args[1].s, args[1].slen);
+    fail(码, 话);
+    free(码);
+    free(话);
+    return 1;
+  }
   // 32 位位运算：与 JS 那三份同一套语义（无符号 32 位，移位按 31 取模）。
   if (name_is16(名off, (const uint16_t[]){0x4F4D, 0x4E0E}, 2)) {      /* 位与 */
     if (nargs != 2) { fail("HMYR-行-020", "位与 wants two arguments"); return 1; }
