@@ -5295,7 +5295,18 @@ static Value run_func(Func *f, Value *args, int nargs) {
       case OP_CALLF: {
         int64_t 位 = find_func_index(in->a);
         Func *callee = (位 >= 0) ? &g_机->函数族[位] : NULL;
-        if (!callee) { fail("HMYR-行-005", "there is no such function"); FRAME_RET(v_null()); }
+        if (!callee) {
+          /* 缺的是哪一个名字：这句以前只说「没有这个函数」，而调用点可能有几十处。
+           * 名字本来就在常量池里，说出来很便宜 —— 不说的时候，查的人只能从头猜。
+           * 打成 UTF-16 码元，四个十六进制一位，读的时候自己拼。 */
+          uint16_t 名缓2[256];
+          uint32_t ml = 池取到((uint32_t)in->a, 名缓2, 256);
+          fprintf(stderr, "MISSING-FUNC:");
+          for (uint32_t k = 0; k < ml && k < 256; k++) fprintf(stderr, "%04X", (unsigned)名缓2[k]);
+          fprintf(stderr, "\n");
+          fail("HMYR-行-005", "there is no such function");
+          FRAME_RET(v_null());
+        }
         if (g_calls_on && g_calls_n < 200000) {
           /* 对某一个函数，顺手把实参的种类打出来：调用序列只说明「调了它」，
            * 说不清「给了它什么」。求二元 就是被盯的那个（79 号）。 */

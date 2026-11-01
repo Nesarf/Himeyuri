@@ -81,6 +81,35 @@
 // 原来的问题：只有花括号有深度，于是 `返回 (` 换行之后，collect 认为这一条语句到此为止，
 // 把后面的元组元素切成一条条独立语句。而解析器本身（atom 与 paren_or_tuple）是认得跨行的，
 // 只是它从没拿到完整的那一段。
+// 这一行还没写完吗：末尾是否停在一个「要右操作数」的记号上。
+//
+// 为什么需要它（2026-11-02）：语句原来一律按换行切，于是
+//
+//     返回 "6a09…" +
+//           "510e…"
+//
+// 被切成两条 —— 第一条以 + 收尾，而 + 去要右操作数时 token 已经用完，落进 chain
+// 里那个空白的「误」节点，最后报成「这一版还编不了这种表达式：误」。
+// 那句错把现场指到了三层之外：看上去像编译器不支持某种表达式，
+// 实际是这一层把一句话切成了两半。self/sha512.hmoca 的 初始串 与 self/sign.hmoca
+// 都踩在这一条上，而它只在「运算符正好落在行末」时才出现，所以容易一路错过。
+//
+// 为什么只认这些记号：它们后面必须还有一个操作数，没有就写不成话。
+// 括号与花括号的跨行已经由 paren 与 depth 管着，不在这里重复一遍。
+函数 续到尾(t: Int) -> Bool {
+  若 t.kind != "punct" { 返回 假 }
+  定 x = t.text
+  若 x == "+" || x == "-" || x == "*" || x == "/" || x == "%" { 返回 真 }
+  若 x == "==" || x == "!=" || x == "<" || x == "<=" || x == ">" || x == ">=" { 返回 真 }
+  若 x == "&&" || x == "||" || x == "=" || x == "," || x == "." || x == ":" { 返回 真 }
+  返回 假
+}
+
+函数 续行(acc: Int) -> Bool {
+  若 len(acc) == 0 { 返回 假 }
+  返回 续到尾(acc[len(acc) - 1])
+}
+
 函数 collect(tokens: Int, i: Int, depth: Int, paren: Int, acc: Int) {
   若 i >= len(tokens) { 返回 {line: acc, next: i, end: 真} }
   定 t = tokens[i]
@@ -96,7 +125,7 @@
     返回 collect(tokens, i + 1, depth, p, acc + (t,))
   }
   若 t.kind == "newline" {
-    若 depth == 0 && paren == 0 { 返回 {line: acc, next: i + 1, end: 假} }
+    若 depth == 0 && paren == 0 && 续行(acc) == 假 { 返回 {line: acc, next: i + 1, end: 假} }
     返回 collect(tokens, i + 1, depth, paren, acc)
   }
   返回 collect(tokens, i + 1, depth, paren, acc + (t,))

@@ -32,7 +32,11 @@ console.log("一、种子在仓库里，而且它是一份能跑的东西");
   if (fs.existsSync(种子路)) {
     const 字节 = fs.readFileSync(种子路);
     ok("它是个 .hmoks（开头是魔数）", 字节.slice(0, 5).toString("latin1") === "HMYRB", JSON.stringify(字节.slice(0, 5).toString("latin1")));
-    ok("它不大（四十千字节上下）", 字节.length > 30000 && 字节.length < 60000, String(字节.length));
+    // 上限从 60000 提到 80000（2026-11-02）：种子里多了走引入树的那一节
+    // （读一棵、解析路、找导入批 这几件），于是从 55364 涨到 61373。
+    // 这条判据问的是「种子还小得住吗」，不是「它一个字节都不许长」——
+    // 钉住这个数，是为了让「不知不觉涨了一倍」这种事有个响动。
+    ok("它不大（六万上下）", 字节.length > 30000 && 字节.length < 80000, String(字节.length));
   }
 }
 
