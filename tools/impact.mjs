@@ -5,7 +5,16 @@
 // 哪个套件 import 了 src/eval.mjs。这张图本来就是写在那里的，只是没人把它拼起来。
 //
 // 用法：
-//   node tools/impact.mjs self/body.hmyr       给一个文件，答它会碰到哪些套件
+// 2026-11-02：这一份的判据已经并入 mega-index-map 的工程地图（library_project 的
+// op=affects），两边的规则取过并集 —— 「装载器调用」与「命令行参数里的源码路径」那两条
+// 正是从这里搬过去的。留着这一份的理由只有一个：它是离线兜底，只要 node，不依赖宿主，
+// 也不依赖插件被加载。
+//
+// 所以两份规则要一起改：改了这一边而那边没动，两张地图会给出不同的影响面，而差异不会
+// 报错 —— 只会让某个人按错的那张去跑套件。MIM 那边还多两条这里没有的：它按扩展名选
+// 语言规则，并且把 test 目录认成套件。
+//
+//   node tools/impact.mjs self/body.hmoca      给一个文件，答它会碰到哪些套件
 //   node tools/impact.mjs src/eval.mjs         对 src 模块同样答
 //   node tools/impact.mjs --map               整张图：谁 import 谁、每个套件加载了什么
 //   node tools/impact.mjs <文件> --all         不省略，把「无关」也列全
