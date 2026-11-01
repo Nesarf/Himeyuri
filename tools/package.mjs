@@ -14,7 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { 是源码 } from "./file-kind.mjs";
+import { 只留源码 } from "./file-kind-hmyr.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 参 = process.argv.slice(2);
@@ -50,7 +50,7 @@ for (const f of ["SPEC.txt", "README.md", "LICENSE", "MASCOT.txt", ".gitignore"]
   const p = path.join(ROOT, f);
   if (fs.existsSync(p)) 收.push(p);
 }
-for (const f of fs.readdirSync(ROOT).filter((n) => 是源码(n))) 收.push(path.join(ROOT, f));
+for (const f of 只留源码(fs.readdirSync(ROOT))) 收.push(path.join(ROOT, f));
 
 // 三、压成一个 zip。用 PowerShell 的 Compress-Archive：那是“借能力”，
 // 而这一层的价值不在压缩算法，在“哪一种东西算发布物”。

@@ -13,7 +13,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { 是源码 } from "./file-kind.mjs";
+import { 只留源码 } from "./file-kind-hmyr.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 读 = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
@@ -52,10 +52,13 @@ const 库 = [];
 const 走 = (dir) => {
   const 全 = path.join(ROOT, dir);
   if (!fs.existsSync(全)) return;
-  for (const e of fs.readdirSync(全, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+  const 项 = fs.readdirSync(全, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
+  // 整批问：这一层里算源码的名字一次问清，而不是在循环里逐个跨层。
+  const 源码名 = new Set(只留源码(项.filter((e) => !e.isDirectory()).map((e) => e.name)));
+  for (const e of 项) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) 走(p);
-    else if (是源码(e.name)) {
+    else if (源码名.has(e.name)) {
       const 文本 = 读(p);
       const 函数 = (文本.match(/^fn /gm) || []).length;
       // 路径写成斜杠：清单要能 diff，而反斜杠只在 Windows 上成立。
