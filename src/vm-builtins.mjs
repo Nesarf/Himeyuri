@@ -609,6 +609,11 @@ export const 内置表 = {
     if (vm.writeErr) vm.writeErr(文); else vm.write(a.map((x) => vm.成串(x)).join(""));
     return null;
   } },
+  // 契约不成立时停下（design/CONTRACTS.txt）。码与消息都是编译器写进常量的字面量，
+  // 所以这一条只是个「带着指定码停机」的出口：它不判断什么，也不决定查不查。
+  // 要不要查由编译器决定（编不编那一段），于是关档与开档是两个字节流；
+  // 硬条款一要的那句「行为一致」由程序那一侧验，见 test/contracts.test.mjs。
+  契约失败: { 做: (vm, a) => vm.坏(vm.成串(a[0]), vm.成串(a[1])) },
   read_text: { 效果: "file", 做: (vm, a) => {
     // 路径与编码都是字符串值，先写成宿主串（文件系统只认那个）。
     const 路径 = vm.成串(a[0]);

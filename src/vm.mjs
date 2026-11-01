@@ -430,7 +430,10 @@ export const 迹输出 = () => {
 // 于是 self/verify.hmyr 的 main 会输给它 import 的 sha256.hmyr 的自测 main ——
 // 跑了半天，输出的是别人算出来的哈希。所以入口那一份要显式交上去。
 export const 跑字节码 = (unit, 选项 = {}) => {
-  const 几份 = unit.order.map((文件) => 编译模块(unit.modules.get(文件)));
+  // 契约的强档（design/CONTRACTS.txt）走编译期：要查就编进去，不查就不编。
+  // 于是开档与关档是两个字节流，而硬条款一要的是「程序行为一致」——
+  // 那一条由 test/contracts.test.mjs 从程序那一侧验，不在这一层。
+  const 几份 = unit.order.map((文件) => 编译模块(unit.modules.get(文件), { contracts: 选项.contracts === true }));
   const 入口份 = 几份.length > 0 ? 几份[几份.length - 1] : null;
   return new 虚拟机(合并程序(几份, 入口份), 选项);
 };

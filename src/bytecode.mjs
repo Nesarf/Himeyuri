@@ -199,7 +199,7 @@ export const 核对返回类型 = (声明们) => {
 };
 
 // 一个函数编译出来的东西：指令、槽数、名字、参数个数、声明效果。
-const 编译函数 = (decl) => {
+const 编译函数 = (decl, 契约) => {
   const 码 = [];
   // 作用域栈：每层是 name -> { 槽, 可写 }
   let 层们 = [new Map()];
@@ -322,6 +322,43 @@ const 编译函数 = (decl) => {
     }
   };
 
+  // ---- 契约：requires 编在体之前，ensures 编在每条 返回 之前（design/CONTRACTS.txt）----
+  //
+  // 强档才编。弱档完全不编，于是两个档是两个字节流 —— 而硬条款一要的是「程序的行为
+  // 一致」，不是「字节流一样」；那一条由 test/contracts.test.mjs 从程序那一侧验。
+  //
+  // 一条契约的形状：求条件、真就跳过、假就把码与消息压栈、调 契约失败 停下。
+  // 用 真跳 而不是 假跳，因为要跳过的是「报错那一段」，而条件为真是常态。
+  const 强契约 = 契约 === true;
+  const 须批 = (decl.contracts && decl.contracts.requires) || [];
+  const 保批 = (decl.contracts && decl.contracts.ensures) || [];
+  // 返回值那个名字落到一个不可写的槽里。它排在参数之后，所以不影响函数表记的参数量
+  // （那个数是 decl.params.length，槽数是另一个数）。
+  let 返槽 = -1;
+  if (强契约 && 保批.length > 0) 返槽 = 分配("返回值", false);
+
+  const 编一条契约 = (条件, 码名, 名, 序) => {
+    表达(条件);
+    const 跳 = 发("真跳", -1);
+    发("常量", 码名);
+    发("常量", "函数 " + decl.name + " 的第 " + 序 + " 条 " + 名 + " 不成立");
+    发("调内置", "契约失败", 2);
+    码[跳].a = 码.length;
+  };
+
+  const 编入场 = () => {
+    if (!强契约) return;
+    for (let i = 0; i < 须批.length; i++) 编一条契约(须批[i], "HMYR-契-001", "requires", i + 1);
+  };
+
+  const 编出场 = () => {
+    if (!强契约 || 保批.length === 0) return;
+    // 顺序不能反：契约求值会把栈弄乱，所以返回值先落槽，查完再取回来。
+    发("存", 返槽);
+    for (let i = 0; i < 保批.length; i++) 编一条契约(保批[i], "HMYR-契-002", "ensures", i + 1);
+    发("取", 返槽);
+  };
+
   // ---- 语句：默认不往栈上留东西；留值 = true 时，最后一条表达式语句的值留在栈上 ----
   //
   // 「块作为表达式」是这门语言的一个真实形状：if 与 while 有值，于是它们的分支块
@@ -348,6 +385,7 @@ const 编译函数 = (decl) => {
       }
       case "返回": {
         if (s.value) 表达(s.value); else 发("常量", null);
+        编出场();
         发("返回");
         return;
       }
@@ -367,8 +405,10 @@ const 编译函数 = (decl) => {
   // 顺序上必须在「函数体」之前 —— 常量先站稳，函数才跑得动。
   for (const 声 of decl.顶层常量 || []) { 表达(声.value); 发("全域存", 声.name); }
 
+  编入场();
   语句们((decl.body && decl.body.statements) || []);
   发("常量", null);
+  编出场();
   发("返回");
   return { 名: decl.name, 码, 槽数, 参数量: (decl.params || []).length, 效果: decl.effects || [] };
 };
@@ -386,18 +426,18 @@ const 内置名 = new Set(["abs", "arena", "argv", "chdir", "chr", "console_code
   "term_color", "term_escape", "term_hide", "term_show", "term_size", "thr_cancel", "thr_count", "thr_join",
   "thr_spawn", "to_int", "to_lower", "to_upper", "write_text", "write_bytes", "bytes_to_text", "f64_bytes",
   "call_c", "bytes_view", "view_len", "view_get", "view_set", "fmt_number", "index_new", "index_set", "index_get", "index_has", "index_len", "index_keys",
-  "pack_value", "read_line", "read_lines", "校验和", "数组", "设", "位与", "位或", "位异或", "位非", "位右移", "位加", "位循环右移", "位循环左移"]);
+  "pack_value", "read_line", "read_lines", "校验和", "数组", "设", "位与", "位或", "位异或", "位非", "位右移", "位加", "位循环右移", "位循环左移", "契约失败"]);
 
 // 顶层常量那一段代码挂在这个名字下。它带两个下划线：不是给用户写的名字，
 // 而宿主那边（vm 与 C 那台）都按同一个名字找它。改它要两处一起改。
 export const 顶层段名 = "__hmyr_top__";
 
 // 模块 → 一个程序：函数表 + 全局常量表 + 顶层指令（用来登记常量）。
-export const 编译模块 = (ast) => {
+export const 编译模块 = (ast, options = {}) => {
   const 函数族 = new Map();   // 名 -> 编译结果
   const 全局们 = [];          // 常量声明（Const）
   for (const decl of ast.decls) {
-    if (decl.kind === "函数") 函数族.set(decl.name, 编译函数(decl));
+    if (decl.kind === "函数") 函数族.set(decl.name, 编译函数(decl, options.contracts === true));
     // Const 与 VarTop 都进上一级那张表：它们的初值都在顶层段里算。
     // 两者的差别只在「函数里能不能写它」—— 而那一半由 Ident / Assign 两支决定，
     // 不由这里决定。

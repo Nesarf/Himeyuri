@@ -58,6 +58,9 @@ if (process.argv.includes("--compile")) {
       capabilities: 本机能力(),
       argv: [目标, ...其余.slice(1)],
       stepLimit: Number(process.env.HMYR_STEPS || 50000000),
+      // 契约的强档（design/CONTRACTS.txt 第四节）：这一跑我要查，就写在环境里。
+      // 默认关 —— 那是 SPEC §2.4 里弱的那一档，也是今天其余三台的样子。
+      contracts: process.env.HMYR_CONTRACTS === "1",
       // 与解释那条路同一个默认：字符串住在码元序列里。
       字符串用码元序列: !process.argv.includes("--host-scalars"),
     });

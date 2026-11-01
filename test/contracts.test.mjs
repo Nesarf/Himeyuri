@@ -4,7 +4,15 @@
 //   一、契约都成立的程序，开关两边跑出同样的输出。
 //   二、契约不成立的程序，关档跑得过去（那是今天的样子），开档在第一条上停住。
 // 只有前一条，说明检查没生效；只有后一条，说明检查会改变正常程序的行为。
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { run } from "../src/eval.mjs";
+import { lex } from "../src/lexer.mjs";
+import { parse } from "../src/parser.mjs";
+import { loadUnit } from "../src/loader.mjs";
+import { 跑字节码 } from "../src/vm.mjs";
+import { 本机能力 } from "../src/capabilities.mjs";
 
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
@@ -79,6 +87,51 @@ console.log("八、没有契约的函数不受开关影响");
   const 关 = 跑(源, false), 开 = 跑(源, true);
   ok("两边都没有错", 关.diagnostics.errors.length === 0 && 开.diagnostics.errors.length === 0, JSON.stringify([码(关), 码(开)]));
   ok("两边输出一样且是 5", 关.output.join("") === 开.output.join("") && 关.output.join("") === "5", JSON.stringify([关.output, 开.output]));
+}
+
+console.log("九、字节码那台：同一个开关，两个字节流，同样的判断");
+{
+  // 这一节走的路与启动器 --compile 同一条：装载、编译、跑。
+  // 契约不进子集解析器（它的立场是只认 self/ 六份用到的构造），所以这里显式用宿主
+  // reader。启动器 --compile 今天仍被子集 reader 卡住 —— 那是一条待收的口，
+  // 写在 design/CONTRACTS.txt 第六节，而不是假装这一节已经等于「用户点得到」。
+  const 新诊断 = () => ({
+    items: [], errors: [], warnings: [],
+    add(severity, code, message, line, column) {
+      const one = { severity, code, message, line, column };
+      this.items.push(one);
+      if (severity === "error") this.errors.push(one);
+    },
+    error(code, message, line, column) { this.add("error", code, message, line, column); },
+    warn(code, message, line, column) { this.add("warning", code, message, line, column); },
+  });
+  const 宿主读 = (source) => {
+    const d = 新诊断();
+    const { ast } = parse(lex(source).tokens, { diagnostics: d });
+    return { ast, diagnostics: d };
+  };
+
+  const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-contract-"));
+  const 写 = (名, 文) => { const p = path.join(临, 名); fs.writeFileSync(p, 文); return p; };
+  const 好 = 写("好.hmoca", "fn 取(n: Int) -> Int requires n > 0 ensures 返回值 > 0 {\n  return n * 2\n}\nfn main() -> Int {\n  print(str(取(3)))\n  return 0\n}\n");
+  const 坏 = 写("坏.hmoca", "fn 取(n: Int) -> Int requires n > 0 {\n  return n\n}\nfn main() -> Int {\n  print(str(取(0 - 5)))\n  return 0\n}\n");
+  const 跑 = (路, 强) => {
+    let 出 = "";
+    const vm = 跑字节码(loadUnit(路, { reader: 宿主读 }), {
+      contracts: 强, capabilities: 本机能力(),
+      write: (t) => { 出 += t; }, writeErr: (t) => { 出 += t; },
+    });
+    const r = vm.调用("main", [], null);
+    return { ok: r.ok, 码: r.ok ? "" : r.码, 话: r.ok ? "" : r.话, 出 };
+  };
+
+  const 关好 = 跑(好, false), 开好 = 跑(好, true);
+  ok("契约都成立时，关档跑得动", 关好.ok && 关好.出 === "6", JSON.stringify([关好.ok, 关好.码, 关好.出]));
+  ok("契约都成立时，开档也跑得动", 开好.ok && 开好.出 === "6", JSON.stringify([开好.ok, 开好.码, 开好.出]));
+  const 关坏 = 跑(坏, false), 开坏 = 跑(坏, true);
+  ok("契约不成立时，关档跑得过去", 关坏.ok && 关坏.出 === "-5", JSON.stringify([关坏.ok, 关坏.码, 关坏.出]));
+  ok("契约不成立时，开档停在 HMYR-契-001", !开坏.ok && 开坏.码 === "HMYR-契-001", JSON.stringify([开坏.ok, 开坏.码, 开坏.话]));
+  ok("消息里有函数名与第几条", 开坏.话.includes("取") && 开坏.话.includes("第 1 条"), JSON.stringify(开坏.话));
 }
 
 console.log("");
