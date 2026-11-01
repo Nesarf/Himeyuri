@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
 import { lex } from "../src/lexer.mjs";
 import { parse } from "../src/parser.mjs";
-import { 是源码 } from "./file-kind.mjs";
+import { 只留源码 } from "./file-kind-hmyr.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -31,9 +31,9 @@ const 宿主认不认得 = (源码) => {
 // 全部 self/ 是 `--全部`：五十四份一起跑要五十五秒，而这一套的价值在「常驻防退」，
 // 不在「一次量全」—— 想量全的人加一个开关就是了。
 const 全部 = process.argv.includes("--全部");
-const 根目录 = fs.readdirSync(ROOT).filter((n) => 是源码(n)).sort();
+const 根目录 = 只留源码(fs.readdirSync(ROOT)).sort();
 const 自助名单 = 全部
-  ? fs.readdirSync(path.join(ROOT, "self")).filter((n) => 是源码(n)).sort()
+  ? 只留源码(fs.readdirSync(path.join(ROOT, "self"))).sort()
   : ["lex.hmoca", "chain.hmoca", "stmt.hmoca", "body.hmoca", "eval.hmoca", "run.hmoca"];
 const 文件们 = [
   ...根目录.map((n) => path.join(ROOT, n)),

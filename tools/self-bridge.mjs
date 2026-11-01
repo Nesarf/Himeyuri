@@ -13,7 +13,7 @@
 // 从「读 .hmyr 文件、搭出树」这一步起，做主的已经是 HMYR 自己：递归、去重、环拒绝、后序。
 import fs from "node:fs";
 import { 是码元序列, 成宿主 } from "../src/units.mjs";
-import { 是源码 } from "./file-kind.mjs";
+import { 只留源码 } from "./file-kind-hmyr.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit as 宿主载, runUnit as 宿主跑 } from "../src/loader.mjs";
@@ -37,8 +37,8 @@ const 字节路 = path.join(ROOT, "runtime/run.hmoks");
 function 源最新时间() {
   let 新 = 0;
   const 目录 = path.join(ROOT, "self");
-  for (const 名 of fs.readdirSync(目录)) {
-    if (!是源码(名)) continue;
+  // 整批问：这一层的名字一次交过去，而不是每个文件跨一次层。
+  for (const 名 of 只留源码(fs.readdirSync(目录))) {
     const t = fs.statSync(path.join(目录, 名)).mtimeMs;
     if (t > 新) 新 = t;
   }
