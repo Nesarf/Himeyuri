@@ -12,6 +12,7 @@ import { lex } from "../src/lexer.mjs";
 import { parse } from "../src/parser.mjs";
 import { loadUnit } from "../src/loader.mjs";
 import { 跑字节码 } from "../src/vm.mjs";
+import { 最小运行 } from "../src/minimal-eval.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
 
 let passed = 0, failed = 0;
@@ -132,6 +133,50 @@ console.log("九、字节码那台：同一个开关，两个字节流，同样�
   ok("契约不成立时，关档跑得过去", 关坏.ok && 关坏.出 === "-5", JSON.stringify([关坏.ok, 关坏.码, 关坏.出]));
   ok("契约不成立时，开档停在 HMYR-契-001", !开坏.ok && 开坏.码 === "HMYR-契-001", JSON.stringify([开坏.ok, 开坏.码, 开坏.话]));
   ok("消息里有函数名与第几条", 开坏.话.includes("取") && 开坏.话.includes("第 1 条"), JSON.stringify(开坏.话));
+}
+
+console.log("十、minimal-eval 那台：开关在它上面也有意义");
+{
+  // 要说清这一台的位置：bin/hmyr.mjs 的默认路用 最小运行 跑的是**自举解释器**，
+  // 不是用户的程序。所以「用户在默认路上写契约」要等 self/eval.hmoca 那一台 ——
+  // 契约不在这条路上被查，不是因为这一台没做，而是因为这一台跑的不是那段源码。
+  //
+  // 这一节钉的是另一件事：同一个开关在它上面也有意义，而且与另外两台给出同一句话。
+  // 四台一致从这一句开始，而不是从「用户点得到」开始。
+  const 新诊断2 = () => ({
+    items: [], errors: [], warnings: [],
+    add(severity, code, message, line, column) {
+      const one = { severity, code, message, line, column };
+      this.items.push(one);
+      if (severity === "error") this.errors.push(one);
+    },
+    error(code, message, line, column) { this.add("error", code, message, line, column); },
+    warn(code, message, line, column) { this.add("warning", code, message, line, column); },
+  });
+  const 宿主读2 = (source) => {
+    const d = 新诊断2();
+    const { ast } = parse(lex(source).tokens, { diagnostics: d });
+    return { ast, diagnostics: d };
+  };
+  const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-contract-min-"));
+  const 写 = (名, 文) => { const p = path.join(临, 名); fs.writeFileSync(p, 文); return p; };
+  const 坏 = 写("坏.hmoca", "fn 取(n: Int) -> Int requires n > 0 {\n  return n\n}\nfn main() -> Int {\n  print(str(取(0 - 5)))\n  return 0\n}\n");
+  const 好 = 写("好.hmoca", "fn 取(n: Int) -> Int requires n > 0 ensures 返回值 > 0 {\n  return n * 2\n}\nfn main() -> Int {\n  print(str(取(3)))\n  return 0\n}\n");
+  const 跑 = (路, 强) => {
+    let 出 = "";
+    const rt = 最小运行(loadUnit(路, { reader: 宿主读2 }), {
+      capabilities: 本机能力(), contracts: 强, write: (t) => { 出 += t; },
+    });
+    try { rt.callFunction(rt.functions.get("main"), [], null); }
+    catch (e) { return { ok: false, 码: e.code || "", 话: e.message || "", 出 }; }
+    return { ok: true, 码: "", 话: "", 出 };
+  };
+  const 关坏 = 跑(坏, false), 开坏 = 跑(坏, true);
+  ok("关档跑得过去", 关坏.ok && 关坏.出 === "-5", JSON.stringify([关坏.ok, 关坏.码, 关坏.出]));
+  ok("开档停在 HMYR-契-001", !开坏.ok && 开坏.码 === "HMYR-契-001", JSON.stringify([开坏.ok, 开坏.码, 开坏.话]));
+  ok("与另外两台说的是同一句", 开坏.话 === "函数 取 的第 1 条 requires 不成立", JSON.stringify(开坏.话));
+  const 关好 = 跑(好, false), 开好 = 跑(好, true);
+  ok("契约都成立时两边输出一样", 关好.ok && 开好.ok && 关好.出 === 开好.出 && 关好.出 === "6", JSON.stringify([关好.ok, 关好.出, 开好.ok, 开好.出]));
 }
 
 console.log("");

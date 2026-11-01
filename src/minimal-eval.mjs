@@ -657,6 +657,9 @@ export class 最小运行时 {
     // （self/ 那六份），而那东西替目标程序执行，必然碰得到全部效果。
     // 目标程序自己的效果仍然要查 —— 那一条在 self/eval.hmyr 里。
     this.检查效果 = options.检查效果 !== false;
+    // 契约的强档（design/CONTRACTS.txt）：写了就查，证不出来就在运行时查。
+    // 与 检查效果 同一条先例 —— 一个选项，只改这一跑查到哪一档，不改语义。
+    this.契约 = options.contracts === true;
     // 能力内核交给调用方：一个求值器自己去 import node:fs 就没法在别的地方用了，
     // 而「它借了世界什么」也就只能去读它的源码才知道。见 src/capabilities.mjs。
     //
@@ -675,6 +678,21 @@ export class 最小运行时 {
     const e = new Error(message);
     e.code = code;
     throw e;
+  }
+
+  // 契约的强档（design/CONTRACTS.txt）。条件按书写的顺序逐个求值，第一个不成立就停。
+  // 与宿主那一份同形 —— 两个求值器互换着跑同一段代码时，这一条也要给出同一句话。
+  //
+  // 条件自己出错时让它原样抛：那是那个表达式的问题。包成契约错会把现场换掉，
+  // 读的人就会去查契约，而不是去查那个名字。
+  查契约(decl, 条件批, 名, 码, scope) {
+    if (!条件批 || 条件批.length === 0) return;
+    for (let i = 0; i < 条件批.length; i++) {
+      const 值 = this.求值(条件批[i], scope, null);
+      if (!this.真(值)) {
+        this.坏(码, "函数 " + decl.name + " 的第 " + (i + 1) + " 条 " + 名 + " 不成立");
+      }
+    }
   }
 
   // 与宿主的 allowed 同一件事：没声明效果的函数，什么带效果的都不许调。
@@ -729,13 +747,29 @@ export class 最小运行时 {
     if (args.length > decl.params.length) {
       this.坏("HMYR-行-002", "function '" + decl.name + "' expects " + decl.params.length + " argument(s), got " + args.length);
     }
+    // requires：参数已经在作用域里，体还没开始（design/CONTRACTS.txt 第一节）。
+    // 不写 `?.`：hostdeps 那套明令执行器不向宿主语言要可选链（SPEC M6 的「八种构造」）。
+    if (this.契约) this.查契约(decl, decl.contracts && decl.contracts.requires, "requires", "HMYR-契-001", scope);
     const inner = this.允许(decl.effects);
+    // 返回值先收进一个变量：ensures 要在出口查，而出口有两条路
+    // （正常走完，以及中途 返回 抛上来的那一个）。原来这两条路各自 return，
+    // 于是没有任何一处是两条路都会经过的 —— 那个位置是这一改才出现的。
+    let 结果 = null;
+    let 半路 = null;
     try {
-      return decl.body ? this.执行块(decl.body, scope, inner) : null;
+      结果 = decl.body ? this.执行块(decl.body, scope, inner) : null;
     } catch (e) {
-      if (e instanceof 返回) return e.value;
-      throw e;
+      if (e instanceof 返回) 结果 = e.value;
+      else 半路 = e;
     }
+    if (半路) throw 半路;
+    if (this.契约 && decl.contracts && decl.contracts.ensures && decl.contracts.ensures.length > 0) {
+      // 返回值这个名字不在关键字表里（design/CONTRACTS.txt 第二节）。
+      // 参数作用域到这一步还没散，于是 ensures 同时看得见参数与返回值。
+      scope.set("返回值", 结果, false);
+      this.查契约(decl, decl.contracts.ensures, "ensures", "HMYR-契-002", scope);
+    }
+    return 结果;
   }
 
   执行块(block, parentScope, effects) {

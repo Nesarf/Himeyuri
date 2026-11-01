@@ -236,9 +236,30 @@ export const 子集解 = (tokens, options = {}) => {
     // realtime：档位修饰符，与宿主那一份同一个位置与同一个形状。
     let realtime = false;
     if (是("ident", "realtime")) { 进(); realtime = true; }
+    // 契约：与宿主那一份同一个位置、同一个形状（design/CONTRACTS.txt）。
+    //
+    // 这一层以前把它们直接丢掉。丢掉的意思不是「子集不认」，而是「契约走不到
+    // 编译器」—— 于是「强档要查」在这一路上永远做不到，因为编译器根本没看见它们。
+    // 所以这里补上：认两种关键字、收表达式、按出现的顺序分别放进 requires 与 ensures。
+    //
+    // 换行可以写在契约的前后与之间（宿主那一份也允许，formatter 就是这么排的）。
+    // 不是契约的时候要把游标退回去 —— 那个换行是函数体的分界，吃掉它会让后面的块
+    // 解析从一个不该开始的地方开始。
+    const contracts = { requires: [], ensures: [] };
+    for (;;) {
+      const 存 = i;
+      过空行();
+      const 这 = 看();
+      if (!(这.type === "keyword" && (这.value === "requires" || 这.value === "ensures"))) {
+        i = 存;
+        break;
+      }
+      进();
+      contracts[这.value].push(解析表达式());
+    }
     if (!是标("{")) 不认("子集的函数必须有函数体：" + (名 ? 名.value : "?"));
     const body = 解析块();
-    return { kind: "函数", name: 名 ? 名.value : "<error>", typeParams: [], params, returns, effects, realtime, contracts: { requires: [], ensures: [] }, body, pub: false, line: kw.line, column: kw.column };
+    return { kind: "函数", name: 名 ? 名.value : "<error>", typeParams: [], params, returns, effects, realtime, contracts, body, pub: false, line: kw.line, column: kw.column };
   }
 
   function 解析参数们() {
