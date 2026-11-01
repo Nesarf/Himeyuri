@@ -16,7 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { 档位, 档预设, 档步限 } from "../tools/file-kind.mjs";
+import { 档位, 档预设, 档步限 } from "../tools/file-kind-reference.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 具 = path.join(ROOT, "bin", "hmyr.mjs");

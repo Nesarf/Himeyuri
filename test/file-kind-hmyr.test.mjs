@@ -1,8 +1,11 @@
 // 一个后缀算源码还是字节码：两份实现，一份判据。
 //
-// tools/file-kind.mjs 与 tools/file-kind.hmoca 是同一件事的两种写法。这一套拿同一批
-// 名字问两边，答案必须逐项一样。它跑在 JS 那一侧（不编 C 机器），因为这一份 HMYR
+// tools/file-kind-reference.mjs 与 tools/file-kind.hmoca 是同一件事的两种写法。这一套拿
+// 同一批名字问两边，答案必须逐项一样。它跑在 JS 那一侧（不编 C 机器），因为这一份 HMYR
 // 什么都不 import，装载它不需要机器 —— 那也让这一套在任何机器上都能跑。
+//
+// 前者名字里的 reference 是这一套存在的原因：生产代码只问 HMYR 那一份，而这一份留着
+// 当对照的另一头。改了一边而另一边没动，这里会红。
 //
 // 为什么值得专门钉住：这个判断被八处调用方共用（bin/hmyr.mjs、manifest、package、
 // self-bridge、self-loader、impact、check-builtins、profile 那套）。它一旦悄悄改了口径，
@@ -13,7 +16,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
-import * as JS版 from "../tools/file-kind.mjs";
+import * as JS版 from "../tools/file-kind-reference.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;

@@ -1,6 +1,6 @@
 // 后缀判据的 HMYR 那一份：装载一次，之后按批问。
 //
-// 判据本身在 tools/file-kind.hmoca 里（与 tools/file-kind.mjs 同一口径，两边由
+// 判据本身在 tools/file-kind.hmoca 里（与 tools/file-kind-reference.mjs 同一口径，两边由
 // test/file-kind-hmyr.test.mjs 钉住）。调用方都是 .mjs，跨过去要一个入口 —— 这一层就是它。
 //
 // 为什么整批而不是逐个：逐个问在跨层时贵一千倍（tools/file-kind.hmoca 的文件头有实测）。
