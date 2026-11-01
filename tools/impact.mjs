@@ -43,7 +43,10 @@ for (const 路 of hmyr们) {
   const 源 = fs.readFileSync(path.join(ROOT, 路), "utf8");
   const 依赖 = [];
   const 本目录 = path.posix.dirname(路);
-  for (const m of 源.matchAll(/^import\s+"([^"]+)"/gm)) {
+  // 两种拼法都认：关键字换成汉字之后源码里写的是「引入」，而这张图要能读现在的源码。
+  // 只认 import 的后果是安静的：整仓 .hmoca 的依赖边会一条都查不到，工具却照样退出 0，
+  // 于是「改这个文件会碰到谁」得到的是「没有——它是入口」。
+  for (const m of 源.matchAll(/^(?:import|引入)\s+"([^"]+)"/gm)) {
     const 原 = m[1];
     if (!原.startsWith("./") && !原.startsWith("../")) continue;
     const 解 = path.posix.normalize(path.posix.join(本目录 === "." ? "" : 本目录, 原));
@@ -72,8 +75,13 @@ for (const [名, 脚本] of 清单) {
   if (!fs.existsSync(路)) continue;
   const 源 = fs.readFileSync(路, "utf8");
   const 载入 = new Set();
+  // 三种写法都认：loadUnit 直接加载、path.join 拼出来的路径、以及出现在字符串参数里的
+  // 路径 —— test/curve.test.mjs 就是 spawn 一个 --compile self/curve.hmoca。
+  // 第三种刻意宽：它会连注释里提到的路径一起收进来，于是可能多报一套。多报的代价是白跑
+  // 一套，漏报的代价是改完不知道要验什么，两者不对称。
   for (const m of 源.matchAll(/loadUnit\(path\.join\(ROOT,\s*"([^"]+)"/g)) 载入.add(m[1].split("\\").join("/"));
-  for (const m of 源.matchAll(/path\.join\(ROOT,\s*"([^"]+\.hmyr)"/g)) 载入.add(m[1].split("\\").join("/"));
+  for (const m of 源.matchAll(/path\.join\(ROOT,\s*"([^"]+\.(?:hmyr|hmoca))"/g)) 载入.add(m[1].split("\\").join("/"));
+  for (const m of 源.matchAll(/["']([A-Za-z0-9_./\\-]+\.hmoca)["']/g)) 载入.add(m[1].split("\\").join("/"));
   const src们 = new Set([...源.matchAll(/from "\.\.\/src\/([^"]+)"/g)].map((m) => "src/" + m[1]));
   套件.push({ 名, 脚本, 载入, src: src们 });
 }
