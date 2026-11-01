@@ -71,6 +71,11 @@ export const CODES = [
   { code: "HMYR-行-017", stage: "run", checkedBy: "test/codes-value.test.mjs", meaning: "assignment to something that is not a variable declared with var" },
   { code: "HMYR-行-018", stage: "run", checkedBy: "test/codes-value.test.mjs", meaning: "a subscript is outside the length of the value" },
   { code: "HMYR-行-019", stage: "run", checkedBy: "test/codes-value.test.mjs", meaning: "the value being subscripted has no elements" },
+  // 契约的强档（design/CONTRACTS.txt）。这两个码报告的是「程序自己写下的条件没成立」，
+  // 而不是实现出了错 —— 所以它们有 checkedBy，也不标 internal。
+  // 「契」是新的码族，与 詞 / 形 / 行 / 載 / 內 并列。
+  { code: "HMYR-契-001", stage: "run", checkedBy: "test/contracts.test.mjs", meaning: "a requires clause did not hold on entry" },
+  { code: "HMYR-契-002", stage: "run", checkedBy: "test/contracts.test.mjs", meaning: "an ensures clause did not hold on exit" },
   // bin/hmyr.mjs 的那一条。它原先在注释里与测试里都写作 詞-003，而 詞-003 是
   // 「块注释没闭合」—— 换码时错配了。2026-11-02 对齐：代码、注释、测试三处都改成它。
   { code: "HMYR-行-021", stage: "host", checkedBy: "test/pipe.test.mjs", meaning: "the output destination cannot be opened: the pipe or the socket refused the connection" },

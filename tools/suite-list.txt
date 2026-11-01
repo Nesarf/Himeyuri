@@ -86,6 +86,7 @@ hmyrcompile	test/hmyr-compiler.test.mjs
 hmyrpack	test/hmyr-pack.test.mjs
 readlines	test/read-lines.test.mjs
 returntypes	test/return-types.test.mjs
+contracts	test/contracts.test.mjs
 pipe	test/pipe.test.mjs
 socket	test/socket.test.mjs
 modulerev	test/module-rev.test.mjs

@@ -97,6 +97,10 @@ export class Runtime {
     // stage0：只允许上面那三张表里的东西。它存在的理由是让「需求表」可执行——
     // 一份写着「只需要这些」的文档只能被人读完点头，而一个会拦下来的求值器能证明它。
     this.stage0 = options.stage0 === true;
+    // 契约的强档（design/CONTRACTS.txt）：写了就查，证不出来就在运行时查。
+    // 与 stage0 同一条先例 —— 一个选项，只改这一跑查到哪一档，不改语义。
+    // 默认关，因为 SPEC §2.4 里弱的那一档就是「不写不查」，而今天写了的也等于没写。
+    this.契约 = options.contracts === true;
     // Each Himeyuri call costs several host frames (evalExpr, evalCall, callFunction, execBlock,
     // execStatement...), so the language's depth limit has to sit below what the host can take,
     // otherwise the host stack goes first and the user sees a host crash instead of a diagnostic.
@@ -113,6 +117,20 @@ export class Runtime {
     const e = new Error(message);
     e.code = code;
     throw e;
+  }
+
+  // 契约的强档（design/CONTRACTS.txt）。条件按书写的顺序逐个求值，第一个不成立就停。
+  //
+  // 条件自己出错时让它原样抛出去：那是那个表达式的问题。包成契约错会把现场换掉，
+  // 读的人就会去查契约，而不是去查那个名字。
+  查契约(decl, 条件批, 名, 码, scope) {
+    if (!条件批 || 条件批.length === 0) return;
+    for (let i = 0; i < 条件批.length; i++) {
+      const 值 = this.evalExpr(条件批[i], scope);
+      if (!this.truthy(值)) {
+        this.fail(码, "函数 " + decl.name + " 的第 " + (i + 1) + " 条 " + 名 + " 不成立");
+      }
+    }
   }
 
   // 可见性：跨模块调一个没写 pub 的名字，拒绝（SPEC 6.4 第二步）。
@@ -268,13 +286,22 @@ export class Runtime {
     if (args.length > decl.params.length) {
       this.fail("HMYR-行-002", "function '" + decl.name + "' expects " + decl.params.length + " argument(s), got " + args.length);
     }
+    // requires：参数已经在作用域里，体还没开始（design/CONTRACTS.txt 第一节）。
+    if (this.契约) this.查契约(decl, decl.contracts?.requires, "requires", "HMYR-契-001", scope);
     const inner = this.allowed(decl.effects);
     this.持有格栈.push([]);
+    // 返回值先收进一个变量，因为 ensures 要在「出口」查，而出口有两条路：
+    // 正常走完，以及中途 返回 抛上来的那一个。原来这两条路各自 return，
+    // 于是没有任何一处是两条路都会经过的 —— 那个位置是这一改才出现的。
+    let 结果 = null;
+    let 半路 = null;
     try {
-      return decl.body ? this.execBlock(decl.body, scope, inner) : null;
-    } catch (e) {
-      if (e instanceof Return) return e.value;
-      throw e;
+      try {
+        结果 = decl.body ? this.execBlock(decl.body, scope, inner) : null;
+      } catch (e) {
+        if (e instanceof Return) 结果 = e.value;
+        else 半路 = e;
+      }
     } finally {
       // 帧退出：这一帧里建的持有格一律关掉，包括提前 return 与抛出的那两条路。
       // 「关」是幂等的（已经关了的再关一次什么也不做），所以外面显式关过也没关系。
@@ -283,6 +310,15 @@ export class Runtime {
         if (!格.关了) { 格.装 = false; 格.值 = null; 格.关了 = true; }
       }
     }
+    if (半路) throw 半路;
+    if (this.契约 && (decl.contracts?.ensures || []).length > 0) {
+      // 返回值这个名字不在关键字表里（design/CONTRACTS.txt 第二节）：它是一个普通标识符，
+      // 所以参数里真有一个同名的时候会被它盖住 —— 那条边界写在设计稿里，没在这里拦。
+      // 参数作用域到这一步还没散，于是 ensures 同时看得见参数与返回值。
+      scope.set("返回值", 结果, false);
+      this.查契约(decl, decl.contracts.ensures, "ensures", "HMYR-契-002", scope);
+    }
+    return 结果;
   }
 
   execBlock(block, parentScope, effects) {
