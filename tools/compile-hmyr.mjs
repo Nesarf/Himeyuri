@@ -65,18 +65,29 @@ if (用JS落盘) {
     }
     return v;
   };
+  // 把 HMYR 交回的值展成 JS 数组。它可能是普通数组、可能是带 tag 的类元组，
+  // 也可能是带 items 的包装 —— 三种形状都试一遍，不靠「应该是哪一种」的假设。
+  // 这一层出过错：效果那一栏曾经用 Array.from 直转，而元组不可迭代，于是静默成空，
+  // 两条打包路径写出不同长度（差一个效果串）。见 design/COMPILER.txt。
+  const 展平 = (v) => {
+    if (v === null || v === undefined) return [];
+    if (v.tag === "tuple" && Array.isArray(v.items)) return v.items.map(展平);
+    if (Array.isArray(v)) return v;
+    if (Array.isArray(v.items)) return v.items.map(展平);
+    return [v];
+  };
   const 函数族 = new Map();
   for (const f of r.函数族) {
     函数族.set(f.名, {
       名: f.名,
       参数量: f.参数量,
       槽数: f.槽数,
-      // 效果这一栏在 HMYR 侧是元组。它到了 JS 这一侧有两种可能形状：可迭代的数组，
-      // 或者带 items 的类元组 —— 后者 Array.from 不出来（不可迭代），于是静默成空数组。
-      // 2026-11-02 才暴露：在那之前 self/compile.hmoca 把效果硬编码成空，这一栏永远是
-      // 空的，两种形状都看不出来。它与 self/pack.hmoca 那条路因此会写出不同长度（差
-      // 一个效果串的字节数），而 packbytes 那套正是量这个的。
-      效果: f.效果 && f.效果.items ? Array.from(f.效果.items) : Array.from(f.效果 || []),
+      // 字段名是 effect 而不是 效果：效果 是关键字，词法把它归一成英文，于是记录字面量
+      // 里的键名也落成 effect。这一侧是 JS，写的是中文字符串，不经过那层归一 —— 读
+      // f.效果 永远拿不到东西，而且是静默的（undefined 变成空数组）。
+      // 2026-11-02 才被发现，因为在那之前 self/compile.hmoca 把这一栏硬编码成空，
+      // 两种拼法都看不出区别。两个都试一遍，免得将来那一边改了写法这一边又断。
+      效果: 展平(f.effect !== undefined ? f.effect : f.效果),
       码: Array.from(f.码 || []).map((i) => {
         const 指令 = { op: i.op };
         // 记录 的立即数是字符串数组（写文件时按 n 个名字落盘），
