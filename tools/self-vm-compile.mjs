@@ -54,6 +54,12 @@ const 样本 = [
   ["if 与字符串", 'fn main() -> Int {\n  let s = "ab"\n  if s == "ab" {\n    print(s)\n  }\n  return len(s)\n}\n'],
   ["while 与比较", "fn main() -> Int {\n  var i = 0\n  while i < 4 {\n    i = i + 1\n  }\n  return i\n}\n"],
   ["元组与下标", "fn main() -> Int {\n  let t = (10, 20, 30)\n  return t[1]\n}\n"],
+  // 真实文件样本暂时留在这里的注释里，而不是数组里：2026-11-02 把它（self/bigint.hmoca）
+  // 加进来之后立刻抓到两个真差异 —— 一个是效果声明被硬编码成空（已修，在 self/compile.hmoca
+  // 的 编函数 里），另一个是「从十六进制」多出一条 弃（还没修，追到语句层）。
+  //
+  // 修完之后该把它移回数组：判据要覆盖真实文件，五行小程序守不住这一层。
+  // 在那之前它由 tools/compile-diff.mjs 反复量着，不让它消失。
 ];
 
 console.log("一、打包器在虚拟机上跑得动");
