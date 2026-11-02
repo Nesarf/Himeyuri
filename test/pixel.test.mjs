@@ -11,6 +11,20 @@ import { lex } from "../src/lexer.mjs";
 import { parse } from "../src/parser.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+// 临时目录：本机约定是不进 C 盘的 E:/DaShaoHuo/cache/tmp，而 WSL 里同一个盘挂在
+// /mnt/e 下。以前下面两行把整串写死成 Windows 形式，于是在 Linux 上连目录都打不开
+// —— 2026-11-02 跨系统时红了三项，那是第十个 Windows 假设。
+// 兜底给 /tmp：那条「不进 C 盘」的纪律本来就是针对这台 Windows 的，Linux 上
+// 没有 C 盘可进。
+const 临时目录 = () => {
+  const 候选 = [
+    process.env.HMYR_TMP,
+    process.platform === "win32" ? "E:/DaShaoHuo/cache/tmp" : "/mnt/e/DaShaoHuo/cache/tmp",
+  ];
+  for (const 路 of 候选) if (路 && fs.existsSync(路)) return 路;
+  return "/tmp";
+};
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
@@ -78,8 +92,9 @@ console.log("导出文本：交给子进程的中间格式");
 
 console.log("导出 PNG：一段带效果的程序真的写出了文件");
 {
-  const 中间 = "E:/DaShaoHuo/cache/tmp/px-test.txt";
-  const 目标 = "E:/DaShaoHuo/cache/tmp/px-test.png";
+  const 临 = 临时目录();
+  const 中间 = 临 + "/px-test.txt";
+  const 目标 = 临 + "/px-test.png";
   fs.rmSync(中间, { force: true });
   fs.rmSync(目标, { force: true });
   const r = 跑程序('let 布 = 填矩形(新布(6, 4), 1, 1, 3, 2, 255)\n  let 果 = 导出(布, "' + 中间 + '", "' + 目标 + '")\n  print(果.text)');

@@ -715,8 +715,35 @@ C 版虚拟机：那台不是 JS 的机器
 
   pixel 在 WSL 上红了三项，根因是第十个 Windows 假设：那个套件把临时路径
   写死成 E:/DaShaoHuo/cache/tmp/px-test.txt，而 WSL 里那个路径不存在
-  （它要的是 /mnt/e/ 那一串）。这属于「该修」，不属于「设计缺席」——
-  记在这里，等下一轮改。
+  （它要的是 /mnt/e/ 那一串）。这属于「该修」，不属于「设计缺席」。
+  这一处已经改成按平台取（Windows 用那个盘符，别的平台用 /mnt/e，都没有就
+  退到 /tmp）。
+
+  第十个假设不是一处，是一片（2026-11-02 深夜量出来的）
+  --------------------------------------------------------------------
+
+  修掉 pixel 之后顺手 grep 了一遍 test/，结果不是一处，而是二十多处：
+  每一个 mkdtempSync、每一串临时文件路径都写死了那个 Windows 盘符。
+
+    test/module.test.mjs        fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-mod-")
+    test/macro.test.mjs、launcher.test.mjs、threads.test.mjs、
+    verify.test.mjs、write-text.test.mjs、package.test.mjs、mod.test.mjs、
+    units.test.mjs、lsp-module.test.mjs、lsp-completion-hmyr.test.mjs、
+    capabilities.test.mjs、color.test.mjs、color-image.test.mjs、
+    color-report.test.mjs、i18n-three.test.mjs、surface.test.mjs 同上
+
+  这就解释了探路时的那次崩溃：modules 那一套一启动就 fs.mkdtempSync 在
+  E:/ 下面，而在 WSL 里那个路径根本不存在 —— 于是它连第一行都没跑出来，
+  报的是「produced no output at all」。
+
+  所以「在 Linux 上跑全量」真正的门槛不在 vm/hmyr.c，而在 test/ 这一层：
+  它把「这台机器的磁盘布局」当成了常量。而那不是一小时的时间问题，
+  也不是机制问题 —— 是二十多个文件的机械改动，改完才轮到那一小时。
+
+  一句话收：机器层已经两个系统同一个数目了，而测试层还只认得一个系统。
+  下一步是把取临时目录这件事收成一处，让那二十多个文件都问它。
+
+  还没做的：那二十多处只改了 pixel 一处，其余不动 —— 等确认。
 
   于是这一页现在能给出两件实测：cvm 那 93 项在两个系统上同一个数目；以及
   五套在 Linux 上按设计缺席、在 Windows 上全过。全量跨系统的完整清单仍然
