@@ -170,6 +170,7 @@ selfcov	tools/self-coverage.mjs
 selfratiohmyr	test/self-ratio-hmyr.test.mjs
 selfload	tools/self-loader.mjs
 selfmod	tools/self-load.mjs
+impact	test/impact.test.mjs
 selfpos	tools/self-positions.mjs
 selfbridge	tools/self-bridge-check.mjs
 selfvmeval	tools/self-vm-eval.mjs

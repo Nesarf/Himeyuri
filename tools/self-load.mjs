@@ -42,13 +42,17 @@ const 归一 = (p) => {
 };
 const 相对仓 = (p) => 归一(path.relative(ROOT, p));
 
-console.log("一、order：四棵真实的 import 树，逐项比");
+console.log("一、order：四棵真实的 import 树，逐位比");
+// 2026-11-02：这里原来两边都 .sort() 过，于是比的是「集合相同」——
+// 谁先被读到这件事从来没验过，而 src/loader-self.mjs 里那条「包里的入口排在被引用的
+// 那一份之后，而后序要求相反」的注释说的正是这个次序。实测两边逐位相同、都是后序
+// （依赖在前、入口最后），那条注释写反了。去掉排序之后，它才真的被测到。
 for (const 入口 of ["self/sign.hmoca", "self/release.hmoca", "self/package.hmoca", "self/verify.hmoca"]) {
   const 宿主 = loadUnit(path.join(ROOT, 入口));
-  const 自己 = 调("加载序", [入口]).trim().split(/\r?\n/).filter(Boolean).map(归一).sort();
-  const 那边 = 宿主.order.map(相对仓).sort();
+  const 自己 = 调("加载序", [入口]).trim().split(/\r?\n/).filter(Boolean).map(归一);
+  const 那边 = 宿主.order.map(相对仓);
   const 同 = 宿主.ok && 自己.length === 那边.length && 自己.every((x, i) => x === 那边[i]);
-  ok(入口 + " 的 order 一致（" + 那边.length + " 个文件）", 同,
+  ok(入口 + " 的 order 逐位一致（" + 那边.length + " 个文件）", 同,
     同 ? "" : "self=" + JSON.stringify(自己) + " 宿主=" + JSON.stringify(那边));
 }
 

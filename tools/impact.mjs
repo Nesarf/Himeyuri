@@ -18,6 +18,10 @@
 //   node tools/impact.mjs src/eval.mjs         对 src 模块同样答
 //   node tools/impact.mjs --map               整张图：谁 import 谁、每个套件加载了什么
 //   node tools/impact.mjs <文件> --all         不省略，把「无关」也列全
+//   node tools/impact.mjs <文件> --suites      只吐套件名，逗号分隔，直接接在 --only 后面
+//
+// --suites 那一条是「改一份跑哪些」的可执行形态：那句话原来写在纪律里，靠人记。
+//   node tools/check-all.mjs --only "$(node tools/impact.mjs src/parser.mjs --suites)"
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +30,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 参数 = process.argv.slice(2);
 const 要全部 = 参数.includes("--all");
 const 要总图 = 参数.includes("--map");
+// 只吐套件名，逗号分隔，直接接在 check-all 后面：
+//   node tools/check-all.mjs --only "$(node tools/impact.mjs src/parser.mjs --suites)"
+// 这是「改一份跑哪些」那句话的可执行形态 —— 那句话原来写在纪律里，靠人记。
+const 要套件 = 参数.includes("--suites");
 const 目标 = 参数.find((a) => !a.startsWith("--"));
 
 // ---- 一、.hmyr 之间谁 import 谁（全仓，不只 self/）----
@@ -174,6 +182,28 @@ for (const s of 套件) {
   if (载了本体 || 用src本体) 直接.push(s.名);
   else if (载了 || 用src间) 间接.push(s.名);
   else 无关.push(s.名);
+}
+
+if (要套件) {
+  // 会进「字节产物」的那几类要另说：它们的扩散不走 import 图，而走
+  // self/*.hmoca → runtime/*.hmoks → bootstrap/pack.hmtn → vm/pack_seed.h → 每一个
+  // 跑 C 那台或读那份字节的套件。地图读的是源码里的路径与 import，这条边它看不见
+  // （实测：改 self/body.hmoca，名单里没有 selfvmcompile，而那一套读的正是它的字节）。
+  // 所以这几类一律报全量 —— 不是保险起见，是那条边真的绕过了它读的所有东西。
+  const 进产物 = [
+    /^self\/[^/]*\.hmoca$/,
+    /^runtime\//,
+    /^bootstrap\//,
+    /^vm\/pack_seed\.h$/,
+    /^vm\/hmyr\.c$/,
+    /^bin\/hmyr\.mjs$/,
+  ];
+  if (进产物.some((r) => r.test(目标键))) {
+    console.log(套件.map((s) => s.名).join(","));
+    process.exit(0);
+  }
+  console.log([...直接, ...间接].join(","));
+  process.exit(0);
 }
 
 const 列 = (arr) => (要全部 ? arr : arr.slice(0, 12));
