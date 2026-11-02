@@ -27,11 +27,12 @@ import { 本机能力 } from "../src/capabilities.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 要JSON = process.argv.includes("--json");
 
-// 两个模 p 之内的数。长度各 64 个十六进制字符（256 位），且都小于
-// p = 2 的 255 次方减 19 —— 第一个是 p 减 1（最坏情形：全是 1 位），
-// 第二个是随机样子的一串。取最坏情形是有意的：模约简里那条「第 255 位置位
-// 就减掉它再加 19」的循环，只有在高位满的时候才真的转。
-const 甲 = "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed";
+// 两个模 p 之内的数。第一个是 p 减 1（最坏情形：低位全是 1，模约简里那几条
+// 折叠与条件减真的会转），第二个是随机样子的一串。
+// 尾字节是 ec 不是 ed —— ed 那个数是 p 本身，而 p 对 p 取模是零，于是模幂那一项
+// 量到的全是 0 的自乘，比真数便宜一半。这一处写错时两笔账差 1.5 倍，而对账的
+// 办法只有一个：模幂自己跑多少次模乘，乘回去看对不对得上（2026-11-02）。
+const 甲 = "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffec";
 const 乙 = "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0";
 
 const 起载 = Date.now();
@@ -52,23 +53,37 @@ const vm = 跑字节码(层, {
 
 // 每一回都从干净状态起跑：步数、停机标志、输出口都重设，
 // 与「原来的一次新进程」等价（curve-batch 那里同样的理由）。
+// 输出口只在建立时设一次。原来每一回都写 vm.write = () => {}，而那是每次调用
+// 分配一个新闭包 —— 量零点几毫秒的运算时，这点脚手架开销就混在结果里。
+// 2026-11-02 对账时才发现：模幂自己 216 毫秒跑约 508 次模乘（折合每次 0.43），
+// 而单独量一次模乘要 0.65 毫秒，两个数对不上。少掉那次闭包分配之后就自洽了 ——
+// 所以「探针自己的开销」也是被量对象的一部分，测量之前先把它压到最小。
+vm.write = () => {};
 const 调 = (名, 参) => {
   vm.步 = 0;
   vm.停机 = null;
-  vm.write = () => {};
   const r = vm.调用(名, 参, null);
   if (!r.ok) throw new Error(名 + " 失败：" + r.码 + " " + r.话);
   return r.值;
 };
 
 const 表 = [];
-// 先热身一次：第一回会带上 JIT 与文件缓存的开销，算进去就失真。
-const 计 = (标签, 次, fn) => {
-  fn();
-  const t0 = performance.now();
-  for (let i = 0; i < 次; i++) fn();
-  const 毫秒 = (performance.now() - t0) / 次;
-  const 行 = { 标签, 次, 毫秒 };
+// 每一档跑 轮数 轮、每轮 次 次，取最快的那一轮。
+//
+// 为什么不是「热身一次再跑一次」：V8 要到上千次调用才把一件小函数编成机器码，
+// 于是「半热」的数字会把后面所有推算带偏。2026-11-02 的实测证据：一次模幂
+// （255 轮、约 508 次模乘）量到 218 毫秒，而单独量的模乘是 0.76 毫秒 ——
+// 508 乘 0.76 是 386 毫秒，差 1.8 倍。多跑几轮取最快之后两个数就自洽了：
+// 那 1.8 倍买的是「还没被优化」的那几轮。所以这一份的基线一律用热透的数字。
+const 计 = (标签, 次, fn, 轮数 = 3) => {
+  let 毫秒 = Infinity;
+  for (let r = 0; r < 轮数; r++) {
+    const t0 = performance.now();
+    for (let i = 0; i < 次; i++) fn();
+    const 这轮 = (performance.now() - t0) / 次;
+    if (这轮 < 毫秒) 毫秒 = 这轮;
+  }
+  const 行 = { 标签, 次, 轮数, 毫秒 };
   表.push(行);
   if (!要JSON) console.log("  " + 标签.padEnd(26) + 毫秒.toFixed(4).padStart(10) + " ms");
   return 行;
@@ -127,6 +142,8 @@ if (要JSON) {
   console.log("    两项分开量各有自己的一次调用开销，所以和比一次模乘略大 —— 比例只作参照：");
   console.log("    乘 " + Math.round((单乘 / 单模乘) * 100) + "%，模约简 " + Math.round((单约 / 单模乘) * 100) + "%（两者相加会过一百）。");
   console.log("    一次内层小乘 = 乘 / 121 = " + (单乘 / 121).toFixed(5) + " ms（24 位字：11 个字两两相乘）");
-  console.log("    一次模幂 = " + 幂.毫秒.toFixed(0) + " ms，按 255 轮乘单价估算是 " +
-    Math.round(255 * 单模乘 * 1.5) + " ms（每轮一到两次乘）");
+  console.log("    一次模幂 = " + 幂.毫秒.toFixed(0) + " ms；除以模乘单价得 " +
+    (幂.毫秒 / 单模乘).toFixed(0) + " 次 —— 它该跑 508 次（255 轮平方 + 指数里 253 个 1），" +
+    "差 " + Math.round(Math.abs(幂.毫秒 / 单模乘 - 508) / 508 * 100) + "%。对不上就先查输入：" +
+    "底若取成 p 本身，模幂量到的全是 0 的自乘。");
 }
