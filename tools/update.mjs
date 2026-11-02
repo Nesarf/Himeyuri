@@ -15,7 +15,12 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const 走 = (参) => spawnSync("git", 参, { encoding: "utf8", cwd: ROOT });
+// 每一步都有上限。没有超时的 git fetch，在没有网络、或者远端要凭据的时候会一直等
+// —— 那比说错更糟：这个工具连「不知道」都说不出来了。
+// 2026-11-03 在 WSL 里第一次跑全量，distro 那一套就是卡在这里：十分钟、零 CPU，
+// 把整轮全量堵住。超时之后 status 是 null，于是它走「取不到远端」那条，
+// 退出码非零 —— 而 distro 套件对「退零」与「非零」两种情形各有断言，不会因此变红。
+const 走 = (参) => spawnSync("git", 参, { encoding: "utf8", cwd: ROOT, timeout: 20000 });
 
 console.log("");
 console.log("  我是哪一份");
