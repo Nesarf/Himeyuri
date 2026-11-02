@@ -777,7 +777,40 @@ C 版虚拟机：那台不是 JS 的机器
   四、其余。contracts、zoneself、globalvar、realtime、owned、ffi、array、zip、
       zipmulti、bitops、sha256、readdir、isdir、packagehmyr、crc、release、
       i18nthree、stdinline、readlines、names、profile、selfcontained、
-      elsenewline 各红一到五项，根因未查。
+      elsenewline 各红一到五项。
+
+  第四类的根因查到了，而且它和第二类是同一个（2026-11-03）
+  --------------------------------------------------------------------
+
+  查 array 那一套时露出的答案。它验的是纯语言层，却在第四节「C 那台也认」红了：
+
+    [不通过] C 那台编得出来
+    /usr/bin/ld: unrecognized option '--stack'
+
+  也就是说：那一段自己 spawn 一次 gcc 编 vm/hmyr.c，而命令行里带着
+  -Wl,--stack,67108864 —— PE 链接器的选项，GNU ld 不认。然后 grep 全仓：
+
+    五十八处。
+
+  test/ 下四十五个文件（array、bitops、board、cli、check-hmyr、contracts、crc、
+  deflate、docs-hmyr、doc-stats-hmyr、embed-hmyr、else-newline、ffi、fmt-hmyr、
+  global-var、hmyr-compiler、hmyr-pack、inflate、isdir、ittgn、locale、lsp 那三套、
+  names、owned、package-hmyr、profile、read-lines、readdir、realtime、
+  self-contained、self-ratio-hmyr、sha256、stdin-line、threads-c-vm、tree、
+  ucd-c-hmyr、zip、zip-multi、zone-self …），加上 bench/run.mjs、
+  bench/realtime.mjs、tools/gen-pack-seed.mjs。
+
+  所以第四类与「C 那一支」是同一个根因，而它的形状值得单独记一句：
+  它不是某一段代码假设了 Windows，是四十八个文件各自重复了同一条命令行。
+  上一轮把临时目录收成 test/scratch.mjs 的经验在这里同样适用 —— 把那条命令行里
+  平台相关的那两项（Windows 的 --stack、POSIX 的 -pthread）收成一个模块，
+  让四十八处都问它。
+
+  这也解释了「26 到 33 秒」那个耗时：gcc 其实立刻就失败了，是套件的重试与
+  后续步骤把它拖到半分钟。
+
+  一句话收：四十套红里绝大多数是同一个字符串。这不是四十个 bug，是一个字符串
+  写了四十八遍 —— 而它和临时目录那一条是同一课：重复的默认值就是未声明的假设。
 
   一句话收：清单有了，分类只分到「能看出来的」为止。第四类那二十来套要逐套查，
   而查法与这一轮相同 —— 单跑、读它吐出来的那一行。
