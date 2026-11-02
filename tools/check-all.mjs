@@ -186,7 +186,7 @@ const SUITES = [
   ["packagehmyr", "test/package-hmyr.test.mjs", "SPEC M7 - a package built in Himeyuri: EOCD, central directory and every member read back by offset, byte for byte against the source"],
   ["crc", "test/crc.test.mjs", "SPEC 2.2 - the CRC32 builtin: three implementations agree with each other and with node, and a blocked tuple equals the flat one"],
   ["releasehmyr", "test/release-hmyr.test.mjs", "SPEC M7 - release: manifest, archive and notes from one command, and the notes answer the three questions"],
-  ["bigint", "test/bigint.test.mjs", "SPEC M7 - 256-bit integers built from 16-bit words: add, subtract, multiply and compare, checked against node's BigInt"],
+  ["bigint", "test/bigint.test.mjs", "SPEC M7 - 256-bit integers built from 24-bit words: add, subtract, multiply and compare, checked against node's BigInt"],
   ["curve", "test/curve.test.mjs", "SPEC M7 - the Ed25519 curve: 0 and 1 times the base point, and every result from 2 to 8 landing on the curve equation"],
   ["sha512", "test/sha512.test.mjs", "SPEC M7 - SHA-512 over four samples: empty, three bytes, the padding boundary, and a two-block input, all against node's crypto"],
   ["ssh", "test/ssh.test.mjs", "SPEC M7 - the OpenSSH signature wire format: base64 decoded and every section of the SSHSIG structure matched byte for byte"],
