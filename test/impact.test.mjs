@@ -64,6 +64,18 @@ console.log("四、src 那几份说得出自己要碰谁");
   ok("改 eval.mjs 会碰到 contracts", 乙.has("contracts"), "");
 }
 
+console.log("五、被 spawn 出去的工具脚本也是一条边");
+{
+  // test/curve.test.mjs 是通过命令行参数调 tools/curve-batch.mjs 的，那里没有 import。
+  // 地图原来的三条规则只收 .hmoca，于是这条边是隐形的 —— 改那个探针会答「没有套件」，
+  // 而 curve 会红。第四种规则（收仓库内的 .mjs 路径）就是为它加的。
+  const 丙 = new Set(名们("tools/curve-batch.mjs"));
+  ok("改 curve-batch.mjs 会碰到 curve", 丙.has("curve"), String(丙.size) + " 套");
+  // 探针自己 import 的 src 也要算进来：改 vm.mjs 时 curve 会红，而地图原来不认得这条路。
+  const 丁 = new Set(名们("src/vm.mjs"));
+  ok("改 vm.mjs 会碰到 curve", 丁.has("curve"), String(丁.size) + " 套");
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

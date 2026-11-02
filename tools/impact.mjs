@@ -99,8 +99,24 @@ for (const [名, 脚本] of 清单) {
   for (const m of 源.matchAll(/loadUnit\(path\.join\(ROOT,\s*"([^"]+)"/g)) 载入.add(m[1].split("\\").join("/"));
   for (const m of 源.matchAll(/path\.join\(ROOT,\s*"([^"]+\.(?:hmyr|hmoca))"/g)) 载入.add(m[1].split("\\").join("/"));
   for (const m of 源.matchAll(/["']([A-Za-z0-9_./\\-]+\.hmoca)["']/g)) 载入.add(m[1].split("\\").join("/"));
+  // 第四种：被当成命令行参数 spawn 出去的 .mjs 工具。上面那三条只收 .hmoca，
+  // 于是 test/curve.test.mjs 调 tools/curve-batch.mjs 这条边从前是隐形的 ——
+  // 改那个探针，--affects 会答「没有套件」，而 curve 会红。
+  // 单独一个集合而不是并进 载入：混进去会让 --map 把 .mjs 列在
+  // 「每个套件加载的 .hmyr」那个标题底下，标题就成了假话。
+  // 只收仓库内的相对路径，所以 from "../src/x.mjs" 这一种不会被误收 —— 它由下面那一条管。
+  const 脚本们 = new Set();
+  for (const m of 源.matchAll(/["']((?:tools|bin|src|test|vm)\/[A-Za-z0-9_./-]+\.mjs)["']/g)) 脚本们.add(m[1]);
   const src们 = new Set([...源.matchAll(/from "\.\.\/src\/([^"]+)"/g)].map((m) => "src/" + m[1]));
-  套件.push({ 名, 脚本, 载入, src: src们 });
+  // 被 spawn 的工具脚本自己也 import src，那些依赖也要算进这个套件。
+  // 少了这一步，改 src/vm.mjs（curve-batch.mjs 正是用它跑字节码）不会选中 curve，
+  // 而曲线套件就是会红的那个。这条缺口是 2026-11-02 加探针时当场露出来的。
+  for (const 工 of 脚本们) {
+    let 工源 = "";
+    try { 工源 = fs.readFileSync(path.join(ROOT, 工), "utf8"); } catch { continue; }
+    for (const m of 工源.matchAll(/from\s+"\.\.\/src\/([^"]+)"/g)) src们.add("src/" + m[1]);
+  }
+  套件.push({ 名, 脚本, 载入, 脚本们, src: src们 });
 }
 
 // ---- 二半、src 模块之间谁 import 谁 ----
@@ -177,9 +193,11 @@ const 无关 = [];
 for (const s of 套件) {
   const 载了本体 = s.载入.has(目标键);
   const 用src本体 = 是src && s.src.has(目标键);
+  // 套件把这个文件当命令行参数 spawn 出去，也算直接依赖：它跑的就是那一步。
+  const 用工具本体 = s.脚本们.has(目标键);
   const 载了 = [...目标链].some((f) => s.载入.has(f));
   const 用src间 = 是src && !用src本体 && [...src链].some((f) => s.src.has(f));
-  if (载了本体 || 用src本体) 直接.push(s.名);
+  if (载了本体 || 用src本体 || 用工具本体) 直接.push(s.名);
   else if (载了 || 用src间) 间接.push(s.名);
   else 无关.push(s.名);
 }
