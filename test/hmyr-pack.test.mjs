@@ -13,6 +13,7 @@ import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
 import { 写程序, 读程序 } from "../src/code-file.mjs";
 import { 虚拟机 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -90,7 +91,7 @@ console.log("三、C 那台也交得出同一份字节");
     console.log("  跳过  这台机器上没有 gcc");
   } else {
     const exe = path.join(临, "vm.exe");
-    const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+    const c = spawnSync("gcc", ["-std=c11", "-O2", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
     if (c.status === 0) {
       const 源路 = path.join(临, "r.hmoca");
@@ -128,7 +129,7 @@ console.log("四、自举的固定点：HMYR 编出来的编译器，重编自�
     console.log("  跳过  这一节要编 self/ 六份两遍，几吉字节：设 HMYR_HEAVY=1 才跑");
   } else {
     const exe = path.join(临, "vm2.exe");
-    const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+    const c = spawnSync("gcc", ["-std=c11", "-O2", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     if (c.status !== 0) {
       ok("C 那台编得出来", false, String(c.stderr).slice(0, 160));
     } else {

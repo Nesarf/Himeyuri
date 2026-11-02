@@ -9,6 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -98,7 +99,7 @@ console.log("二、在真正的程序里按行读（两台机器）");
       console.log("  跳过  这台机器上没有 gcc");
     } else {
       const exe = path.join(临, "vm.exe");
-      const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+      const c = spawnSync("gcc", ["-std=c11", "-O2", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
       ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
       if (c.status === 0) {
         const r = spawnSync(exe, [码路], { encoding: "utf8", timeout: 120000 });

@@ -13,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 临 = path.join(ROOT, "dist", "_realtime");
@@ -27,7 +28,7 @@ fs.mkdirSync(临, { recursive: true });
 
 // 编 C 那台与那份回调：基准自己负责准备它的输入（与 bench/run.mjs 同一条规矩）。
 const exe = path.join(临, "hmyr-rt.exe");
-const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe,
+const 编 = spawnSync("gcc", ["-std=c11", "-O2", ...平台参数(), "-o", exe,
   path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
 if (编.status !== 0) {
   console.error("C 那台编不出来：" + String(编.stderr).slice(0, 200));

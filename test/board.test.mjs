@@ -11,6 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -38,7 +39,7 @@ const exe = path.join(临, "board-check.exe");
   // 去掉 main 之后那几个启动器函数没有调用者，所以关掉那条警告 ——
   // 它们不是死代码，只是在这一种编译形态下用不到。
   const r = spawnSync("gcc", [
-    "-std=c11", "-O2", "-Wall", "-Wno-unused-function", "-Wl,--stack,67108864",
+    "-std=c11", "-O2", "-Wall", "-Wno-unused-function", ...平台参数(),
     "-DHMYR_LIB", "-o", exe,
     path.join(ROOT, "port/board-check.c"),
     path.join(ROOT, "port/arm-port.c"),

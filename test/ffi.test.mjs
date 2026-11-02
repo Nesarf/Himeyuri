@@ -19,6 +19,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 具 = path.join(ROOT, "bin", "hmyr.mjs");
@@ -116,7 +117,7 @@ console.log("四、C 那台一致");
     console.log("  跳过  这台机器上没有 gcc —— 第四台不验");
   } else {
     const exe = path.join(临, "hmyr-ffi.exe");
-    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-Wl,--stack,67108864", "-o", exe,
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", ...平台参数(), "-o", exe,
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得出来", 编.status === 0, String(编.stderr || "").slice(0, 160));
     if (编.status === 0) {
@@ -170,7 +171,7 @@ console.log("五、可写窗口：写进窗口，源也跟着变");
     try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
   })();
   if (有gcc) {
-    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-Wl,--stack,67108864", "-o", exe2,
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", ...平台参数(), "-o", exe2,
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     if (编.status === 0) {
       const 码 = path.join(临, "可.hmoks");
@@ -234,7 +235,7 @@ console.log("六、call_c 的三条失败");
     const 子 = path.join(临, "call");
     try { fs.mkdirSync(子, { recursive: true }); } catch { /* 已经有了就用 */ }
     const exe = path.join(子, "hmyr-call.exe");
-    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-Wl,--stack,67108864", "-o", exe,
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", ...平台参数(), "-o", exe,
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     if (编.status !== 0) console.log("  跳过  call_c 那台这一次没编出来：" + String(编.stderr || "").slice(0, 100));
     if (编.status === 0) {

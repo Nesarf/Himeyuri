@@ -14,6 +14,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 种子 = path.join(ROOT, "bootstrap/pack.hmtn");
@@ -39,7 +40,7 @@ if (!fs.existsSync(种子)) { console.error("没有种子：" + 种子); process
 
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-seedgen-"));
 const exe = path.join(临, "hmyr.exe");
-const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe,
+const 编 = spawnSync("gcc", ["-std=c11", "-O2", ...平台参数(), "-o", exe,
   path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
 if (编.status !== 0) { console.error("exe 编不出来：\n" + String(编.stderr).slice(0, 400)); process.exit(1); }
 

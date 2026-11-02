@@ -16,6 +16,7 @@ import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
 import { 写程序 } from "../src/code-file.mjs";
 import { 虚拟机, 类元组, 类记录 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -46,7 +47,7 @@ if (!有编译器) {
 // Linux 那边主线程栈由 ulimit 定（默认 8MB）；真需要更多也不能靠编译参数，
 // 要在跑的时候抬 ulimit，所以这一侧换成 -pthread：线程那一块现在两端都有了，
 // 而 POSIX 那边要显式链上它。
-const 栈参数 = process.platform === "win32" ? ["-Wl,--stack,67108864"] : ["-pthread"];
+const 栈参数 = 平台参数();
 const exe = path.join(临, "hmyr-vm.exe");
 {
   const r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...栈参数, "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });

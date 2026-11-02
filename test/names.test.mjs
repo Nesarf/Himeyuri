@@ -19,6 +19,7 @@ import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
 import { 写程序 } from "../src/code-file.mjs";
 import { 虚拟机 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -60,7 +61,7 @@ if (!有编译器) {
 } else {
   const exe = path.join(临, "hmyr.exe");
   {
-    const r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe,
+    const r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe,
       path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("vm/hmyr.c 编得出来", r.status === 0, String(r.stderr).slice(0, 200));
   }

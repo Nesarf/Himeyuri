@@ -17,6 +17,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { 档位, 档预设, 档步限 } from "../tools/file-kind-reference.mjs";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 具 = path.join(ROOT, "bin", "hmyr.mjs");
@@ -88,7 +89,7 @@ console.log("五、C 那台也按档位：同一份内容，两个名字，两�
     console.log("  跳过  这台机器上没有 gcc —— C 那台那一侧不验");
   } else {
     const exe = path.join(临, "hmyr.exe");
-    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe,
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", ...平台参数(), "-o", exe,
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得出来", 编.status === 0, String(编.stderr).slice(0, 160));
     const 源 = "fn main() -> Int {\n  print(\"C 那台两档一样\" + chr(10))\n  return 0\n}\n";

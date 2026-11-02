@@ -18,6 +18,7 @@ import { 切 } from "../src/subset-lex.mjs";
 import { 子集解 } from "../src/subset-parse.mjs";
 import { 实时检查 } from "../src/realtime-check.mjs";
 import { loadUnit } from "../src/loader.mjs";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-realtime-"));
@@ -208,7 +209,7 @@ console.log("七、C 那台：分配真的少了（堆账是判据）");
     console.log("  跳过  这台机器上没有 gcc —— 堆账那一侧不验");
   } else {
     const exe = path.join(临, "hmyr-rt.exe");
-    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-Wl,--stack,67108864", "-o", exe,
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", ...平台参数(), "-o", exe,
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得出来", 编.status === 0, String(编.stderr || "").slice(0, 160));
 

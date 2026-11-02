@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 临 = path.join(ROOT, "dist", "_bench");
@@ -42,7 +43,7 @@ const 编码 = (源, 出) => {
 const 清场 = () => spawnSync("taskkill", ["/IM", "hmyr-bench.exe", "/F"], { encoding: "utf8" });
 
 const exe = path.join(临, "hmyr-bench.exe");
-const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
 if (编.status !== 0) {
   console.error("C 那台编不出来：" + String(编.stderr).slice(0, 200));
   process.exit(2);

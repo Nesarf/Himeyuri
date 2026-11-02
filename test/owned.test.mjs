@@ -14,6 +14,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 具 = path.join(ROOT, "bin", "hmyr.mjs");
@@ -128,7 +129,7 @@ console.log("三、四台同一段");
     console.log("  跳过  这台机器上没有 gcc —— C 那台那一侧不验");
   } else {
     const exe = path.join(临, "hmyr-c.exe");
-    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-Wl,--stack,67108864", "-o", exe,
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", ...平台参数(), "-o", exe,
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得出来", 编.status === 0, String(编.stderr || "").slice(0, 160));
     if (编.status === 0) {
