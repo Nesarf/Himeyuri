@@ -147,5 +147,6 @@ node tools/check-all.mjs --list > tools/suite-list.txt 才对。
 而那一行的字还停在旧名上）。数字是对的，字该改，只是它不影响任何判据 ——
 记在这里，免得下一个人按那个字去找 .hmyr 文件。
 
-2026-11-02 的账：地图报 111 份 HMYR 源码、203 个套件，与 check-all 的 SUITES 表对得上。
+2026-11-02 的账：地图报 111 份 HMYR 源码、204 个套件，与 check-all 的 SUITES 表对得上。
 清单那条事故之后，导出件由 node tools/check-all.mjs --list 重生成，两边数字一直同步。
+（末一句那天晚些时候从 203 改成 204 —— impact 那一套加进来之后，这行数没跟着动过。）
