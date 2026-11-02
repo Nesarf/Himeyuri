@@ -84,6 +84,10 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <pthread.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <fcntl.h>
 #endif
 
 /* 「标准输入是不是一个终端」——两家的名字不一样，收成一个宏。
@@ -913,10 +917,20 @@ static 线程局部 Hmyr机器 *g_机 = &主机;
  * 一个线程一个独立的 Hmyr机器 —— 分开的机制是上面那个线程局部的 g_机：
  * 线程入口把它指向自己那一台，于是所有读它的代码在那一个线程里看到自己那一份。
  */
+/* 线程句柄：两家各一个名字，收成一个类型 —— 与 是终端 那个宏同一条路子。 */
 #if defined(_WIN32)
+typedef HANDLE 线程句柄;
+#elif !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+typedef pthread_t 线程句柄;
+#endif
+
+/* 桌面两支都有线程，板子那一支没有（call_builtin 里给它的是 fallback）。
+ * 2026-11-02 之前这一块只写成 #if defined(_WIN32)，于是 Linux 被当成了板子 ——
+ * 「桌面就等于 Windows」这个假设在 WSL 上第一次被检验，它不成立。 */
+#if defined(_WIN32) || (!defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__))
 typedef struct 线程上下文 {
   int 号;
-  HANDLE 手;
+  线程句柄 手;
   char 源码路径[1024];
   /* 比源码路径宽八个字节：它是「源码路径 + .hmyrb」，同宽会让 snprintf 报可能截断，
    * 而那个警告是真的（截断之后编出来的产物名与要读的那个对不上）。 */
@@ -925,7 +939,11 @@ typedef struct 线程上下文 {
   char 结果[4096];
   volatile int 完;
   int 码;
-  char 话[256];
+  /* 与 g_fail_msg 同宽：失败理由最长写到 g_fail_msg 那一份（512 字节），
+   * 而这里原来只有 256 —— Linux 的 gcc 15 把 -Wformat-truncation 报成了警告，
+   * 而那条警告是真的：截断之后调用方看到的是一句被剪断的话。
+   * 2026-11-02 跨系统实测时露出来的。 */
+  char 话[512];
 } 线程上下文;
 
 #define 线程上限 16
@@ -1112,7 +1130,12 @@ static const char *环境(const char *名) {
  */
 typedef struct { char *p; size_t n, cap; } 字节串;
 
-#ifdef _WIN32
+/* 往字节串后面接一段。它不需要 Windows —— 2026-11-02 才把这一点分出来，
+ * 之前它被包在 _WIN32 里只是历史原因（当时只有 Windows 那条路在收子进程的输出）。
+ * 但它仍然只在「有子进程输出要收」的那两支上有用：板子上没有管道，留着它
+ * 只换来一条 unused-function 警告，而那条警告是真的 —— 说明这块代码在那台
+ * 机器上没有归属。 */
+#if defined(_WIN32) || (!defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__))
 static void 字节串放(字节串 *b, const char *s, size_t n) {
   if (b->n + n + 1 > b->cap) {
     size_t 新 = b->cap ? b->cap : 4096;
@@ -1169,6 +1192,20 @@ static void 读管道(HANDLE h, 字节串 *b) {
     DWORD 要 = 可读 < (DWORD)sizeof 缓 ? 可读 : (DWORD)sizeof 缓;
     if (!ReadFile(h, 缓, 要, &得, NULL) || 得 == 0) break;
     字节串放(b, 缓, 得);
+  }
+}
+#endif
+
+#if !defined(_WIN32) && !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+/* 一个 fd 上把此刻读得到的东西都取走。fd 必须是非阻塞的 ——
+ * 主循环还要同时看另一根管道、子进程有没有结束、超时到了没有，
+ * 阻塞在任何一样上都会把另外三样一起卡住。 */
+static void 读管道fd(int fd, 字节串 *b) {
+  for (;;) {
+    char 缓[4096];
+    ssize_t 得 = read(fd, 缓, sizeof 缓);
+    if (得 > 0) { 字节串放(b, 缓, (size_t)得); continue; }
+    break;   /* 0 是 EOF；-1 在非阻塞下就是「暂时没有」，两种都该停 */
   }
 }
 #endif
@@ -4535,8 +4572,88 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
       if (oR) CloseHandle(oR);
       if (eR) CloseHandle(eR);
     }
+#elif !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+    {
+      /* fork + 两根管道 + execvp。不用 popen：它一路单向，而且拿不到退出码，
+       * 而这一份契约要 stdout、stderr、退出码、超时四样。
+       * 2026-11-02 补：之前这一支只写一句 ENOPROC，于是「桌面等于 Windows」
+       * 在 run_program 这一块也成立过 —— 与线程那一处是同一种假设，同一天被
+       * WSL 上的第一次跨系统跑摊开。 */
+      int o管[2], e管[2], 握[2];
+      o管[0] = o管[1] = e管[0] = e管[1] = 握[0] = 握[1] = -1;
+      if (pipe(o管) != 0 || pipe(e管) != 0 || pipe(握) != 0) {
+        错误码 = "EPIPE";
+      } else {
+        pid_t 子 = fork();
+        if (子 == 0) {
+          /* 子进程：两根写端接到 1 与 2，读端关掉，然后 exec。
+           * 握[1] 要设 FD_CLOEXEC：exec 成功之后它由内核关掉，父进程读到的就是
+           * EOF；exec 失败时这一支自己写一个字节，父进程由此知道「没起来」。
+           * 少了这道握手，两边对「程序不存在」的码就不一样了 —— Windows 那边
+           * 根本没建出进程（-1），POSIX 这边是起来了又退出 127。 */
+          close(o管[0]); close(e管[0]); close(握[0]);
+          dup2(o管[1], 1);
+          dup2(e管[1], 2);
+          close(o管[1]); close(e管[1]);
+          fcntl(握[1], F_SETFD, FD_CLOEXEC);
+          {
+            char **argv = (char **)calloc((size_t)参量 + 2, sizeof(char *));
+            if (!argv) _exit(127);
+            argv[0] = 命令;
+            for (int k = 0; k < 参量; k++) argv[k + 1] = 参们[k];
+            execvp(命令, argv);
+          }
+          {
+            char e = 1;
+            ssize_t w = write(握[1], &e, 1);
+            (void)w;
+          }
+          _exit(127);
+        }
+        close(o管[1]); close(e管[1]); close(握[1]);
+        if (子 < 0) {
+          错误码 = "ENOENT";
+        } else {
+          long 已等 = 0;
+          fcntl(o管[0], F_SETFL, O_NONBLOCK);
+          fcntl(e管[0], F_SETFL, O_NONBLOCK);
+          for (;;) {
+            int 状 = 0;
+            读管道fd(o管[0], &出);
+            读管道fd(e管[0], &错);
+            if (waitpid(子, &状, WNOHANG) == 子) {
+              码 = WIFEXITED(状) ? (long)WEXITSTATUS(状) : -1;
+              break;
+            }
+            if (超时毫秒 > 0 && (double)已等 >= 超时毫秒) {
+              kill(子, SIGKILL);
+              waitpid(子, NULL, 0);
+              超时了 = 1;
+              码 = -1;
+              break;
+            }
+            {
+              struct timespec 停;
+              停.tv_sec = 0;
+              停.tv_nsec = 10L * 1000000L;
+              nanosleep(&停, NULL);
+            }
+            已等 += 10;
+          }
+          /* 收殓之后再把管道里剩下的读完：子进程写完就退出时，那一点输出可能
+           * 还停在内核缓冲里，而上面那一轮读发生在它的退出之前。 */
+          读管道fd(o管[0], &出);
+          读管道fd(e管[0], &错);
+          {
+            char e = 0;
+            if (read(握[0], &e, 1) > 0) { 错误码 = "ENOENT"; 码 = -1; }
+          }
+        }
+        close(o管[0]); close(e管[0]); close(握[0]);
+      }
+    }
 #else
-    /* 别的平台还没有这一份实现。说清是哪一个平台没有，而不是装作跑成功了。 */
+    /* 板子上没有进程：说清是这一台没有，而不是装作跑成功了。 */
     (void)超时毫秒;
     错误码 = "ENOPROC";
 #endif
@@ -4576,7 +4693,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
    *
    * 上下文、线程表与三个辅助函数的声明在文件头部（g_机 那一段之后），
    * 它们的定义在 run_bytecode 之后 —— 那批函数在文件更靠后的位置。 */
-#if defined(_WIN32)
+#if defined(_WIN32) || (!defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__))
   if (name_is(名off, "thr_spawn")) {
     if (nargs != 2) { fail("HMYR-行-002", "thr_spawn wants (source, entry)"); return 1; }
     {
@@ -4597,16 +4714,41 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
   if (name_is(名off, "thr_join")) {
     线程上下文 *c;
     int 号;
+#ifdef _WIN32
     DWORD 到;
+#endif
     if (nargs < 1) { fail("HMYR-行-002", "thr_join wants (handle [, timeout_ms])"); return 1; }
     号 = (int)args[0].num;
     c = 找线程(号);
     if (!c) { fail("HMYR-內-020", "no such thread handle"); return 1; }
+#ifdef _WIN32
     到 = (nargs >= 2 && args[1].tag == T_NUM && args[1].num > 0) ? (DWORD)args[1].num : 30000;
     if (WaitForSingleObject(c->手, 到) != WAIT_OBJECT_0) {
       fail("HMYR-內-021", "the thread did not finish within that time");
       return 1;
     }
+#else
+    {
+      /* pthread 的标准 join 没有超时。与其用 glibc 的 pthread_timedjoin_np
+       * （一个非标准扩展），不如拿 线程体 收尾时置的那个 完 位轮询 —— 语义一样、
+       * 只依赖 POSIX，代价是十毫秒一次的唤醒。
+       * 2026-11-02：这一支是给 Linux 补的，补的动机是「桌面等于 Windows」不成立。 */
+      long 等到 = (nargs >= 2 && args[1].tag == T_NUM && args[1].num > 0) ? (long)args[1].num : 30000;
+      long 已等 = 0;
+      while (!c->完 && 已等 < 等到) {
+        struct timespec 停;
+        停.tv_sec = 0;
+        停.tv_nsec = 10L * 1000000L;
+        nanosleep(&停, NULL);
+        已等 += 10;
+      }
+      if (!c->完) {
+        fail("HMYR-內-021", "the thread did not finish within that time");
+        return 1;
+      }
+      pthread_join(c->手, NULL);
+    }
+#endif
     if (c->码 == 0) {
       uint32_t 长16 = 0;
       uint16_t *u = utf8_to_utf16(c->结果, strlen(c->结果), &长16);
@@ -4627,7 +4769,15 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     号 = (int)args[0].num;
     c = 找线程(号);
     if (!c) { fail("HMYR-內-020", "no such thread handle"); return 1; }
+#ifdef _WIN32
     TerminateThread(c->手, 1);
+#else
+    /* pthread_cancel 是「请求」不是「保证」：它只在取消点生效，而字节码循环里
+     * 不一定有取消点。所以这一支的语义比 Windows 那台弱 —— 写明在这里，
+     * 而不是让调用方以为两边一样。 */
+    pthread_cancel(c->手);
+    pthread_detach(c->手);
+#endif
     清线程(c);
     *out = v_num((double)号);
     return 1;
@@ -6029,8 +6179,12 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
  *
  * 为什么定义在这儿：它们要用种子、装载与执行那一批函数，而那批在文件更靠后的位置。
  * 结构与线程表留在内置表旁边 —— 那里要用到它们的字段。 */
+#if defined(_WIN32) || (!defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__))
 #if defined(_WIN32)
 static DWORD WINAPI 线程体(LPVOID 参) {
+#else
+static void *线程体(void *参) {
+#endif
   线程上下文 *c = (线程上下文 *)参;
   Hmyr机器 m;
   memset(&m, 0, sizeof g_诊m);
@@ -6141,8 +6295,12 @@ static int 线程起(const char *源码, const char *入口) {
   fwrite(源码, 1, strlen(源码), f);
   fclose(f);
 
+#ifdef _WIN32
   c->手 = CreateThread(NULL, 0, 线程体, c, 0, NULL);
   if (!c->手) { remove(c->源码路径); free(c); return -1; }
+#else
+  if (pthread_create(&c->手, NULL, 线程体, c) != 0) { remove(c->源码路径); free(c); return -1; }
+#endif
   g_线程们[槽] = c;
   return c->号;
 }
@@ -6155,7 +6313,14 @@ static 线程上下文 *找线程(int 号) {
 /* 收掉一行的账：句柄关掉、两份临时文件删掉、结构放掉。 */
 static void 清线程(线程上下文 *c) {
   for (int i = 0; i < 线程上限; i++) if (g_线程们[i] == c) g_线程们[i] = NULL;
+#ifdef _WIN32
   if (c->手) CloseHandle(c->手);
+#else
+  /* pthread 没有「关句柄」：join 过的线程已经结束，detach 掉就不必再回收。
+   * 没 join 就清掉的那条路（cancel）在那边已经 detach 过一次，这里再来一次
+   * 是空操作 —— 对已 detach 的线程 pthread_detach 交回 EINVAL，无害。 */
+  pthread_detach(c->手);
+#endif
   remove(c->源码路径);
   remove(c->产物路径);
   free(c);

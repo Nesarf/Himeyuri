@@ -44,8 +44,9 @@ if (!有编译器) {
 // 参数就得不同。2026-11-02 在 WSL 里第一次跨系统跑这一套时才露：那条参数
 // 一直是写死的，因为这条编译路只走过 MinGW。
 // Linux 那边主线程栈由 ulimit 定（默认 8MB）；真需要更多也不能靠编译参数，
-// 要在跑的时候抬 ulimit，所以这里给的是一句空。
-const 栈参数 = process.platform === "win32" ? ["-Wl,--stack,67108864"] : [];
+// 要在跑的时候抬 ulimit，所以这一侧换成 -pthread：线程那一块现在两端都有了，
+// 而 POSIX 那边要显式链上它。
+const 栈参数 = process.platform === "win32" ? ["-Wl,--stack,67108864"] : ["-pthread"];
 const exe = path.join(临, "hmyr-vm.exe");
 {
   const r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...栈参数, "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
@@ -832,15 +833,24 @@ console.log("二十二、跑一个程序：退出码、两路输出、超时");
 {
   // 这一条是进程组的大件：管道、超时、四个字段一份记录。
   // 程序只输出可断言的那几件，不输出 stderr 内容（它随宿主的措辞而变）。
+  //
+  // 命令的名字与「怎么让它执行一句话」是平台的事：Windows 是 cmd /c，POSIX 是
+  // sh -c；而要「慢到超时」的那一条，Windows 用 ping -n，POSIX 用 sleep。
+  // 这一节原来只写 cmd，因为这一套只在 Windows 上跑过 —— 2026-11-02 跨系统时
+  // 它红了，红的原因是「测试里假设了 Windows」，不是机器坏了。
+  const 是win = process.platform === "win32";
+  const 外壳 = 是win ? "cmd" : "sh";
+  const 壳参 = 是win ? "/c" : "-c";
+  const 慢命令 = 是win ? "ping -n 4 127.0.0.1" : "sleep 5";
   const 源码 = [
     "fn main() -> Int effects(process) {",
-    '  let 甲 = run_program("cmd", ("/c", "echo hi"))',
+    `  let 甲 = run_program("${外壳}", ("${壳参}", "echo hi"))`,
     '  print(str(甲.code) + " " + 甲.stdout + " ")',
-    '  let 乙 = run_program("cmd", ("/c", "exit 3"))',
+    `  let 乙 = run_program("${外壳}", ("${壳参}", "exit 3"))`,
     '  print(str(乙.code) + " ")',
     '  let 丙 = run_program("no-such-program-xyz")',
     '  print(str(丙.code) + " ")',
-    '  let 丁 = run_program("cmd", ("/c", "ping -n 4 127.0.0.1"), 60)',
+    `  let 丁 = run_program("${外壳}", ("${壳参}", "${慢命令}"), 60)`,
     '  print(str(丁.timedOut))',
     "  return 0",
     "}",
