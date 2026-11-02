@@ -61,6 +61,11 @@ const 样本 = [
   // 选 bigint.hmoca 因为两条：336 行，且零 import（这一套的样本会被写进临时目录，
   // 有 import 的会在那里解析不了）。curve 与 sign 现在还编不动 —— 等子集扩大之后
   // 那两份才进得来。
+  // 契约（design/CONTRACTS.txt、design/INVARIANTS.txt）。2026-11-02 补这一份，
+  // 因为前面六份一条契约都没有 —— 而子集编译器新写的那一段字节，恰好是判据没走到的地方。
+  // 三样写全：requires 在入口，ensures 与 invariant 在出口，而 invariant 在入口也查一次。
+  // 契约必须分行：自举层的 契约批 靠行尾切条件，写在签名同一行会把 { 也吃进去。
+  ["带三样契约的函数", "fn 取首(a: Int) -> Int\n  requires a >= 0\n  ensures 返回值 >= 0\n  invariant a >= 0\n{\n  return a\n}\nfn main() -> Int {\n  let x = 取首(3)\n  return x\n}\n"],
   ["真实文件 self/bigint.hmoca", fs.readFileSync(path.join(ROOT, "self/bigint.hmoca"), "utf8")],
 ];
 
@@ -86,7 +91,10 @@ for (const [标, 源] of 样本) {
   const u = loadUnit(源路);
   fs.rmSync(临, { recursive: true, force: true });
   if (!u.ok) { ok(标, false, "宿主加载失败"); continue; }
-  const js = 写程序(合并程序(u.order.map((f) => 编译模块(u.modules.get(f)))));
+  // 两个档得对齐才谈得上逐字节比。子集编译器（self/compile.hmoca 的 编源码）
+  // 没有选项层 —— 它固定编强档；所以这里让 JS 那一份也开强档。
+  // 无契约的样本在两个档下字节相同（返槽与那两段都不发），这一句对它们没有影响。
+  const js = 写程序(合并程序(u.order.map((f) => 编译模块(u.modules.get(f), { contracts: true }))));
 
   const 同 = js.length === 她.length && js.every((b, i) => b === 她[i]);
   ok(标 + "（" + js.length + " 字节）", 同, 同 ? "" : "JS " + js.length + " / vm " + 她.length);

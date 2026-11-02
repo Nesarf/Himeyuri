@@ -13,10 +13,10 @@ import { run } from "../src/eval.mjs";
 import { lex } from "../src/lexer.mjs";
 import { parse } from "../src/parser.mjs";
 import { loadUnit } from "../src/loader.mjs";
-import { 跑字节码 } from "../src/vm.mjs";
+import { 虚拟机, 跑字节码 } from "../src/vm.mjs";
 import { 最小运行 } from "../src/minimal-eval.mjs";
 import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
-import { 写程序 } from "../src/code-file.mjs";
+import { 读程序, 写程序 } from "../src/code-file.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -263,6 +263,57 @@ console.log("十二、自举那台：默认路（解释）也查了");
   ok("消息与另外四台同一句", 开坏.出.includes("函数 取 的第 1 条 requires 不成立"), JSON.stringify(开坏.出.trim().slice(0, 80)));
   const 关好 = 跑(好, false), 开好 = 跑(好, true);
   ok("契约都成立时两台输出一样", 关好.出.startsWith("6") && 开好.出.startsWith("6"), JSON.stringify([关好.出.trim(), 开好.出.trim()]));
+}
+
+console.log("十三、子集编译器：它编出的字节里，契约真的在");
+{
+  // 第五条编路：self/compile.hmoca。
+  //
+  // 它在 2026-11-02 之前只读声明的头四件 —— 第九格的契约从不打开。于是拿它编一份
+  // 带契约的源码，那些条件会静默消失：没有错，没有警告，只是不再查。
+  // 这一节盯的就是「它不再静默」，而判据分成两层：
+  //   一、两台编译器逐字节一致（tools/self-vm-compile.mjs 那一套钉这一层）；
+  //   二、同一份字节跑在 vm 上，坏契约要停在 HMYR-契-001（这一节钉这一层）。
+  // 只有第一层，说明两边错得一样；只有第二层，说明不了子集交的就是同一份字节。
+  //
+  // 与另外几台的形状差别要说清：这一位没有开关。编源码 不带选项，编出来的永远是强档流。
+  // 所以这里没有「关档跑得过去」那一半 —— 那一半在字节码那台（第九节）钉着。
+  const 字节路 = path.join(ROOT, "runtime/pack.hmoks");
+  if (!fs.existsSync(字节路)) {
+    ok("runtime/pack.hmoks 在", false, "先跑 node tools/emit-code.mjs self/pack.hmoca runtime/pack.hmoks");
+  } else {
+    const 种子 = new 虚拟机(读程序(fs.readFileSync(字节路)), {
+      capabilities: 本机能力(), stepLimit: 400000000, maxDepth: 4000,
+    });
+    const 取 = (v, k) => (v && v.fields ? v.fields.get(k) : (v ? v[k] : undefined));
+    const 拍平 = (v, acc = []) => {
+      if (typeof v === "number") { acc.push(v); return acc; }
+      if (v && v.tag === "tuple") { for (const x of v.items) 拍平(x, acc); return acc; }
+      if (Array.isArray(v)) { for (const x of v) 拍平(x, acc); return acc; }
+      if (v && v.tag === "record") { for (const [, x] of v.fields) 拍平(x, acc); return acc; }
+      return acc;
+    };
+    const 子集跑 = (源) => {
+      const 编r = 种子.调用("编源码", [源], null);
+      if (!编r || !编r.ok) return { ok: false, 崩: String(编r && 编r.码 ? 编r.码 + " " + 编r.话 : "编源码 停机") };
+      const 包r = 种子.调用("打包", [取(编r.值, "函数族")], null);
+      if (!包r || !包r.ok) return { ok: false, 崩: String(包r && 包r.码 ? 包r.码 + " " + 包r.话 : "打包 停机") };
+      let 出 = "";
+      const vm = new 虚拟机(读程序(Buffer.from(拍平(包r.值))), {
+        capabilities: 本机能力(), write: (t) => { 出 += t; }, writeErr: (t) => { 出 += t; },
+      });
+      const r = vm.调用("main", [], null);
+      return { ok: r.ok, 码: r.ok ? "" : r.码, 话: r.ok ? "" : r.话, 出, 崩: "" };
+    };
+    // 契约分行写：自举那一层靠行尾切条件，写在签名同一行会把 { 也吃进去。
+    const 坏源 = "fn 取(n: Int) -> Int\n  requires n > 0\n{\n  return n\n}\nfn main() -> Int {\n  print(str(取(0 - 5)))\n  return 0\n}\n";
+    const 好源 = "fn 取(n: Int) -> Int\n  requires n > 0\n  ensures 返回值 > 0\n{\n  return n * 2\n}\nfn main() -> Int {\n  print(str(取(3)))\n  return 0\n}\n";
+    const 坏 = 子集跑(坏源);
+    ok("坏契约停在 HMYR-契-001", 坏.ok === false && 坏.码 === "HMYR-契-001", JSON.stringify([坏.ok, 坏.码, 坏.话, 坏.崩]));
+    ok("消息与另外五台同一句", String(坏.话 || "").includes("函数 取 的第 1 条 requires 不成立"), JSON.stringify(坏.话 || 坏.崩));
+    const 好 = 子集跑(好源);
+    ok("好契约跑出 6", 好.ok === true && 好.出 === "6", JSON.stringify([好.ok, 好.码, 好.出, 好.崩]));
+  }
 }
 
 console.log("");
