@@ -743,7 +743,47 @@ C 版虚拟机：那台不是 JS 的机器
   一句话收：机器层已经两个系统同一个数目了，而测试层还只认得一个系统。
   下一步是把取临时目录这件事收成一处，让那二十多个文件都问它。
 
-  还没做的：那二十多处只改了 pixel 一处，其余不动 —— 等确认。
+  结算（2026-11-03）：那二十多处已经改成问 test/scratch.mjs 一处了。
+
+  全量在 Linux 上的第一次清单（2026-11-03）
+  --------------------------------------------------------------------
+
+  用 --skip 跳掉 21 套（二十套最慢的，加上 distro —— 后者在网络层挂住，
+  它的 tools/update.mjs 没有超时，在 WSL 里等死了十分钟）之后跑了 181 套：
+
+    141 套通过
+     40 套不通过
+      4 套设计缺席（surface / parallel / ittgn / package，缺 powershell）
+
+  按能看出来的模式分四类。根因还没有逐套查，第四类只是列着：
+
+  一、CRLF 假设 —— 第十一个 Windows 假设。lspsymbol、lspcompletion、lspmodule
+      三套崩在同一处：const end = b.indexOf("\r\n\r\n") 找不到，于是 end 是 -1。
+      LSP 的头用 CRLF 分隔是对的，而那三个自举 LSP 进程在 Linux 上吐出来的
+      换行不是 CRLF。这一类的修法与 cmd /c 那一处同形：按平台取分隔符，
+      或者让被测的那一侧统一吐 CRLF。
+
+  二、C 那一支。docshmyr、docstatshmyr、threadscvm、cli、board、hmyrpack、
+      cembed、checkhmyr、embedhmyr、ucdchmyr、lsphmyr 等一批，报的是
+      「0 passed 1 failed」或「N passed 1 failed」，耗时集中在 26 到 33 秒 ——
+      那不是断言失败，那是某个等待。而 cvm 自己 93 项全过（11.3 秒，比 Windows
+      上的 24 秒还快），所以 gcc 与 vm/hmyr.c 这条链是好的。差别在套件自己
+      额外 spawn 了什么。
+
+  三、python —— 环境缺件，不是缺陷。color、colorimage、colorreport 三套红，
+      而三份文件里写死了 E:/DaShaoHuo/Python-managed/bin/python.exe，那个
+      解释器在 Linux 上不存在。
+
+  四、其余。contracts、zoneself、globalvar、realtime、owned、ffi、array、zip、
+      zipmulti、bitops、sha256、readdir、isdir、packagehmyr、crc、release、
+      i18nthree、stdinline、readlines、names、profile、selfcontained、
+      elsenewline 各红一到五项，根因未查。
+
+  一句话收：清单有了，分类只分到「能看出来的」为止。第四类那二十来套要逐套查，
+  而查法与这一轮相同 —— 单跑、读它吐出来的那一行。
+
+  还没做的：distro 的 tools/update.mjs 没有超时（在 WSL 里会等死）；
+  第四类那二十来套的根因；以及「跳掉的二十套最慢的」在 Linux 上还没跑过。
 
   于是这一页现在能给出两件实测：cvm 那 93 项在两个系统上同一个数目；以及
   五套在 Linux 上按设计缺席、在 Windows 上全过。全量跨系统的完整清单仍然
