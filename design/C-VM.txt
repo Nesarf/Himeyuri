@@ -658,3 +658,45 @@ C 版虚拟机：那台不是 JS 的机器
   摊在了桌上。那种假设在只有一台机器的时候永远是隐形的；而补完之后，两个
   系统上的判据第一次是同一个数目，不是一边绿一边列出缺口。
 
+
+全量跨系统：为什么这条路要换个走法（2026-11-02 深夜）
+--------------------------------------------------------------------
+
+  想把上面那 93 项的跨系统判据扩到全量，先试了一次：在 WSL 里跑
+  node tools/check-all.mjs。30 分钟没跑完，重定向出去的日志只有两行。
+  那不是挂住 —— node 的 stdout 写到文件时是块缓冲，而套件本身在跑。
+
+  成本量到了：Windows 上全量约 10 分钟，而 WSL 里最慢的那几套
+  （selfcompile、ucdnfchmyr、selfload、selfvmcompile 都是一百秒上下）
+  都在大量读写 /mnt/d 上的源码，而那是跨文件系统的 IO。205 套乘下来
+  一小时以上，快套件等不起。
+
+  第二条路也不通：想用工程地图把「碰平台」的套件筛出来，只跑那一份。
+  结果是 168 套 —— 205 的八成。原因是平台判断住在两个核心模块里
+  （src/capabilities.mjs 与 src/eval.mjs 里各有一条 cmd /c chcp，读控制台
+  代码页），而几乎所有套件都依赖它们。所以「依赖平台代码」在地图上等价于
+  「全量」，这个判据筛不出东西。
+
+  真正是 Windows 专用的文件只有九个，列在这里备查：
+
+    src/capabilities.mjs        cmd /c chcp（读控制台代码页）
+    src/eval.mjs                cmd /c chcp
+    tools/package.mjs           powershell（压 zip）
+    tools/ittgn-to-zip.mjs      powershell
+    tools/ittgn-from-zip.mjs    powershell
+    test/package.test.mjs       powershell
+    test/ittgn.test.mjs         powershell
+    test/i18n-three.test.mjs    cmd /c echo（GBK 那一条）
+    test/parallel.test.mjs      cmd /c
+
+  另有四处已经有平台分支，在 Linux 上应当本来就过：tools/arm-size.mjs 的
+  .exe 后缀、test/pipe.test.mjs 与 test/socket.test.mjs 的命名管道名、
+  test/c-vm.test.mjs 的编译参数。
+
+  所以结论只有一条：跨系统的判据不该是「跑全量」，而是「让套件清单自己
+  带上平台条件」—— 哪些套件在当前平台上按设计不适用，check-all 该知道，
+  并且报「设计缺席」而不是「不通过」。那是下一件，不是这一轮能收的。
+  在它落地之前，这一页能给出的仍然是「cvm 那 93 项在两个系统上同一个数目」
+  这一个实测，而不是「全量跨系统」的清单 —— 两者的差别写在这里，免得后来
+  的人以为后者已经有过。
+
