@@ -353,6 +353,36 @@
   返回 ()
 }
 
+// 函数的契约：requires 与 ensures 各收一批表达式，按出现的顺序。
+//
+// 与宏的 `= 表达式` 同一条做法：切出「关键字之后到行尾」那一段，交给 chain。
+// 为什么要在这一层收：自举层的声明元组里原来没有契约的位置，于是解释这一条路
+// 永远看不到它们 —— 而「强档要查」在解释路上就等于没有（design/CONTRACTS.txt）。
+//
+// 只认 text 不认 kind：自举词法把关键字都标成 ident（stmt.hmoca 的 is_word 就是这么判的），
+// 而 要求 / 保证 已经被词法归一成 requires / ensures，所以这里看归一的 text 就够了。
+函数 契约批(tokens: Int, 起: Int, 末: Int) {
+  变 须 = ()
+  变 保 = ()
+  变 i = 起
+  当 i < 末 {
+    定 t = tokens[i]
+    若 t.text == "requires" || t.text == "ensures" {
+      // 止 要改，所以是 变 而不是 定 —— 定 声明的东西不可写，
+      // 而这里要先取行尾、再把它夹到函数签名的那一段之内。
+      变 止 = 行尾位(tokens, i + 1)
+      若 止 > 末 { 止 = 末 }
+      定 片 = 切片(tokens, i + 1, 止, ())
+      定 式 = chain(片).node
+      若 t.text == "requires" { 须 = 须 + (式,) } 否则 { 保 = 保 + (式,) }
+      i = 止 + 1
+    } 否则 {
+      i = i + 1
+    }
+  }
+  返回 (须, 保)
+}
+
 // 切一段 token 出来（含起点，不含末）。表达式那一层从 0 开始吃，所以要先切。
 函数 切片(tokens: Int, i: Int, 末: Int, acc: Int) {
   若 i >= 末 { 返回 acc }
@@ -403,7 +433,10 @@
     定 宏 = 宏声明(tokens, at)
     若 宏.name == "" { 返回 decls_from(tokens, 宏.next, acc, 常量册) }
     // 九件：与 Fn 同形的前八件，第九件标成 "macro"，第三件放的是表达式（不是语句批）。
-    返回 decls_from(tokens, 宏.next, acc + ((宏.name, 宏.params, 宏.body, (), 位.line, 位.column, (), 0, "macro"),), 常量册)
+    // 宏那一支现在是十件，而函数那一支是九件 —— 长度不同是有意的，也不该抹平：
+    // 宏的第九件是 "macro" 这个标记（它回答「这是函数还是宏」），于是契约只能排到第十件。
+    // 读契约的地方因此要知道自己读的是哪一种；而读前三件的地方，两种形状都能读。
+    返回 decls_from(tokens, 宏.next, acc + ((宏.name, 宏.params, 宏.body, (), 位.line, 位.column, (), 0, "macro", ()),), 常量册)
   }
   定 名 = 名字在(tokens, at)
   定 open = find_body(tokens, at + 1)
@@ -422,7 +455,10 @@
   // 公开 写在 函数 前一个记号：next_decl 只停在 函数/常量/变，所以它被跳过了。
   变 是公开 = 0
   若 at > 0 && tokens[at - 1].kind == "ident" && tokens[at - 1].text == "pub" { 是公开 = 1 }
-  返回 decls_from(tokens, got.next, acc + ((名, 参名册, got.list, 效册, 位.line, 位.column, 返型, 是公开),), 常量册)
+  // 第九件：契约。加在末尾，所以读前面八件的代码一行都不用改。
+  // 它是一对 (须, 保)，由 契约批 收；没有契约时是两串空元组。
+  定 契约 = 契约批(tokens, at + 1, open)
+  返回 decls_from(tokens, got.next, acc + ((名, 参名册, got.list, 效册, 位.line, 位.column, 返型, 是公开, 契约),), 常量册)
 }
 
 // 交回 {fns: ((名字, 参数名册, 语句批, 效果名册, 行, 列), …), consts: ((名字, 值), …), next}。

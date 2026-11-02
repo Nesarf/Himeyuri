@@ -236,6 +236,35 @@ console.log("十一、C 那台：契约已经在字节码里，所以它只差�
   }
 }
 
+console.log("十二、自举那台：默认路（解释）也查了");
+{
+  // 五台里最后补上的一台，而它正是「用户不给 --compile 时」走的那条路。
+  //
+  // 开关走命令行而不是环境：自举层读不到环境变量（locale_env 交回的是语言环境猜测，
+  // 不是环境），而 argv 本来就是它的。见 self/eval.hmoca 的 跑程序带常量与参。
+  //
+  // 输出要留意：解释那一条会把 main 的返回值也打出来（self/run.hmoca 顶部那段注释），
+  // 所以 -5 会变成 -50、6 会变成 60。判据因此看前缀，不看相等。
+  const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-contract-self-"));
+  const 写 = (名, 文) => { const p = path.join(临, 名); fs.writeFileSync(p, 文, "utf8"); return p; };
+  const 坏 = 写("坏.hmoca", "fn 取(n: Int) -> Int requires n > 0 {\n  return n\n}\nfn main() -> Int {\n  print(str(取(0 - 5)))\n  return 0\n}\n");
+  const 好 = 写("好.hmoca", "fn 取(n: Int) -> Int requires n > 0 ensures 返回值 > 0 {\n  return n * 2\n}\nfn main() -> Int {\n  print(str(取(3)))\n  return 0\n}\n");
+  const 跑 = (路, 开) => {
+    const r = spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), 路, ...(开 ? ["--contracts"] : [])], { encoding: "utf8", timeout: 180000 });
+    return { 出: String(r.stdout || ""), 错: String(r.stderr || ""), 码: r.status };
+  };
+  const 关坏 = 跑(坏, false), 开坏 = 跑(坏, true);
+  ok("关档跑得过去", 关坏.码 === 0 && 关坏.出.startsWith("-5"), JSON.stringify([关坏.码, 关坏.出.trim()]));
+  // 失败形状与另外四台不同，而那不是这次改出来的：self/run.hmoca 的 跑模块族 把运行期的错
+  // 包成「错：…」当成正常文字交回去，于是 命令行入口 打印它并以 0 退出。
+  // 所以这一条的判据看输出里有没有那个码与那句话，不看退出码 ——
+  // 若将来那一层改成「运行错误以非零退出」，这条判据要跟着改成看码，而不是两边都放宽。
+  ok("开档停在 HMYR-契-001", 开坏.出.includes("HMYR-契-001"), JSON.stringify([开坏.码, 开坏.出.trim().slice(0, 80)]));
+  ok("消息与另外四台同一句", 开坏.出.includes("函数 取 的第 1 条 requires 不成立"), JSON.stringify(开坏.出.trim().slice(0, 80)));
+  const 关好 = 跑(好, false), 开好 = 跑(好, true);
+  ok("契约都成立时两台输出一样", 关好.出.startsWith("6") && 开好.出.startsWith("6"), JSON.stringify([关好.出.trim(), 开好.出.trim()]));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

@@ -44,7 +44,9 @@ console.log("一、六份，默认栈下，名字与顺序都与宿主一致");
   // 现在认 macro 声明（那之前它把宏整个跳过，于是展开那一层拿到空表）。
   // 同日再晚些 body 从 30 到 32：加了 续到尾 与 续行 —— 行末停在要右操作数的记号上
   // 时不再切断语句（那一条让 sha512.hmoca 与 sign.hmoca 终于编得过）。
-  const 期 = { lex: 31, chain: 27, stmt: 10, body: 32, eval: 57, run: 65 };
+  // 2026-11-02 再晚些（契约进自举层那一轮）：body 加 契约批（33），
+  // eval 加 契约开 / 查契约批 / 含参（60）。
+  const 期 = { lex: 31, chain: 27, stmt: 10, body: 33, eval: 60, run: 65 };
   for (const 名 of Object.keys(期)) {
     const 路 = path.join(ROOT, "self", 名 + ".hmoca");
     const 甲 = 算名(路);
