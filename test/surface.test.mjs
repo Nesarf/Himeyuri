@@ -173,6 +173,32 @@ console.log("图像：把像素布导出的 PNG 交给 native 后端");
   fs2.rmSync("E:/DaShaoHuo/cache/tmp/surface-img.txt", { force: true });
 }
 
+console.log("会话：窗活着的那一段时间里，事件进得去、帧换得过来");
+{
+  // 毫秒 0 → 不弹窗，只验回执的形状。这一节全部走这条路：套件不该在别人桌面上
+  // 弹窗抢焦点，而「会话的形状对不对」与「它会不会真弹」本来就是两件事。
+  const 空 = call("会话", ["native", 主(2, 4), "hello", 0, 0, ""]);
+  ok("会话跑得通", 空.ok === true, JSON.stringify(String(空.text).slice(0, 120)));
+  ok("回执说没弹窗", String(空.text).indexOf("\"shown\":false") >= 0, JSON.stringify(String(空.text).slice(0, 120)));
+  ok("没有事件时事件表是空的", String(空.text).indexOf("\"events\":[]") >= 0, JSON.stringify(String(空.text).slice(0, 160)));
+
+  // 三帧、间隔 100 毫秒：NoShow 下报的是「本来要换几次」，也就是帧数减一。
+  const 多帧 = call("会话", ["native", 主(2, 4), "a|b|c", 0, 100, ""]);
+  ok("三帧报换了两次", String(多帧.text).indexOf("\"frames\":2") >= 0, JSON.stringify(String(多帧.text).slice(0, 160)));
+
+  // 注入的事件要原样回传：这条守的是「窗口到语言的那条通道」，而不是
+  // 「有人真的按了键」—— 后者在这台机器上没法自动验。
+  const 有事件 = call("会话", ["native", 主(2, 4), "hello", 0, 0, "key:A;mouse:10,20"]);
+  ok("键事件原样回来", String(有事件.text).indexOf("\"kind\":\"key\",\"value\":\"A\"") >= 0,
+     JSON.stringify(String(有事件.text).slice(0, 200)));
+  ok("鼠标事件的坐标也在",
+     String(有事件.text).indexOf("\"x\":10") >= 0 && String(有事件.text).indexOf("\"y\":20") >= 0,
+     JSON.stringify(String(有事件.text).slice(0, 200)));
+
+  const 坏 = call("会话", ["term", 主(2, 4), "hello", 0, 0, ""]);
+  ok("字符后端不承认开会话，如实说", 坏.ok === false && String(坏.text).indexOf("这个后端还不开会话") >= 0, JSON.stringify(坏));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
