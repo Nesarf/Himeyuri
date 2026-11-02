@@ -10,18 +10,38 @@
 //   node tools/map-agree.mjs E:/mega-index-map/lib/project-map.js
 //
 // 没给就跳过并以 0 退出 —— 这个仓库不该因为另一台机器上没装 MIM 而变红。
+import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const 库 = process.argv[2] || process.env.MIM_LIB;
+
+// 找 MIM 的 project-map.js：参数、环境变量 MIM_LIB，或这台机器上的默认位置。
+// 位置做成可发现的，而不是必须有人记得设变量 —— E:/mega-index-map 是这台机器上的
+// 默认克隆点，而「两个仓库并排」是另一种常见摆法，两条都试。
+// 一个都找不到就跳过并以 0 退出：这个仓库不该因为另一台机器上没装 MIM 而变红。
+const 候选 = [
+  process.argv[2],
+  process.env.MIM_LIB,
+  "E:/mega-index-map/lib/project-map.js",
+  path.resolve(ROOT, "..", "mega-index-map", "lib", "project-map.js"),
+].filter(Boolean);
+
+const 库 = 候选.find((p) => fs.existsSync(path.resolve(p)));
 if (!库) {
-  console.log("跳过：没给 MIM 的 project-map.js（参数或 MIM_LIB）");
+  console.log("跳过：这台机器上没有 mega-index-map 的 lib/project-map.js");
+  console.log("      要给一个位置：node tools/map-agree.mjs <project-map.js>，或设 MIM_LIB");
   process.exit(0);
 }
 
 const { projectMap } = await import(pathToFileURL(path.resolve(库)).href);
+// 版本不同也算跳过：那说明这份 MIM 不是这两份地图能对照的那一代，
+// 这时报红只会让人以为规则漂了，而真正的问题是「这里没有可比的对象」。
+if (typeof projectMap !== "function") {
+  console.log("跳过：" + 库 + " 里没有导出 projectMap（版本不同）");
+  process.exit(0);
+}
 
 let passed = 0, failed = 0;
 const ok = (标签, 条件, 细节 = "") => {

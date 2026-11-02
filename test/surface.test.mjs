@@ -2,6 +2,7 @@
 //
 // 合成规则与将来真窗口要走的完全一样：子表面按自己的坐标贴到主布上，
 // 后贴的盖住先贴的，越界的行跳过。
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
@@ -197,6 +198,25 @@ console.log("会话：窗活着的那一段时间里，事件进得去、帧换�
 
   const 坏 = call("会话", ["term", 主(2, 4), "hello", 0, 0, ""]);
   ok("字符后端不承认开会话，如实说", 坏.ok === false && String(坏.text).indexOf("这个后端还不开会话") >= 0, JSON.stringify(坏));
+}
+
+console.log("");
+console.log("deps/surface 下的 .ps1 只许 ASCII —— 这是 powershell.exe 5.1 的代码页，不是洁癖");
+{
+  // powershell.exe 5.1（不是 pwsh 7）读脚本时，没有 BOM 就按当前代码页解码。
+  // 中文注释被解成 GBK 字节对，而 GBK 的第二字节可以落在 ASCII 区 ——
+  // 于是一个汉字能变成半个括号，报错却指在 param() 那一行，与真正出错的地方无关。
+  // win.ps1 与 parallel.ps1 都在 2026-11-02 踩过，所以立这条判据代替「记得」。
+  // .py 不受这一条约束：Python 3 按 UTF-8 读源码，注释里的中文是安全的。
+  const 目录 = path.join(ROOT, "deps", "surface");
+  const 脚本们 = fs.readdirSync(目录).filter((f) => f.endsWith(".ps1")).sort();
+  ok("找到了 .ps1 脚本", 脚本们.length > 0, 脚本们.join(","));
+  for (const f of 脚本们) {
+    const 字节 = fs.readFileSync(path.join(目录, f));
+    let 越界 = 0;
+    for (const b of 字节) if (b > 127) 越界++;
+    ok(f + " 是纯 ASCII", 越界 === 0, f + " 有 " + 越界 + " 个非 ASCII 字节");
+  }
 }
 
 console.log("");

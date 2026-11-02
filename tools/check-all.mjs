@@ -196,6 +196,9 @@ const SUITES = [
   ["selfload", "tools/self-loader.mjs", "FULLSELF - the loading half: the lexer and parser written in HMYR accept the same 27 real files the host loader accepts"],
   ["selfmod", "tools/self-load.mjs", "FULLSELF - module loading semantics: four real import trees give the same order position by position, and a missing import or a cycle is refused with the same code as the host loader"],
   ["impact", "test/impact.test.mjs", "SPEC M7 - the project map answers which suites a change touches: the count matches the suite list, the bytecode-product routes report everything, and every name it hands back is a real suite"],
+  // 两份地图各说各话时不会报错，只会让人按错的那张去跑套件 —— 所以它对一遍。
+  // MIM 不在的那台机器上这一套跳过（以 0 退出并说清是跳过），而不是变红。
+  ["mapagree", "tools/map-agree.mjs", "SPEC M7 - the two project maps agree file by file: this repository's impact.mjs and mega-index-map's library_project hand back the same suites for the same change (skipped when mega-index-map is not on this machine)"],
   ["selfpos", "tools/self-positions.mjs", "FULLSELF - the lexer's positions: six samples agree with the host lexer token for token on text, line and column"],
   ["selfbridge", "tools/self-bridge-check.mjs", "FULLSELF - the bridge: loadUnit replaced by HMYR's own loader agrees with the host loader on acceptance, function names, import order and the refusal of a missing file"],
   ["selfvmeval", "tools/self-vm-eval.mjs", "FULLSELF - the evaluator on the bytecode machine: the self-hosted lexer, parser and evaluator run as bytecode and interpret four programs to the same answers as the host"],
