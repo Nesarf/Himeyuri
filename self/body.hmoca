@@ -353,34 +353,43 @@
   返回 ()
 }
 
-// 函数的契约：requires 与 ensures 各收一批表达式，按出现的顺序。
+// 函数的契约：requires / ensures / invariant 各收一批表达式，按出现的顺序。
 //
 // 与宏的 `= 表达式` 同一条做法：切出「关键字之后到行尾」那一段，交给 chain。
 // 为什么要在这一层收：自举层的声明元组里原来没有契约的位置，于是解释这一条路
-// 永远看不到它们 —— 而「强档要查」在解释路上就等于没有（design/CONTRACTS.txt）。
+// 永远看不到它们 —— 而「强档要查」在解释路上就等于没有（design/CONTRACTS.txt、
+// design/INVARIANTS.txt）。
 //
 // 只认 text 不认 kind：自举词法把关键字都标成 ident（stmt.hmoca 的 is_word 就是这么判的），
-// 而 要求 / 保证 已经被词法归一成 requires / ensures，所以这里看归一的 text 就够了。
+// 而 要求 / 保证 / 不变式 已经被词法归一成 requires / ensures / invariant。
+//
+// 交回三件：须、保、不变。三件而不是一对，是因为不变式在入口与出口都要查，
+// 与另外两样同一时机却是不同的条件。
 函数 契约批(tokens: Int, 起: Int, 末: Int) {
   变 须 = ()
   变 保 = ()
+  变 不变 = ()
   变 i = 起
   当 i < 末 {
     定 t = tokens[i]
-    若 t.text == "requires" || t.text == "ensures" {
+    若 t.text == "requires" || t.text == "ensures" || t.text == "invariant" {
       // 止 要改，所以是 变 而不是 定 —— 定 声明的东西不可写，
       // 而这里要先取行尾、再把它夹到函数签名的那一段之内。
       变 止 = 行尾位(tokens, i + 1)
       若 止 > 末 { 止 = 末 }
       定 片 = 切片(tokens, i + 1, 止, ())
       定 式 = chain(片).node
-      若 t.text == "requires" { 须 = 须 + (式,) } 否则 { 保 = 保 + (式,) }
+      若 t.text == "requires" {
+        须 = 须 + (式,)
+      } 否则 {
+        若 t.text == "ensures" { 保 = 保 + (式,) } 否则 { 不变 = 不变 + (式,) }
+      }
       i = 止 + 1
     } 否则 {
       i = i + 1
     }
   }
-  返回 (须, 保)
+  返回 (须, 保, 不变)
 }
 
 // 切一段 token 出来（含起点，不含末）。表达式那一层从 0 开始吃，所以要先切。

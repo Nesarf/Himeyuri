@@ -158,13 +158,16 @@ export function parse(tokens, options = {}) {
     // 第 3 节那处将就）。现在它有自己的位置，而效果检查不必再为它开特例。
     let realtime = false;
     if (at("ident", "realtime")) { advance(); realtime = true; }
-    const contracts = { requires: [], ensures: [] };
+    const contracts = { requires: [], ensures: [], invariant: [] };
     // A contract may be written on its own line - the formatter does exactly that - so newlines are
     // allowed before and between them.
+    // 三样并列：requires / ensures / invariant（design/INVARIANTS.txt）。
+    const 是契约词 = () => at("keyword", "requires") || at("keyword", "ensures") || at("keyword", "invariant");
     while (true) {
-      while (at("newline")) { const save = i; skipNewlines(); if (!(at("keyword", "requires") || at("keyword", "ensures"))) { i = save; break; } }
-      if (!(at("keyword", "requires") || at("keyword", "ensures"))) break;
-      const which = advance().value === "requires" ? "requires" : "ensures";
+      while (at("newline")) { const save = i; skipNewlines(); if (!是契约词()) { i = save; break; } }
+      if (!是契约词()) break;
+      const 这 = advance().value;
+      const which = 这 === "requires" ? "requires" : (这 === "ensures" ? "ensures" : "invariant");
       contracts[which].push(parseExpr());
       if (at("newline")) skipNewlines();
     }

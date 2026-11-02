@@ -1,6 +1,6 @@
 // 子集 parser：Stage 0 的第二层。token 进，树出。
 //
-// 现状：两件事都对上了（2026-10-20）——树，六份共 17498 个节点，逐个相同（形状与位置）；
+// 现状：两件事都对上了（2026-10-20）——树，六份共 17584 个节点，逐个相同（形状与位置）；
 // 以及错误路径上的话（与宿主同一批码、同一个位置）。
 //
 // 它的立场是认得窄而说清：遇到不认的构造就报出来，而不是猜一个树。
@@ -246,18 +246,22 @@ export const 子集解 = (tokens, options = {}) => {
     // 换行可以写在契约的前后与之间（宿主那一份也允许，formatter 就是这么排的）。
     // 不是契约的时候要把游标退回去 —— 那个换行是函数体的分界，吃掉它会让后面的块
     // 解析从一个不该开始的地方开始。
-    const contracts = { requires: [], ensures: [] };
+    const contracts = { requires: [], ensures: [], invariant: [] };
     for (;;) {
       const 存 = i;
       过空行();
       const 这 = 看();
-      if (!(这.type === "keyword" && (这.value === "requires" || 这.value === "ensures"))) {
+      if (!(这.type === "keyword" && (这.value === "requires" || 这.value === "ensures" || 这.value === "invariant"))) {
         i = 存;
         break;
       }
       进();
       contracts[这.value].push(解析表达式());
     }
+    // 回退留在了那个换行上（它是「签名与体之间」的分界），而这里真正要看的是它之后
+    // 那个 {。所以先过空行再判 —— 少了这一句的症状是：带契约的函数被读成「没有函数体」，
+    // 而报的那一行是契约那一行，看上去像契约写坏了。
+    过空行();
     if (!是标("{")) 不认("子集的函数必须有函数体：" + (名 ? 名.value : "?"));
     const body = 解析块();
     return { kind: "函数", name: 名 ? 名.value : "<error>", typeParams: [], params, returns, effects, realtime, contracts, body, pub: false, line: kw.line, column: kw.column };

@@ -332,10 +332,13 @@ const 编译函数 = (decl, 契约) => {
   const 强契约 = 契约 === true;
   const 须批 = (decl.contracts && decl.contracts.requires) || [];
   const 保批 = (decl.contracts && decl.contracts.ensures) || [];
+  // 不变式（design/INVARIANTS.txt）：入口与出口各查一次，位置与 requires / ensures 相同。
+  const 不变批 = (decl.contracts && decl.contracts.invariant) || [];
   // 返回值那个名字落到一个不可写的槽里。它排在参数之后，所以不影响函数表记的参数量
   // （那个数是 decl.params.length，槽数是另一个数）。
+  // 有 ensures 或 invariant 就要它：两个都在出口查，而存/取那一对是出口的统一收尾。
   let 返槽 = -1;
-  if (强契约 && 保批.length > 0) 返槽 = 分配("返回值", false);
+  if (强契约 && (保批.length > 0 || 不变批.length > 0)) 返槽 = 分配("返回值", false);
 
   const 编一条契约 = (条件, 码名, 名, 序) => {
     表达(条件);
@@ -349,13 +352,17 @@ const 编译函数 = (decl, 契约) => {
   const 编入场 = () => {
     if (!强契约) return;
     for (let i = 0; i < 须批.length; i++) 编一条契约(须批[i], "HMYR-契-001", "requires", i + 1);
+    // 不变式在入口也查一次（design/INVARIANTS.txt 第四节：先 requires 再 invariant）。
+    for (let i = 0; i < 不变批.length; i++) 编一条契约(不变批[i], "HMYR-契-003", "invariant", i + 1);
   };
 
   const 编出场 = () => {
-    if (!强契约 || 保批.length === 0) return;
+    if (!强契约 || (保批.length === 0 && 不变批.length === 0)) return;
     // 顺序不能反：契约求值会把栈弄乱，所以返回值先落槽，查完再取回来。
     发("存", 返槽);
     for (let i = 0; i < 保批.length; i++) 编一条契约(保批[i], "HMYR-契-002", "ensures", i + 1);
+    // 出口的不变式在 ensures 之后（同一节）。
+    for (let i = 0; i < 不变批.length; i++) 编一条契约(不变批[i], "HMYR-契-003", "invariant", i + 1);
     发("取", 返槽);
   };
 

@@ -288,7 +288,11 @@ export class Runtime {
     }
     // requires：参数已经在作用域里，体还没开始（design/CONTRACTS.txt 第一节）。
     // 不写 `?.`：hostdeps 那套明令执行器不向宿主语言要可选链（SPEC M6 的「八种构造」）。
-    if (this.契约) this.查契约(decl, decl.contracts && decl.contracts.requires, "requires", "HMYR-契-001", scope);
+    if (this.契约) {
+      this.查契约(decl, decl.contracts && decl.contracts.requires, "requires", "HMYR-契-001", scope);
+      // 不变式在入口也查一次（design/INVARIANTS.txt 第四节：先 requires 再 invariant）。
+      this.查契约(decl, decl.contracts && decl.contracts.invariant, "invariant", "HMYR-契-003", scope);
+    }
     const inner = this.allowed(decl.effects);
     this.持有格栈.push([]);
     // 返回值先收进一个变量，因为 ensures 要在「出口」查，而出口有两条路：
@@ -312,12 +316,16 @@ export class Runtime {
       }
     }
     if (半路) throw 半路;
-    if (this.契约 && decl.contracts && decl.contracts.ensures && decl.contracts.ensures.length > 0) {
-      // 返回值这个名字不在关键字表里（design/CONTRACTS.txt 第二节）：它是一个普通标识符，
-      // 所以参数里真有一个同名的时候会被它盖住 —— 那条边界写在设计稿里，没在这里拦。
-      // 参数作用域到这一步还没散，于是 ensures 同时看得见参数与返回值。
-      scope.set("返回值", 结果, false);
-      this.查契约(decl, decl.contracts.ensures, "ensures", "HMYR-契-002", scope);
+    if (this.契约) {
+      if (decl.contracts && decl.contracts.ensures && decl.contracts.ensures.length > 0) {
+        // 返回值这个名字不在关键字表里（design/CONTRACTS.txt 第二节）：它是一个普通标识符，
+        // 所以参数里真有一个同名的时候会被它盖住 —— 那条边界写在设计稿里，没在这里拦。
+        // 参数作用域到这一步还没散，于是 ensures 同时看得见参数与返回值。
+        scope.set("返回值", 结果, false);
+        this.查契约(decl, decl.contracts.ensures, "ensures", "HMYR-契-002", scope);
+      }
+      // 出口的不变式在 ensures 之后（design/INVARIANTS.txt 第四节）。
+      this.查契约(decl, decl.contracts && decl.contracts.invariant, "invariant", "HMYR-契-003", scope);
     }
     return 结果;
   }

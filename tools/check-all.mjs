@@ -105,6 +105,7 @@ const SUITES = [
   ["readlines", "test/read-lines.test.mjs", "SPEC 4 - reading a file line by line, on both machines, with CRLF and LF agreeing"],
   ["returntypes", "test/return-types.test.mjs", "SPEC 2.3 - a declared return type is checked against what the function actually returns, with the boundary stated"],
   ["contracts", "test/contracts.test.mjs", "SPEC 2.4 - contracts: requires is checked on entry and ensures on exit, and turning the check on changes no other behaviour (design/CONTRACTS.txt)"],
+  ["invariants", "test/invariants.test.mjs", "SPEC 2.4 - the third of the three things: an invariant is checked on entry and again before every return, and the order with requires and ensures is observable (design/INVARIANTS.txt)"],
   ["pipe", "test/pipe.test.mjs", "SPEC 6 - the third use of a replaceable outlet: print goes into a named pipe, and a missing pipe says so"],
   ["socket", "test/socket.test.mjs", "SPEC 6 - the fourth use of a replaceable outlet: print goes into a socket, which is opened only when it is asked for"],
   ["modulerev", "test/module-rev.test.mjs", "SPEC 6 - module version negotiation: the highest revision both sides support, refused when there is no intersection"],
