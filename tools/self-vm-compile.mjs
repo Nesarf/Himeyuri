@@ -138,6 +138,40 @@ console.log("三、验签也在虚拟机上跑");
   }
 }
 
+console.log("四、整棵树：自举那台编自己，与种子逐字节相同");
+{
+  // 上面三节都是「一份源码」：编源码 只吃一个字符串，所以样本必须自成一个文件
+  // （bigint.hmoca 零 import 才进得来）。而 self/pack.hmoca 不是那样 —— 它引 compile，
+  // compile 引 lex 与 body，body 引 stmt，stmt 引 chain，一棵五层的树。
+  //
+  // 这一节换用法：不调 编源码，调 pack.hmoca 自己的 main。它本来就走引入树
+  // （读一棵）、去导入、一份一份编、按后序接函数表 —— 「多文件」这件事一直长在
+  // 它的 main 里，只是上面三节没有走过那条路。
+  //
+  // 判据是那份种子：bootstrap/pack.hmtn 是六源编出来的字节。让自举那台重新生成
+  // 一遍，相同就是自举闭环 —— 「runtime/pack.hmoks 由 JS 编出来」那句话于是只剩
+  // 「第一次」这一个身份，而不是一道一直开着的口子。
+  const 临 = path.join(ROOT, ".tmp-vmc-tree");
+  const 出 = path.join(临, "out.hmtn");
+  fs.mkdirSync(临, { recursive: true });
+  fs.rmSync(出, { force: true });
+  const 树vm = new 虚拟机(读程序(fs.readFileSync(字节路)), {
+    capabilities: 本机能力(), stepLimit: 40000000000, maxDepth: 4000,
+  });
+  // 只给入口那一份：main 会顺着 引入 自己读邻居。argv 的第一位是程序名，
+  // 第二位是输出路径，第三位才是要编的源 —— 漏掉第三位它就走「编个 return 7」那条
+  // fallback，产出四十几字节而看着像成功。
+  树vm.argv = ["pack.hmoca", 出, path.join(ROOT, "self/pack.hmoca")];
+  const 树r = 树vm.调用("main", [], null);
+  const 她 = fs.existsSync(出) ? fs.readFileSync(出) : null;
+  const 种子 = fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmtn"));
+  const 同 = 她 !== null && 她.length === 种子.length && Buffer.compare(她, 种子) === 0;
+  ok("自举那台编出整棵树，与种子逐字节相同（" + (她 ? 她.length : 0) + " 字节）",
+    同,
+    她 ? "她 " + 她.length + " / 种子 " + 种子.length : (树r.ok ? "没有产出" : 树r.码 + " " + 树r.话));
+  fs.rmSync(临, { recursive: true, force: true });
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
