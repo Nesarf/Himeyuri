@@ -158,7 +158,7 @@ const SUITES = [
   ["stdinline", "test/stdin-line.test.mjs", "SPEC M7 - reading one line of standard input, and a cat that echoes what it was fed"],
   ["lsphmyr", "test/lsp-hmyr.test.mjs", "SPEC M7 - the language server written in Himeyuri: initialize, shutdown, exit, over Content-Length framing"],
   ["fmthmyr", "test/fmt-hmyr.test.mjs", "SPEC M7 - the expression formatter written in Himeyuri: parentheses where they matter, and printing twice changes nothing"],
-  ["elsenewline", "test/else-newline.test.mjs", "SPEC 2.2 - a newline before else is not a statement boundary: both spellings parse to one tree and run to one answer"],
+  ["elsenewline", "test/else-newline.test.mjs", "SPEC 2.2 - a newline before else, and between a signature and its block, is not a statement boundary: both spellings parse to one tree and run to one answer"],
   ["selfcontained", "test/self-contained.test.mjs", "SPEC M7 - the binary carries its own compiler: a .hmyr runs with no node, no seed beside it, and no manual compile step"],
   // 种子与内置表同步：2026-10-25 量到它只认得七十二个内置里的三十一个，
   // 而 self-contained 那一套用的例子只用 print 与 str，所以它一直是绿的。

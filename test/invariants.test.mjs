@@ -63,19 +63,19 @@ console.log("三、开档：入口不成立");
   ok("没有跑出输出", r.output.length === 0, JSON.stringify(r.output));
 }
 
-console.log("四、为什么「出口不成立」不在这里验");
+console.log("四、解释这一台：出口不成立也验得动");
 {
-  // 要造一条「入口成立、出口不成立」的不变式，就得让函数改掉不变式引用的那个东西，
-  // 而参数是不可写的（它是 定 绑的），于是只剩下模块级 var。
+  // 2026-11-02：这一节原来是「解释这一路拒绝写模块级 var，所以出口只能在字节码那台验」。
+  // 那条口子收掉之后，模块级的 var 在两台求值器里都能写（design/GLOBALS.txt），
+  // 于是出口不变式在解释这一台上也验得动了 —— 而它本来就是四台一致的一部分。
   //
-  // 而解释这条路今天拒绝它：scope.assign 只沿作用域链走，不碰运行时的全局表，
-  // 于是 `状态 = 1` 报 HMYR-行-017。字节码那台不一样 —— 编译器的 赋值 会回退到
-  // 「槽里没有就是模块级」并生成 全域存。那是既有的不一致，不属于这一件该顺手动的东西，
-  // 所以出口那两条判据放到第十一节（那里跑的是字节码）。
-  // 这条样本要带一条契约：宿主解析器在「签名之后换行、再写 {」时不认那个体
-  // （atPunct("{") 在换行上为假，body 成了 null）。有契约时 contracts 那一圈
-  // 会把换行吃掉，形状才对 —— 那是既有行为，与不变式无关，这里绕开它而不是改它。
-  ok("解释这一路拒绝写模块级 var（写下来，免得下次当成 bug 重查）", 跑("var 状态 = 0\nfn 进() -> Int\n  requires 1 == 1\n{\n  状态 = 1\n  return 0\n}\nfn main() { print(str(进())) }\n", false).diagnostics.errors.some((e) => e.code === "HMYR-行-017"), JSON.stringify(码(跑("var 状态 = 0\nfn 进() -> Int\n  requires 1 == 1\n{\n  状态 = 1\n  return 0\n}\nfn main() { print(str(进())) }\n", false))));
+  // 要造一条「入口成立、出口不成立」的不变式，就得让函数改掉不变式引用的那个东西；
+  // 参数是 定 绑的（不可写），所以只剩下模块级 var 这一条路。
+  const 源 = "var 状态 = 0\nfn 进() -> Int\n  invariant 状态 == 0\n{\n  状态 = 1\n  return 0\n}\nfn main() { print(str(进())) }\n";
+  const 关 = 跑(源, false), 开 = 跑(源, true);
+  ok("关档跑得过去，输出 0", 关.diagnostics.errors.length === 0 && 关.output.join("") === "0", JSON.stringify([码(关), 关.output]));
+  ok("开档停在 HMYR-契-003", 码(开).includes("HMYR-契-003"), JSON.stringify(码(开)));
+  ok("消息与字节码那台同一句", 话(开).some((m) => m === "函数 进 的第 1 条 invariant 不成立"), JSON.stringify(话(开)));
 }
 
 console.log("五、顺序：入口先 requires 再 invariant");
@@ -94,10 +94,13 @@ console.log("七、硬条款：不变式都成立时，开关两边同样");
   ok("两边输出一样且是 6", 关.output.join("") === 开.output.join("") && 关.output.join("") === "6", JSON.stringify([关.output, 开.output]));
 }
 
-console.log("六、字节码那台：出口的不变式在这里才验得动");
+console.log("六、字节码那台：出口那两条的顺序在这里才看得清");
 {
-  // 那一台能验出口，因为它的编译器把「槽里没有」的赋值编成 全域存；
-  // 解释那一路拒绝它（第四节写下了这件事）。
+  // 出口在这个语言里是两条：ensures 与 invariant，而有先后 —— 「我交出去的东西对不对」
+  // 排在「我的前提还在不在」之前。这一节钉的就是那个顺序。
+  //
+  // 解释那台现在也验得动出口（第四节），而它验的是「出口不成立会报」；
+  // 顺序这一条只在这一节有样本，因为它需要「两条同时不成立」的那份源码。
   const 新诊断 = () => ({
     items: [], errors: [], warnings: [],
     add(severity, code, message, line, column) {

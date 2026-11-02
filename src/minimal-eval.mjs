@@ -642,6 +642,9 @@ export class 最小运行时 {
   constructor(options = {}) {
     this.functions = new Map();
     this.globals = new Map();
+    // 哪些模块级名字可写（design/GLOBALS.txt）。与 src/eval.mjs 那一张同一个意思：
+    // 全局表里 常量 与 顶层变 长得一样，区别只在这一点上。
+    this.可写全局 = new Set();
     this.output = [];
     this.write = options.write || ((line) => this.output.push(line));
     this.writeErr = options.writeErr || null;
@@ -713,6 +716,13 @@ export class 最小运行时 {
     for (const decl of ast.decls) {
       if (decl.kind === "函数") this.functions.set(decl.name, decl);
       else if (decl.kind === "常量") this.globals.set(decl.name, this.求值(decl.value, new 作用域(null), null));
+      // 顶层 var 与 const 走同一条登记路，区别只在它进不进「可写」那张表。
+      // 原来只收 常量，于是模块级的 var 在这一条路上既读不到（HMYR-行-005）
+      // 也写不上（HMYR-行-017），而字节码那台与自举那台都支持它。
+      else if (decl.kind === "顶层变") {
+        this.globals.set(decl.name, this.求值(decl.value, new 作用域(null), null));
+        this.可写全局.add(decl.name);
+      }
     }
   }
 
@@ -807,10 +817,17 @@ export class 最小运行时 {
       }
       case "赋值": {
         const value = this.求值(stmt.value, scope, effects);
-        if (!scope.assign(stmt.name, value)) {
-          this.坏("HMYR-行-017", "cannot assign to '" + stmt.name + "': it is not a variable declared with var, or it is not in scope");
+        if (scope.assign(stmt.name, value)) return value;
+        // 与 src/eval.mjs 那一位同一条回退：链上没有就是模块级那一个，而读它也是这么找的。
+        // 只认全局表里已经有的名字，所以拼错的名字仍旧是 HMYR-行-017，不会凭空造一个全局。
+        if (this.globals.has(stmt.name)) {
+          if (!this.可写全局.has(stmt.name)) {
+            this.坏("HMYR-行-017", "cannot assign to '" + stmt.name + "': it is a const");
+          }
+          this.globals.set(stmt.name, value);
+          return value;
         }
-        return value;
+        this.坏("HMYR-行-017", "cannot assign to '" + stmt.name + "': it is not a variable declared with var, or it is not in scope");
       }
       case "返回": {
         const v = stmt.value;

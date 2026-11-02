@@ -63,6 +63,24 @@ export function parse(tokens, options = {}) {
 
   // Newlines separate statements; they are insignificant everywhere else.
   const skipNewlines = () => { while (at("newline")) advance(); };
+
+  // 隔着若干换行看：若下一个非换行 token 是 `{`，就把那些换行吃掉。
+  //
+  // 换行是 token，也是语句边界，但「块的开头」这个位置不是 —— 一条声明的体、一个 if 的
+  // then、一个 while 的体、以及 else 之后的那个块，写在同一行与另起一行是同一棵树。
+  // 反过来，无条件过空行会把「这一条语句之后紧跟着的下一句」的换行也吃掉，而那正是
+  // 两条语句之间唯一的边界 —— 所以判据是「看准了再吃」，不是「先吃再说」。
+  //
+  // 2026-11-02 之前只有子集那一层这么看（src/subset-parse.mjs），宿主这一份没有，
+  // 于是同一份源码在两条路上给出两种形状。四处一起用这一条，形状才对得住。
+  function 过换行看花括号() {
+    if (atPunct("{")) return;
+    if (!at("newline")) return;
+    let 距 = 1;
+    while (peek(距).type === "newline") 距++;
+    const 非空 = peek(距);
+    if (非空 && 非空.type === "punct" && 非空.value === "{") skipNewlines();
+  }
   const endStatement = () => {
     if (at("newline")) { skipNewlines(); return; }
     if (atPunct("}") || at("eof")) return;
@@ -171,6 +189,10 @@ export function parse(tokens, options = {}) {
       contracts[which].push(parseExpr());
       if (at("newline")) skipNewlines();
     }
+    // 体之前允许换行：这一条以前不存在，于是同一份源码在两条路上给出两种形状 ——
+    // 宿主解析器把体读成空（body 为 null），而子集解析器（loadUnit 默认用的那个）读得动。
+    // 绕开的办法是给签名塞一条契约把换行吃掉，而那让「怎么写」变成了语义。
+    过换行看花括号();
     const body = atPunct("{") ? parseBlock() : null;
     return { kind: "函数", name: name ? name.value : "<error>", typeParams, params, returns, effects, realtime, contracts, body, pub: false, line: kw.line, column: kw.column };
   }
@@ -456,6 +478,7 @@ export function parse(tokens, options = {}) {
       // 代价是 invariant 不能再当变量名，而它本来就被词法当成契约词，从来不是变量名。
       const 不变式 = at("keyword", "invariant") ? (advance(), parseExpr()) : null;
 
+      过换行看花括号();
       const body = atPunct("{") ? parseBlock() : null;
 
       return { kind: "当", condition, body, invariant: 不变式, line: t.line, column: t.column };
@@ -465,11 +488,24 @@ export function parse(tokens, options = {}) {
     if (at("keyword", "if")) {
       advance();
       const condition = parseExpr();
+      过换行看花括号();
       const then = atPunct("{") ? parseBlock() : null;
+      // else 之前允许换行：换行是 token，而它在这个位置不是语句分界。
+      // 规矩与子集那一份相同（src/subset-parse.mjs）—— 先往前看，确认隔着若干换行之后
+      // 真是 else，才把那些换行吃掉。无条件跳过会把「if 之后紧跟着的下一句」也吞掉，
+      // 而那是两条语句之间唯一的边界。
       let otherwise = null;
-      if (at("keyword", "else")) {
-        advance();
-        otherwise = at("keyword", "if") ? parsePrimary() : parseBlock();
+      {
+        let 距 = 0;
+        while (peek(距).type === "newline") 距++;
+        const 非空 = peek(距);
+        if (非空 && 非空.type === "keyword" && 非空.value === "else") {
+          for (let k = 0; k < 距; k++) advance();
+          advance();
+          // else 之后也一样：`else` 换行再写 `{` 与写在同一行是同一棵树。
+          过换行看花括号();
+          otherwise = at("keyword", "if") ? parsePrimary() : parseBlock();
+        }
       }
       return { kind: "若", condition, then, otherwise, line: t.line, column: t.column };
     }

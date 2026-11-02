@@ -143,7 +143,16 @@
   变 收 = acc
   若 len(got.line) > 0 {
     定 st = parse_statement(got.line)
-    收 = 收 + (st.node,)
+    // 一条语句行必须被读完。读不完说明这一层的语法不认这一行，而它原来会静默丢掉
+    // 剩下的部分 —— 于是 `match 1 { }` 被读成「一个叫 match 的名字」，编译出来跑得动，
+    // 只是跑的不是那份源码（2026-11-02 实测：子集编译器编这一行交回 ok）。
+    // 交回一个 误 节点，让编译与求值两条路都说得出「这一版不认这一行」，
+    // 而不是给出一个看起来正常、跑起来另一个答案的程序。
+    若 st.next < len(got.line) {
+      收 = 收 + ({kind: "误", text: "这一行读不完", line: st.node.line, column: st.node.column},)
+    } 否则 {
+      收 = 收 + (st.node,)
+    }
   }
   若 got.end { 返回 {list: 收, next: got.next} }
   返回 each(tokens, got.next, 收)

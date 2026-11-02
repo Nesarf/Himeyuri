@@ -75,6 +75,10 @@ export class Runtime {
   constructor(options = {}) {
     this.functions = new Map();
     this.globals = new Map();
+    // 哪些模块级名字可写（design/GLOBALS.txt）。全局表里 常量 与 顶层变 长得一样，
+    // 区别只在这一点上；所以它单放一张表，而不是给每个值套一层 { value, mutable } ——
+    // 那张形状是作用域的，而这里的读者只有「赋值」那一支。
+    this.可写全局 = new Set();
     this.output = [];
     this.write = options.write || ((line) => this.output.push(line));
     this.steps = 0;
@@ -175,8 +179,15 @@ export class Runtime {
     for (const decl of ast.decls) {
       if (decl.kind === "函数") this.functions.set(decl.name, decl);
       else if (decl.kind === "常量") this.globals.set(decl.name, this.evalExpr(decl.value, new Scope(null)));
-      if (文件 && (decl.kind === "函数" || decl.kind === "常量")) this.归属.set(decl.name, 文件);
-      if (文件 && (decl.kind === "函数" || decl.kind === "常量")) {
+      // 顶层 var 与 const 走同一条登记路，区别只在它进不进「可写」那张表。
+      // 原来只收 常量，于是模块级的 var 在解释这一条路上既读不到（HMYR-行-005）
+      // 也写不上（HMYR-行-017），而字节码那台与自举那台都支持它 —— 那是既有的不一致。
+      else if (decl.kind === "顶层变") {
+        this.globals.set(decl.name, this.evalExpr(decl.value, new Scope(null)));
+        this.可写全局.add(decl.name);
+      }
+      if (文件 && (decl.kind === "函数" || decl.kind === "常量" || decl.kind === "顶层变")) this.归属.set(decl.name, 文件);
+      if (文件 && (decl.kind === "函数" || decl.kind === "常量" || decl.kind === "顶层变")) {
         if (!this.模块声明.has(文件)) this.模块声明.set(文件, new Map());
         this.模块声明.get(文件).set(decl.name, decl);
       }
@@ -221,9 +232,16 @@ export class Runtime {
   }
 
   run(ast) {
+    // 与 registerModule 同一条登记路（那条走 loader，这条走 run(源) 直接跑）。
+    // 两处必须一起改：只改一处的话，「模块级 var 读不到」这件事会一半发生一半不发生，
+    // 而那正是这一轮要收掉的那种不一致。
     for (const decl of ast.decls) {
       if (decl.kind === "函数") this.functions.set(decl.name, decl);
       else if (decl.kind === "常量") this.globals.set(decl.name, this.evalExpr(decl.value, new Scope(null)));
+      else if (decl.kind === "顶层变") {
+        this.globals.set(decl.name, this.evalExpr(decl.value, new Scope(null)));
+        this.可写全局.add(decl.name);
+      }
     }
     const main = this.functions.get("main");
     if (!main) this.fail("HMYR-行-001", "no main function to run");
@@ -362,10 +380,18 @@ export class Runtime {
       }
       case "赋值": {
         const value = this.evalExpr(stmt.value, scope, effects);
-        if (!scope.assign(stmt.name, value)) {
-          this.fail("HMYR-行-017", "cannot assign to '" + stmt.name + "': it is not a variable declared with var, or it is not in scope");
+        if (scope.assign(stmt.name, value)) return value;
+        // 作用域链上没有这个名字，就是模块级的那一个 —— 与读它走同一条回退（见 case "名"）。
+        // 只认全局表里已经有的名字：拼错的名字仍旧是 HMYR-行-017，而不是凭空造一个全局。
+        // 写 const 也仍旧拒绝，而那时说「它是 const」比「它不在作用域里」准。
+        if (this.globals.has(stmt.name)) {
+          if (!this.可写全局.has(stmt.name)) {
+            this.fail("HMYR-行-017", "cannot assign to '" + stmt.name + "': it is a const");
+          }
+          this.globals.set(stmt.name, value);
+          return value;
         }
-        return value;
+        this.fail("HMYR-行-017", "cannot assign to '" + stmt.name + "': it is not a variable declared with var, or it is not in scope");
       }
       case "返回": {
         // 尾位置：return f(...) 里的那个调用不必保留这一层。
