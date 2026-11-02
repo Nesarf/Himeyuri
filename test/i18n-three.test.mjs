@@ -41,6 +41,10 @@ try {
   fs.writeFileSync(p("zh-gbk.txt"), Buffer.from([0xc4, 0xe3, 0xba, 0xc3, 0x0a]));
   fs.writeFileSync(p("ja-sjis.txt"), Buffer.from([0x82, 0xa0, 0x82, 0xa2, 0x0a]));
 
+  // 命令与「怎么让它执行一句话」按平台取：Windows 是 cmd /c，POSIX 是 sh -c。
+  // 2026-11-03 跨系统时这一节红了 —— 这一套当初只在 Windows 上跑过。
+  const 壳 = process.platform === "win32" ? "cmd" : "sh";
+  const 壳参 = process.platform === "win32" ? "/c" : "-c";
   const out = run(`fn say(t: String) -> Int {
   // print 不自己加换行——它就是「写出这些字符」。所以每个观察自己带上换行。
   print(t + "\\n")
@@ -54,10 +58,10 @@ fn main() -> Int effects(file, process) {
   say("write-ok:" + str(write_text(${JSON.stringify(p("en-utf8.txt"))}, "hello 你好 こんにちは")))
   say("split:" + str(len(split("一\\n二\\n三", "\\n"))))
   say("codepage:" + console_codepage())
-  let r = run_program("cmd", ("/c", "echo 你好，世界"), 8000, "gbk")
+  let r = run_program(${JSON.stringify(壳)}, (${JSON.stringify(壳参)}, "echo 你好，世界"), 8000, "gbk")
   say("proc-gbk:" + str(r.code) + "|" + r.stdout)
-  let r2 = run_program("cmd", ("/c", "echo 你好，世界"), 8000)
-  say("proc-utf8:" + str(r2.code) + "|" + str(len(r2.stdout)))
+  let r2 = run_program(${JSON.stringify(壳)}, (${JSON.stringify(壳参)}, "echo 你好，世界"), 8000)
+  say("proc-utf8:" + str(r2.code) + "|" + r2.stdout)
   return 0
 }
 `);
@@ -165,8 +169,18 @@ console.log("\n不认识的编码名：拒绝，并点名编号");
   }
 
   console.log("\n子进程：今天那个乱码案例");
-  ok("按 GBK 解码子进程输出，得到那五个字", get("proc-gbk") === "0|你好，世界", JSON.stringify(get("proc-gbk")));
-  ok("不说编码时按 UTF-8 解，于是它就坏了", !String(get("proc-utf8")).includes("你好，世界"), JSON.stringify(get("proc-utf8")));
+  // 两台机器验的是同一件事 —— 「声明的编码必须与字节对得上」—— 只是方向相反。
+  // Windows 的控制台吐 GBK 字节，声明 GBK 才对、不说就坏；
+  // POSIX 的 shell 吐 UTF-8 字节，声明 GBK 反而把它解坏、不声明才读得对。
+  // 2026-11-03 在 WSL 上第一次看清这一点：那时断言只写了 Windows 那个方向。
+  if (process.platform === "win32") {
+    ok("声明 GBK 解子进程输出，得到那五个字", get("proc-gbk") === "0|你好，世界", JSON.stringify(get("proc-gbk")));
+    ok("不说编码时按 UTF-8 解，于是它就坏了", !String(get("proc-utf8")).includes("你好，世界"), JSON.stringify(get("proc-utf8")));
+  } else {
+    ok("声明成 GBK 反而解坏了（字节是 UTF-8）", !String(get("proc-gbk")).includes("你好，世界"), JSON.stringify(get("proc-gbk")));
+    ok("这台不声明编码才读得对：子进程输出本来就是 UTF-8",
+       String(get("proc-utf8")).includes("你好，世界"), JSON.stringify(get("proc-utf8")));
+  }
 } finally {
   fs.rmSync(SCRATCH, { recursive: true, force: true });
 }
