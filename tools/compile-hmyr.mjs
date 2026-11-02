@@ -47,7 +47,7 @@ if (unit.ok) {
 } else {
   源码 = fs.readFileSync(入口路, "utf8");
 }
-const r = 编.callFunction(编源码, [源码], null);
+const r = 编.callFunction(编源码, [源码, 1], null);
 if (!r || r.ok === false) {
   console.error("HMYR 编译器： " + (r ? r.错 : "没有交回值"));
   process.exit(2);

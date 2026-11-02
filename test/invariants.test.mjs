@@ -277,7 +277,7 @@ console.log("八、循环不变式：挂在 当 上，入口一次、每轮体�
       return acc;
     };
     const 子集跑 = (源) => {
-      const 编r = 种子.调用("编源码", [源], null);
+      const 编r = 种子.调用("编源码", [源, 1], null);
       if (!编r || !编r.ok) return { ok: false, 崩: String(编r && 编r.码 ? 编r.码 + " " + 编r.话 : "编源码 停机") };
       const 包r = 种子.调用("打包", [取(编r.值, "函数族")], null);
       if (!包r || !包r.ok) return { ok: false, 崩: String(包r && 包r.码 ? 包r.码 + " " + 包r.话 : "打包 停机") };

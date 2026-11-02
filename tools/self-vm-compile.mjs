@@ -75,13 +75,13 @@ const 样本 = [
 
 console.log("一、打包器在虚拟机上跑得动");
 {
-  const r = 调("编源码", [样本[0][1]]);
+  const r = 调("编源码", [样本[0][1], 1]);
   ok("编源码 在 vm 上给出结果", !r.err, r.err || "ok");
 }
 
 console.log("二、两位打包者交出同样的字节");
 for (const [标, 源] of 样本) {
-  const 编r = 调("编源码", [源]);
+  const 编r = 调("编源码", [源, 1]);
   if (编r.err) { ok(标, false, "编源码：" + 编r.err); continue; }
   const 包r = 调("打包", [取(编r.value, "函数族")]);
   if (包r.err) { ok(标, false, "打包：" + 包r.err); continue; }
@@ -102,6 +102,41 @@ for (const [标, 源] of 样本) {
 
   const 同 = js.length === 她.length && js.every((b, i) => b === 她[i]);
   ok(标 + "（" + js.length + " 字节）", 同, 同 ? "" : "JS " + js.length + " / vm " + 她.length);
+}
+
+console.log("二半、弱档：契约那几段一条都不发");
+{
+  // 这一节问的是档本身，而不只是「多了一个参数」。两条判据：
+  //   一、弱档与 JS 弱档逐字节相同 —— 与第二节同一个理由，只是换了一档；
+  //   二、弱档字节与强档字节不同 —— 否则那个参数只是摆设，改了也看不出来。
+  // 只拿带契约的两份样本问：无契约的样本在两档下本来就相同（理由写在第二节）。
+  for (const [标, 源] of 样本.filter(([标签]) => 标签.startsWith("带"))) {
+    const 强r = 调("编源码", [源, 1]);
+    const 强包r = 强r.err ? 强r : 调("打包", [取(强r.value, "函数族")]);
+    if (强包r.err) { ok(标 + " 弱档", false, "强档就编不动：" + 强包r.err); continue; }
+    const 强包 = 拍平(强包r.value);
+
+    const 弱r = 调("编源码", [源, 0]);
+    const 弱包r = 弱r.err ? 弱r : 调("打包", [取(弱r.value, "函数族")]);
+    if (弱包r.err) { ok(标 + " 弱档", false, "弱档：" + 弱包r.err); continue; }
+    const 弱包 = 拍平(弱包r.value);
+
+    const 临 = path.join(ROOT, ".tmp-vmc");
+    fs.mkdirSync(临, { recursive: true });
+    const 源路 = path.join(临, "p.hmoca");
+    fs.writeFileSync(源路, 源, "utf8");
+    const u = loadUnit(源路);
+    fs.rmSync(临, { recursive: true, force: true });
+    if (!u.ok) { ok(标 + " 弱档", false, "宿主加载失败"); continue; }
+    const js弱 = 写程序(合并程序(u.order.map((f) => 编译模块(u.modules.get(f), { contracts: false }))));
+
+    const 同 = js弱.length === 弱包.length && js弱.every((b, i) => b === 弱包[i]);
+    const 两档一样 = 强包.length === 弱包.length && 强包.every((b, i) => b === 弱包[i]);
+    ok(标 + " 弱档与 JS 弱档相同（" + js弱.length + " 字节）", 同,
+       同 ? "" : "JS " + js弱.length + " / vm " + 弱包.length);
+    ok(标 + " 弱档与强档不同（" + 强包.length + " 对 " + 弱包.length + " 字节）", !两档一样,
+       "两档字节一样 —— 那说明档没有起作用");
+  }
 }
 
 console.log("三、验签也在虚拟机上跑");

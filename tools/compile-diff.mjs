@@ -49,7 +49,7 @@ const 拍平 = (v, acc = []) => {
 // 这是两份编译器：JS 那份（src/bytecode.mjs 编、src/code-file.mjs 写）与 HMYR 那份
 // （runtime/pack.hmoks 里的 编源码 + 打包）。两边都吃同一份源码字符串。
 const 编一份 = (源) => {
-  const 族 = 取(调("编源码", [源]), "函数族");
+  const 族 = 取(调("编源码", [源, 1]), "函数族");
   return 拍平(调("打包", [族]));
 };
 const JS编一份 = (源) => {

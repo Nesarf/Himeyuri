@@ -42,7 +42,7 @@ const 编 = (() => {
     return v;
   };
   return (源码) => {
-    const r = rt.callFunction(编源码, [源码], null);
+    const r = rt.callFunction(编源码, [源码, 1], null);
     if (!r || r.ok === false) return { 错: r ? r.错 : "没有交回值" };
     const 函数族 = new Map();
     for (const f of r.函数族) {
