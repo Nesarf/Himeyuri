@@ -80,6 +80,31 @@ console.log("五、被 spawn 出去的工具脚本也是一条边");
   ok("改 hmget.mjs 会碰到 hmget（拆成两段的路径也认得）", 戊.has("hmget"), String(戊.size) + " 套");
 }
 
+console.log("六、预期表现：基线那一份与地图那一节对得上");
+{
+  // 地图第四节的数字读的是 tools/expected.json，不写在代码里 —— 数字会漂，
+  // 所以这一节不盯数值（那会天天红），盯的是「它还在、还完整、还印得出来」。
+  // 少了这几条，第四节早晚退回硬编码，而套件数已经摔过两次那种跤。
+  const 基线 = JSON.parse(fs.readFileSync(path.join(ROOT, "tools/expected.json"), "utf8"));
+  ok("基线带着测于与环境", typeof 基线.测于 === "string" && typeof 基线.环境 === "string",
+     String(基线.测于));
+  ok("基线带着容差，而且是大于一的数", typeof 基线.容差倍数 === "number" && 基线.容差倍数 > 1,
+     String(基线.容差倍数));
+  ok("每一项都齐：名字、数值、单位、量法",
+     Array.isArray(基线.项) && 基线.项.length > 0 &&
+      基线.项.every((p) => p.名 && typeof p.值 === "number" && p.单位 && p.量法),
+     JSON.stringify(基线.项.slice(0, 1)));
+  const 总图 = 跑("--map");
+  ok("地图里有第四节", 总图.indexOf("四、预期表现") >= 0, "");
+  const 缺 = 基线.项.filter((p) => 总图.indexOf(p.名) < 0).map((p) => p.名);
+  ok("每一项都印在地图上", 缺.length === 0, JSON.stringify(缺));
+  ok("量法也印出来了", 总图.indexOf(基线.项[0].量法) >= 0, "");
+  // 对照那一段记的是「换字宽之前是多少」，最容易被当成旧账删掉，而它正是下一次
+  // 判断的参照 —— 没有它，36.1 秒只是一个孤立数字。
+  ok("对照至少留一条", Array.isArray(基线.对照) && 基线.对照.length > 0,
+     String((基线.对照 || []).length));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

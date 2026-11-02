@@ -27,6 +27,23 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+// 预期表现的家：tools/expected.json。地图只读它，不把数字写在这里 ——
+// 数字会随机器与负载漂，而硬编码进代码的数字最后都会变成文档里过时的东西
+// （这个仓库里已经有过两次：套件数 203→204→205，每回都慢半拍）。
+// 所以这一层只负责「读出来、按量法分组打印」，改数字去改那一份。
+const 读基线 = () => {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(ROOT, "tools/expected.json"), "utf8"));
+  } catch {
+    return null;
+  }
+};
+
+// 按显示宽度补空格：一个汉字占两列，而 padEnd 数的是字符数。
+// 少了这一层，第四节的数字列会被中文名推得参差不齐。
+const 宽 = (s) => [...s].reduce((n, c) => n + (c.charCodeAt(0) > 127 ? 2 : 1), 0);
+const 补宽 = (s, n) => s + " ".repeat(Math.max(0, n - 宽(s)));
 const 参数 = process.argv.slice(2);
 const 要全部 = 参数.includes("--all");
 const 要总图 = 参数.includes("--map");
@@ -175,6 +192,21 @@ if (要总图) {
   }
   console.log("");
   console.log("三、反过来：给一个文件，用 node tools/impact.mjs <文件> 看它会碰到哪些套件");
+  console.log("");
+  const 基线 = 读基线();
+  if (!基线) {
+    console.log("四、预期表现：没有 tools/expected.json —— 先跑一次量具，再把数字抄进那一份");
+  } else {
+    console.log("四、预期表现（测于 " + 基线.测于 + "，" + 基线.环境 + "）");
+    for (const 项 of 基线.项) {
+      console.log("  " + 补宽(项.名, 44) + String(项.值).padStart(9) + " " + 项.单位);
+    }
+    console.log("  回退口径：超出基线的 " + 基线.容差倍数 + " 倍就该查；低得太多也要看 —— 那多半是某条路根本没跑到。");
+    console.log("  重测（每一项的量法都写在 tools/expected.json 里）：");
+    for (const 量法 of [...new Set(基线.项.map((p) => p.量法))]) {
+      console.log("    " + 量法);
+    }
+  }
   process.exit(0);
 }
 
