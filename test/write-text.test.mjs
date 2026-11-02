@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { loadUnit } from "../src/loader.mjs";
 import { 最小运行 } from "../src/minimal-eval.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -18,7 +19,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 路 = "E:/DaShaoHuo/cache/tmp/hmyr-write-text.txt";
+const 路 = 临时文件("hmyr-write-text.txt");
 
 console.log("一、写得出来，而且读回来是同一份");
 {
@@ -44,7 +45,7 @@ console.log("一、写得出来，而且读回来是同一份");
 console.log("二、效果那一层：要 file 才有写");
 {
   // 不声明 effects(file) 的 main 调 write_text，应当被拒绝（HMYR-內-001），而不是悄悄写出去。
-  const 临 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-wt-");
+  const 临 = 临时mkdtempSync("hmyr-wt-");
   const p = path.join(临, "noeffect.hmoca");
   fs.writeFileSync(p, 'fn main() -> Int {\n  write_text("' + 临.replace(/\\\\/g, "/") + '/x.txt", "a")\n  return 0\n}\n', "utf8");
   const 层 = loadUnit(p);

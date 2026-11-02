@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { lex } from "../src/lexer.mjs";
 import { parse } from "../src/parser.mjs";
 import { Runtime } from "../src/eval.mjs";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -18,7 +19,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const SCRATCH = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-i18n-");
+const SCRATCH = 临时mkdtempSync("hmyr-i18n-");
 const p = (n) => path.join(SCRATCH, n).replace(/\\/g, "/");
 
 /** 跑一个 Himeyuri 程序，把它打印的东西交回来 */

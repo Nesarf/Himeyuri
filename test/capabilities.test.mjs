@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { lex } from "../src/lexer.mjs";
 import { parse } from "../src/parser.mjs";
 import { Runtime } from "../src/eval.mjs";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -41,7 +42,7 @@ console.log("写不进：给出编号 HMYR-內-012");
 }
 console.log("正常路径不受影响");
 {
-  const tmp = "E:/DaShaoHuo/cache/tmp/caps-ok.txt";
+  const tmp = 临时文件("caps-ok.txt");
   const r = 跑('fn main() -> Int effects(file) { print(str(write_text("' + tmp + '", "hello"))) return 0 }\n');
   // 写入的长度是被 print 写在输出里的；main 的返回值是零，两者别弄混。
   ok("写得进时交回写入的长度", r.out === "5", JSON.stringify(r.out));

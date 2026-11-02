@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -33,7 +34,7 @@ const 造 = (名, 标题, 标记, 歌长, 序列, 样本长) => {
   fs.writeFileSync(p, Buffer.concat([头, 格]));
   return p.replace(/\\/g, "/");
 };
-const 过程目录 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/mod-");
+const 过程目录 = 临时mkdtempSync("mod-");
 
 const unit = loadUnit(path.join(ROOT, "mod.hmoca"));
 ok("MOD 那一层加载得动", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));

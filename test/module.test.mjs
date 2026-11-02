@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit, describeUnit } from "../src/loader.mjs";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -15,7 +16,7 @@ const codes = (unit) => unit.diagnostics.items.map((d) => d.code);
 
 // one scratch directory, cleaned up at the end
 // Scratch files belong in the cache area, not the system temp on the system drive.
-const SCRATCH = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-mod-");
+const SCRATCH = 临时mkdtempSync("hmyr-mod-");
 const write = (name, text) => { const f = path.join(SCRATCH, name); fs.writeFileSync(f, text, "utf8"); return f; };
 
 try {

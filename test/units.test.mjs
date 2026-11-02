@@ -16,6 +16,7 @@ import { 最小运行 } from "../src/minimal-eval.mjs";
 import { 跑字节码 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
 import * as u from "../src/units.mjs";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -195,7 +196,7 @@ console.log("五、字节码那边也打开同一个开关，三条路仍然一�
   // 谁把默认悄悄改回去它们不会红。翻默认之前它红过一次：那时 packValue 把码元序列
   // 当成记录编，self-vm-compile 的「if 与字符串」多出 44 字节。
   {
-    const 临三 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-units-default-");
+    const 临三 = 临时mkdtempSync("hmyr-units-default-");
     try {
       const p = path.join(临三, "默认.hmoca");
       fs.writeFileSync(p, "fn main() -> Int {\n  return \"abc\"\n}\n");

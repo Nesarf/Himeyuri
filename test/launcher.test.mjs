@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -17,7 +18,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 const 启动 = (args) => spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), ...args], { encoding: "utf8" });
-const 临 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-launch-");
+const 临 = 临时mkdtempSync("hmyr-launch-");
 const 写 = (名, 内容) => { const p = path.join(临, 名); fs.writeFileSync(p, 内容, "utf8"); return p; };
 
 try {
@@ -144,7 +145,7 @@ try {
 
 console.log("模块加载：import 进来的函数能调");
 {
-  const 模块目录 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-mod-");
+  const 模块目录 = 临时mkdtempSync("hmyr-mod-");
   try {
     fs.writeFileSync(path.join(模块目录, "helper.hmoca"), "fn helper() -> Int {\n  return 9\n}\n", "utf8");
     fs.writeFileSync(path.join(模块目录, "main.hmoca"), 'import "./helper.hmoca"\n\nfn main() -> Int {\n  return helper() + 1\n}\n', "utf8");
@@ -180,7 +181,7 @@ console.log("读自举那一层用的是子集那两层，不是宿主那两层"
 
 console.log("默认那份最小求值器，与 --host-eval 那条做同一件事");
 {
-  const 目录 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-min-launch-");
+  const 目录 = 临时mkdtempSync("hmyr-min-launch-");
   try {
     const 用 = (args) => spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), ...args], { encoding: "utf8" });
     const 目标 = path.join(ROOT, "examples/hello.hmoca");

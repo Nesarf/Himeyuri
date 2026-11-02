@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -19,7 +20,7 @@ const ok = (label, condition, detail = "") => {
 };
 
 // 临时目录留在非系统盘。
-const 临 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-lspmod-");
+const 临 = 临时mkdtempSync("hmyr-lspmod-");
 const 别路 = path.join(临, "other.hmoca");
 const 基路 = path.join(临, "base.hmoca");
 fs.writeFileSync(别路, "fn 别的(a: Int) -> Int {\n  return a\n}\n");
@@ -101,7 +102,7 @@ console.log("四、自举那一份也跳得过去");
   if (!有编译器) {
     console.log("  跳过  这台机器上没有 gcc —— 自举那一边跑不起来");
   } else {
-    const 临二 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-lspmod-c-");
+    const 临二 = 临时mkdtempSync("hmyr-lspmod-c-");
     const exe = path.join(临二, "hmyr.exe");
     const 编r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得动", 编r.status === 0, String(编r.stderr || "").slice(0, 120));

@@ -11,6 +11,7 @@ import path from "node:path";
 import { run } from "../src/eval.mjs";
 import { loadUnit, runUnit } from "../src/loader.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
@@ -18,7 +19,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 临 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-macro-");
+const 临 = 临时mkdtempSync("hmyr-macro-");
 let 序 = 0;
 
 const 走求值器 = (源) => {

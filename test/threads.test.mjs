@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { lex } from "../src/lexer.mjs";
 import { parse } from "../src/parser.mjs";
 import { Runtime } from "../src/eval.mjs";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -20,7 +21,7 @@ const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
-const 临 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-thr-");
+const 临 = 临时mkdtempSync("hmyr-thr-");
 const 写 = (n, 内容) => { const p = path.join(临, n); fs.writeFileSync(p, 内容, "utf8"); return p.replace(/\\/g, "/"); };
 const 跑 = (src) => {
   const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
@@ -76,7 +77,7 @@ try {
 console.log("超时：等不到就报编号，而不是一直挂着");
 {
   // 这一段在 finally 之后（临时目录已经删了），所以它自己造自己的文件。
-  const 慢路径 = "E:/DaShaoHuo/cache/tmp/hmyr-thr-slow.hmoca";
+  const 慢路径 = 临时文件("hmyr-thr-slow.hmoca");
   fs.writeFileSync(慢路径, "fn work() -> Int {\n  var i = 0\n  var s = 0\n  while i < 200000 {\n    s = s + i\n    i = i + 1\n  }\n  return s\n}\n", "utf8");
   const 慢 = 慢路径;
   const r = 跑('fn main() -> Int effects(thread, file) {\n  let 源码 = read_text("' + 慢 + '", "utf8")\n  let 手 = thr_spawn(源码, "work")\n  print(str(thr_join(手, 1)))\n  return 0\n}\n');

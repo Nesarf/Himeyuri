@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -18,7 +19,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 const 验 = (...参) => spawnSync(process.execPath, [path.join(ROOT, "tools/verify.mjs"), ...参], { encoding: "utf8" });
-const 临 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/verify-");
+const 临 = 临时mkdtempSync("verify-");
 
 // 本机的签名能力：有就测签名那几节，没有就跳过去。
 const 钥匙 = "C:/Windows/System32/OpenSSH/ssh-keygen.exe";

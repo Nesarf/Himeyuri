@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -72,7 +73,7 @@ if (!有编译器) {
 }
 
 // 临时目录留在非系统盘（与 package.test.mjs 同一条约定）。
-const 临 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-lspcomp-");
+const 临 = 临时mkdtempSync("hmyr-lspcomp-");
 const exe = path.join(临, "hmyr.exe");
 const 编r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
 ok("C 那台编得动", 编r.status === 0, String(编r.stderr || "").slice(0, 120));

@@ -7,6 +7,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PY = "E:/DaShaoHuo/Python-managed/bin/python.exe";
@@ -18,7 +19,7 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const SCRATCH = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-img-");
+const SCRATCH = 临时mkdtempSync("hmyr-img-");
 const p = (n) => path.join(SCRATCH, n).replace(/\\/g, "/");
 
 // 造一张带 sRGB ICC 的图。CmsProfile 本身没有 tobytes，要用 ImageCmsProfile 包一层。

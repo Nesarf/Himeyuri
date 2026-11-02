@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadUnit, runUnit } from "../src/loader.mjs";
+import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ESC = String.fromCharCode(27);
@@ -146,7 +147,7 @@ console.log("native 后端：借一个子进程开真窗口（这里只验管道
 console.log("图像：把像素布导出的 PNG 交给 native 后端");
 {
   const fs2 = (await import("node:fs")).default;
-  const 图 = "E:/DaShaoHuo/cache/tmp/surface-img.png";
+  const 图 = 临时文件("surface-img.png");
   // 子进程里要加载的那几个 mjs 与 pixel.hmoca 都按仓库自身位置算，不写死盘符。
   const 仓根 = new URL("..", import.meta.url);
   const 仓根斜 = 仓根.pathname.slice(1);
@@ -158,7 +159,7 @@ console.log("图像：把像素布导出的 PNG 交给 native 后端");
     'const { parse } = await import("' + new URL("src/parser.mjs", 仓根).href + '");',
     'const rt = runUnit(loadUnit("' + 仓根斜 + 'pixel.hmoca"));',
     'const d = { items: [], errors: [], warnings: [], add(){}, error(){}, warn(){} };',
-    'const src = "fn main() -> Int effects(process, file) {\\n  let 布 = 填矩形(新布(16, 10), 2, 2, 8, 5, 11141120)\\n  let 果 = 导出(布, \\"E:/DaShaoHuo/cache/tmp/surface-img.txt\\", \\"E:/DaShaoHuo/cache/tmp/surface-img.png\\")\\n  print(果.text)\\n  return 0\\n}\\n";',
+    'const src = "fn main() -> Int effects(process, file) {\\n  let 布 = 填矩形(新布(16, 10), 2, 2, 8, 5, 11141120)\\n  let 果 = 导出(布, \\"' + 临时文件("surface-img.txt") + '\\", \\"' + 临时文件("surface-img.png") + '\\")\\n  print(果.text)\\n  return 0\\n}\\n";',
     'const { ast } = parse(lex(src, { diagnostics: d }).tokens, { diagnostics: d });',
     'rt.write = (s) => process.stdout.write(s);',
     'rt.registerModule(ast);',
@@ -171,7 +172,7 @@ console.log("图像：把像素布导出的 PNG 交给 native 后端");
   const 坏 = call("呈现图像", ["term", 图]);
   ok("字符后端不呈现图像，如实说", 坏.ok === false && String(坏.text).indexOf("还不呈现图像") >= 0, JSON.stringify(坏));
   fs2.rmSync(图, { force: true });
-  fs2.rmSync("E:/DaShaoHuo/cache/tmp/surface-img.txt", { force: true });
+  fs2.rmSync(临时文件("surface-img.txt"), { force: true });
 }
 
 console.log("会话：窗活着的那一段时间里，事件进得去、帧换得过来");
