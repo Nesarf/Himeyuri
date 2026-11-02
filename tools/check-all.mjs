@@ -4,7 +4,7 @@
 //
 // It runs each suite as its own process, so a crash in one is reported as that suite failing rather
 // than as this script dying, and it prints the M2 status line the specification asks about.
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -98,6 +98,10 @@ const SUITES = [
   // 结果写成文本交回。板子那一支不编线程，thr_* 仍如实说没有。
   ["threadscvm", "test/threads-c-vm.test.mjs", "SPEC M4 - threads on both bytecode machines: two threads alive at once, hard isolation, and a handle that is gone after join"],
   ["cli", "test/cli.test.mjs", "SPEC M4 - the launcher: one command from source to running, with no JavaScript in between (skipped when the host has no C compiler)"],
+  // 这一条不标 需要：套件自己就带那份候选清单（绝对路径 + PATH 名），
+  // 缺编译器时它会打印「跳过」并以 0 退出。在这里再标一次，等于把同一件事
+  // 写进两处 —— 而 2026-11-02 第一次标上去就出了错：Windows 上那台编译器
+  // 在绝对路径里、不在 PATH 里，于是这里误判成缺席，而它本来是过的。
   ["arm", "test/arm.test.mjs", "SPEC M4 - the same C machine compiled for a bare-metal Cortex-M4: the desktop assumptions sit behind conditionals, the image links against a linker script and a startup file, and it runs on either arm-none-eabi-gcc or armclang (skipped when neither is present)"],
   ["board", "test/board.test.mjs", "SPEC M4 - the board path walked on a desk: bytecode in memory, a platform installed, output into a buffer"],
   ["hmyrcompile", "test/hmyr-compiler.test.mjs", "SPEC M4 - the compiler moved into Himeyuri: two compilers, one answer, and a stated boundary where one is still a subset"],
@@ -131,9 +135,9 @@ const SUITES = [
   ["pkgmanifest", "test/pkg-manifest.test.mjs", "design/PKGMAN.txt - a package says who it is: four fields, a shape check while loading (HMYR-載-007), and a hash check by a tool that is allowed to borrow a crypto library"],
   ["packbytes", "test/pack-bytes.test.mjs", "design/COMPILER.txt - two packers, one bytecode: self/pack.hmoca and src/code-file.mjs write the same bytes for the same source; and two compilers, the JavaScript one and the bootstrap one, agree on what the program prints"],
   ["hmget", "test/hmget.test.mjs", "design/HMGET.txt - taking a package: a local directory or a file URL as the source, the manifest hash checked before anything moves, an existing different package refused unless asked, and http refused by name because the criterion has to be reproducible"],
-  ["surface", "test/surface.test.mjs", "SPEC M7 - several sub surfaces composited onto the main one, the way real windows will be"],
-  ["pixel", "test/pixel.test.mjs", "SPEC M7 - a second kind of buffer: pixels, and a real PNG comes out the other end"],
-  ["parallel", "test/parallel.test.mjs", "SPEC M7 - real parallelism borrowed from a process that has it, and the judgement still read back in Himeyuri"],
+  ["surface", "test/surface.test.mjs", "SPEC M7 - several sub surfaces composited onto the main one, the way real windows will be", { 需要: ["powershell"] }],
+  ["pixel", "test/pixel.test.mjs", "SPEC M7 - a second kind of buffer: pixels, and a real PNG comes out the other end", { 需要: ["python-pil"] }],
+  ["parallel", "test/parallel.test.mjs", "SPEC M7 - real parallelism borrowed from a process that has it, and the judgement still read back in Himeyuri", { 需要: ["powershell"] }],
   ["message", "test/message.test.mjs", "SPEC M7 - mailboxes between tasks: bounded, first in first out, refuse when full, say empty when empty"],
   ["sched", "test/sched.test.mjs", "SPEC M7 - a cooperative scheduler: turn taking, completion, cancellation, and failure that does not spread"],
   ["threads", "test/threads.test.mjs", "SPEC M7 - real threads: another core, the result arrives through a file, and isolation is hard not promised"],
@@ -171,7 +175,7 @@ const SUITES = [
   // 两档：hmsnp 与 hmhsr 是同一份内容的两档入口，档位由名字定。
   ["profile", "test/profile.test.mjs", "design/FILETYPE.txt section four - the two entries really differ: the profile comes from the suffix, steady and elastic land on different resource presets, a plain .hmoca keeps the number it always had, and both run to the same output"],
   // 容器格式的骨架：三条规矩都是格式的一部分，所以各有判据。
-  ["ittgn", "test/ittgn.test.mjs", "design/FILETYPE.txt - the container format's skeleton: bytes go in and come out unchanged, depth is counted per container with a ceiling of twelve, and hmsnp or hmhsr is refused as a member because those two are the container's own logic"],
+  ["ittgn", "test/ittgn.test.mjs", "design/FILETYPE.txt - the container format's skeleton: bytes go in and come out unchanged, depth is counted per container with a ceiling of twelve, and hmsnp or hmhsr is refused as a member because those two are the container's own logic", { 需要: ["powershell"] }],
   ["deflate", "test/deflate.test.mjs", "SPEC M7 - deflate stored blocks written in Himeyuri: round trip, and zlib reads the stream without being told anything"],
   ["tree", "test/tree.test.mjs", "SPEC M7 - the Huffman tree alone: all three code-length tables must sum to a complete Kraft total"],
   ["array", "test/array.test.mjs", "SPEC 2.2 - a mutable array beside the immutable tuple: write, read, out of range, and the tuple it came from stays put"],
@@ -214,7 +218,7 @@ const SUITES = [
   ["manifest", "test/manifest.test.mjs", "SPEC M7 - the distribution manifest: everything it lists actually exists, and the minimal set is exactly fifteen"],
   ["helper", "test/helper.test.mjs", "SPEC M7 - the assistant: a code explains itself, a word searches the meanings, and a miss still hands back the list"],
   ["verify", "test/verify.test.mjs", "SPEC M7 - the manifest verifier: it says pass when it matches, and it really says fail when something was changed"],
-  ["package", "test/package.test.mjs", "SPEC M7 - packaging: the release carries a manifest, and that manifest verifies from inside the package"],
+  ["package", "test/package.test.mjs", "SPEC M7 - packaging: the release carries a manifest, and that manifest verifies from inside the package", { 需要: ["powershell"] }],
   ["distro", "test/distro.test.mjs", "SPEC M7 - the distribution pieces: a wizard that installs nothing, a tour that links only to what exists, and an updater that can say it does not know"],
   ["release", "test/release.test.mjs", "SPEC M7 - release: it prepares the notes and the assets, and by default it sends nothing anywhere"],
   ["selfparse", "test/self-parse.test.mjs", "SPEC M7 - the expression parser written in Himeyuri agrees shape by shape"],
@@ -336,6 +340,33 @@ if (改过的.length) {
 if (跳过.size) 选中 = 选中.filter(([名]) => !跳过.has(名));
 const 名单 = new Set(选中.map(([名]) => 名));
 
+// ---- 平台能力：这一套件在「这一台」上能不能跑 ----
+//
+// 为什么要有这一段：在第二个系统上跑全量时，「缺 powershell」与「平台假设写错了」
+// 在报告里长得一模一样 —— 而处置完全不同：前者记明即可，后者要改代码。
+// 2026-11-02 在 WSL（Nyarch Linux）上第一次跑全量时才需要这条区分，于是 SUITES
+// 表的第四项（原本只放 knownMissing）多了 需要 这个字段。
+//
+// 探测全在本地做，不装任何东西：缺就是缺，报「设计缺席」，不计入失败。
+const 能力 = (() => {
+  const 有 = (cmd, args) => {
+    try { return spawnSync(cmd, args, { encoding: "utf8", timeout: 15000 }).status === 0; } catch { return false; }
+  };
+  return {
+    powershell: 有("powershell", ["-NoProfile", "-Command", "exit 0"]),
+    "arm-gcc": 有("arm-none-eabi-gcc", ["--version"]),
+    "python-pil": 有("python", ["-c", "import PIL"]),
+    cmd: process.platform === "win32",
+  };
+})();
+const 缺什么 = (标记) => (((标记 && 标记.需要) || []).filter((x) => !能力[x]));
+const 缺席 = [];
+选中 = 选中.filter(([名, , , 标记]) => {
+  const 缺 = 缺什么(标记);
+  if (缺.length) { 缺席.push([名, 缺]); return false; }
+  return true;
+});
+
 const 跑一套 = (script) => new Promise((resolve) => {
   /* 每个工人的堆上限。2026-11-01 从写死的 768 改成可配置，缺省 512。
    *
@@ -412,6 +443,17 @@ for (const [name, script, what, 标记] of 选中) {
   } else if (ok && result.重试过) {
     console.log("          (passed on the second attempt: this suite is flaky under load)");
   }
+}
+if (缺席.length) {
+  // 「设计缺席」与「不通过」是两件事：前者是这一台没有那个能力（缺 powershell、
+  // 缺 arm gcc、缺 python 的 PIL），后者是代码或判据有问题。混在一起报，读的人
+  // 就得自己去猜哪一种是该修的。
+  for (const [名, 缺] of 缺席) {
+    console.log("  [设计缺席] " + 名.padEnd(12) + "这台没有：" + 缺.join(" / "));
+  }
+  console.log("");
+  console.log(缺席.length + " suite(s) are absent by design on this machine: counted here, not failed");
+  console.log("");
 }
 console.log("");
 // 最慢的五套：知道时间花在哪，才知道下一次该不该跑全量。
