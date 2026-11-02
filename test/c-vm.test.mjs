@@ -39,9 +39,16 @@ if (!有编译器) {
 }
 
 // 二、把它编起来
+//
+// 栈大小那一项是 PE 链接器的选项（-Wl,--stack），GNU ld 不认 —— 平台不同，
+// 参数就得不同。2026-11-02 在 WSL 里第一次跨系统跑这一套时才露：那条参数
+// 一直是写死的，因为这条编译路只走过 MinGW。
+// Linux 那边主线程栈由 ulimit 定（默认 8MB）；真需要更多也不能靠编译参数，
+// 要在跑的时候抬 ulimit，所以这里给的是一句空。
+const 栈参数 = process.platform === "win32" ? ["-Wl,--stack,67108864"] : [];
 const exe = path.join(临, "hmyr-vm.exe");
 {
-  const r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...栈参数, "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("vm/hmyr.c 编得出来", r.status === 0, String(r.stderr).slice(0, 200));
   ok("而且没有警告", String(r.stderr).trim() === "", String(r.stderr).slice(0, 200));
 }

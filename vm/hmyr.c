@@ -21,6 +21,21 @@
  * Run:    ./hmyr-vm program.hmyrb
  */
 
+/* POSIX 特性宏，必须在所有 include 之前 —— 晚一行就不生效。
+ *
+ * 为什么要有它：nanosleep、isatty、fileno 这些名字在严格的 C11 下不由 time.h
+ * 与 unistd.h 露出来，得先用这个宏请 C 库把它们放出来。2026-11-02 在 WSL
+ * （gcc 15.2.1，Nyarch Linux）里第一次编就撞上了：gcc 从 C23 起把隐式声明
+ * 当错误，nanosleep 于是直接编不过。这条编译路之前只走过 MSVC 与 MinGW，
+ * 两个都把 POSIX 名字当默认，所以一直没露。
+ *
+ * 只在 POSIX 那一支加：Windows 用 _isatty/_fileno，裸机那支连 unistd.h 都没有。 */
+#if !defined(_WIN32) && !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+#endif
+
 /* 线程局部：这一台机器里「每台一份」的那几样状态。
  *
  * 为什么不给每个函数加一个 Hmyr机器 * 参数：那要动十三个函数的签名与它们全部的
@@ -69,6 +84,17 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#endif
+
+/* 「标准输入是不是一个终端」——两家的名字不一样，收成一个宏。
+ * MSVC 那边是 _isatty(_fileno(f))，POSIX 那边是 isatty(fileno(f))。
+ * 2026-11-02 之前调用处直接写着 _isatty/_fileno，于是这份文件其实假设了 MSVC：
+ * design/C-VM.txt 里「没有别的地方假设自己跑在 Windows 或 POSIX 上」那一句
+ * 是不准确的，Linux 上编一次就露了。 */
+#ifdef _WIN32
+#define 是终端(f) _isatty(_fileno(f))
+#else
+#define 是终端(f) isatty(fileno(f))
 #endif
 
 /* 按 UTF-8 的路径开文件。
@@ -4294,7 +4320,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     /* 板子上没有标准输入：没有键就是空串。 */
     *out = ascii_text("");
 #else
-    if (!_isatty(_fileno(stdin))) {
+    if (!是终端(stdin)) {
       /* 队列空而 stdin 不是终端：立即交回空串 —— 不阻塞，也没有键。 */
       *out = ascii_text("");
       return 1;
