@@ -112,6 +112,7 @@ HMYR-載-019  HMYR-E0312 載
 HMYR-載-020  HMYR-E0320 載
 HMYR-載-021  HMYR-E0321 載
 HMYR-載-022  HMYR-E0399 載
+HMYR-載-024  HMYR-E0313 載
 
 注意：HMYR-E0002 有两处含义。lexer.mjs 里是「块注释没闭合」（→ 詞003），而 bin/hmyr.mjs 里是「pipe 或 socket 打不开」（→ 行021）。同一个码表达两件事，这件事是换码的时候才发现的 —— 而它说明映射表要按调用点，不是按码。
 

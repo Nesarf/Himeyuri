@@ -201,6 +201,52 @@ console.log("十二、--dry-run：只说话，不动手");
   ok("包还在", fs.existsSync(path.join(根, "子包", "index.hmoca")), "");
 }
 
+console.log("十三、传递依赖：整条链、环，以及默认不取");
+{
+  // 一条三层链：链头 要 链中，链中 要 链尾。--with-deps 一次取完。
+  造包("链尾", "pub fn 链尾() -> Int {\n  return 3\n}\n");
+  造包("链中", "pub fn 链中() -> Int {\n  return 2\n}\n", (清单) => { 清单.依赖 = { 链尾: 1 }; });
+  造包("链头", "pub fn 链头() -> Int {\n  return 1\n}\n", (清单) => { 清单.依赖 = { 链中: 1 }; });
+  const r = 跑(["--from", 源, "--into", 根, "--with-deps", "链头"]);
+  ok("三层链一次取完（退出码 0）", r.status === 0, String(r.stderr || "").slice(0, 200));
+  ok("链中也在包里", fs.existsSync(path.join(根, "链中", "index.hmoca")), "");
+  ok("链尾也在包里", fs.existsSync(path.join(根, "链尾", "index.hmoca")), "");
+  // 后序就是装的顺序：依赖在前。这一条只有一处读法 —— 那一行报的是什么次序。
+  const 行 = String(r.stdout || "").split(/\r?\n/).find((l) => l.includes("顺着链取来")) || "";
+  ok("取来的次序是依赖在前（链尾 排在 链中 之前）",
+    行.indexOf("链尾") >= 0 && 行.indexOf("链尾") < 行.indexOf("链中"), 行);
+
+  // 默认不取：同一个包去掉那个开关，就得报缺，而且说清是「还没装」。
+  造包("只报乙", "pub fn 只报乙() -> Int {\n  return 5\n}\n");
+  造包("只报甲", "pub fn 只报甲() -> Int {\n  return 4\n}\n", (清单) => { 清单.依赖 = { 只报乙: 1 }; });
+  const r1 = 跑(["--from", 源, "--into", 根, "只报甲"]);
+  ok("不加 --with-deps 就报缺（HMYR-載-009）",
+    r1.status !== 0 && String(r1.stderr || "").includes("HMYR-載-009"), String(r1.stderr || "").slice(0, 200));
+  ok("说清那一个属于「还没装」",
+    String(r1.stderr || "").includes("只报乙") && String(r1.stderr || "").includes("还没装"),
+    String(r1.stderr || "").slice(0, 200));
+  ok("而它没有被偷偷取进来", !fs.existsSync(path.join(根, "只报乙")), "");
+
+  // 环：环甲 要 环乙，环乙 要 环甲。转不完的圈要当场说清，并且一次都不取。
+  造包("环甲", "pub fn 环甲() -> Int {\n  return 6\n}\n", (清单) => { 清单.依赖 = { 环乙: 1 }; });
+  造包("环乙", "pub fn 环乙() -> Int {\n  return 7\n}\n", (清单) => { 清单.依赖 = { 环甲: 1 }; });
+  const r2 = 跑(["--from", 源, "--into", 根, "--with-deps", "环甲"]);
+  ok("环报 HMYR-載-024", String(r2.stderr || "").includes("HMYR-載-024"), String(r2.stderr || "").slice(0, 200));
+  ok("环上两个名字都写出来",
+    String(r2.stderr || "").includes("环甲") && String(r2.stderr || "").includes("环乙"),
+    String(r2.stderr || "").slice(0, 200));
+  ok("环上另一个没有被取进来", !fs.existsSync(path.join(根, "环乙")), "");
+
+  // 版本不够：要至少 3，来源里是 2。取来也没用，所以它属于「取不来」那一类。
+  造包("版本低", "pub fn 版本低() -> Int {\n  return 8\n}\n", (清单) => { 清单.版本 = 2; });
+  造包("版本高", "pub fn 版本高() -> Int {\n  return 9\n}\n", (清单) => { 清单.依赖 = { 版本低: 3 }; });
+  const r3 = 跑(["--from", 源, "--into", 根, "--with-deps", "版本高"]);
+  ok("版本不够报 HMYR-載-009", String(r3.stderr || "").includes("HMYR-載-009"), String(r3.stderr || "").slice(0, 200));
+  ok("说清要几版、来源里是几版",
+    String(r3.stderr || "").includes("要至少 3") && String(r3.stderr || "").includes("来源里是 2"),
+    String(r3.stderr || "").slice(0, 200));
+}
+
 fs.rmSync(临, { recursive: true, force: true });
 console.log("");
 console.log(passed + " passed, " + failed + " failed");

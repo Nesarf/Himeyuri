@@ -74,6 +74,10 @@ console.log("五、被 spawn 出去的工具脚本也是一条边");
   // 探针自己 import 的 src 也要算进来：改 vm.mjs 时 curve 会红，而地图原来不认得这条路。
   const 丁 = new Set(名们("src/vm.mjs"));
   ok("改 vm.mjs 会碰到 curve", 丁.has("curve"), String(丁.size) + " 套");
+  // 第三种写法：path.join(ROOT, "tools", "hmget.mjs")。路径被拆成两段，而上面那条
+  // 正则只认整段字符串，于是它一度也看不见 —— 这是同一条边换的第二个形状。
+  const 戊 = new Set(名们("tools/hmget.mjs"));
+  ok("改 hmget.mjs 会碰到 hmget（拆成两段的路径也认得）", 戊.has("hmget"), String(戊.size) + " 套");
 }
 
 console.log("");

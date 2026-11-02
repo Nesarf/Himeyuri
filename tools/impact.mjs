@@ -107,6 +107,9 @@ for (const [名, 脚本] of 清单) {
   // 只收仓库内的相对路径，所以 from "../src/x.mjs" 这一种不会被误收 —— 它由下面那一条管。
   const 脚本们 = new Set();
   for (const m of 源.matchAll(/["']((?:tools|bin|src|test|vm)\/[A-Za-z0-9_./-]+\.mjs)["']/g)) 脚本们.add(m[1]);
+  // 第二种写法：path.join(ROOT, "tools", "hmget.mjs")。test/hmget.test.mjs 就是这么拼的，
+  // 而上面那一条正则要求整段字符串以 tools/ 开头 —— 拆成两段它就看不见了。
+  for (const m of 源.matchAll(/path\.join\(ROOT,\s*"([^"]+)",\s*"([^"]+\.mjs)"\)/g)) 脚本们.add(m[1] + "/" + m[2]);
   const src们 = new Set([...源.matchAll(/from "\.\.\/src\/([^"]+)"/g)].map((m) => "src/" + m[1]));
   // 被 spawn 的工具脚本自己也 import src，那些依赖也要算进这个套件。
   // 少了这一步，改 src/vm.mjs（curve-batch.mjs 正是用它跑字节码）不会选中 curve，

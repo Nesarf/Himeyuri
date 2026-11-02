@@ -24,11 +24,11 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
-const 用法 = "用法：node tools/hmget.mjs --from <来源> --into <包根> [--force] <包名>\n" +
+const 用法 = "用法：node tools/hmget.mjs --from <来源> --into <包根> [--with-deps] [--force] <包名>\n" +
   "      node tools/hmget.mjs --remove --into <包根> [--force] [--dry-run] <包名>";
 
 const 参数 = process.argv.slice(2);
-let 来源 = null, 包根 = null, 名 = null, 强制 = false, 要删 = false, 只说话 = false;
+let 来源 = null, 包根 = null, 名 = null, 强制 = false, 要删 = false, 只说话 = false, 要依赖 = false;
 for (let i = 0; i < 参数.length; i++) {
   const a = 参数[i];
   if (a === "--from") 来源 = 参数[++i];
@@ -36,6 +36,7 @@ for (let i = 0; i < 参数.length; i++) {
   else if (a === "--force") 强制 = true;
   else if (a === "--remove") 要删 = true;
   else if (a === "--dry-run") 只说话 = true;
+  else if (a === "--with-deps") 要依赖 = true;
   else if (a.startsWith("--")) { console.error("不认识的参数：" + a); console.error(用法); process.exit(2); }
   else 名 = a;
 }
@@ -129,35 +130,36 @@ const 造来源 = (说明) => {
 
 const 算 = (buf) => "sha256:" + createHash("sha256").update(buf).digest("hex");
 
-const 主 = async () => {
-  const 源 = 造来源(来源);
+const 依赖表 = (清单) =>
+  清单 && 清单.依赖 && typeof 清单.依赖 === "object" && !Array.isArray(清单.依赖) ? 清单.依赖 : {};
 
-  // 一、来源里有没有这个包，它的清单说得通不通。
-  // 「包在不在」在这一层就是「两个文件都拿得到吗」—— 目录与端口用同一个判据。
-  const 源清单字节 = await 源.读(名, "hmyr.hmkit");
-  const 源入口字节 = await 源.读(名, "index.hmoca");
+// ---- 取一个包 --------------------------------------------------------
+//
+// 「装一个」在 2026-11-02 抽成了单独一步：解析依赖链时要顺着链把每一个都装上，
+// 而那段逻辑原来只写在 主 里一处，第二处用不上。抽出来之后，根包与它的依赖
+// 走的是同一条路 —— 哈希、冲突、搬运那三件事只此一份。
+const 取一个 = async (包名, 源, 根, 强制) => {
+  const 源清单字节 = await 源.读(包名, "hmyr.hmkit");
+  const 源入口字节 = await 源.读(包名, "index.hmoca");
   if (!源清单字节 && !源入口字节) {
-    错("HMYR-載-013", "来源里没有这个包：'" + 名 + "'（来源是 " + 源.说 + "）");
+    错("HMYR-載-013", "来源里没有这个包：'" + 包名 + "'（来源是 " + 源.说 + "）");
   }
-  if (!源清单字节) 错("HMYR-載-013", "这个包没有 hmyr.hmkit：" + 源.说 + "/" + 名);
-  if (!源入口字节) 错("HMYR-載-013", "这个包没有 index.hmoca：" + 源.说 + "/" + 名);
+  if (!源清单字节) 错("HMYR-載-013", "这个包没有 hmyr.hmkit：" + 源.说 + "/" + 包名);
+  if (!源入口字节) 错("HMYR-載-013", "这个包没有 index.hmoca：" + 源.说 + "/" + 包名);
 
   let 清单;
   try { 清单 = JSON.parse(源清单字节.toString("utf8")); }
-  catch { 错("HMYR-載-007", "清单不是 JSON：" + 源.说 + "/" + 名 + "/hmyr.hmkit"); }
+  catch { 错("HMYR-載-007", "清单不是 JSON：" + 源.说 + "/" + 包名 + "/hmyr.hmkit"); }
   if (!清单 || typeof 清单 !== "object" || Array.isArray(清单)) 错("HMYR-載-007", "清单不是一个对象");
-  if (清单.名字 !== 名) 错("HMYR-載-007", "清单说它是 '" + String(清单.名字) + "'，而目录叫 '" + 名 + "'");
+  if (清单.名字 !== 包名) 错("HMYR-載-007", "清单说它是 '" + String(清单.名字) + "'，而目录叫 '" + 包名 + "'");
 
-  // 二、入口文件的哈希要对得上清单说的那个。
   const 真 = 算(源入口字节);
   if (清单.哈希 !== 真) {
     错("HMYR-載-014", "入口文件的哈希与清单不符：清单说 " + String(清单.哈希).slice(0, 20) +
       "…，文件是 " + 真.slice(0, 20) + "…（来源被人动过？）");
   }
 
-  // 三、目标：存在且内容不同就拒绝，除非 --force。
-  const 根 = path.resolve(包根);
-  const 目标 = path.join(根, 名);
+  const 目标 = path.join(根, 包名);
   if (fs.existsSync(目标)) {
     const 旧入口 = path.join(目标, "index.hmoca");
     const 旧清单 = path.join(目标, "hmyr.hmkit");
@@ -166,7 +168,7 @@ const 主 = async () => {
       fs.readFileSync(旧清单).equals(源清单字节);
     if (同) {
       console.log("已经在了，而且内容相同：" + 目标);
-      return;
+      return { 清单, 跳过: true, 真 };
     }
     if (!强制) {
       错("HMYR-載-015", "目标已经存在且内容不同：" + 目标 + "（要覆盖就加 --force）");
@@ -174,7 +176,7 @@ const 主 = async () => {
     fs.rmSync(目标, { recursive: true, force: true });
   }
 
-  // 四、搬过去。包根不在就造它，并放一个空的 hmyr.hmkit —— 那是「这里是包根」的记号，
+  // 包根不在就造它，并放一个空的 hmyr.hmkit —— 那是「这里是包根」的记号，
   // 不是清单（清单在每个包自己的目录里）。
   fs.mkdirSync(根, { recursive: true });
   const 根记号 = path.join(根, "hmyr.hmkit");
@@ -182,30 +184,118 @@ const 主 = async () => {
   fs.mkdirSync(目标, { recursive: true });
   fs.writeFileSync(path.join(目标, "index.hmoca"), 源入口字节);
   fs.writeFileSync(path.join(目标, "hmyr.hmkit"), 源清单字节);
+  return { 清单, 跳过: false, 真 };
+};
 
-  // 五、依赖：缺哪个就报哪个，不递归取。
-  // 「一次装一棵树」要一个求解器，而这一页先要一条可验的路（design/HMGET.txt 第一节）。
-  const 依赖 = 清单.依赖 && typeof 清单.依赖 === "object" && !Array.isArray(清单.依赖) ? 清单.依赖 : {};
-  const 缺 = [];
-  for (const 依赖名 of Object.keys(依赖)) {
-    const p = path.join(根, 依赖名, "hmyr.hmkit");
-    if (!fs.existsSync(p)) { 缺.push(依赖名); continue; }
-    let 它 = null;
-    try { 它 = JSON.parse(fs.readFileSync(p, "utf8")); } catch { continue; }
-    if (它 && Number.isInteger(它.版本) && Number.isInteger(依赖[依赖名]) && 它.版本 < 依赖[依赖名]) {
-      缺.push(依赖名 + "（要至少 " + 依赖[依赖名] + "，装的是 " + 它.版本 + "）");
+// ---- 解析依赖链 ------------------------------------------------------
+//
+// 从根包出发，把整条链走一遍。三样东西一起交回：
+//
+//   序  后序 —— 依赖排在依赖者之前，于是它就是「该按什么顺序装」的答案，
+//       而不是反过来再倒一遍。图论那半边在这里，装那半边在 取一个。
+//   缺  缺什么、又是谁要的。只说「缺 X」不够：读者要的是「X 在哪一条链上」，
+//       否则在一棵深树里他得自己走一遍才知道该先补谁。
+//   环  一条环就够拒绝，而环上每一环的名字都要写出来 —— 只说「有环」等于让人
+//       自己再找一遍，而找环正是这件事的全部难点。
+//
+// 已装的包优先于来源：这台机器上真正会被装载的是包根里的那一份，所以判断
+// 「够不够」要对着它，而不是对着来源里更新的那个版本。
+const 解析链 = async (根名, 源, 根) => {
+  const 序 = [], 缺 = [], 环 = [];
+  const 完成 = new Set(), 在途 = new Set(), 栈 = [];
+
+  const 走 = async (包名, 要至少, 谁要) => {
+    if (在途.has(包名)) {
+      环.push(栈.slice(栈.indexOf(包名)).concat(包名).join(" 要 "));
+      return;
+    }
+    if (完成.has(包名)) return;
+
+    let 清单 = null, 已装 = false, 那话 = "装的是 ";
+    const 已路 = path.join(根, 包名, "hmyr.hmkit");
+    if (fs.existsSync(已路)) {
+      try { 清单 = JSON.parse(fs.readFileSync(已路, "utf8")); 已装 = 清单 !== null; }
+      catch { 清单 = null; }
+    }
+    if (!清单) {
+      const 字节 = await 源.读(包名, "hmyr.hmkit");
+      const 入口 = await 源.读(包名, "index.hmoca");
+      if (!字节 || !入口) {
+        缺.push("「" + 包名 + "」（" + 谁要 + " 要它，而来源里没有）");
+        return;
+      }
+      try { 清单 = JSON.parse(字节.toString("utf8")); }
+      catch {
+        缺.push("「" + 包名 + "」（" + 谁要 + " 要它，来源里的清单不是 JSON）");
+        return;
+      }
+      那话 = "来源里是 ";
+    }
+    if (Number.isInteger(要至少) && Number.isInteger(清单.版本) && 清单.版本 < 要至少) {
+      缺.push("「" + 包名 + "」（" + 谁要 + " 要至少 " + 要至少 + "，" + 那话 + 清单.版本 + "）");
+      return;
+    }
+
+    在途.add(包名); 栈.push(包名);
+    for (const [子, 版] of Object.entries(依赖表(清单))) await 走(子, 版, 包名);
+    在途.delete(包名); 栈.pop();
+    完成.add(包名);
+    序.push({ 名: 包名, 清单, 已装 });
+  };
+
+  await 走(根名, undefined, "（根包）");
+  return { 序, 缺, 环 };
+};
+
+const 主 = async () => {
+  const 源 = 造来源(来源);
+  const 根 = path.resolve(包根);
+
+  // 一、装根包。哈希、清单、冲突与搬运都在 取一个 里，它自己的依赖走同一条路。
+  const 根结 = await 取一个(名, 源, 根, 强制);
+
+  // 二、依赖：从根包出发把整条链走一遍。
+  // 这一遍不看「根包里那一栏」，看的是整条链 —— 甲要乙、乙要丙时，丙缺了
+  // 也要在装甲这一步说出来，而不是等乙自己装的那一刻。
+  const { 序, 缺, 环 } = await 解析链(名, 源, 根);
+
+  // 环先判：它比「缺什么」更靠前，因为环上的缺口永远补不齐。
+  if (环.length > 0) {
+    错("HMYR-載-024", "依赖成环，一次都取不了：" + 环.join("；"));
+  }
+  // 缺有两种，而它们该分开说：一种是「包里没有、但来源里有」，--with-deps 补得上；
+  // 另一种是「来源里也没有」或者「版本不够」，取也取不来。默认模式下两种都算缺，
+  // 只是说法不同 —— 读者要能一眼看出哪一种加个开关就解决，哪一种得自己动手。
+  if (!要依赖) {
+    const 说 = [];
+    for (const 项 of 序) if (!项.已装) 说.push("「" + 项.名 + "」（还没装）");
+    for (const 句 of 缺) 说.push(句);
+    if (说.length > 0) {
+      错("HMYR-載-009", "这个包装好了，但它要的依赖还缺：" + 说.join("、") +
+        "（加 --with-deps 让这一步顺着来源把整条链取来）");
     }
   }
-  if (缺.length > 0) {
-    错("HMYR-載-009", "这个包装好了，但它要的依赖还缺：" + 缺.join("、") +
-      "（这一步不递归取，逐个再跑一次 hmget）");
+  if (要依赖 && 缺.length > 0) {
+    错("HMYR-載-009", "这条链上有取不来的包（来源里没有，或者版本不够）：" + 缺.join("、"));
   }
 
-  // 六、验收：让 hmkit-check 说它过，而不是这个工具自己说。
-  console.log("装上：" + 目标);
+  // 三、--with-deps：按后序把缺的装上。后序就是「依赖在前」，于是走完这一趟，
+  // 每个被装上的包在它自己装的那一刻，依赖都已经在了 —— 这一条不必再验，
+  // 因为顺序本来就是从这张图上读出来的。
+  const 要补 = 序.filter((x) => !x.已装);
+  const 补过 = [];
+  for (const 项 of 要补) {
+    const 结 = await 取一个(项.名, 源, 根, 强制);
+    if (!结.跳过) 补过.push(项.名);
+  }
+
+  // 四、报告与验收。验收交给 hmkit-check，不由这个工具自己说。
+  console.log("装上：" + path.join(根, 名));
   console.log("来源：" + 源.类 + " · " + 源.说);
-  console.log("清单哈希：" + 真.slice(0, 20) + "… 对得上");
-  if (Object.keys(依赖).length > 0) console.log("依赖：" + Object.keys(依赖).join("、") + " 都在");
+  console.log("清单哈希：" + 根结.真.slice(0, 20) + "… 对得上");
+  const 赖 = Object.keys(依赖表(根结.清单));
+  if (补过.length > 0) console.log("顺着链取来（依赖在前）：" + 补过.join("、"));
+  if (赖.length > 0) console.log("依赖：" + 赖.join("、") + (要补.length > 0 ? "，整条链都齐了" : " 都在"));
   console.log("验收：node tools/hmkit-check.mjs --all " + 根);
 };
 
