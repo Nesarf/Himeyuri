@@ -1,13 +1,13 @@
 // 子集 parser：Stage 0 的第二层。token 进，树出。
 //
-// 现状：两件事都对上了（2026-10-20）——树，六份共 17584 个节点，逐个相同（形状与位置）；
+// 现状：两件事都对上了（2026-10-20）——树，六份共 17715 个节点，逐个相同（形状与位置）；
 // 以及错误路径上的话（与宿主同一批码、同一个位置）。
 //
 // 它的立场是认得窄而说清：遇到不认的构造就报出来，而不是猜一个树。
 // 一个猜出来的树会在后面某一层变成算错的数，而那时已经看不出源头。
 //
 // 它认的是 self/ 那六份源码用到的构造，别的都报错。那份普查是数出来的，不是照语法书抄的：
-//   声明   只有 fn，226 个；没有 type / const / effect / pub，没有类型参数
+//   声明   只有 fn，227 个；没有 type / const / effect / pub，没有类型参数
 //          （requires 与 ensures 现在认了 —— 契约那一节要它，见 design/CONTRACTS.txt）
 //   参数   491 个，全部带类型，没有默认值，没有 own/borrow
 //   类型   只有三种：Int 375、String 116、Bool 4，全是单名
@@ -452,9 +452,13 @@ export const 子集解 = (tokens, options = {}) => {
     if (是("keyword", "while")) {
       进();
       const condition = 解析表达式();
+      // 循环不变式（design/INVARIANTS.txt 第八节）：写在条件与块之间，同一行。
+      // 条件碰到 invariant 会自己停 —— 它是关键字，不在优先级表里。
+      // 换行在这里不认，理由与宿主那一份相同：这一层本来也不接受「条件与块分两行」。
+      const 不变式 = 是("keyword", "invariant") ? (进(), 解析表达式()) : null;
       if (!是标("{")) 不认("子集的 while 必须有块", t);
       const body = 解析块();
-      return { kind: "当", condition, body, line: t.line, column: t.column };
+      return { kind: "当", condition, body, invariant: 不变式, line: t.line, column: t.column };
     }
     if (是("keyword", "if")) {
       进();

@@ -695,6 +695,17 @@ export class 最小运行时 {
     }
   }
 
+  // 循环不变式（design/INVARIANTS.txt 第八节）：入口一次，每轮体末一次。
+  //
+  // 与 src/eval.mjs 那一位同一处、同一句话 —— 五台一致说的是「同一句话」，
+  // 不只是「同一个码」。两处的说明也一样：消息只带行号，理由写在宿主那一份里。
+  查循环不变(node, scope, effects) {
+    if (!this.契约 || !node.invariant) return;
+    if (!this.真(this.求值(node.invariant, scope, effects))) {
+      this.坏("HMYR-契-004", "第 " + node.line + " 行的循环不变式不成立");
+    }
+  }
+
   // 与宿主的 allowed 同一件事：没声明效果的函数，什么带效果的都不许调。
   允许(effects) { return new Set(effects || []); }
 
@@ -838,9 +849,13 @@ export class 最小运行时 {
       case "二元": return this.二元(node, scope, effects);
       case "当": {
         // 循环用宿主的 while，于是深度不随迭代次数增长。
+        // 循环不变式（design/INVARIANTS.txt 第八节）：入口一次，每轮体末一次。
+        // 0 轮时只有入口那一次，所以「进来时它成立」在 0 轮上也验得到。
+        this.查循环不变(node, scope, effects);
         let guard = 0;
         while (this.真(this.求值(node.condition, scope, effects))) {
           if (node.body) this.执行块(node.body, scope, effects);
+          this.查循环不变(node, scope, effects);
           if (++guard > 循环闸) this.坏("HMYR-內-010", "a while loop ran past a million iterations without ending");
         }
         return null;

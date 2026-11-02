@@ -77,6 +77,7 @@ export const CODES = [
   { code: "HMYR-契-001", stage: "run", checkedBy: "test/contracts.test.mjs", meaning: "a requires clause did not hold on entry" },
   { code: "HMYR-契-002", stage: "run", checkedBy: "test/contracts.test.mjs", meaning: "an ensures clause did not hold on exit" },
   { code: "HMYR-契-003", stage: "run", checkedBy: "test/invariants.test.mjs", meaning: "an invariant did not hold: it is checked on entry and again before every return" },
+  { code: "HMYR-契-004", stage: "run", checkedBy: "test/invariants.test.mjs", meaning: "a loop invariant did not hold: it is checked once on entry and again at the end of every iteration" },
   // bin/hmyr.mjs 的那一条。它原先在注释里与测试里都写作 詞-003，而 詞-003 是
   // 「块注释没闭合」—— 换码时错配了。2026-11-02 对齐：代码、注释、测试三处都改成它。
   { code: "HMYR-行-021", stage: "host", checkedBy: "test/pipe.test.mjs", meaning: "the output destination cannot be opened: the pipe or the socket refused the connection" },

@@ -119,16 +119,32 @@
 
 // 当：条件是一个表达式，然后是一个块。
 // 与 若 相比它没有 否则——而「什么时候停」由条件说，这一层不管。
+//
+// 循环不变式（design/INVARIANTS.txt 第八节）写在条件与块之间，同一行。
+// 条件碰到 invariant 会自己停：它是 ident，而 from_here 拿到一个完整表达式就交回。
+// 没有这一样时交回 假，而不是让节点少一个字段，也不是空元组。
+// 少字段会让读它的人落到「没有这个字段」上；空元组在这一层的比较里靠不住
+// （2026-11-02 实测：`() == ()` 在编译那条路上判假，于是 编循环不变 去读了 .line）。
+// 假 是这一层现成的「没有」，而它的真值规矩正是「只有假才算假」。
 函数 parse_while(tokens: Int, i: Int) {
   变 位 = tokens[0]
   若 i > 0 { 位 = tokens[i - 1] }
   定 cond = from_here(tokens, i)
-  定 at = skip_newlines(tokens, cond.next)
+  变 后 = cond.next
+  变 不变 = 假
+  若 后 < len(tokens) {
+    若 is_word(tokens[后], "invariant") {
+      定 式 = from_here(tokens, 后 + 1)
+      不变 = 式.node
+      后 = 式.next
+    }
+  }
+  定 at = skip_newlines(tokens, 后)
   若 at >= len(tokens) || !is_punct(tokens[at], "{") {
     返回 {node: {kind: "误", text: "while", line: 位.line, column: 位.column}, next: at}
   }
   定 body = block(tokens, at + 1)
-  返回 {node: {kind: "当", cond: cond.node, body: body.list, line: 位.line, column: 位.column}, next: body.next}
+  返回 {node: {kind: "当", cond: cond.node, body: body.list, invariant: 不变, line: 位.line, column: 位.column}, next: body.next}
 }
 
 // 宿主入口：读一条语句。

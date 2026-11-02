@@ -449,9 +449,16 @@ export function parse(tokens, options = {}) {
 
       const condition = parseExpr();
 
+      // 循环不变式（design/INVARIANTS.txt 第八节）：写在条件与块之间。
+      //
+      // 条件表达式碰到 invariant 会自己停下 —— 它是关键字，不在优先级表里。
+      // 所以这里不必给 parseExpr 传「停在哪」，只需在它之后看一眼这个词。
+      // 代价是 invariant 不能再当变量名，而它本来就被词法当成契约词，从来不是变量名。
+      const 不变式 = at("keyword", "invariant") ? (advance(), parseExpr()) : null;
+
       const body = atPunct("{") ? parseBlock() : null;
 
-      return { kind: "当", condition, body, line: t.line, column: t.column };
+      return { kind: "当", condition, body, invariant: 不变式, line: t.line, column: t.column };
 
     }
 

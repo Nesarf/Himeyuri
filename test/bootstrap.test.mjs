@@ -48,7 +48,7 @@ console.log("一、Stage 0 是五份：loader、子集那两层、诊断，与�
   ok("宿主那份留着一条开关（--host-eval）", 启动器.includes("--host-eval"));
 }
 
-console.log("二、它读进来自举那一层：六份，两百一十九条声明");
+console.log("二、它读进来自举那一层：六份，两百二十七条声明");
 {
   const u = loadUnit(path.join(ROOT, "self/run.hmoca"));
   ok("loadUnit 读得动", u.ok, JSON.stringify(u.diagnostics.errors.map((e) => e.code)));
@@ -61,9 +61,11 @@ console.log("二、它读进来自举那一层：六份，两百一十九条声�
   // slice —— 净加两条，于是两百一十条。
   // 2026-11-02：lex 再添四个（攒、取范围、合并们、收段，词法器改分块累积），两百一十四条。
   // 2026-11-02 再晚些（契约进自举层那一轮）：body 加了 契约批，eval 加了 契约开、
-  // 查契约批、含参 —— 六份合计 226。（这里的六份是 self/run.hmoca 那棵树的六份，
-  // 也就是 lex、chain、stmt、body、eval、run，而不是种子链那六份。）
-  ok("两百二十六条声明", 声明 === 226, String(声明));
+  // 查契约批、含参 —— 六份合计 226。
+  // 2026-11-02 再晚些（循环不变式那一轮）：eval 加了 查循环不变 —— 227。
+  // （这里的六份是 self/run.hmoca 那棵树的六份，也就是 lex、chain、stmt、body、eval、run，
+  // 而不是种子链那六份。）
+  ok("两百二十七条声明", 声明 === 227, String(声明));
 }
 
 console.log("三、求值不在 Stage 0 里（两份账都不在）");

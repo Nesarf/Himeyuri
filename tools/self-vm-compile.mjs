@@ -66,6 +66,10 @@ const 样本 = [
   // 三样写全：requires 在入口，ensures 与 invariant 在出口，而 invariant 在入口也查一次。
   // 契约必须分行：自举层的 契约批 靠行尾切条件，写在签名同一行会把 { 也吃进去。
   ["带三样契约的函数", "fn 取首(a: Int) -> Int\n  requires a >= 0\n  ensures 返回值 >= 0\n  invariant a >= 0\n{\n  return a\n}\nfn main() -> Int {\n  let x = 取首(3)\n  return x\n}\n"],
+  // 循环不变式（design/INVARIANTS.txt 第八节）。2026-11-02 补这一份：
+  // 它让「当」上的那两处插入（入口一次、体末一次）进到逐字节比对里。
+  // 契约写在 当 那一行是必须的：自举那一层靠同一行认它（见 self/stmt.hmoca 的 parse_while）。
+  ["带循环不变式的当", "fn main() -> Int {\n  var i = 0\n  while i < 4 invariant i >= 0 {\n    i = i + 1\n  }\n  return i\n}\n"],
   ["真实文件 self/bigint.hmoca", fs.readFileSync(path.join(ROOT, "self/bigint.hmoca"), "utf8")],
 ];
 

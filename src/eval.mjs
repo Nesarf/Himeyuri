@@ -133,6 +133,18 @@ export class Runtime {
     }
   }
 
+  // 循环不变式（design/INVARIANTS.txt 第八节）：入口一次，每轮体末一次。
+  //
+  // 消息只带行号，不带函数名。理由是这项状态的代价：要带函数名就得记住「当前在哪个
+  // 函数里」，而它的恢复点有两处 —— 正常返回与抛出，那正是这类状态最容易漏的地方。
+  // 而行号正是读的人要找的东西：循环在同一个函数里可以有若干个，位置比名字说得准。
+  查循环不变(node, scope) {
+    if (!this.契约 || !node.invariant) return;
+    if (!this.truthy(this.evalExpr(node.invariant, scope))) {
+      this.fail("HMYR-契-004", "第 " + node.line + " 行的循环不变式不成立");
+    }
+  }
+
   // 可见性：跨模块调一个没写 pub 的名字，拒绝（SPEC 6.4 第二步）。
   //
   // 两处调用：普通调用（evalCall）与 return 里的尾调用（Return 分支）。
@@ -406,11 +418,18 @@ export class Runtime {
 
         // 语言里有了循环之后，用这门语言写的东西也不必靠深递归硬撑（shell 的真会话就是例子）。
 
+        // 循环不变式（design/INVARIANTS.txt 第八节）：入口一次，每轮体末一次。
+        // 0 轮时只有入口那一次 —— 所以「进来时它成立」在 0 轮上也验得到。
+        // 出口那一次由末轮的体末覆盖：末轮体末之后只再求一次条件，而条件不改循环里的名字。
+        this.查循环不变(node, scope);
+
         let guard = 0;
 
         while (this.truthy(this.evalExpr(node.condition, scope, effects))) {
 
           if (node.body) this.execBlock(node.body, scope, effects);
+
+          this.查循环不变(node, scope);
 
           guard += 1;
 

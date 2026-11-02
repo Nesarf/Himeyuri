@@ -308,10 +308,14 @@ const 编译函数 = (decl, 契约) => {
         return;
       }
       case "当": {
+        // 循环不变式（design/INVARIANTS.txt 第八节）：入口一次，每轮体末一次。
+        // 入口那段摆在 头 之前 —— 跳回去的是条件求值，而入口只该跑一次。
+        编循环不变(n.invariant);
         const 头 = 码.length;
         表达(n.condition);
         const 出 = 发("假跳", -1);
         if (n.body) { 进层(); 语句们(n.body.statements, false); 出层(); }
+        编循环不变(n.invariant);
         发("跳", 头);
         码[出].a = 码.length;
         发("常量", null);        // while 的值是 null，与宿主一致
@@ -340,29 +344,42 @@ const 编译函数 = (decl, 契约) => {
   let 返槽 = -1;
   if (强契约 && (保批.length > 0 || 不变批.length > 0)) 返槽 = 分配("返回值", false);
 
-  const 编一条契约 = (条件, 码名, 名, 序) => {
+  const 编一条契约 = (条件, 码名, 话) => {
     表达(条件);
     const 跳 = 发("真跳", -1);
     发("常量", 码名);
-    发("常量", "函数 " + decl.name + " 的第 " + 序 + " 条 " + 名 + " 不成立");
+    发("常量", 话);
     发("调内置", "契约失败", 2);
     码[跳].a = 码.length;
   };
 
+  // 函数契约那句话。三样共用这一个形状，差别只在中间那两个词。
+  const 契约话 = (名, 序) => "函数 " + decl.name + " 的第 " + 序 + " 条 " + 名 + " 不成立";
+
+  // 循环不变式（design/INVARIANTS.txt 第八节）：消息带行号，不带函数名与序。
+  //
+  // 与另外三样不同是有意的：循环在同一个函数里可以有若干个，而「第几条」对它没有意义，
+  // 行号才是它的位置，也是读的人唯一要找的东西。src/eval.mjs 与 src/minimal-eval.mjs
+  // 说的是同一句话 —— 五台一致是「同一句话」，不只是「同一个码」。
+  const 编循环不变 = (条件) => {
+    if (!强契约 || !条件) return;
+    编一条契约(条件, "HMYR-契-004", "第 " + 条件.line + " 行的循环不变式不成立");
+  };
+
   const 编入场 = () => {
     if (!强契约) return;
-    for (let i = 0; i < 须批.length; i++) 编一条契约(须批[i], "HMYR-契-001", "requires", i + 1);
+    for (let i = 0; i < 须批.length; i++) 编一条契约(须批[i], "HMYR-契-001", 契约话("requires", i + 1));
     // 不变式在入口也查一次（design/INVARIANTS.txt 第四节：先 requires 再 invariant）。
-    for (let i = 0; i < 不变批.length; i++) 编一条契约(不变批[i], "HMYR-契-003", "invariant", i + 1);
+    for (let i = 0; i < 不变批.length; i++) 编一条契约(不变批[i], "HMYR-契-003", 契约话("invariant", i + 1));
   };
 
   const 编出场 = () => {
     if (!强契约 || (保批.length === 0 && 不变批.length === 0)) return;
     // 顺序不能反：契约求值会把栈弄乱，所以返回值先落槽，查完再取回来。
     发("存", 返槽);
-    for (let i = 0; i < 保批.length; i++) 编一条契约(保批[i], "HMYR-契-002", "ensures", i + 1);
+    for (let i = 0; i < 保批.length; i++) 编一条契约(保批[i], "HMYR-契-002", 契约话("ensures", i + 1));
     // 出口的不变式在 ensures 之后（同一节）。
-    for (let i = 0; i < 不变批.length; i++) 编一条契约(不变批[i], "HMYR-契-003", "invariant", i + 1);
+    for (let i = 0; i < 不变批.length; i++) 编一条契约(不变批[i], "HMYR-契-003", 契约话("invariant", i + 1));
     发("取", 返槽);
   };
 
