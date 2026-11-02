@@ -10,16 +10,19 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 临时目录, 临时mkdtempSync } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const 缓存 = "E:\\DaShaoHuo\\cache\\tmp";
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-const 临 = fs.mkdtempSync(path.join(缓存, "hmyr-cembed-"));
+// 临时目录问 test/scratch.mjs。这一处原来写的是反斜杠形式
+// （"E:\\DaShaoHuo\\cache\\tmp"），上一轮扫改正斜杠时漏了它 ——
+// 而它在 Linux 上直接 ENOENT，于是这一套连第一行都没跑出来，报的是零输出。
+const 临 = 临时mkdtempSync("hmyr-cembed-");
 const 有gcc = (() => {
   try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
 })();
@@ -45,8 +48,19 @@ console.log("一、一个 C 程序调到 HMYR");
       ok("宿主拿到 42", String(台.stdout || "").trim() === "42", JSON.stringify({ status: 台.status, out: (台.stdout || "").slice(0, 80), err: (台.stderr || "").slice(0, 120) }));
 
       // 第二条判据：HMYR 自己跑同一份，拿到的是同一个数（退出码就是 main 的返回值）。
-      const 自己 = spawnSync(path.join(缓存, "hmyr-self", "hmyr.exe"), [码], { encoding: "utf8", timeout: 300000 });
-      ok("HMYR 自己跑也是 42", 自己.status === 42, String(自己.status));
+      // 这一份可执行放在临时目录下的固定位置，不是这一套自己编出来的 —— 所以它不在时
+      // 如实跳过，而不是让整条判据红。
+      // 名字也按平台取：那个目录里放的是本机编出来的那一份，Windows 上叫 hmyr.exe，
+      // 别的平台不带扩展。少了这一步，WSL 里会找到那份 PE 文件、然后跑出 1
+      // （存在与能跑是两件事，2026-11-03 在这里踩了一次）。
+      const 自己路径 = path.join(临时目录(), "hmyr-self",
+        process.platform === "win32" ? "hmyr.exe" : "hmyr");
+      if (!fs.existsSync(自己路径)) {
+        console.log("  跳过  " + 自己路径 + " 不在，第二条判据不验");
+      } else {
+        const 自己 = spawnSync(自己路径, [码], { encoding: "utf8", timeout: 300000 });
+        ok("HMYR 自己跑也是 42", 自己.status === 42, String(自己.status));
+      }
 
       // 三条失败各自要有一个退出码，而不是「跑挂了」。
       const 缺 = spawnSync(exe, [path.join(临, "missing.hmoks")], { encoding: "utf8" });

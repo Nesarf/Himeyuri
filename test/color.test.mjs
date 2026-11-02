@@ -11,7 +11,11 @@ import { loadUnit, runUnit } from "../src/loader.mjs";
 import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const PY = "E:/DaShaoHuo/Python-managed/bin/python.exe";
+// python：Windows 上是那个固定路径，别的平台问 PATH —— 写死一个 Windows
+// 路径在 Linux 上必然找不到（2026-11-03 跨系统时这三套因此全红）。
+const PY = process.platform === "win32"
+  ? "E:/DaShaoHuo/Python-managed/bin/python.exe"
+  : "python3";
 const SWOP = "C:/Windows/System32/spool/drivers/color/RSWOP.icm";
 const SRGB_FILE = "C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm";
 let passed = 0, failed = 0;

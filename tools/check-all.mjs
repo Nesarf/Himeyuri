@@ -5,7 +5,7 @@
 // It runs each suite as its own process, so a crash in one is reported as that suite failing rather
 // than as this script dying, and it prints the M2 status line the specification asks about.
 import { spawn, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,9 +42,9 @@ const SUITES = [
   ["i18nthree", "test/i18n-three.test.mjs", "SPEC M7 - Chinese, Japanese and English on the read, write and subprocess boundaries"],
   ["locale", "test/locale.test.mjs", "SPEC M7 - four locale profiles, switchable and checkable, and they never change an evaluation result"],
   ["json", "test/json.test.mjs", "SPEC M7 - JSON read in Himeyuri, so a report can be judged without the host"],
-  ["colorreport", "test/color-report.test.mjs", "SPEC M7 - a colour report judged inside Himeyuri: fields taken, thresholds applied, nothing guessed"],
-  ["color", "test/color.test.mjs", "SPEC M7 - two named colour strategies, and the report that proves which loses less"],
-  ["colorimage", "test/color-image.test.mjs", "SPEC M7 - an image says which space it is in, and the output carries the target profile"],
+  ["colorreport", "test/color-report.test.mjs", "SPEC M7 - a colour report judged inside Himeyuri: fields taken, thresholds applied, nothing guessed", { 需要: ["windows-icc"] }],
+  ["color", "test/color.test.mjs", "SPEC M7 - two named colour strategies, and the report that proves which loses less", { 需要: ["windows-icc"] }],
+  ["colorimage", "test/color-image.test.mjs", "SPEC M7 - an image says which space it is in, and the output carries the target profile", { 需要: ["windows-icc"] }],
   ["term", "test/term.test.mjs", "SPEC M7 - frames are data: the terminal layer returns escape sequences and writes nothing"],
   ["termscene", "test/term-scene.test.mjs", "SPEC M7 - a scene stack, a frame loop, and every frame assertable"],
   ["termbeat", "test/term-beat.test.mjs", "SPEC M7 - beat-driven animation: one scene per beat, no drift with frame rate"],
@@ -357,6 +357,10 @@ const 能力 = (() => {
     "arm-gcc": 有("arm-none-eabi-gcc", ["--version"]),
     "python-pil": 有("python", ["-c", "import PIL"]),
     cmd: process.platform === "win32",
+    // 三套颜色套件要用 Windows 自带的那两个 ICC 配置文件（sRGB 与 SWOP）。
+    // 别的系统上没有它们，而替代物不是随手能编出来的 —— 所以那一侧是环境缺件，
+    // 报「设计缺席」而不是「不通过」（2026-11-03 在 WSL 上第一次分清这两件事）。
+    "windows-icc": existsSync("C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm"),
   };
 })();
 const 缺什么 = (标记) => (((标记 && 标记.需要) || []).filter((x) => !能力[x]));

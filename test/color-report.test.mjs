@@ -9,7 +9,10 @@ import { loadUnit, runUnit } from "../src/loader.mjs";
 import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const PY = "E:/DaShaoHuo/Python-managed/bin/python.exe";
+// python：Windows 上是那个固定路径，别的平台问 PATH（见 color.test.mjs）。
+const PY = process.platform === "win32"
+  ? "E:/DaShaoHuo/Python-managed/bin/python.exe"
+  : "python3";
 const SRGB = "C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm";
 const CLAY = path.join(ROOT, "deps/color/profiles/ClayRGB-elle-V2-srgbtrc.icc");
 const SWOP = "C:/Windows/System32/spool/drivers/color/RSWOP.icm";
