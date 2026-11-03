@@ -212,6 +212,7 @@ const SUITES = [
   ["ssh", "test/ssh.test.mjs", "SPEC M7 - the OpenSSH signature wire format: base64 decoded and every section of the SSHSIG structure matched byte for byte"],
   ["sign", "test/sign.test.mjs", "SPEC M7 - a real release signature verified by Himeyuri itself: the signed data built from PROTOCOL.sshsig section 3, and the judge refuses a message changed by one byte"],
   ["signgen", "test/sign-gen.test.mjs", "SPEC M7 - the other half of the OpenSSH bridge: HMYR signs from a seed, and RFC 8032's two published vectors come out byte for byte"],
+  ["signbridge", "test/sign-bridge.test.mjs", "SPEC M7 - the first arrow of the ssh-keygen bridge: HMYR writes an OpenSSH private key from a seed, and ssh-keygen -y reads back the same public key"],
   ["selfcov", "tools/self-coverage.mjs", "FULLSELF - the evaluator written in HMYR agrees with the host on fourteen programs"],
   ["selfratiohmyr", "test/self-ratio-hmyr.test.mjs", "M7 - the bootstrap ratio measured twice: the JavaScript version and the HMYR one count the same lines in the same five groups, and agree on the total (skipped when the host has no C compiler)"],
   ["selfload", "tools/self-loader.mjs", "FULLSELF - the loading half: the lexer and parser written in HMYR accept the same 27 real files the host loader accepts"],

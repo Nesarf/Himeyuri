@@ -1,0 +1,101 @@
+// OpenSSH 私钥的写法：从 32 字节 seed 交出一份 ssh-keygen 认得的私钥文件。
+//
+// 为什么需要它：design/SIGNING.txt 第 141 行说「与 ssh-keygen 的双向互通一步都没做」。
+// 验那半边早就通了（sign.hmoca 的 验文件 验的就是 ssh-keygen 签出来的东西），缺的是
+// 「HMYR 签的东西，ssh-keygen 认不认」。而那要先给它一把它能读的钥匙 ——
+// 这个文件就是那把钥匙的格式。
+//
+// 格式是 OpenSSH 的 openssh-key-v1（PROTOCOL.key 那一份），明文、不加密：
+//
+//   "openssh-key-v1\0"
+//   string ciphername   "none"
+//   string kdfname      "none"
+//   string kdfoptions   ""
+//   uint32 nkeys        1
+//   string publickey    string "ssh-ed25519" + string pub(32)
+//   string privatekey   uint32 check1 + uint32 check2 + string "ssh-ed25519"
+//                       + string pub(32) + string priv(64) + string comment
+//                       + 补白（1、2、3…直到总长是 8 的倍数）
+//
+// 外面再包一层 PEM：----- BEGIN OPENSSH PRIVATE KEY ----- 一个 base64 大块。
+// 而 .pub 那一行是「ssh-ed25519 <base64(publickey)> <注释>」。
+//
+// 两个 checkint 是 OpenSSH 用来判断「解密对不对」的，明文模式下随便但必须相等；
+// 这里用 0x12345678 的固定值 —— 确定性让同一份 seed 永远产出同一份文件，判据才好比。
+//
+// 顺带一条：写出来的私钥**不加密**。这与 ssh-keygen 默认的行为不同，所以 .pub 与私钥
+// 都只该落在临时目录里，判据用完就删 —— 这一点写在 test/sign-bridge.test.mjs 里。
+引入 "./ssh.hmoca"
+引入 "./sign.hmoca"
+
+// 文字节：一个 ASCII 字符串 → 它的字节。没有内置的，而 OpenSSH 那几段 string 都要它。
+函数 文字节(s: String) {
+  变 出 = ()
+  变 i = 0
+  当 i < len(s) {
+    出 = 出 + (ord(slice(s, i, i + 1)) % 256,)
+    i = i + 1
+  }
+  返回 出
+}
+
+// 公钥 blob：ssh 的两段 string，正好是 allowed_signers 与 .pub 里那一块。
+公开 函数 公钥blob(公: Int) {
+  返回 写串(文字节("ssh-ed25519")) + 写串(公)
+}
+
+// 私钥 blob：明文、不加密的那一段。
+公开 函数 私钥blob(种子: Int, 公: Int, 注释: String) {
+  定 头 = 写四(305419896) + 写四(305419896)
+  定 算 = 写串(文字节("ssh-ed25519")) + 写串(公) + 写串(接(种子, 公)) + 写串(文字节(注释))
+  变 体 = 头 + 算
+  // 补白：1、2、3… 直到长度是 8 的倍数。OpenSSH 要求每一段的补白字节就是它的序号。
+  变 填 = 1
+  当 len(体) % 8 != 0 {
+    体 = 体 + (填,)
+    填 = 填 + 1
+  }
+  返回 体
+}
+
+// 成私钥文：整份 PEM 文本（末尾带换行）。
+//
+// 一行一个中间值，而不是把一个长表达式折成几行 —— HMYR 不认行首的 + 当续行，
+// 那样折出来的第二行会被读成「以 + 开头的新语句」，报「期望一个表达式，见到 punct +」。
+公开 函数 成私钥文(种子: Int, 注释: String) -> String {
+  定 材 = 从种子(种子)
+  // 空元组要先绑一个名字，而且不能叫 空 —— 那是 nil 的中文名（关键字）。
+  // 2026-11-03 撞了三次：写串(()) 读成「调用一个叫 ( 的东西」，定 空 = () 读成
+  // 「名字是 nil」，变 空 = () 也一样。改成 没有的 就通了。
+  变 没有的 = ()
+  定 头 = 文字节("openssh-key-v1" + chr(0))
+  定 壳 = 写串(文字节("none")) + 写串(文字节("none")) + 写串(没有的)
+  定 数 = 写四(1)
+  定 公 = 写串(公钥blob(材.公))
+  定 私 = 写串(私钥blob(种子, 材.公, 注释))
+  定 全 = 头 + 壳 + 数 + 公 + 私
+  定 前 = "-----BEGIN OPENSSH PRIVATE KEY-----" + chr(10)
+  定 后 = "-----END OPENSSH PRIVATE KEY-----" + chr(10)
+  返回 前 + 折行(成base64(全), 70) + 后
+}
+
+// 成公钥文：ssh-keygen 认的 .pub 那一行。
+公开 函数 成公钥文(种子: Int, 注释: String) -> String {
+  定 材 = 从种子(种子)
+  返回 "ssh-ed25519 " + 成base64(公钥blob(材.公)) + " " + 注释 + chr(10)
+}
+
+// 折行：base64 太长，PEM 按 70 列折 —— ssh-keygen 不在乎列宽，但人也得看得下去。
+函数 折行(s: String, 宽: Int) -> String {
+  变 出 = ""
+  变 i = 0
+  当 i < len(s) {
+    变 止 = i + 宽
+    若 止 > len(s) {
+      止 = len(s)
+    }
+    出 = 出 + slice(s, i, 止) + chr(10)
+    i = 止
+  }
+  返回 出
+}
