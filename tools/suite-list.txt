@@ -163,6 +163,7 @@ crc	test/crc.test.mjs
 releasehmyr	test/release-hmyr.test.mjs
 bigint	test/bigint.test.mjs
 rational	test/lib-rational.test.mjs
+interval	test/lib-interval.test.mjs
 curve	test/curve.test.mjs
 sha512	test/sha512.test.mjs
 ssh	test/ssh.test.mjs
