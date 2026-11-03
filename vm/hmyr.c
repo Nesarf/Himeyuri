@@ -6224,6 +6224,15 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
     报一行(g_fail_msg);
     return 1;
   }
+  /* HMYR_OPS=1：把这一次跑掉的步数报出来。
+   *
+   * 为什么要有它：inflate 那类套件一次解压要几百万步，而「慢」既可能是步数多、
+   * 也可能是单步贵。两个数一除就分得开 —— 在此之前手里只有「总共多少秒」这一个数，
+   * 而它指向不了任何一种改法。与 HMYR_LOAD_ONLY 同一个形状：板子上 getenv 返回 0，
+   * 那一条开不起来。2026-11-03 加。 */
+  if (getenv("HMYR_OPS")) {
+    fprintf(stderr, "ops=%ld\n", g_机->步数);
+  }
   /* 返回值就是退出码，不是输出。自举层自己会打印它那份验收的编号，
    * 而一台机器不欠谁这一行。 */
   return (r.tag == T_NUM) ? (int)r.num : 0;
