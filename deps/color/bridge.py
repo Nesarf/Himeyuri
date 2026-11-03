@@ -34,8 +34,15 @@ STRATEGIES = {
 }
 
 
+# 系统自带的 ICC 目录。Windows 是那一处（sRGB 与 SWOP 都在里面）；POSIX 上是 colord
+# 与 ghostscript 放的那几处 —— colord 带 SWOP_TR003（印刷用 CMYK），ghostscript 带
+# default_cmyk 与 ps_cmyk。不存在的目录会被 list_spaces 跳过，所以四列都写在这里。
+# 2026-11-03 跨系统时改的：原来只有第一行，于是 Linux 上「清单里没有 CMYK 那张」。
 PROFILE_DIRS = [
     r"C:\Windows\System32\spool\drivers\color",
+    "/usr/share/color/icc",
+    "/usr/share/color/icc/colord",
+    "/usr/local/share/color/icc",
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "profiles"),
 ]
 

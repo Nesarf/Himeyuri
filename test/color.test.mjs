@@ -21,9 +21,13 @@ const PY = process.platform === "win32"
 // 2026-11-03 给 Linux 补这一条时改的：源用仓库的 sRGB，目标用 AllColorsRGB ——
 // 这一套验的是「两个不同 profile 之间转换」，而那件事与 CMYK 无关。
 const 档 = (名) => path.join(ROOT, "deps/color/profiles", 名);
+// CMYK 那张按平台：Windows 是系统自带的 RSWOP.icm（Agfa Swop Standard），
+// POSIX 上是 colord 带的 SWOP_TR003_coated_3.icc —— 同一个印刷条件，两份 profile。
+// 2026-11-03 量过：这两台都有，所以 color 那三套不必再按「缺 CMYK」缺席。
+const CMYK名 = process.platform === "win32" ? "RSWOP.icm" : "SWOP_TR003_coated_3.icc";
 const SWOP = process.platform === "win32"
   ? "C:/Windows/System32/spool/drivers/color/RSWOP.icm"
-  : 档("AllColorsRGB-elle-V2-srgbtrc.icc");
+  : "/usr/share/color/icc/colord/SWOP_TR003_coated_3.icc";
 const SRGB_FILE = process.platform === "win32"
   ? "C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm"
   : 档("sRGB-elle-V2-srgbtrc.icc");
@@ -73,7 +77,7 @@ try {
     const text = call("可用清单", []);
     ok("清单里有内建三个", text.includes("sRGB built-in") && text.includes("Lab identity") && text.includes("XYZ identity"));
     ok("清单里有存储模式", text.includes("storage_modes"));
-    ok("清单里有 SWOP 那张", text.includes("RSWOP.icm"));
+    ok("清单里有 CMYK 那张（按平台取名）", text.includes(CMYK名), text.slice(0, 200));
   }
 
   console.log("\n两次转换：min-loss 对 look");
@@ -100,11 +104,11 @@ try {
 
   console.log("\n选工作空间：从损失最小的排起（这是三条原则的机械化）");
   {
-    const text = call("选工作空间", ["sRGB", "ClayRGB-elle-V2-srgbtrc.icc;AllColorsRGB-elle-V2-srgbtrc.icc;RSWOP.icm"]);
+    const text = call("选工作空间", ["sRGB", "ClayRGB-elle-V2-srgbtrc.icc;AllColorsRGB-elle-V2-srgbtrc.icc;" + CMYK名]);
     const data = JSON.parse(text);   // 语言那边现在有 json.hmoca 了；这一条暂时留在宿主侧，下一步换成它
     ok("排名第一的是零损失的目标", data.ranked[0].given === "ClayRGB-elle-V2-srgbtrc.icc" && data.ranked[0].sum === 0,
       JSON.stringify(data.ranked[0]));
-    ok("CMYK 排在最后", data.ranked[data.ranked.length - 1].given === "RSWOP.icm",
+    ok("CMYK 排在最后", data.ranked[data.ranked.length - 1].given === CMYK名,
       JSON.stringify(data.ranked.map((r) => r.given + ":" + r.sum)));
     ok("每个候选都带指纹", data.ranked.every((r) => typeof r.sha256 === "string" && r.sha256.length === 64));
     console.log("        （" + data.ranked.map((r) => r.given.replace(/-elle-V2.*/, "") + " " + r.sum).join(" · ") + "）");

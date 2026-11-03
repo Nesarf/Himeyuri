@@ -14,8 +14,14 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PY = process.platform === "win32"
   ? "E:/DaShaoHuo/Python-managed/bin/python.exe"
   : "python3";
-const SWOP = "C:/Windows/System32/spool/drivers/color/RSWOP.icm";
-const SRGB = "C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm";
+// ICC 按平台：Windows 用系统自带的两张，POSIX 上 sRGB 用仓库自带的、CMYK 用 colord 带的
+// SWOP_TR003 —— 同一个印刷条件，两份 profile（2026-11-03 跨系统时改的）。
+const SWOP = process.platform === "win32"
+  ? "C:/Windows/System32/spool/drivers/color/RSWOP.icm"
+  : "/usr/share/color/icc/colord/SWOP_TR003_coated_3.icc";
+const SRGB = process.platform === "win32"
+  ? "C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm"
+  : path.join(ROOT, "deps/color/profiles/sRGB-elle-V2-srgbtrc.icc");
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }

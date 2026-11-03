@@ -13,9 +13,15 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PY = process.platform === "win32"
   ? "E:/DaShaoHuo/Python-managed/bin/python.exe"
   : "python3";
-const SRGB = "C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm";
+// ICC 按平台：Windows 用系统自带的两张，POSIX 上 sRGB 用仓库自带的、CMYK 用 colord 带的
+// SWOP_TR003 —— 同一个印刷条件，两份 profile（2026-11-03 跨系统时改的）。
+const SRGB = process.platform === "win32"
+  ? "C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm"
+  : path.join(ROOT, "deps/color/profiles/sRGB-elle-V2-srgbtrc.icc");
 const CLAY = path.join(ROOT, "deps/color/profiles/ClayRGB-elle-V2-srgbtrc.icc");
-const SWOP = "C:/Windows/System32/spool/drivers/color/RSWOP.icm";
+const SWOP = process.platform === "win32"
+  ? "C:/Windows/System32/spool/drivers/color/RSWOP.icm"
+  : "/usr/share/color/icc/colord/SWOP_TR003_coated_3.icc";
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }
@@ -64,7 +70,11 @@ try {
   // 报告里的 max 是小数，而这里取整数部分，所以「0 点几」可能显示成 0 或 1。
   // 判定用的阈值远大于这个粗糙度，所以判断本身不受影响。
   ok("转到无损空间的最大色差很小（取整后不超过 1）", m1 <= 1, String(m1));
-  ok("转到印刷 CMYK 的最大色差很大", m2 > 50, String(m2));
+  // 阈值取 40 而不是 50：这一条验的是「转到印刷空间损失很大」那件事，而具体多大
+  // 取决于用哪一份 CMYK profile —— Windows 的 RSWOP.icm 在 51 上下，colord 的
+  // SWOP_TR003_coated_3.icc 是 48。两份都是真的 SWOP 印刷条件，差在色域边界怎么画。
+  // 2026-11-03 在 WSL 上第一次看到这个差，把阈值放到 40 之后两边都成立。
+  ok("转到印刷 CMYK 的最大色差很大", m2 > 40, String(m2));
   ok("阈值 2 时无损那份可接受", call("可接受", [一, 2]) === true);
   ok("阈值 2 时印刷那份不可接受", call("可接受", [二, 2]) === false);
   ok("摘要说得出结论", call("摘要", [一]).includes("可接受"), call("摘要", [一]));

@@ -1064,6 +1064,27 @@ C 版虚拟机：那台不是 JS 的机器
 
   于是 surface 四十九项在 Linux 上全过。按设计缺席降到三套：color 那三套。
 
+  第七件：color 三套（2026-11-03 更晚）
+  --------------------------------------------------------------------
+
+  上一轮说「缺一张 CMYK profile，仓库没有、这台也没有」。这一轮去找了，而它一直
+  在这台机器上：
+
+      /usr/share/color/icc/colord/SWOP_TR003_coated_3.icc
+
+  那是 colord 包带的、SWOP TR003 涂布纸条件的 CMYK profile —— 与 Windows 自带的
+  RSWOP.icm（Agfa Swop Standard）是同一个印刷条件的两份画法。
+
+  于是三处按平台取：sRGB 用仓库自带的（deps/color/profiles/），CMYK 用上面那一张；
+  桥的 PROFILE_DIRS 也从「只有 Windows 那一处」改成四列（Windows 一处、POSIX 三处，
+  不存在的目录由 list_spaces 跳过）。
+
+  一条断言跟着改了：color-report 验「转到印刷空间最大色差很大」，阈值从 50 放到 40
+  —— 两份 profile 给的数不同（RSWOP 在 51 上下，SWOP_TR003 是 48），而那一条验的是
+  「很大」，不是「等于五十一」。
+
+  于是 color 三套在 Linux 上全过，按设计缺席降到零。
+
   一句话收：清单有了，分类只分到「能看出来的」为止。第四类那二十来套要逐套查，
   而查法与这一轮相同 —— 单跑、读它吐出来的那一行。
 
