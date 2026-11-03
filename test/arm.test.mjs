@@ -90,6 +90,51 @@ console.log("一之二、同一份代码编到 Cortex-M7（桌上那块 H723ZG�
   fs.rmSync(临, { recursive: true, force: true });
 }
 
+console.log("一之三、链到 H723：编得过之后的下一关是链得出、布局对");
+{
+  // 一 与 一之二 都只用 -c，验的是「编得过」。而板子上要的是链之后的映像：
+  // 向量表在 Flash 起点、入口紧跟着它、栈顶落在 RAM 里、各段装得下。四件都能用
+  // nm 与 size 读到，所以这一节不需要板子，也不需要 ST-Link。
+  //
+  // 走 port/Makefile 而不是把六条 gcc 命令行抄一遍：那一份已经是「换芯片改旋钮」的
+  // 形状，抄过来就多一处要同步。make 不在就跳过 —— 与 armclang 那一支同一个态度。
+  const make = 找(["make", "E:/msys64/usr/bin/make.exe", "D:/msys64/usr/bin/make.exe"]);
+  if (!是GNU) {
+    console.log("  跳过  这一节要 GNU 工具链；Arm 那一支的链接脚本是 link.sct，不是 link-h723.ld");
+  } else if (!make) {
+    console.log("  跳过  这台机器上没有 make（MSYS2 那一份也不在常见位置）");
+  } else {
+    const 端口 = path.join(ROOT, "port");
+    const 映 = path.join(端口, "build", "hmyr-board.elf");
+    fs.rmSync(映, { force: true });
+    const 前缀 = gcc.replace(/gcc(\.exe)?$/i, "");
+    const r = spawnSync(make, ["h723", "CROSS=" + 前缀], { cwd: 端口, encoding: "utf8", timeout: 900000 });
+    ok("make h723 链得出来", r.status === 0 && fs.existsSync(映),
+      String(r.status) + " " + String(r.stderr || "").slice(-300));
+    if (fs.existsSync(映)) {
+      const 跑 = (具, 参) => spawnSync(前缀 + 具, 参, { encoding: "utf8" }).stdout || "";
+      const 符 = 跑("nm" + (是GNU ? ".exe" : ""), ["-n", 映]);
+      const 取 = (名) => {
+        const m = new RegExp("^([0-9a-fA-F]+) \\w+ " + 名 + "$", "m").exec(符);
+        return m ? parseInt(m[1], 16) : null;
+      };
+      const 十六 = (n) => (n === null ? "无" : "0x" + n.toString(16));
+      const 向量 = 取("__Vectors"), 入口 = 取("Reset_Handler"), 栈顶 = 取("_estack");
+      ok("向量表在 Flash 起点", 向量 === 0x08000000, 十六(向量));
+      ok("入口紧跟在向量表后面", 入口 !== null && 入口 >= 0x08000040 && 入口 < 0x08000200, 十六(入口));
+      // 栈顶必须落在 AXI SRAM（0x24000000 起 512 KB）里：掉到 0x20000000 是摸到了
+      // DTCM，越过 0x24080000 是越界 —— 两种都只会在第一次中断时 HardFault，
+      // 而那时串口一个字都没有，看上去像「程序没跑」。
+      ok("栈顶落在 AXI SRAM 里", 栈顶 !== null && 栈顶 > 0x24000000 && 栈顶 <= 0x24080000, 十六(栈顶));
+      const 量 = 跑("size" + (是GNU ? ".exe" : ""), [映]);
+      const 行 = 量.split("\n").find((l) => /^\s*\d+/.test(l)) || "";
+      const 数 = 行.trim().split(/\s+/).map(Number);
+      ok("代码装得进 1 MB 的 Flash", 数[0] > 0 && 数[0] < 1024 * 1024, String(数[0]));
+      ok("静态 RAM 装得进 512 KB", 数[1] + 数[2] > 0 && 数[1] + 数[2] < 512 * 1024, (数[1] + 数[2]) + " 字节");
+    }
+  }
+}
+
 console.log("二、桌面专属的那几处都在条件编译里");
 {
   const 源 = fs.readFileSync(path.join(ROOT, "vm/hmyr.c"), "utf8");

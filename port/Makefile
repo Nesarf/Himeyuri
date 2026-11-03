@@ -1,4 +1,10 @@
-# Cortex-M4 那一侧的最小构建：把 VM、平台口、板侧入口与启动文件编成一颗映像。
+# 裸机那一侧的最小构建：把 VM、平台口、板侧入口与启动文件编成一颗映像。
+#
+# 两套芯片共用这一份：Nucleo-F411RE（Cortex-M4，默认）与桌上那块 H723ZG
+# （Cortex-M7，make h723）。差别全落在旋钮上 —— CPU / FPU / STARTUP / UART /
+# LDSCRIPT / OPENOCD_TARGET —— 源代码里一处在没有 #ifdef，理由与 port/ 里那几对
+# 文件一样：换芯片时改的是「这几个数」，而一份文件里放两套最容易出的错是改了这边
+# 忘了那边。
 #
 # 三个目标，各有各的用处：
 #
@@ -19,6 +25,14 @@ NODE    ?= /c/Program\ Files/nodejs/node.exe
 # 两者的差别只有寄存器布局，所以换的是文件，不是代码里的 #ifdef。
 UART    ?= uart.c
 
+# 启动文件那一份：M4 与 M7 各一份 —— M7 那份多一段 FPU 使能（CPACR 的 CP10/CP11）。
+STARTUP ?= startup_cm4_gnu.s
+
+# 浮点：M4 留空（走软浮点，GNU 默认），M7 用 -mfpu=fpv5-d16 -mfloat-abi=hard。
+# 硬浮点必须配 startup_cm7_gnu.s —— 少了那段 CPACR，第一条浮点指令就进 HardFault，
+# 而症状是「程序跑到某处就不动了」，看上去像别的地方出了问题。
+FPU     ?=
+
 # PROGRAM 是相对仓库根的名字 —— 不是相对 port/。理由：编字节码那一步要回仓库根，
 # 而「相对谁」只该有一个答案。
 PROGRAM ?= examples/hello.hmoca
@@ -35,13 +49,13 @@ TARGET  := $(BUILD)/hmyr-board
 # 症状是 Undefined 异常 —— 而我们的向量表只有一个 Reset_Handler，于是变成 lockup。
 CPU     ?= cortex-m4
 
-CFLAGS  := -mcpu=$(CPU) -mthumb -Os -g -Wall -Wextra -Wno-unused-parameter \
+CFLAGS  := -mcpu=$(CPU) $(FPU) -mthumb -Os -g -Wall -Wextra -Wno-unused-parameter \
            -ffunction-sections -fdata-sections -fno-common -std=c11 \
            --specs=nosys.specs
 # 链接脚本：板子是 link.ld（Flash 从 0x08000000），QEMU 的 MPS2 是 link-mps2.ld（从 0）。
 LDSCRIPT ?= link.ld
 
-LDFLAGS := -mcpu=$(CPU) -mthumb -T $(LDSCRIPT) --specs=nosys.specs -Wl,--gc-sections -Wl,-Map=$(TARGET).map
+LDFLAGS := -mcpu=$(CPU) $(FPU) -mthumb -T $(LDSCRIPT) --specs=nosys.specs -Wl,--gc-sections -Wl,-Map=$(TARGET).map
 
 OBJS    := $(BUILD)/startup.o $(BUILD)/arm-port.o $(BUILD)/board-main.o \
            $(BUILD)/$(UART:.c=.o) $(BUILD)/hmyr.o $(BUILD)/program.o
@@ -75,24 +89,18 @@ $(BUILD)/program.o: $(BUILD)/program.hmoks
 	  --rename-section .data=.program,alloc,load,readonly,data,contents \
 	  program.hmoks program.o
 
-$(BUILD)/startup.o: startup_cm4_gnu.s
+$(BUILD)/startup.o: $(STARTUP)
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BUILD)/arm-port.o: arm-port.c
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -I../vm -c $< -o $@
-
-$(BUILD)/board-main.o: board-main.c
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -I../vm -c $< -o $@
-
-# 两条串口来源，同一个目标文件：UART 变量说这一轮换哪一份进来。
-$(BUILD)/uart.o: uart.c
-	@mkdir -p $(BUILD)
-	$(CC) $(CFLAGS) -I../vm -c $< -o $@
-
-$(BUILD)/uart-mps2.o: uart-mps2.c
+# port/ 里的每一份 .c 都走这一条：arm-port、board-main，以及任意一份串口。
+#
+# 用模式规则而不是一条一条列 —— 「加第三份串口」这件事刚发生过一次（uart-h723.c），
+# 而列出写法漏掉它时报的是「No rule to make target 'build/uart-h723.o'」，
+# 那句话看不出是 Makefile 漏了、还是文件根本没写。
+#
+# hmyr.o 不走这一条：它的源在 ../vm，而且要多一个 -DHMYR_BOARD。
+$(BUILD)/%.o: %.c
 	@mkdir -p $(BUILD)
 	$(CC) $(CFLAGS) -I../vm -c $< -o $@
 
@@ -133,6 +141,24 @@ qemu-mps2:
 	$(MAKE) elf PROGRAM=$(PROGRAM) $(QEMU_MPS2_FLAGS)
 	qemu-system-arm -M mps2-an385 -kernel $(TARGET).elf -nographic -monitor none -serial stdio
 
+# 桌上那块 STM32H723ZG：Cortex-M7、1 MB Flash、512 KB AXI SRAM。
+# H723_FLAGS 一处在源代码里都没有 —— 它改的全是旋钮。
+H723_FLAGS := CPU=cortex-m7 STARTUP=startup_cm7_gnu.s UART=uart-h723.c \
+              LDSCRIPT=link-h723.ld FPU="-mfpu=fpv5-d16 -mfloat-abi=hard"
+
+# 只链、不烧：这一条在没有 ST-Link 的机器上也能跑完，产出 ELF 与 map，
+# 于是「链接布局对不对」这件事不必等硬件。
+h723:
+	$(MAKE) elf PROGRAM=$(PROGRAM) $(H723_FLAGS)
+
+h723-bin:
+	$(MAKE) bin PROGRAM=$(PROGRAM) $(H723_FLAGS)
+
+# 烧：这一条要 ST-Link 插上、且 OpenOCD 能看见它。
+h723-flash:
+	$(MAKE) flash PROGRAM=$(PROGRAM) $(H723_FLAGS) \
+	  OPENOCD_TARGET=target/stm32h7x.cfg TARGET_CHIP=stm32h723zg
+
 # 烧板子。三条路，看本机装了哪一件：
 #
 #   make flash                  OpenOCD（默认 —— 这块探针只有它通得过）
@@ -144,10 +170,12 @@ PROBE       ?= openocd
 PYOCD       ?= /e/DaShaoHuo/Python-managed/pythoncore-3.14-64/Scripts/pyocd.exe
 OPENOCD     ?= openocd
 TARGET_CHIP ?= stm32f411re
+# OpenOCD 的目标配置也得跟着换：H7 那一族是 target/stm32h7x.cfg，F4 是 stm32f4x.cfg。
+OPENOCD_TARGET ?= target/stm32f4x.cfg
 
 flash: $(TARGET).elf
 ifeq ($(PROBE),openocd)
-	$(OPENOCD) -f interface/stlink.cfg -f target/stm32f4x.cfg \
+	$(OPENOCD) -f interface/stlink.cfg -f $(OPENOCD_TARGET) \
 	  -c "program $(TARGET).elf verify reset exit"
 else ifeq ($(PROBE),pyocd)
 	$(PYOCD) flash --target $(TARGET_CHIP) $(TARGET).elf
@@ -158,4 +186,4 @@ endif
 clean:
 	rm -rf $(BUILD)
 
-.PHONY: elf bin qemu qemu-mps2 flash clean
+.PHONY: elf bin qemu qemu-mps2 qemu-desktop flash clean h723 h723-bin h723-flash
