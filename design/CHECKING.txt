@@ -61,31 +61,36 @@
 八路并行下每套都在抢 CPU，所以单套在全量里的耗时是单独跑的两倍上下。要与哪一次全量比
 就用同一次全量的数，要判断某套自己的速度就用 --only。tools/expected.json 记的是后者。
 
-2026-11-03 量了一次全表（check-all 现在认 HMYR_TIMES，设了就落一份降序表，一行一套）：
-209 套，合计 2754.8 秒工作量，除并行 8 是 344 秒 —— 而墙钟 411.6 秒，差的六十七秒是
-串行那几套与调度。前二十套占 1776.8 秒（64%），后一百五十套合计 258.7 秒（9%）。
+2026-11-03 量了一次全表（check-all 现在认 HMYR_TIMES，设了就落一份降序表，一行一套）。
+同一天量了两次，中间修掉了一处控制流对象：
 
-    inflate 141.8      codeseval 124.4   sign 112.6        selfload 110.9
-    selfcompile 108.8  selfvmcompile 106.8  ucdnfchmyr 106.0  selfcov 96.9
-    hmyrcompile 91.4   curve 90.5        selfnodes 80.6    selftree 79.3
-    arm 76.7           tree 76.0         selfhandoff 75.7  ittgn 74.4
-    cvm 64.3           signbridge 60.9   deflate 50.2      docshmyr 48.5
+    209 套    2754.8 秒工作量    墙钟 411.6 秒
+    209 套    2173.6 秒工作量    墙钟 353.9 秒
+
+两次都除并行 8 得三百来秒，差的那几十秒是串行那几套与调度。前二十套占六成三
+（1378.0 秒），后一百五十套占一成一（229.1 秒）。前十四套是：
+
+    inflate 146.8      codeseval 116.5   sign 103.3        ucdnfchmyr 93.3
+    curve 90.6         selfvmcompile 87.3  tree 79.5       ittgn 78.7
+    arm 78.1           cvm 63.1         signbridge 62.7  deflate 51.8
+    signgen 49.3       verifyhmyr 48.4
 
 「最慢的五套」从这个数起不够用了：它回答「要不要跑全量」，回答不了「下一次该改哪一套」。
-后者要的是总工作量的分布，而一套省下的时间还要再除以并行数才落到墙钟上 —— inflate
-快了四倍（133.7 秒到 68 秒），全量墙钟从 419.9 走到 411.6，动的那一点还在抖动里，
-差的就是这个除法。
+后者要的是总工作量的分布，而一套省下的时间还要再除以并行数才落到墙钟上 —— inflate 单独
+跑从 133.7 秒到 68 秒，而它在全量里那一格从 141.8 走到 146.8，动的方向甚至是反的：
+那是别的套件变快之后 CPU 重新分配的结果，不是它自己慢了。这两个数一定要分清。
 
-按「跑在哪台机器上」把同一批时间重新归一遍，大块才浮出来：
+按「跑在哪台机器上」把同一批时间重新归一遍，大块才浮出来（括号里是第一次量的数）：
 
-    src/eval.mjs 宿主求值器        约 406 秒   codeseval、selfcompile、selfcov、selfhandoff
-    src/vm.mjs JS 字节码那台       约 380 秒   selfvmcompile、ucdnfchmyr、hmyrcompile、tree
-    bin/hmyr.mjs 自举解释器        约 187 秒   sign、ittgn
-    vm/hmyr.c C 那台               约 256 秒   inflate、deflate、cvm，以及另外几套的一半
+    src/vm.mjs JS 字节码那台    约 284 秒（380）  selfvmcompile、ucdnfchmyr、tree、hmyrcompile
+    vm/hmyr.c C 那台            约 262 秒（256）  inflate、deflate、cvm，以及另外几套的一半
+    bin/hmyr.mjs 自举解释器     约 182 秒（187）  sign、ittgn
+    src/eval.mjs 宿主求值器     约 174 秒（406）  codeseval、selfcov、selfcompile、selfhandoff、selfload
 
-三台 JS 机器合计约九百七十秒，占总量三成半，而它们解释的是同一份 HMYR。所以「一处改动、
-多套受益」的形态在这里，不在「最慢的那五套」里 —— 动一台 JS 解释器的每步开销，受益的
-是十几套。这一条与下面那段 curve 的教训是同一个：先看清钱花在哪一层，再挑改哪一处。
+三台 JS 机器合计从九百七十秒降到六百四十秒，占总量三成 —— 而它们解释的是同一份 HMYR。
+所以「一处改动、多套受益」的形态在这里，不在「最慢的那五套」里：动一台 JS 解释器的每步
+开销，受益的是十几套。这一条与下面那段 curve 的教训是同一个：先看清钱花在哪一层，
+再挑改哪一处。
 
 这一节写完的同一天，它就撞上了第一个用例。按机器归并看到 src/eval.mjs 占四百秒之后，
 用 node --cpu-prof 跑了一遍 tools/self-coverage.mjs（一行代码都没改），热点是那个求值器
@@ -99,15 +104,22 @@ class Return extends Error —— 于是每一个 return 语句都造一个 Erro
 要抓栈，那个栈没有任何代码读过（三个用点：抛出、instanceof 收下、取 .value）。改成不继承
 之后，同一台机器上单独跑：selfcov 25.91 秒到 6.58 秒，codeseval 77.48 秒到 62.69 秒。
 
-而全量里受益的不止这两套：
+而全量里受益的不止这两套（最终数）：
 
-    selfcompile   108.8 → 15.2 秒（减 86%）
-    selfcov        96.9 → 15.1 秒（减 84%）
-    selfload      110.9 → 21.0 秒（减 81%）
-    selfhandoff    75.7 → 15.0 秒（减 80%）
+    selfcompile   108.8 → 13.6 秒（减 87%）
+    selfcov        96.9 → 11.6 秒（减 88%）
+    selfload      110.9 → 18.3 秒（减 83%）
+    selfhandoff    75.7 → 13.7 秒（减 82%）
 
 selfload 用的是宿主的 loader 与 parser，但它经由 loader 的 runUnit 也走到求值器，所以它
-跟着一起快了八成。总工作量 2754.8 秒到 2332.7 秒，墙钟 411.6 到 387.7 秒。
+跟着一起快了八成。这一族五套合计从五百一十七秒降到一百七十四秒。总工作量 2754.8 秒到
+2173.6 秒，墙钟 411.6 到 353.9 秒。
+
+那之后又试了两处，都不大：execBlock 的 for...of 换成索引循环毫无变化（六十二点三对
+六十二点七），而 Scope 的 Map 改成按需分配省了三个百分点（六十点七对六十二点七）。
+profile 里 execBlock 占 45.2% 而 Scope 的构造只占 0.9%，说明那笔钱在 V8 内联进 execBlock
+的 new Map 上 —— 迭代器早就被优化掉了，空 Map 没有。剩下的四成多是建 Scope 对象本身
+与建帧，那是延迟建帧那一档的事，不在这一天里。
 
 这件事的形状要记清楚：那三个受益最大的套件在「最慢五套」榜上并不显眼（selfcompile 第五、
 selfload 第四、selfhandoff 第十一），而在「按机器归并」里它们与 codeseval 站在同一列。
