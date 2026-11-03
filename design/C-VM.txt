@@ -948,6 +948,25 @@ C 版虚拟机：那台不是 JS 的机器
   powershell —— sRGB 那一张仓库自带（deps/color/profiles/sRGB-elle-V2-srgbtrc.icc），
   SWOP 那张（CMYK 印刷 profile）没有。
 
+  第四件：parallel（2026-11-03 深夜）
+  --------------------------------------------------------------------
+
+  parallel 原来也按设计缺席，原因是 deps/surface/parallel.ps1 用 Start-Job ——
+  那是 PowerShell 的。现在多了一份 deps/surface/parallel.sh：后台作业加 wait，
+  每条的时限用 timeout(1)，输出形状与那一份逐字段一致（items 数组、每项
+  cmd/state/output/ms，末行 HMYR-PARALLEL，state 取值也一致）。
+
+  parallel.hmoca 这一层不判断平台，而是先试 powershell、再试 bash ——
+  在 Windows 上第一个就成，在 Linux 上 powershell 根本起不来（ENOENT）。
+  这条回退本身就是判据，不必再引一个「我在哪台机器上」的内置
+  （language 那一侧今天也确实没有 platform()）。
+
+  测试里那两条命令原来写死了 cmd /c "echo one" —— 在 Linux 上 bash 说
+  「没有 cmd 这个命令」，于是两条都成 Failed。现在按平台取。
+
+  于是 parallel 十一项在两个系统上全过。按设计缺席降到五套：
+  surface、ittgn，以及 color 那三套。
+
   一句话收：清单有了，分类只分到「能看出来的」为止。第四类那二十来套要逐套查，
   而查法与这一轮相同 —— 单跑、读它吐出来的那一行。
 

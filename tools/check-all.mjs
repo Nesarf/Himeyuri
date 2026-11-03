@@ -137,7 +137,9 @@ const SUITES = [
   ["hmget", "test/hmget.test.mjs", "design/HMGET.txt - taking a package: a local directory or a file URL as the source, the manifest hash checked before anything moves, an existing different package refused unless asked, and http refused by name because the criterion has to be reproducible"],
   ["surface", "test/surface.test.mjs", "SPEC M7 - several sub surfaces composited onto the main one, the way real windows will be", { 需要: ["powershell"] }],
   ["pixel", "test/pixel.test.mjs", "SPEC M7 - a second kind of buffer: pixels, and a real PNG comes out the other end", { 需要: ["python-pil"] }],
-  ["parallel", "test/parallel.test.mjs", "SPEC M7 - real parallelism borrowed from a process that has it, and the judgement still read back in Himeyuri", { 需要: ["powershell"] }],
+  // parallel 现在两台各一份脚本（parallel.ps1 / parallel.sh），而 parallel.hmoca
+  // 先试 powershell、失败再试 bash —— 所以它不再需要 powershell 这一项能力。
+  ["parallel", "test/parallel.test.mjs", "SPEC M7 - real parallelism borrowed from a process that has it, and the judgement still read back in Himeyuri"],
   ["message", "test/message.test.mjs", "SPEC M7 - mailboxes between tasks: bounded, first in first out, refuse when full, say empty when empty"],
   ["sched", "test/sched.test.mjs", "SPEC M7 - a cooperative scheduler: turn taking, completion, cancellation, and failure that does not spread"],
   ["threads", "test/threads.test.mjs", "SPEC M7 - real threads: another core, the result arrives through a file, and isolation is hard not promised"],

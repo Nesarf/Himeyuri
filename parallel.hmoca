@@ -28,16 +28,24 @@
   返回 拼列表从(命令册, 0, "")
 }
 
-// 真的同时跑。交回 {ok, text}：text 是那段 JSON，由调用方交给 json.hmyr 解析。
+// 真的同时跑。交回 {ok, text}：text 是那段 JSON，由调用方交给 json.hmoca 解析。
 //
-// 超时是**每条**的上限（脚本里逐条 Wait-Job），不是总时长——因为并行时「总时长」
+// 超时是每一条的上限（两个脚本都逐条等），不是总时长 —— 因为并行时「总时长」
 // 取决于最长的那一条，把它写死反而会误杀。
+//
+// 两台各一份脚本：Windows 是 parallel.ps1（Start-Job），POSIX 是 parallel.sh
+// （后台作业加 wait）。这一层不判断平台，而是先试 powershell、再试 bash ——
+// 在 Windows 上第一个就成，在 Linux 上 powershell 根本起不来（ENOENT）。
+// 于是这条回退本身就是判据，不必再引一个「我在哪台机器上」的内置
+// （language 那一侧今天也确实没有 platform()）。
 函数 并行跑(命令册: Int, 超时秒: Int) -> Int 效果串(process, file) {
   write_text(列表路径(), 拼列表(命令册), "utf8")
-  定 r = run_program("powershell", ("-NoProfile", "-STA", "-File", 并行脚本(),
-    "-List", 列表路径(), "-Out", 结果路径(), "-TimeoutSec", str(超时秒)), 120000, "utf8")
-  若 r.code != 0 { 返回 {ok: 假, text: r.stderr} }
-  返回 {ok: 真, text: read_text(结果路径(), "utf8"), 报: r.stdout}
+  定 参 = ("-List", 列表路径(), "-Out", 结果路径(), "-TimeoutSec", str(超时秒))
+  定 甲 = run_program("powershell", ("-NoProfile", "-STA", "-File", repo_path("deps/surface/parallel.ps1")) + 参, 120000, "utf8")
+  若 甲.code == 0 { 返回 {ok: 真, text: read_text(结果路径(), "utf8"), 报: 甲.stdout} }
+  定 乙 = run_program("bash", (repo_path("deps/surface/parallel.sh"),) + 参, 120000, "utf8")
+  若 乙.code == 0 { 返回 {ok: 真, text: read_text(结果路径(), "utf8"), 报: 乙.stdout} }
+  返回 {ok: 假, text: 乙.stderr}
 }
 
 函数 main() -> Int 效果串(process, file) {

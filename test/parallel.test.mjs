@@ -23,9 +23,15 @@ const call = (name, args) => {
   return rt.callFunction(fn, args, null);
 };
 
+// 命令按平台取：Windows 是 cmd /c，POSIX 直接就是那一条。
+// 2026-11-03 加 parallel.sh 的那一轮才发现这一套写死了 cmd /c ——
+// 于是 Linux 上两条命令全成 Failed（bash 说「没有 cmd 这个命令」），
+// 而那与并行无关，是测试自己假设了平台。
+const 一句话 = (词) => process.platform === "win32" ? 'cmd /c "echo ' + 词 + '"' : "echo " + 词;
+
 console.log("两条命令同时跑");
 {
-  const r = call("并行跑", [["cmd /c \"echo one\"", "cmd /c \"echo two\""], 20]);
+  const r = call("并行跑", [[一句话("one"), 一句话("two")], 20]);
   ok("跑通了", r.ok === true, JSON.stringify(String(r.text).slice(0, 80)));
   ok("结果不是空", String(r.text).length > 10);
   // 交给语言自己的 JSON 解析器
@@ -48,7 +54,7 @@ console.log("边角");
   // JS 里的 () 不是空元组，是空括号——宿主侧要写 []。
   const 空 = call("并行跑", [[], 5]);
   ok("空列表不崩（脚本会报零条）", 空.ok === true, JSON.stringify(String(空.text).slice(0, 60)));
-  const 一条 = call("并行跑", [["cmd /c \"echo solo\""], 10]);
+  const 一条 = call("并行跑", [[一句话("solo")], 10]);
   const 树 = call("解析", [一条.text])[0];
   const 条 = call("字段", [树, "items"]);
   ok("一条时形状仍然是数组（不是对象）", 条.kind === "a" && 条.value.length === 1, JSON.stringify(条).slice(0, 50));
