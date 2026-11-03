@@ -27,8 +27,11 @@ const 包名 = path.basename(包路).replace(/\.zip$/i, "");
 const 出 = path.resolve(参[1] || path.join(process.cwd(), 包名 + 容器后缀));
 
 const 目录 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-ittgn-r-"));
-const 开 = spawnSync("powershell", ["-NoProfile", "-Command",
-  "Expand-Archive -Path '" + 包路 + "' -DestinationPath '" + 目录 + "' -Force"], { encoding: "utf8" });
+// 解包按平台：Windows 是 Expand-Archive，别的平台是 unzip（2026-11-03）。
+const 开 = process.platform === "win32"
+  ? spawnSync("powershell", ["-NoProfile", "-Command",
+    "Expand-Archive -Path '" + 包路 + "' -DestinationPath '" + 目录 + "' -Force"], { encoding: "utf8" })
+  : spawnSync("unzip", ["-q", "-o", 包路, "-d", 目录], { encoding: "utf8" });
 if (开.status !== 0) {
   console.error("解不开：" + String(开.stderr || 开.stdout).slice(0, 200));
   process.exit(1);

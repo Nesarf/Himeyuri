@@ -18,6 +18,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { 读容器, 找入口, 摊开, 容器后缀, 成员表名 } from "../src/ittgn.mjs";
+import { 压目录 } from "../src/zip-writer.mjs";
 
 const 参 = process.argv.slice(2);
 if (参.length < 1) {
@@ -59,13 +60,19 @@ for (const 档 of ["hmsnp", "hmhsr"]) {
 const 行批 = ["1", 包名, 入口名, ...r.成员们.map((m) => m.名)];
 fs.writeFileSync(path.join(目录, 成员表名), 行批.join("\n") + "\n", "utf8");
 
-const 压 = spawnSync("powershell", ["-NoProfile", "-Command",
-  "Compress-Archive -Path '" + path.join(目录, "*") + "' -DestinationPath '" + 出 + "' -Force"],
-{ encoding: "utf8" });
-
-if (压.status !== 0) {
-  console.error("压不成：" + String(压.stderr || 压.stdout).slice(0, 200));
-  process.exit(1);
+// 压包按平台：Windows 用 Compress-Archive，别的平台用 src/zip-writer.mjs ——
+// 与 tools/package.mjs 是同一条改动（2026-11-03）。这里压的是刚才摊开的那个目录，
+// 形态与打包那一件一模一样，所以同一个写入器就够。
+if (process.platform === "win32") {
+  const 压 = spawnSync("powershell", ["-NoProfile", "-Command",
+    "Compress-Archive -Path '" + path.join(目录, "*") + "' -DestinationPath '" + 出 + "' -Force"],
+  { encoding: "utf8" });
+  if (压.status !== 0) {
+    console.error("压不成：" + String(压.stderr || 压.stdout).slice(0, 200));
+    process.exit(1);
+  }
+} else {
+  压目录(目录, 出);
 }
 
 console.log("摊开 " + fs.readdirSync(目录).length + " 项（含两个入口与一张成员表）→ " + 出);

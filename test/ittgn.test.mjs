@@ -178,9 +178,12 @@ console.log("八、转换到 zip：入口释放出来，内容只摊一份");
 
   const 解 = path.join(临, "解开的");
   fs.mkdirSync(解, { recursive: true });
-  const 开 = spawnSync("powershell", ["-NoProfile", "-Command",
-    "Expand-Archive -Path '" + path.join(临, "转.zip") + "' -DestinationPath '" + 解 + "' -Force"],
-  { encoding: "utf8" });
+  // 解包按平台：Windows 是 Expand-Archive，别的平台是 unzip（2026-11-03）。
+  const 开 = process.platform === "win32"
+    ? spawnSync("powershell", ["-NoProfile", "-Command",
+      "Expand-Archive -Path '" + path.join(临, "转.zip") + "' -DestinationPath '" + 解 + "' -Force"],
+    { encoding: "utf8" })
+    : spawnSync("unzip", ["-q", "-o", path.join(临, "转.zip"), "-d", 解], { encoding: "utf8" });
   ok("解得出", fs.existsSync(解), String(开.status));
   ok("成员在里面", fs.existsSync(path.join(解, "转", "main.hmoca")));
   ok("hmsnp 在根目录", fs.existsSync(path.join(解, "转.hmsnp")));
