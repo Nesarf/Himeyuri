@@ -251,13 +251,17 @@ console.log("六、call_c 的三条失败");
         if (编程序.status !== 0) return { stderr: String(编程序.stderr || "") };
         return spawnSync(exe, [码], { encoding: "utf8", timeout: 300000, env: { ...process.env, HMYR_STEPS: "4000000000" } });
       };
-      const 甲 = 跑一条("没有这个库.dll", "abs", "(0 - 7,)");
+      // 库名按平台取：Windows 是 msvcrt.dll，Linux 是 libc.so.6，abs 两边都在里头。
+      // 2026-11-03 之前这里写死了 msvcrt.dll，于是 Linux 上后三项全红在「打不开库」。
+      const 库名 = process.platform === "win32" ? "msvcrt.dll" : "libc.so.6";
+      const 没有的库 = process.platform === "win32" ? "没有这个库.dll" : "没有这个库.so";
+      const 甲 = 跑一条(没有的库, "abs", "(0 - 7,)");
       ok("打不开库是 HMYR-器-013", String(甲.stderr || "").includes("HMYR-器-013"), String(甲.stderr || "").slice(0, 140));
-      const 乙 = 跑一条("msvcrt.dll", "没有这个符号", "(0 - 7,)");
+      const 乙 = 跑一条(库名, "没有这个符号", "(0 - 7,)");
       ok("找不到符号是 HMYR-器-014", String(乙.stderr || "").includes("HMYR-器-014"), String(乙.stderr || "").slice(0, 140));
-      const 丙 = 跑一条("msvcrt.dll", "abs", '("不是数",)');
+      const 丙 = 跑一条(库名, "abs", '("不是数",)');
       ok("传不了的类型是 HMYR-器-015", String(丙.stderr || "").includes("HMYR-器-015"), String(丙.stderr || "").slice(0, 140));
-      const 丁 = 跑一条("msvcrt.dll", "abs", "(0 - 7,)");
+      const 丁 = 跑一条(库名, "abs", "(0 - 7,)");
       ok("而对了就给出七", String(丁.stdout || "").includes("7"), String(丁.stdout || "") + " / " + String(丁.stderr || "").slice(0, 100));
     }
   }

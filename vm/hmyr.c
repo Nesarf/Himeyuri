@@ -88,6 +88,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <dlfcn.h>
 #endif
 
 /* 「标准输入是不是一个终端」——两家的名字不一样，收成一个宏。
@@ -1023,15 +1024,18 @@ static Value v_str(const uint16_t *p, uint32_t len) {
 /* 一个 ASCII 串变成语言里的字符串。终端与诊断都拿它交回短序列：
  * 那些序列里没有一个字节是中文，所以逐字节摊成码元就够。 */
 /* 把 HMYR 的串折成 C 的 ASCII（非 ASCII 按低八位截断 —— ABI 第三节说字符串借而不复制，而这一版只认 ASCII）。 */
-/* 只在桌面上：板子既没有 LoadLibrary 也没有 dlopen，所以串到ascii 只给 call_c 用。 */
-#if defined(_WIN32)
+/* 桌面两支的 call_c 都用它：Windows 的 LoadLibraryA 与 POSIX 的 dlopen 都要一个
+ * 窄字符的库名。板子上没有 call_c，所以那边用不到 —— 而「用不到」在这个仓库里
+ * 是有代价的：gcc 会报 unused-function，而那条警告是真的（说明这块代码在那台
+ * 机器上没有归属）。2026-11-03 补 POSIX 那一支时先漏了这一层，arm 那套当场红了。 */
+#if defined(_WIN32) || (!defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__))
 static void 串到ascii(const Value *v, char *buf, int cap) {
   uint32_t n = v->slen < (uint32_t)(cap - 1) ? v->slen : (uint32_t)(cap - 1);
   for (uint32_t i = 0; i < n; i++) buf[i] = (char)(v->s[i] & 0xFF);
   buf[n] = 0;
 }
+#endif
 
-#endif  /* _WIN32：串到ascii 只给 call_c 用 */
 static Value ascii_text(const char *s) {
   size_t n = strlen(s);
   uint16_t *p = 串存(n ? n : 1);
@@ -4839,8 +4843,27 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     return 1;
   }
 /* call_c 只在桌面上存在：板子没有 LoadLibrary、没有 dlopen、也没有对应的内存模型。
- * design/ABI.txt 第六节说的「跨平台要另写一段」在这里就体现为一层条件编译。 */
+ * design/ABI.txt 第六节说的「跨平台要另写一段」在这里就体现为一层条件编译。
+ *
+ * 2026-11-03：两支都做了。Windows 是 LoadLibraryA / GetProcAddress / FreeLibrary，
+ * POSIX 是 dlopen / dlsym / dlclose —— 名字不同，形状一样。所以把三样各收成一个宏，
+ * 中间那一百行（参数检查、错误码、按参数个数分派的调用）一个字都不必写两遍。
+ * 这一处是「桌面等于 Windows」的最后一个角落：ffi 那套的四项红就出在这里。 */
 #if defined(_WIN32)
+#define 库句柄 HMODULE
+#define 函指针 FARPROC
+#define 开库(名) LoadLibraryA(名)
+#define 取符号(模, 名) GetProcAddress(模, 名)
+#define 关库(模) FreeLibrary(模)
+#elif !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
+#define 库句柄 void *
+#define 函指针 void *
+#define 开库(名) dlopen(名, RTLD_NOW)
+#define 取符号(模, 名) dlsym(模, 名)
+#define 关库(模) dlclose(模)
+#endif
+
+#if defined(_WIN32) || (!defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__))
   if (name_is(名off, "call_c")) {
     /* 调一个 C 函数（design/ABI.txt 第四节）。这一版只走 Windows：dlfcn 在 MinGW 上
      * 没有，而这一台本来就 include <windows.h> —— 所以是 LoadLibraryA 与 GetProcAddress。
@@ -4860,14 +4883,14 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
     char 库名[512], 符号[256];
     串到ascii(&args[0], 库名, (int)sizeof 库名);
     串到ascii(&args[1], 符号, (int)sizeof 符号);
-    HMODULE 模 = LoadLibraryA(库名);
+    库句柄 模 = 开库(库名);
     if (!模) {
       fail("HMYR-器-013", "call_c cannot open the library; check the name and the working directory");
       return 1;
     }
-    FARPROC 函 = GetProcAddress(模, 符号);
+    函指针 函 = 取符号(模, 符号);
     if (!函) {
-      FreeLibrary(模);
+      关库(模);
       fail("HMYR-器-014", "call_c cannot find that symbol in the library");
       return 1;
     }
@@ -4877,7 +4900,7 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
       if (项.tag == T_NUM) 数们[i] = (int)项.num;
       else if (项.tag == T_BOOL) 数们[i] = 项.boolean ? 1 : 0;
       else {
-        FreeLibrary(模);
+        关库(模);
         fail("HMYR-器-015", "call_c this version takes only numbers and booleans; strings come later");
         return 1;
       }
@@ -4890,15 +4913,15 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
       case 2: 结果 = ((int (*)(int, int))函)(数们[0], 数们[1]); break;
       case 3: 结果 = ((int (*)(int, int, int))函)(数们[0], 数们[1], 数们[2]); break;
       default:
-        FreeLibrary(模);
+        关库(模);
         fail("HMYR-行-002", "call_c this version takes at most three arguments");
         return 1;
     }
-    FreeLibrary(模);
+    关库(模);
     *out = v_num((double)结果);
     return 1;
   }
-#endif  /* _WIN32：call_c 只在桌面上 */
+#endif  /* 桌面两支：call_c 不在板子上 */
   if (name_is(名off, "view_len")) {
     if (nargs != 1) { fail("HMYR-行-002", "view_len wants one argument"); return 1; }
     Value 类值, 长值;
