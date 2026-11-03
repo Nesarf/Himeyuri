@@ -178,12 +178,15 @@ console.log("八、转换到 zip：入口释放出来，内容只摊一份");
 
   const 解 = path.join(临, "解开的");
   fs.mkdirSync(解, { recursive: true });
-  // 解包按平台：Windows 是 Expand-Archive，别的平台是 unzip（2026-11-03）。
+  // 解包按平台：Windows 是 Expand-Archive，别的平台是 python3 的 zipfile（2026-11-03）。
+  // 不用 unzip：它不认 ZIP 里的 UTF-8 标志，中文成员名会解成乱码（见 from-zip 的注释）。
   const 开 = process.platform === "win32"
     ? spawnSync("powershell", ["-NoProfile", "-Command",
       "Expand-Archive -Path '" + path.join(临, "转.zip") + "' -DestinationPath '" + 解 + "' -Force"],
     { encoding: "utf8" })
-    : spawnSync("unzip", ["-q", "-o", path.join(临, "转.zip"), "-d", 解], { encoding: "utf8" });
+    : spawnSync("python3", ["-c",
+      "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])",
+      path.join(临, "转.zip"), 解], { encoding: "utf8" });
   ok("解得出", fs.existsSync(解), String(开.status));
   ok("成员在里面", fs.existsSync(path.join(解, "转", "main.hmoca")));
   ok("hmsnp 在根目录", fs.existsSync(path.join(解, "转.hmsnp")));

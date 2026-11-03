@@ -27,11 +27,17 @@ const 包名 = path.basename(包路).replace(/\.zip$/i, "");
 const 出 = path.resolve(参[1] || path.join(process.cwd(), 包名 + 容器后缀));
 
 const 目录 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-ittgn-r-"));
-// 解包按平台：Windows 是 Expand-Archive，别的平台是 unzip（2026-11-03）。
+// 解包按平台：Windows 是 Expand-Archive，别的平台是 python3 的 zipfile（2026-11-03）。
+//
+// 不用 unzip 而用 python3，理由是具体的：容器摊开之后成员名可能是中文（比如「往」），
+// 而压缩那一侧写的是 ZIP 的 UTF-8 标志（0x0800，见 src/zip-writer.mjs）。
+// Info-ZIP 的 unzip 不认那条标志，会按 CP437 解，于是「往」变成 х╛А ——
+// 名字一乱，反方向就找不到入口，报的是「根目录既没有 往.hmsnp」。python3 认它。
 const 开 = process.platform === "win32"
   ? spawnSync("powershell", ["-NoProfile", "-Command",
     "Expand-Archive -Path '" + 包路 + "' -DestinationPath '" + 目录 + "' -Force"], { encoding: "utf8" })
-  : spawnSync("unzip", ["-q", "-o", 包路, "-d", 目录], { encoding: "utf8" });
+  : spawnSync("python3", ["-c",
+    "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])", 包路, 目录], { encoding: "utf8" });
 if (开.status !== 0) {
   console.error("解不开：" + String(开.stderr || 开.stdout).slice(0, 200));
   process.exit(1);
