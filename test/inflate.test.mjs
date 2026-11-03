@@ -136,6 +136,41 @@ if (!有编译器) {
       }
     }
 
+    console.log("三·七、大的动态流：整份种子与十倍，走 zlib 的默认策略");
+    {
+      // 三·六那三条只有四 KB，一两块就完事 —— 而动态块的表解码是这一版新加的路：
+      // 码表按块建、九位装不下的长码退回逐位读。块数少，建表与「一块接一块」的头读
+      // 都走不完。这一节用整份种子与它的十倍，zlib 的默认策略写的是 BTYPE=2。
+      //
+      // 步数上限那一条盯的是收益本身：动态块原来每输出一个字节七百五十步，
+      // 改成按块建表之后一百八十七。步数是确定的数 —— 同一份字节码、同一份输入，
+      // 换台机器也一样，所以它可以当判据，而墙钟不行。
+      for (const 倍 of [1, 10]) {
+        const 大 = Buffer.concat(Array.from({ length: 倍 }, () => 全));
+        const 流 = zlib.deflateRawSync(大);
+        const 型 = (流[0] - 流[0] % 2) / 2 % 4;
+        const 流路 = path.join(临, "bigdyn-" + 倍 + ".z");
+        const 出路 = path.join(临, "bigdyn-" + 倍 + ".out");
+        fs.writeFileSync(流路, 流);
+        const t0 = Date.now();
+        const r = spawnSync(exe, [解路, 流路, 出路], {
+          encoding: "utf8", timeout: 1800000,
+          env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0", HMYR_OPS: "1" },
+        });
+        const 秒 = ((Date.now() - t0) / 1000).toFixed(1);
+        const 回 = fs.existsSync(出路) ? fs.readFileSync(出路) : null;
+        const m = /ops=(\d+)/.exec(String(r.stderr || ""));
+        const ops = m ? Number(m[1]) : NaN;
+        ok(倍 + " 倍的动态块确实是 BTYPE=2", 型 === 2, "BTYPE=" + 型);
+        ok(倍 + " 倍的动态流解得回原样",
+          r.status === 0 && 回 && 回.length === 大.length && Buffer.compare(大, 回) === 0,
+          String(r.status) + " 用时 " + 秒 + "s " + (回 ? 回.length : 0));
+        ok(倍 + " 倍的动态流没过步数上限",
+          Number.isFinite(ops) && ops < 大.length * 260,
+          "ops=" + ops + " 上限 " + 大.length * 260);
+      }
+    }
+
         console.log("四、别人的流：zlib 用固定策略压的，HMYR 也解得开");
     {
       const z流 = path.join(临, "zlib.fixed");
