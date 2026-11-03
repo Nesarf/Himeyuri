@@ -44,6 +44,15 @@ param(
 
 # The event list: a kind plus its own fields. Injected and really-received events both land
 # here, so the receipt has exactly one shape.
+#
+# Five kinds (2026-11-03): the first two were always here, the last three are the "still
+# missing" list from design/OPEN.txt item 12.
+#   key:A        a key press
+#   mouse:10,20  a click at a point
+#   move:10,20   the pointer moving to a point (no button)
+#   wheel:3      the wheel turning, positive is up
+#   key:A:3      a key held down, repeated three times -- the auto-repeat a real keyboard
+#                produces. Written as a third field so key:A keeps its old meaning.
 $eventList = New-Object System.Collections.ArrayList
 foreach ($piece in $Events.Split(";")) {
   $piece = $piece.Trim()
@@ -51,10 +60,19 @@ foreach ($piece in $Events.Split(";")) {
   $parts = $piece.Split(":")
   if ($parts.Count -lt 2) { continue }
   if ($parts[0] -eq "key") {
-    [void]$eventList.Add(@{ kind = "key"; value = $parts[1] })
+    if ($parts.Count -gt 2 -and $parts[2] -ne "") {
+      [void]$eventList.Add(@{ kind = "key"; value = $parts[1]; repeat = [int]$parts[2] })
+    } else {
+      [void]$eventList.Add(@{ kind = "key"; value = $parts[1] })
+    }
   } elseif ($parts[0] -eq "mouse") {
     $xy = $parts[1].Split(",")
     [void]$eventList.Add(@{ kind = "mouse"; x = [int]$xy[0]; y = [int]$xy[1] })
+  } elseif ($parts[0] -eq "move") {
+    $xy = $parts[1].Split(",")
+    [void]$eventList.Add(@{ kind = "move"; x = [int]$xy[0]; y = [int]$xy[1] })
+  } elseif ($parts[0] -eq "wheel") {
+    [void]$eventList.Add(@{ kind = "wheel"; delta = [int]$parts[1] })
   }
 }
 

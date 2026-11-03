@@ -130,19 +130,36 @@ def parse(argv):
 
 
 def parse_events(text):
-    # Semicolons between events, commas only inside a mouse pair -- win.ps1 learned that the
-    # hard way (a comma split mouse:10,20 into three pieces and y came back as 0).
+    # Semicolons between events, commas only inside a pair -- win.ps1 learned that the hard way
+    # (a comma split mouse:10,20 into three pieces and y came back as 0).
+    #
+    # Five kinds now (2026-11-03): the first two were always here, the last three are the
+    # "still missing" list from design/OPEN.txt item 12.
+    #   key:A        a key press
+    #   mouse:10,20  a click at a point
+    #   move:10,20   the pointer moving to a point (no button)
+    #   wheel:3      the wheel turning, positive is up
+    #   key:A:3      a key held down, repeated three times -- the auto-repeat a real keyboard
+    #                produces. Written as a third field so key:A keeps its old meaning.
     events = []
     for piece in text.split(";"):
         if not piece:
             continue
         if piece.startswith("key:"):
-            events.append({"kind": "key", "value": piece[4:]})
-        elif piece.startswith("mouse:"):
-            pair = piece[6:].split(",")
+            rest = piece[4:]
+            parts = rest.split(":")
+            if len(parts) > 1 and parts[1]:
+                events.append({"kind": "key", "value": parts[0], "repeat": int(parts[1])})
+            else:
+                events.append({"kind": "key", "value": rest})
+        elif piece.startswith("mouse:") or piece.startswith("move:"):
+            kind = "mouse" if piece.startswith("mouse:") else "move"
+            pair = piece.split(":", 1)[1].split(",")
             x = int(pair[0]) if len(pair) > 0 and pair[0] else 0
             y = int(pair[1]) if len(pair) > 1 and pair[1] else 0
-            events.append({"kind": "mouse", "x": x, "y": y})
+            events.append({"kind": kind, "x": x, "y": y})
+        elif piece.startswith("wheel:"):
+            events.append({"kind": "wheel", "delta": int(piece[6:] or "0")})
     return events
 
 

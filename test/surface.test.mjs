@@ -202,6 +202,20 @@ console.log("会话：窗活着的那一段时间里，事件进得去、帧换�
 
   const 坏 = call("会话", ["term", 主(2, 4), "hello", 0, 0, ""]);
   ok("字符后端不承认开会话，如实说", 坏.ok === false && String(坏.text).indexOf("这个后端还不开会话") >= 0, JSON.stringify(坏));
+
+  // 后三种事件（design/OPEN.txt 第十二条记的「仍然没有的」）：指针移动、滚轮、长按重复。
+  // 三种都是注入的，与 key/mouse 走同一条路 —— 所以它们检验的是「回执把注入的东西
+  // 原样带回来」，而不是「真的有人在滚轮」。
+  const 多 = call("会话", ["native", 主(2, 4), "hello", 0, 0, "move:33,44;wheel:3;key:B:4"]);
+  ok("指针移动原样回来", String(多.text).indexOf("\"kind\":\"move\"") >= 0
+     && String(多.text).indexOf("\"x\":33") >= 0 && String(多.text).indexOf("\"y\":44") >= 0,
+     JSON.stringify(String(多.text).slice(0, 240)));
+  ok("滚轮的方向也在", String(多.text).indexOf("\"kind\":\"wheel\"") >= 0
+     && String(多.text).indexOf("\"delta\":3") >= 0, JSON.stringify(String(多.text).slice(0, 240)));
+  ok("长按的重复次数也在", String(多.text).indexOf("\"repeat\":4") >= 0,
+     JSON.stringify(String(多.text).slice(0, 240)));
+  ok("老的 key 仍然只有 value（不因新字段变样）", String(多.text).indexOf("\"value\":\"B\"") >= 0,
+     JSON.stringify(String(多.text).slice(0, 240)));
 }
 
 console.log("");
