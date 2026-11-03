@@ -6,11 +6,25 @@
 #   HMYR-SURFACE {"shown":false,"width":640,"height":400,"text_len":5,
 #                 "image":false,"image_w":0,"image_h":0,"frames":2,"events":[...]}
 #
-# This one only does the -NoShow path: check the arguments, read the image size, work out how
-# many frame changes would have happened, hand back the receipt. Opening a real window needs an
-# X11 binding -- libX11 is on this machine (1.8.13-1) but writing that binding is its own piece
-# of work, and mixing it into the cross-system round would have made neither reviewable. So a
-# call that asks for a real window says so instead of pretending one opened.
+# Two paths:
+#
+#   -NoShow   check the arguments, read the image size, work out how many frame changes would
+#             have happened, hand back the receipt. No window. This is what the suite uses by
+#             default, and it is what win.ps1's -NoShow does.
+#   default   the same receipt, then open a real X11 window, print the receipt again with
+#             "shown":true and "window":<id>, hold it for ShowMs, destroy it.
+#
+# Why the window id is in the receipt: it makes "a window really appeared" checkable by another
+# process instead of by eye. test/surface.test.mjs reads that id while this process is holding
+# the window and asks XGetWindowAttributes whether it is viewable; after this process exits the
+# same call finds nothing. That is the criterion design/OPEN.txt was waiting for.
+#
+# Why the receipt is printed before the hold, and flushed: a caller that wants to check the
+# window needs the id while the window exists. Printing only at the end would leave nothing to
+# look at.
+#
+# Why ctypes instead of tkinter: this machine has libX11 (1.8.13-1) and no libtk, so tkinter
+# cannot even import. Xlib is the layer below both and needs no installation.
 #
 # The frame count under -NoShow is "how many changes would have happened", which is the frame
 # count minus one -- the same convention win.ps1 uses, and the same one the suite expects.
@@ -18,8 +32,10 @@
 # ASCII ONLY, comments included: deps/surface carries that rule for the .ps1 files because
 # powershell 5.1 decodes them in the current code page. This file does not have that problem,
 # but it lives in the same directory under the same rule, and one rule is easier to check.
+import ctypes
 import json
 import sys
+import time
 
 DEFAULTS = {
     "Width": "640",
@@ -32,6 +48,64 @@ DEFAULTS = {
     "Frames": "0",
     "NoShow": False,
 }
+
+# From X.h: map_state values. Named here rather than imported -- there is no python-xlib on this
+# machine, and these two numbers are stable ABI.
+IS_UNMAPPED = 0
+IS_VIEWABLE = 2
+
+
+class XWindowAttributes(ctypes.Structure):
+    """The Xlib struct, field for field. Only map_state is read, but the layout before it has
+    to be right or the offset lands somewhere else -- so all of it is declared."""
+    _fields_ = [
+        ("x", ctypes.c_int),
+        ("y", ctypes.c_int),
+        ("width", ctypes.c_int),
+        ("height", ctypes.c_int),
+        ("border_width", ctypes.c_int),
+        ("depth", ctypes.c_int),
+        ("visual", ctypes.c_void_p),
+        ("root", ctypes.c_ulong),
+        ("c_class", ctypes.c_int),
+        ("bit_gravity", ctypes.c_int),
+        ("win_gravity", ctypes.c_int),
+        ("backing_store", ctypes.c_int),
+        ("backing_planes", ctypes.c_ulong),
+        ("backing_pixel", ctypes.c_ulong),
+        ("save_under", ctypes.c_int),
+        ("colormap", ctypes.c_ulong),
+        ("map_installed", ctypes.c_int),
+        ("map_state", ctypes.c_int),
+        ("all_event_masks", ctypes.c_long),
+        ("your_event_mask", ctypes.c_long),
+        ("do_not_propagate_mask", ctypes.c_long),
+        ("override_redirect", ctypes.c_int),
+        ("screen", ctypes.c_void_p),
+    ]
+
+
+def load_xlib():
+    lib = ctypes.CDLL("libX11.so.6")
+    lib.XOpenDisplay.restype = ctypes.c_void_p
+    lib.XOpenDisplay.argtypes = [ctypes.c_char_p]
+    lib.XDefaultRootWindow.restype = ctypes.c_ulong
+    lib.XDefaultRootWindow.argtypes = [ctypes.c_void_p]
+    lib.XCreateSimpleWindow.restype = ctypes.c_ulong
+    lib.XCreateSimpleWindow.argtypes = [
+        ctypes.c_void_p, ctypes.c_ulong,
+        ctypes.c_int, ctypes.c_int, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint,
+        ctypes.c_ulong, ctypes.c_ulong,
+    ]
+    lib.XStoreName.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_char_p]
+    lib.XMapWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
+    lib.XFlush.argtypes = [ctypes.c_void_p]
+    lib.XDestroyWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
+    lib.XCloseDisplay.argtypes = [ctypes.c_void_p]
+    lib.XGetWindowAttributes.argtypes = [
+        ctypes.c_void_p, ctypes.c_ulong, ctypes.POINTER(XWindowAttributes),
+    ]
+    return lib
 
 
 def parse(argv):
@@ -72,6 +146,12 @@ def parse_events(text):
     return events
 
 
+def emit(report):
+    """One line, flushed: a caller waiting for the window id cannot see it otherwise."""
+    sys.stdout.write("HMYR-SURFACE " + json.dumps(report, separators=(",", ":"), ensure_ascii=False) + "\n")
+    sys.stdout.flush()
+
+
 def main():
     args = parse(sys.argv[1:])
     if args is None:
@@ -80,8 +160,6 @@ def main():
     text = args["Text"]
     frames = text.split("|")
     interval = int(args["Frames"] or "0")
-    # Under -NoShow there is no time to change frames in, so report how many changes would
-    # have happened. Not a lie: it is the convention both this file and win.ps1 follow.
     planned = (len(frames) - 1) if (interval > 0 and len(frames) > 1) else 0
 
     image = args["Image"]
@@ -96,10 +174,12 @@ def main():
             sys.stderr.write("cannot read the image: " + str(exc) + "\n")
             return 1
 
+    width = int(args["Width"] or "640")
+    height = int(args["Height"] or "400")
     report = {
         "shown": False,
-        "width": int(args["Width"] or "640"),
-        "height": int(args["Height"] or "400"),
+        "width": width,
+        "height": height,
         "text_len": len(text),
         "image": bool(image),
         "image_w": image_w,
@@ -107,14 +187,36 @@ def main():
         "frames": planned,
         "events": parse_events(args["Events"]),
     }
-    print("HMYR-SURFACE " + json.dumps(report, separators=(",", ":"), ensure_ascii=False))
 
-    if not args["NoShow"]:
-        # A real window was asked for. This build does not open one, and saying so on stderr
-        # keeps the exit code honest without making the receipt a lie.
-        sys.stderr.write(
-            "this machine has libX11 but no window binding in this file: "
-            "the receipt was produced without opening a window\n")
+    if args["NoShow"]:
+        emit(report)
+        return 0
+
+    # The real path: open a window, say where it is, hold it, close it.
+    lib = load_xlib()
+    display = lib.XOpenDisplay(None)
+    if not display:
+        sys.stderr.write("cannot open the X display: is DISPLAY set and the server running?\n")
+        report["window"] = 0
+        emit(report)
+        return 1
+
+    root = lib.XDefaultRootWindow(display)
+    window = lib.XCreateSimpleWindow(display, root, 0, 0, width, height, 1, 0, 0)
+    lib.XStoreName(display, window, b"HMYR surface")
+    lib.XMapWindow(display, window)
+    lib.XFlush(display)
+
+    report["shown"] = True
+    report["window"] = int(window)
+    emit(report)
+
+    # Hold it. sleep is enough: nothing here consumes X events, and X keeps the window mapped
+    # until this process destroys it or exits. A caller checks it during this window of time.
+    time.sleep(max(0.0, int(args["ShowMs"] or "1200") / 1000.0))
+
+    lib.XDestroyWindow(display, window)
+    lib.XCloseDisplay(display)
     return 0
 
 

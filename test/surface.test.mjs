@@ -205,6 +205,44 @@ console.log("会话：窗活着的那一段时间里，事件进得去、帧换�
 }
 
 console.log("");
+console.log("真窗口：开出来，另一个进程查得见，关掉之后查不见");
+if (process.platform !== "linux") {
+  // 这一节问的是 X11 的窗口表。Windows 那一侧的真窗口是 WPF（deps/surface/win.ps1），
+  // 它不交窗口 id，也没有 X11 可问 —— 而「窗口在不在」在那条路上没有别的自动判据，
+  // 所以在别的平台上如实跳过，而不是拿一句「反正开了」冒充。
+  console.log("  跳过  这一节问的是 X11 的窗口表（libX11），Windows 上那一侧是 WPF");
+} else {
+  // 三件事，一条链：后端开窗并把 id 打进回执；另一个进程（xprobe.py）查得见 viewable；
+  // 后端退出之后同一个 id 查出来是 gone。
+  // 2026-11-03 立的这一节：在那之前，真开窗没有任何自动判据，只能靠眼睛。
+  // spawnSync 在别的节里是局部 import 的，这一节自己取一份。
+  const { spawnSync } = await import("node:child_process");
+  const 行批 = [
+    "set -u",
+    "T=$(mktemp)",
+    'python3 deps/surface/win.py -ShowMs 1500 > "$T" 2>&1 &',
+    "P=$!",
+    "sleep 0.9",
+    "ID=$(grep -o '\"window\":[0-9]*' \"$T\" | head -1 | cut -d: -f2)",
+    'echo "id:$ID"',
+    'echo "alive:$(python3 deps/surface/xprobe.py "$ID")"',
+    'wait "$P"',
+    'echo "after:$(python3 deps/surface/xprobe.py "$ID")"',
+    'rm -f "$T"',
+  ].join("\n");
+  const 跑体 = spawnSync("bash", ["-c", 行批], { cwd: ROOT, encoding: "utf8", timeout: 120000 });
+  const 出 = String(跑体.stdout || "");
+  const 取 = (键) => {
+    const m = 出.match(new RegExp("^" + 键 + ":(.*)$", "m"));
+    return m ? m[1].trim() : "";
+  };
+  const 窗 = 取("id");
+  ok("真的拿到了一个窗口 id", /^[0-9]+$/.test(窗), 出.slice(0, 200));
+  ok("窗口活着的时候 X 说 viewable", 取("alive") === "viewable", 出.slice(0, 200));
+  ok("后端退出之后同一个 id 是 gone", 取("after") === "gone", 出.slice(0, 200));
+}
+
+console.log("");
 console.log("deps/surface 下的 .ps1 只许 ASCII —— 这是 powershell.exe 5.1 的代码页，不是洁癖");
 {
   // powershell.exe 5.1（不是 pwsh 7）读脚本时，没有 BOM 就按当前代码页解码。

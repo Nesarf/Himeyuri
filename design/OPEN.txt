@@ -23,6 +23,15 @@
       核对的判据，否则写完也无从判断对不对。
       这台机器的条件是量过的：libX11 在（1.8.13-1），libtk 不在，于是 python3 的
       tkinter 起不来；sudo 要密码，所以装不了 tk。
+
+      收掉了（2026-11-03 更晚）：判据先立，再写窗口。deps/surface/win.py 用 ctypes
+      调 libX11 真开一个窗口，把窗口 id 打进回执；deps/surface/xprobe.py 拿那个 id
+      问 XGetWindowAttributes 要 map_state。test/surface.test.mjs 因此多一条链 ——
+      后端开窗、另一个进程查得见 viewable、后端退出之后同一个 id 是 gone ——
+      那一套从四十九项到五十二项。
+      两个坑写在代码里：Xlib 默认的错误处理器遇到 BadWindow 会 exit()，探针要装一个
+      只记下错误的；回执必须在「按住窗口」之前打出来并 flush，否则调用方拿不到 id。
+      Windows 那一侧仍然是 WPF，它不交 id 也没有 X11 可问 —— 那一节在那里如实跳过。
   二、call_c 的混合形状。
       这一版认「零到三个数字」与「一个字符串」两种，数与串掺在一起报 HMYR-器-015。
       要做的是「谁按什么顺序摊进可变参数」—— ABI 第三节那一格。
