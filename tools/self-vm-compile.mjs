@@ -151,7 +151,10 @@ console.log("三、验签也在虚拟机上跑");
     const 真签 = path.join(ROOT, "dist/manifest.json.sig");
     const 真文 = path.join(ROOT, "dist/manifest.json");
     if (!fs.existsSync(真签) || !fs.existsSync(真文)) {
-      ok("dist 里有真实签名", false, "没有 dist/manifest.json.sig");
+      // 这一条要的是「一份真的、已经签过的发布物」。没有钥匙的机器（比如 WSL）
+      // 打出来的包只有内容寻址，没有签名 —— 那时如实跳过，而不是报红：
+      // 缺的是产物，不是代码。2026-11-03 在这里踩到过，报红的样子很像「验不过」。
+      console.log("  跳过  dist 里没有 manifest.json 与它的签名：这一台没有签名钥匙");
     } else {
       const r = 签vm.调用("验文件", [真签, 真文], null);
       const 结果 = r && r.ok ? r.值 : null;

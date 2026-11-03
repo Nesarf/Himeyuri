@@ -100,6 +100,12 @@ if (fs.existsSync(钥匙) && fs.existsSync(私钥)) {
     console.log("  签名没成：" + String(签.stderr || 签.stdout).trim().slice(0, 100));
   }
 } else {
+  // 没有钥匙就不签。而旧的 .sig 必须在这里删掉：清单刚被打过，那份签名对应的是
+  // 上一份清单 —— 留着它，下游（test/sign、test/ssh）会拿一份过期的签名去验，
+  // 报出来的是「验不过」，而真正的原因是「这份签名签的不是这份清单」。
+  // 2026-11-03 在 WSL 上踩到：那边没有私钥，跑过一次 package 之后 sign 就红了。
+  fs.rmSync(path.join(ROOT, "dist/manifest.json.sig"), { force: true });
   console.log("  这台机器上没有签名钥匙——于是这一包只有内容寻址，没有签名。");
+  console.log("  旧的 dist/manifest.json.sig 已删：它对应的是上一份清单。");
 }
 console.log("  注意：zip 没有内嵌签名位置，所以签的是清单，不是 zip 本身。");

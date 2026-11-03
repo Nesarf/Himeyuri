@@ -140,6 +140,11 @@ const SUITES = [
   ["pkgmanifest", "test/pkg-manifest.test.mjs", "design/PKGMAN.txt - a package says who it is: four fields, a shape check while loading (HMYR-載-007), and a hash check by a tool that is allowed to borrow a crypto library"],
   ["packbytes", "test/pack-bytes.test.mjs", "design/COMPILER.txt - two packers, one bytecode: self/pack.hmoca and src/code-file.mjs write the same bytes for the same source; and two compilers, the JavaScript one and the bootstrap one, agree on what the program prints"],
   ["hmget", "test/hmget.test.mjs", "design/HMGET.txt - taking a package: a local directory or a file URL as the source, the manifest hash checked before anything moves, an existing different package refused unless asked, and http refused by name because the criterion has to be reproducible"],
+  // surface 的四十九项里三十八项在语言层就能跑（子表面叠在主表面上、帧是数据）；
+  // 另外十一项要 deps/surface/win.ps1 那个真窗口后端（native 呈现、图像、会话）。
+  // 2026-11-03 在 WSL 上试过：DISPLAY=:0 与 wayland-0 都在（WSLg），所以那三段的红
+  // 与「有没有显示」无关 —— 是「没有那份后端」。于是它仍然标缺席，而准确的说法是：
+  // 缺一个 POSIX 的窗口后端，不是缺一台有显示器的机器。
   ["surface", "test/surface.test.mjs", "SPEC M7 - several sub surfaces composited onto the main one, the way real windows will be", { 需要: ["powershell"] }],
   ["pixel", "test/pixel.test.mjs", "SPEC M7 - a second kind of buffer: pixels, and a real PNG comes out the other end", { 需要: ["python-pil"] }],
   // parallel 现在两台各一份脚本（parallel.ps1 / parallel.sh），而 parallel.hmoca
