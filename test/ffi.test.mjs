@@ -271,6 +271,39 @@ console.log("六、call_c 的三条失败");
       const 戊 = 跑一条(库名, "strlen", '("abc",)');
       ok("字符串参数：strlen(\"abc\") 得三", String(戊.stdout || "").trim() === "3",
          String(戊.stdout || "") + " / " + String(戊.stderr || "").slice(0, 120));
+      // 掺在一起的形状要一个自己的函数：系统库里没有「(int, const char*) 得 int」
+      // 这样一粒。所以在这里编一份 .so/.dll —— 用的还是同一个 gcc 与同一份平台参数，
+      // 与 vm/hmyr.c 那台共一条路。2026-11-03 加的：这一版之前只认「一个字符串」，
+      // 数与串掺在一起报 HMYR-器-015。
+      const 库源 = path.join(子, "fixtures.c");
+      fs.writeFileSync(库源, [
+        "/* 判据用的两种形状：数在前与串在前。串的长度算进结果，于是「串真的到了」可验。 */",
+        "int take_int_then_str(int n, const char *s) {",
+        "  int len = 0;",
+        "  while (s && s[len]) len++;",
+        "  return n * 100 + len;",
+        "}",
+        "int take_str_then_int(const char *s, int n) {",
+        "  int len = 0;",
+        "  while (s && s[len]) len++;",
+        "  return n * 100 + len;",
+        "}",
+        "",
+      ].join("\n"));
+      // 路径里的反斜杠要先换成正斜杠：它要进 HMYR 的字符串字面量，而那个词法不认
+      // \f 这种转义（2026-11-03 在 Windows 上踩到，报的是「子集不含这种转义」）。
+      const 库出 = path.join(子, process.platform === "win32" ? "fixtures.dll" : "fixtures.so").replace(/\\/g, "/");
+      const 编库 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-shared", ...平台参数(), "-o", 库出, 库源], { encoding: "utf8" });
+      if (编库.status !== 0) {
+        console.log("  跳过  判据用的共用库没编出来：" + String(编库.stderr || "").slice(0, 120));
+      } else {
+        const 混甲 = 跑一条(库出, "take_int_then_str", '(3, "abcd")');
+        ok("数在前、串在后：3 与 abcd 得 304", String(混甲.stdout || "").trim() === "304",
+           String(混甲.stdout || "") + " / " + String(混甲.stderr || "").slice(0, 120));
+        const 混乙 = 跑一条(库出, "take_str_then_int", '("abcd", 3)');
+        ok("串在前、数在后：abcd 与 3 得 304", String(混乙.stdout || "").trim() === "304",
+           String(混乙.stdout || "") + " / " + String(混乙.stderr || "").slice(0, 120));
+      }
     }
   }
 }

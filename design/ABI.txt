@@ -61,7 +61,13 @@ HMYR 调 C：ABI 那一页
   （LoadLibraryA / GetProcAddress / FreeLibrary），POSIX 是 libc.so.6 那一支
   （dlopen / dlsym / dlclose），中间那段（参数检查、三个错误码、按形状分派）
   是同一份代码。第二个（strlen）走的是「一个字符串摊成 char *」。
-  混合形状（数与串掺在一起）还没做，报 HMYR-器-015。
+
+  掺在一起的形状也做了：数与串各一个时，认「数在前」与「串在前」两种顺序
+  （(int, const char*) 与 (const char*, int)）。三参以上掺着串的仍然报
+  HMYR-器-015 —— 那需要一张完整的「谁按什么顺序摊」的表，而今天还没有人需要它。
+  判据是 test/ffi.test.mjs 自己编的一份共用库：take_int_then_str 与
+  take_str_then_int 各一条，都是 3 与 abcd 得 304（串的长度进了结果，于是
+  「串真的到了」可验）。
 
   第二例那句「不复制」在实现上是「只在调用期间转一份」：语言里的串是 UTF-16
   码元，而 C 那边要 UTF-8，所以调用前转、调用后放。第三条说的是「调用期间有效、

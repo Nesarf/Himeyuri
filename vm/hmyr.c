@@ -4916,19 +4916,26 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
         return 1;
       }
     }
-    /* 分派：全是数就按个数摊进 int 可变参数；有一个串就只认「一个字符串」那一种
-     * 形状 —— ABI 第四节第二个例子就是它（call_c("libc.so.6", "strlen", ("abc",))
-     * 得 3）。混合形状（数与串掺在一起）要处理「谁按什么顺序摊」，那是下一格。 */
+    /* 分派：全是数就按个数摊进 int 可变参数；有串就按它所在的位置挑签名。
+     * ABI 第四节的两个例子各占一种形状（abs 全是数、strlen 一个串），而掺在一起的
+     * 那种（数 + 串）在 2026-11-03 补上：它认「数在前」与「串在前」两种顺序。
+     * 三参以上掺着串的仍然报 015 —— 那要的是「谁按什么顺序摊」的完整表，不是猜。 */
     int 结果 = 0;
     if (有串) {
-      if (args[2].ilen != 1 || !串们[0]) {
+      const uint32_t 个 = args[2].ilen;
+      if (个 == 1 && 串们[0]) {
+        结果 = ((int (*)(const char *))函)(串们[0]);
+      } else if (个 == 2 && !串们[0] && 串们[1]) {
+        结果 = ((int (*)(int, const char *))函)(数们[0], 串们[1]);
+      } else if (个 == 2 && 串们[0] && !串们[1]) {
+        结果 = ((int (*)(const char *, int))函)(串们[0], 数们[1]);
+      } else {
         for (int k = 0; k < 8; k++) free(串们[k]);
         关库(模);
-        fail("HMYR-器-015", "call_c takes either one string or zero to three numbers, not a mix");
+        fail("HMYR-器-015", "call_c takes one string, two arguments with one string, or zero to three numbers");
         return 1;
       }
-      结果 = ((int (*)(const char *))函)(串们[0]);
-      free(串们[0]);
+      for (int k = 0; k < 8; k++) free(串们[k]);
     } else {
       switch (args[2].ilen) {
         case 0: 结果 = ((int (*)(void))函)(); break;
