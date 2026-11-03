@@ -257,6 +257,33 @@ if (process.platform !== "linux") {
 }
 
 console.log("");
+console.log("屏幕与缩放：问 X11，不靠猜");
+if (process.platform !== "linux") {
+  // 与真窗口那一节同一个理由：这一节问的是 X11。Windows 那一侧的取法完全不同
+  // （GetSystemMetrics 与 DPI awareness），而今天没有第二个后端，所以如实跳过。
+  console.log("  跳过  这一节问的是 X11 的屏幕表，Windows 上那一侧是另一套");
+} else {
+  // 两件事：主屏的像素与毫米（缩放由它们的比值决定），以及 Xinerama 认得几个显示器。
+  // 2026-11-03 立的 —— design/OPEN.txt 第十二条那条「还没有的」收的就是它。
+  // spawnSync 在别的节里也是局部 import 的，这一节自己取一份。
+  const { spawnSync } = await import("node:child_process");
+  const 屏 = spawnSync("python3", ["deps/surface/xprobe.py", "--screen"], { cwd: ROOT, encoding: "utf8", timeout: 60000 });
+  const 屏行 = String(屏.stdout || "").trim();
+  const 数 = (屏行.match(/screen:(\d+) (\d+)x(\d+) (\d+)x(\d+)mm dpi:([\d.]+)/) || []);
+  ok("主屏那四个数都拿到了", 数.length === 7, 屏行.slice(0, 120));
+  if (数.length === 7) {
+    ok("像素是正的", Number(数[2]) > 0 && Number(数[3]) > 0, 数[2] + "x" + 数[3]);
+    ok("毫米也是正的（缩放要从它算）", Number(数[4]) > 0 && Number(数[5]) > 0, 数[4] + "x" + 数[5]);
+    const 点 = Number(数[6]);
+    ok("算出的 DPI 在 72 到 300 之间（超出就说明毫米是假值）", 点 >= 72 && 点 <= 300, String(点));
+  }
+
+  const 屏们 = spawnSync("python3", ["deps/surface/xprobe.py", "--screens"], { cwd: ROOT, encoding: "utf8", timeout: 60000 });
+  const 行们 = String(屏们.stdout || "").trim().split("\n").filter((l) => l.startsWith("monitor:"));
+  ok("Xinerama 至少答一个显示器", 行们.length >= 1, String(屏们.status) + " " + String(屏们.stderr || "").slice(0, 120));
+  ok("每个显示器都报得出位置与尺寸", 行们.every((l) => /monitor:\d+ -?\d+,-?\d+ \d+x\d+/.test(l)), 行们.join(" | ").slice(0, 160));
+}
+
 console.log("deps/surface 下的 .ps1 只许 ASCII —— 这是 powershell.exe 5.1 的代码页，不是洁癖");
 {
   // powershell.exe 5.1（不是 pwsh 7）读脚本时，没有 BOM 就按当前代码页解码。

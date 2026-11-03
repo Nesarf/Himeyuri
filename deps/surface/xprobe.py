@@ -68,10 +68,100 @@ def _on_x_error(display, event):
 _HANDLER = X_ERROR_HANDLER(_on_x_error)
 
 
+class XineramaScreenInfo(ctypes.Structure):
+    """From Xinerama.h. The two origins and the size are shorts, the number is an int --
+    getting that order wrong reads plausible garbage instead of failing."""
+    _fields_ = [
+        ("screen_number", ctypes.c_int),
+        ("x_org", ctypes.c_short),
+        ("y_org", ctypes.c_short),
+        ("width", ctypes.c_short),
+        ("height", ctypes.c_short),
+    ]
+
+
+def _open():
+    lib = ctypes.CDLL("libX11.so.6")
+    lib.XOpenDisplay.restype = ctypes.c_void_p
+    lib.XOpenDisplay.argtypes = [ctypes.c_char_p]
+    lib.XDefaultScreen.argtypes = [ctypes.c_void_p]
+    lib.XDisplayWidth.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.XDisplayHeight.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.XDisplayWidthMM.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.XDisplayHeightMM.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    lib.XCloseDisplay.argtypes = [ctypes.c_void_p]
+    return lib
+
+
+def screen_report():
+    """The primary screen: pixels, millimetres, and the DPI those two imply.
+
+    Scaling is a consequence of DPI, so this is the half of "multi-monitor and scaling" that
+    can be answered without asking about a monitor at all. 2026-11-03.
+    """
+    lib = _open()
+    d = lib.XOpenDisplay(None)
+    if not d:
+        sys.stderr.write("cannot open the X display\n")
+        return 1
+    s = lib.XDefaultScreen(d)
+    w = lib.XDisplayWidth(d, s)
+    h = lib.XDisplayHeight(d, s)
+    wm = lib.XDisplayWidthMM(d, s)
+    hm = lib.XDisplayHeightMM(d, s)
+    lib.XCloseDisplay(d)
+    dpi = (w / (wm / 25.4)) if wm else 0.0
+    print("screen:%d %dx%d %dx%dmm dpi:%.1f" % (s, w, h, wm, hm, dpi))
+    return 0
+
+
+def screens_report():
+    """Every monitor Xinerama knows about, one per line: number, origin, size.
+
+    A single monitor answers one line -- Xinerama still reports it, so "one" and "cannot tell"
+    stay distinguishable. If libXinerama is not installed, the exit code says so instead of
+    pretending there is one screen.
+    """
+    try:
+        lib = ctypes.CDLL("libXinerama.so.1")
+    except OSError:
+        sys.stderr.write("this machine has no libXinerama\n")
+        return 3
+    x = _open()
+    d = x.XOpenDisplay(None)
+    if not d:
+        sys.stderr.write("cannot open the X display\n")
+        return 1
+    lib.XineramaQueryScreens.restype = ctypes.POINTER(XineramaScreenInfo)
+    lib.XineramaQueryScreens.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)]
+    count = ctypes.c_int(0)
+    info = lib.XineramaQueryScreens(d, ctypes.byref(count))
+    if not info:
+        x.XCloseDisplay(d)
+        sys.stderr.write("Xinerama answered nothing\n")
+        return 1
+    for i in range(count.value):
+        one = info[i]
+        print("monitor:%d %d,%d %dx%d" % (one.screen_number, one.x_org, one.y_org, one.width, one.height))
+    # XineramaQueryScreens hands back memory the caller must free.
+    try:
+        lib.XFree = x.XFree
+        x.XFree.argtypes = [ctypes.c_void_p]
+        x.XFree(info)
+    except AttributeError:
+        pass
+    x.XCloseDisplay(d)
+    return 0
+
+
 def main():
     if len(sys.argv) < 2:
-        sys.stderr.write("usage: xprobe.py <window-id>\n")
+        sys.stderr.write("usage: xprobe.py <window-id> | --screen | --screens\n")
         return 2
+    if sys.argv[1] == "--screen":
+        return screen_report()
+    if sys.argv[1] == "--screens":
+        return screens_report()
     try:
         target = int(sys.argv[1], 0)
     except ValueError:
