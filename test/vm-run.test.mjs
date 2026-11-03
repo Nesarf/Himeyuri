@@ -96,6 +96,10 @@ if (!有编译器) {
       // （HMYR-形-003，理由见 design/GLOBALS.txt 第一条）。
       ["全一", "六、顶层常量：先算再读", "常量 顶端 = 41\n\n函数 main() -> Int {\n  返回 顶端 + 1\n}\n"],
       ["全二", "六、两个常量相加", "常量 左 = 20\n常量 右 = 22\n\n函数 main() -> Int {\n  返回 左 + 右\n}\n"],
+      // 调用那一条：同文件里的用户函数，一个参数。实参在栈上的顺序是最左先压，
+      // 所以两条用例故意用「参数顺序会影响答案」的形状 —— 一个减法，一个两个参数。
+      ["调一", "七、调同文件的函数：一个参数", "函数 加一(x: Int) -> Int {\n  返回 x + 1\n}\n\n函数 main() -> Int {\n  返回 加一(41)\n}\n"],
+      ["调二", "七、两个参数：顺序会影响答案", "函数 减(x: Int, y: Int) -> Int {\n  返回 x - y\n}\n\n函数 main() -> Int {\n  返回 减(50, 8)\n}\n"],
     ];
 
     console.log("二、三组程序：两边跑出同一个值");
@@ -127,21 +131,22 @@ if (!有编译器) {
 
     console.log("三、这一版还做不到的要说出来，不假装跑通");
     {
-      const 源路 = path.join(临, "调一.hmoca");
-      fs.writeFileSync(源路, "函数 加一(x: Int) -> Int {\n  返回 x + 1\n}\n\n函数 main() -> Int {\n  返回 加一(41)\n}\n", "utf8");
+      // 调内置还没做（内置表要一层一层搭）。用 print 逼出那一条指令。
+      const 源路 = path.join(临, "内一.hmoca");
+      fs.writeFileSync(源路, "函数 main() -> Int {\n  print(\"x\" + chr(10))\n  返回 0\n}\n", "utf8");
       const u = loadUnit(源路);
       const 码 = 写程序(合并程序(
         u.order.map((f) => 编译模块(u.modules.get(f))),
         编译模块(u.modules.get(u.order[u.order.length - 1])),
       ));
-      const 码路 = path.join(临, "调一.hmoks");
+      const 码路 = path.join(临, "内一.hmoks");
       fs.writeFileSync(码路, 码);
       const r = spawnSync(exe, [器路, 码路], {
         encoding: "utf8", timeout: 600000,
         env: { ...process.env, HMYR_STEPS: "2000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
       });
       const 出 = String(r.stdout || "");
-      ok("调函数这一版要明说「还做不到」", 出.includes("还做不到"), 出.slice(0, 120));
+      ok("调内置这一版要明说「还做不到」", 出.includes("还做不到"), 出.slice(0, 120));
     }
 
     console.log("四、反向：把那个值改坏，它必须红");
