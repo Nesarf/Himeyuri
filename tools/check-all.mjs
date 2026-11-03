@@ -106,7 +106,7 @@ const SUITES = [
   // 缺编译器时它会打印「跳过」并以 0 退出。在这里再标一次，等于把同一件事
   // 写进两处 —— 而 2026-11-02 第一次标上去就出了错：Windows 上那台编译器
   // 在绝对路径里、不在 PATH 里，于是这里误判成缺席，而它本来是过的。
-  ["arm", "test/arm.test.mjs", "SPEC M4 - the same C machine compiled for a bare-metal Cortex-M4: the desktop assumptions sit behind conditionals, the image links against a linker script and a startup file, and it runs on either arm-none-eabi-gcc or armclang (skipped when neither is present)"],
+  ["arm", "test/arm.test.mjs", "SPEC M4 - the same C machine compiled for bare metal: Cortex-M4 and Cortex-M7 (mfpu=fpv5-d16), the desktop assumptions sit behind conditionals, the image links against a linker script and a startup file, and it runs on either arm-none-eabi-gcc or armclang (skipped when neither is present)"],
   ["board", "test/board.test.mjs", "SPEC M4 - the board path walked on a desk: bytecode in memory, a platform installed, output into a buffer"],
   ["hmyrcompile", "test/hmyr-compiler.test.mjs", "SPEC M4 - the compiler moved into Himeyuri: two compilers, one answer, and a stated boundary where one is still a subset"],
   ["hmyrpack", "test/hmyr-pack.test.mjs", "SPEC M4 - the writer moved into Himeyuri too: the same source packed by two packers, byte for byte"],
@@ -283,14 +283,23 @@ console.log("");
  * 输出顺序不变：结果先收进表里，最后按 SUITES 的顺序打印。并行只影响
  * 「什么时候跑」，不影响「看起来是什么样」。
  */
+// 真正必须串行的六套 —— 判据只有一条：它们会不会写到同一个地方。
+//
+//   manifest / package / distro / release   四套都写 dist/，并行会互相覆盖产物，
+//                                           症状是四套一起红、而单独跑都过。
+//   hostdeps / text                         两套要在临时目录里写同一份文件再读回来。
+//
+// 而另外七套原来也在这张表里，2026-11-03 挪了出去：
+//
+//   cvm / cli / arm / board   编 C，但各自在 mkdtemp 里出产物 —— 不冲突，只是抢 CPU，
+//                             而抢 CPU 正是并行池该管的事。
+//   corpus / ucd              读 deps/ 下的表，只读。
+//   subsetparse               与 subsetload 读同一批 self/ 源码，也是读。
+//
+// 那七套合计约一百秒，原来全在串行里，等于把并行池空着等它们。
 const 串行 = new Set([
-  "cvm", "cli", "arm", "board", "corpus", "ucd",
   "manifest", "package", "distro", "release",
-  // 这两套都要在临时目录里写同一份文件再读回来；并行时互相踩，
-  // 症状就是「单独跑全过、总表里红三条」。
   "hostdeps", "text",
-  // 它读 self/ 那六份源码数节点，与 subsetload 抢同一批文件。
-  "subsetparse",
 ]);
 // 并行数：八路。这台是 12 核 16 GB，八路留四核给系统与 gcc 的子进程，
 // 同时把内存峰值压在 8 × 768 MB 的名义上限之内。

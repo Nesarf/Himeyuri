@@ -66,6 +66,30 @@ console.log("一、C 那台机器编到 Cortex-M4 裸机");
   fs.rmSync(临, { recursive: true, force: true });
 }
 
+console.log("一之二、同一份代码编到 Cortex-M7（桌上那块 H723ZG）");
+{
+  // H723ZG 是 Cortex-M7，带双精度 FPU —— 与上面 M4 那条路的差别就是这三个开关：
+  // -mcpu=cortex-m7、-mfpu=fpv5-d16、-mfloat-abi=hard。
+  // 这一节 2026-11-03 加的，因为桌上接了一块 H723ZG 的核心板，而 arm 那一套原来只认 M4。
+  // 它验的是「同一份 C 机器」这句话对 M7 也成立 —— 不需要板子，只要工具链。
+  const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-arm-m7-"));
+  const 出 = path.join(临, "hmyr-m7.o");
+  const 选 = 是GNU
+    ? ["-mcpu=cortex-m7", "-mthumb", "-mfpu=fpv5-d16", "-mfloat-abi=hard", "-O2", "-Wall"]
+    : ["--target=arm-arm-none-eabi", "-mcpu=cortex-m7", "-mfpu=fpv5-d16", "-mfloat-abi=hard", "-O2", "-Wall"];
+  const r = spawnSync(编译器, [...选, "-c", path.join(ROOT, "vm/hmyr.c"), "-o", 出],
+    { encoding: "utf8", timeout: 300000 });
+  ok("编译器编得过 M7", r.status === 0, String(r.stderr).slice(0, 300));
+  ok("而且没有警告", String(r.stderr).trim() === "", String(r.stderr).slice(0, 300));
+  if (fs.existsSync(出)) {
+    const 大小 = fs.statSync(出).size;
+    ok("产出了对象文件（一百千字节上下）", 大小 > 100 * 1024, String(大小));
+  } else {
+    ok("产出了对象文件（一百千字节上下）", false, "没有文件");
+  }
+  fs.rmSync(临, { recursive: true, force: true });
+}
+
 console.log("二、桌面专属的那几处都在条件编译里");
 {
   const 源 = fs.readFileSync(path.join(ROOT, "vm/hmyr.c"), "utf8");
