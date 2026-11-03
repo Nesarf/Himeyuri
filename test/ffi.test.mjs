@@ -259,10 +259,18 @@ console.log("六、call_c 的三条失败");
       ok("打不开库是 HMYR-器-013", String(甲.stderr || "").includes("HMYR-器-013"), String(甲.stderr || "").slice(0, 140));
       const 乙 = 跑一条(库名, "没有这个符号", "(0 - 7,)");
       ok("找不到符号是 HMYR-器-014", String(乙.stderr || "").includes("HMYR-器-014"), String(乙.stderr || "").slice(0, 140));
-      const 丙 = 跑一条(库名, "abs", '("不是数",)');
+      // 2026-11-03 补字符串参数时这一条也换了：以前「字符串」就是那个传不了的类型，
+      // 而它现在是合法的（下面 strlen 那条走的就是它）。改成元组套元组 —— 那仍然传不了。
+      const 丙 = 跑一条(库名, "abs", "((1, 2),)");
       ok("传不了的类型是 HMYR-器-015", String(丙.stderr || "").includes("HMYR-器-015"), String(丙.stderr || "").slice(0, 140));
       const 丁 = 跑一条(库名, "abs", "(0 - 7,)");
       ok("而对了就给出七", String(丁.stdout || "").includes("7"), String(丁.stdout || "") + " / " + String(丁.stderr || "").slice(0, 100));
+      // design/ABI.txt 第四节第二个例子：call_c("libc.so.6", "strlen", ("abc",)) 得 3。
+      // 它验的是「借而不复制」那一条 —— 字符串在调用期间有效，回来之后 HMYR 那一侧
+      // 仍然拥有它。2026-11-03 补的这一条：那一版之前只认数字与布尔。
+      const 戊 = 跑一条(库名, "strlen", '("abc",)');
+      ok("字符串参数：strlen(\"abc\") 得三", String(戊.stdout || "").trim() === "3",
+         String(戊.stdout || "") + " / " + String(戊.stderr || "").slice(0, 120));
     }
   }
 }

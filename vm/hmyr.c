@@ -4895,27 +4895,51 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
       return 1;
     }
     int 数们[8];
+    char *串们[8];
+    int 有串 = 0;
+    for (int i = 0; i < 8; i++) { 数们[i] = 0; 串们[i] = NULL; }
     for (uint32_t i = 0; i < args[2].ilen; i++) {
       Value 项 = args[2].items[i];
       if (项.tag == T_NUM) 数们[i] = (int)项.num;
       else if (项.tag == T_BOOL) 数们[i] = 项.boolean ? 1 : 0;
-      else {
+      else if (项.tag == T_STR) {
+        /* ABI 第三条：字符串不复制 —— 调用期间它有效，回来之后 HMYR 那一侧仍然
+         * 拥有它。而语言里的串是 UTF-16 码元，C 那边要 UTF-8，所以这一版必须转
+         * 一次：转出来的那一份活到调用结束，之后立刻放掉。设计说的「不复制」与
+         * 实现做的「只在调用期间转一份」，边界就写在这里。 */
+        串们[i] = utf16_to_utf8(项.s, 项.slen);
+        有串 = 1;
+      } else {
+        for (int k = 0; k < 8; k++) free(串们[k]);
         关库(模);
-        fail("HMYR-器-015", "call_c this version takes only numbers and booleans; strings come later");
+        fail("HMYR-器-015", "call_c takes numbers, booleans and strings; nothing else yet");
         return 1;
       }
     }
-    /* 统一按「最多八个 int 参数、返回 int」调 —— ABI 第四节的最小形状就是这个。 */
+    /* 分派：全是数就按个数摊进 int 可变参数；有一个串就只认「一个字符串」那一种
+     * 形状 —— ABI 第四节第二个例子就是它（call_c("libc.so.6", "strlen", ("abc",))
+     * 得 3）。混合形状（数与串掺在一起）要处理「谁按什么顺序摊」，那是下一格。 */
     int 结果 = 0;
-    switch (args[2].ilen) {
-      case 0: 结果 = ((int (*)(void))函)(); break;
-      case 1: 结果 = ((int (*)(int))函)(数们[0]); break;
-      case 2: 结果 = ((int (*)(int, int))函)(数们[0], 数们[1]); break;
-      case 3: 结果 = ((int (*)(int, int, int))函)(数们[0], 数们[1], 数们[2]); break;
-      default:
+    if (有串) {
+      if (args[2].ilen != 1 || !串们[0]) {
+        for (int k = 0; k < 8; k++) free(串们[k]);
         关库(模);
-        fail("HMYR-行-002", "call_c this version takes at most three arguments");
+        fail("HMYR-器-015", "call_c takes either one string or zero to three numbers, not a mix");
         return 1;
+      }
+      结果 = ((int (*)(const char *))函)(串们[0]);
+      free(串们[0]);
+    } else {
+      switch (args[2].ilen) {
+        case 0: 结果 = ((int (*)(void))函)(); break;
+        case 1: 结果 = ((int (*)(int))函)(数们[0]); break;
+        case 2: 结果 = ((int (*)(int, int))函)(数们[0], 数们[1]); break;
+        case 3: 结果 = ((int (*)(int, int, int))函)(数们[0], 数们[1], 数们[2]); break;
+        default:
+          关库(模);
+          fail("HMYR-行-002", "call_c this version takes at most three arguments");
+          return 1;
+      }
     }
     关库(模);
     *out = v_num((double)结果);
