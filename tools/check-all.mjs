@@ -208,6 +208,7 @@ const SUITES = [
   ["rational", "test/lib-rational.test.mjs", "SPEC M7 - rational numbers on top of bigint: a third plus two thirds is exactly one, a third times three is one too, and a broken check hands back which line it was"],
   ["f64bits", "test/f64-hmyr.test.mjs", "SPEC M7 - the eight bytes of a double read back into a number, bootstrap side: round trips over regular, subnormal and infinite bit patterns, and a broken round trip names its line"],
   ["vmload", "test/vm-load.test.mjs", "SPEC M4 - the loader of an HMYR-written VM: three real .hmoks files come back with the same function table the JS reader gives, line for line, and bad headers are refused with a reason"],
+  ["vmrun", "test/vm-run.test.mjs", "SPEC M4 - the instruction loop of an HMYR-written VM: six small programs run through it and through src/vm.mjs, the two answers must be the same, and the opcodes it does not implement yet have to say so"],
   ["interval", "test/lib-interval.test.mjs", "SPEC M7 - interval arithmetic over doubles: an exact sum keeps its endpoints unchanged, a computed one is never narrower than the truth, and a broken check hands back which line it was"],
   ["curve", "test/curve.test.mjs", "SPEC M7 - the Ed25519 curve: 0 and 1 times the base point, and every result from 2 to 8 landing on the curve equation"],
   ["sha512", "test/sha512.test.mjs", "SPEC M7 - SHA-512 over four samples: empty, three bytes, the padding boundary, and a two-block input, all against node's crypto"],
