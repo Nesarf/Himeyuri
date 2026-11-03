@@ -16,8 +16,17 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PY = process.platform === "win32"
   ? "E:/DaShaoHuo/Python-managed/bin/python.exe"
   : "python3";
-const SWOP = "C:/Windows/System32/spool/drivers/color/RSWOP.icm";
-const SRGB_FILE = "C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm";
+// ICC profile：Windows 用系统自带的那两张（sRGB 与 SWOP）；别的系统上没有它们，
+// 而仓库自带 deps/color/profiles/ 一整套（elle stone 那份公开 profile 集）。
+// 2026-11-03 给 Linux 补这一条时改的：源用仓库的 sRGB，目标用 AllColorsRGB ——
+// 这一套验的是「两个不同 profile 之间转换」，而那件事与 CMYK 无关。
+const 档 = (名) => path.join(ROOT, "deps/color/profiles", 名);
+const SWOP = process.platform === "win32"
+  ? "C:/Windows/System32/spool/drivers/color/RSWOP.icm"
+  : 档("AllColorsRGB-elle-V2-srgbtrc.icc");
+const SRGB_FILE = process.platform === "win32"
+  ? "C:/Windows/System32/spool/drivers/color/sRGB Color Space Profile.icm"
+  : 档("sRGB-elle-V2-srgbtrc.icc");
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {
   if (condition) { passed++; console.log("  通过  " + label); }

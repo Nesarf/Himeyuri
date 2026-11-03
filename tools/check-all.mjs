@@ -42,6 +42,11 @@ const SUITES = [
   ["i18nthree", "test/i18n-three.test.mjs", "SPEC M7 - Chinese, Japanese and English on the read, write and subprocess boundaries"],
   ["locale", "test/locale.test.mjs", "SPEC M7 - four locale profiles, switchable and checkable, and they never change an evaluation result"],
   ["json", "test/json.test.mjs", "SPEC M7 - JSON read in Himeyuri, so a report can be judged without the host"],
+  // color 三套要 Windows 系统自带的那两张 ICC。sRGB 那张仓库也有
+  // （deps/color/profiles/sRGB-elle-V2-srgbtrc.icc），2026-11-03 起测试在非 Windows 上
+  // 用的是它 —— 但 SWOP 那张是 CMYK 印刷 profile，仓库里没有、Linux 上也没有等价物，
+  // 而这一套有两条断言就建在它上面（清单里点它的名、选工作空间时它排在最后）。
+  // 所以这一格准确的说法是「缺一张 CMYK profile」，不是「缺所有 ICC」。
   ["colorreport", "test/color-report.test.mjs", "SPEC M7 - a colour report judged inside Himeyuri: fields taken, thresholds applied, nothing guessed", { 需要: ["windows-icc"] }],
   ["color", "test/color.test.mjs", "SPEC M7 - two named colour strategies, and the report that proves which loses less", { 需要: ["windows-icc"] }],
   ["colorimage", "test/color-image.test.mjs", "SPEC M7 - an image says which space it is in, and the output carries the target profile", { 需要: ["windows-icc"] }],
