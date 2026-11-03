@@ -5,7 +5,7 @@
 // It runs each suite as its own process, so a crash in one is reported as that suite failing rather
 // than as this script dying, and it prints the M2 status line the specification asks about.
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -494,6 +494,19 @@ console.log("");
 const 慢五 = 慢的.slice(0, 5).filter(([毫]) => 毫 >= 500);
 if (慢五.length) {
   console.log("慢的五套：" + 慢五.map(([毫, 名]) => 名 + " " + (毫 / 1000).toFixed(1) + "s").join(" · "));
+  console.log("");
+}
+// 全表：慢的五套只够回答「要不要跑全量」，回答不了「下一次该改哪一套」。
+//
+// 那要的是总工作量的分布，因为墙钟是总工作量除以并行数 —— 一套省下的时间要再除以
+// 并行数才落到墙钟上。inflate 快了四倍而墙钟只动了噪声那么多，差的就是这个除法。
+// 设了 HMYR_TIMES 就落一份降序全表，一行一套、毫秒在前，直接能排序。
+if (process.env.HMYR_TIMES) {
+  const 总毫 = 慢的.reduce((n, [毫]) => n + 毫, 0);
+  writeFileSync(process.env.HMYR_TIMES,
+    慢的.map(([毫, 名]) => 毫 + "\t" + 名).join("\n") + "\n", "utf8");
+  console.log("全表落在 " + process.env.HMYR_TIMES + "：" + 慢的.length + " 套，合计 "
+    + (总毫 / 1000).toFixed(1) + " 秒工作量（除以并行数 " + 并行数 + " 才是墙钟的量级）");
   console.log("");
 }
 if (已知缺) console.log(已知缺 + " suite(s) are known missing: counted here, not failed — they are the target acceptance");
