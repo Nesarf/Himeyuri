@@ -100,6 +100,10 @@ if (!有编译器) {
       // 所以两条用例故意用「参数顺序会影响答案」的形状 —— 一个减法，一个两个参数。
       ["调一", "七、调同文件的函数：一个参数", "函数 加一(x: Int) -> Int {\n  返回 x + 1\n}\n\n函数 main() -> Int {\n  返回 加一(41)\n}\n"],
       ["调二", "七、两个参数：顺序会影响答案", "函数 减(x: Int, y: Int) -> Int {\n  返回 x - y\n}\n\n函数 main() -> Int {\n  返回 减(50, 8)\n}\n"],
+      // 内置那两条：这一层不做「再实现一遍」，只做「按名字挑一个」——
+      // 因为虚拟机自己就跑在 HMYR 上，print/str/chr 就是语言自己的内置。
+      ["内二", "八、调内置：len", "函数 main() -> Int {\n  返回 len(\"abcd\")\n}\n"],
+      ["内三", "八、调内置：str 与 chr", "函数 main() -> Int {\n  定 s = str(42)\n  定 t = \"\" + chr(65)\n  若 s == \"42\" {\n    若 t == \"A\" {\n      返回 5\n    }\n  }\n  返回 0\n}\n"],
     ];
 
     console.log("二、三组程序：两边跑出同一个值");
@@ -129,11 +133,11 @@ if (!有编译器) {
         r.status !== 0 ? ("退出码 " + r.status + " " + String(r.stderr || "").slice(0, 160)) : ("这边 " + 这));
     }
 
-    console.log("三、这一版还做不到的要说出来，不假装跑通");
+    console.log("三、跑不通的时候要说清是哪一种不通");
     {
-      // 调内置还没做（内置表要一层一层搭）。用 print 逼出那一条指令。
+      // 调一个不存在的名字：这一层要说出「没有这个函数」，而不是安静地压一个空。
       const 源路 = path.join(临, "内一.hmoca");
-      fs.writeFileSync(源路, "函数 main() -> Int {\n  print(\"x\" + chr(10))\n  返回 0\n}\n", "utf8");
+      fs.writeFileSync(源路, "函数 main() -> Int {\n  返回 根本不存在(1)\n}\n", "utf8");
       const u = loadUnit(源路);
       const 码 = 写程序(合并程序(
         u.order.map((f) => 编译模块(u.modules.get(f))),
@@ -146,7 +150,7 @@ if (!有编译器) {
         env: { ...process.env, HMYR_STEPS: "2000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
       });
       const 出 = String(r.stdout || "");
-      ok("调内置这一版要明说「还做不到」", 出.includes("还做不到"), 出.slice(0, 120));
+      ok("调一个不存在的函数要说出来", 出.includes("没有这个函数"), 出.slice(0, 120));
     }
 
     console.log("四、反向：把那个值改坏，它必须红");
