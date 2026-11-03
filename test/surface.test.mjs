@@ -149,8 +149,11 @@ console.log("图像：把像素布导出的 PNG 交给 native 后端");
   const fs2 = (await import("node:fs")).default;
   const 图 = 临时文件("surface-img.png");
   // 子进程里要加载的那几个 mjs 与 pixel.hmoca 都按仓库自身位置算，不写死盘符。
+  // 仓库根：Windows 上 pathname 是 /D:/himeyuri/，去掉开头那个斜杠才是有盘符的形式；
+  // POSIX 上它本来就是 /mnt/d/himeyuri/，去掉斜杠就成了相对路径 —— 于是 loadUnit
+  // 找不到 pixel.hmoca，"测试图造得出"那一条跟着红（2026-11-03 跨系统时踩到）。
   const 仓根 = new URL("..", import.meta.url);
-  const 仓根斜 = 仓根.pathname.slice(1);
+  const 仓根斜 = process.platform === "win32" ? 仓根.pathname.slice(1) : 仓根.pathname;
   // 先借像素那条路造一张 16x10 的图
   const { spawnSync } = await import("node:child_process");
   const 造 = spawnSync(process.execPath, ["-e", [

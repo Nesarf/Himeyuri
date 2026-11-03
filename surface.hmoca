@@ -92,14 +92,31 @@
   返回 repo_path("deps/surface/win.ps1")
 }
 
-// 呈现到某个后端，并且**会真的动世界**（native 要起一个进程）。
+// POSIX 那一份：同一件事、同一份回执，只做 -NoShow 那条路（见那个文件头）。
+函数 脚本路径py() -> String {
+  返回 repo_path("deps/surface/win.py")
+}
+
+// 两台各一份脚本，而这一层不判断平台：先试 powershell、失败再试 python3。
+// 在 Windows 上第一个就成；在 Linux 上 powershell 根本起不来（ENOENT）。
+// 与 parallel.hmoca 那一条回退是同一个写法，理由也一样 —— 行为本身就是判据，
+// 不必再引一个「我在哪台机器上」的内置（language 那一侧今天没有 platform()）。
+//
+// 交回 {ok, text}：ok 只在真拿到退出码 0 时为真，text 是「退出码 N · 回执」。
+// 调用处三个（呈现进程、呈现图像、会话）形状一致，所以只写这一份。
+函数 试两路(参: Int) -> Int 效果串(process) {
+  定 甲 = run_program("powershell", ("-NoProfile", "-STA", "-File", 脚本路径()) + 参, 20000, "utf8")
+  若 甲.code == 0 { 返回 {ok: 真, text: "退出码 " + str(甲.code) + " · " + 甲.stdout} }
+  定 乙 = run_program("python3", (脚本路径py(),) + 参, 20000, "utf8")
+  返回 {ok: 乙.code == 0, text: "退出码 " + str(乙.code) + " · " + 乙.stdout + 乙.stderr}
+}
+
+// 呈现到某个后端，并且会真的动世界（native 要起一个进程）。
 // 与上面的 呈现 分开：那一个是纯的，只交出字符串；这一个要 process 效果。
 函数 呈现进程(后端: String, 布: Int, 文字: String) -> Int 效果串(process) {
   若 后端 == "term" { 返回 {ok: 真, text: 呈现("term", 布)} }
   若 后端 == "native" {
-    定 r = run_program("powershell", ("-NoProfile", "-STA", "-File", 脚本路径(),
-      "-Width", "640", "-Height", "400", "-Text", 文字, "-NoShow"), 20000, "utf8")
-    返回 {ok: 真, text: "退出码 " + str(r.code) + " · " + r.stdout}
+    返回 试两路(("-Width", "640", "-Height", "400", "-Text", 文字, "-NoShow"))
   }
   返回 {ok: 假, text: "没有这个后端：" + 后端}
 }
@@ -108,9 +125,7 @@
 // 因为它们的参数不同：一个是「一段文字」，一个是「一个文件」。
 函数 呈现图像(后端: String, 图像路径: String) -> Int 效果串(process) {
   若 后端 == "native" {
-    定 r = run_program("powershell", ("-NoProfile", "-STA", "-File", 脚本路径(),
-      "-Image", 图像路径, "-NoShow"), 20000, "utf8")
-    返回 {ok: r.code == 0, text: r.stdout + r.stderr}
+    返回 试两路(("-Image", 图像路径, "-NoShow"))
   }
   返回 {ok: 假, text: "这个后端还不呈现图像：" + 后端}
 }
@@ -128,15 +143,10 @@
 // 真窗口自己收到的键与点击会与它进同一张表，所以真人用时这一栏空着就行。
 公开 函数 会话(后端: String, 布: Int, 文字: String, 毫秒: Int, 帧间隔: Int, 事件: String) -> Int 效果串(process) {
   若 后端 == "native" {
-    定 参 = ("-NoProfile", "-STA", "-File", 脚本路径(),
-      "-Width", "640", "-Height", "400", "-Text", 文字,
+    定 参 = ("-Width", "640", "-Height", "400", "-Text", 文字,
       "-EventMs", str(毫秒), "-Frames", str(帧间隔), "-Events", 事件)
-    若 毫秒 <= 0 {
-      定 r0 = run_program("powershell", 参 + ("-NoShow",), 20000, "utf8")
-      返回 {ok: r0.code == 0, text: r0.stdout}
-    }
-    定 r = run_program("powershell", 参, 20000, "utf8")
-    返回 {ok: r.code == 0, text: r.stdout}
+    若 毫秒 <= 0 { 返回 试两路(参 + ("-NoShow",)) }
+    返回 试两路(参)
   }
   返回 {ok: 假, text: "这个后端还不开会话：" + 后端}
 }
