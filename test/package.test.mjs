@@ -34,8 +34,13 @@ try {
   {
     const 解 = path.join(临, "x");
     fs.mkdirSync(解, { recursive: true });
-    const r = spawnSync("powershell", ["-NoProfile", "-Command",
-      "Expand-Archive -Path '" + 出 + "' -DestinationPath '" + 解 + "' -Force"], { encoding: "utf8" });
+    // 解包按平台：Windows 用 Expand-Archive，别的平台用 unzip。
+    // 2026-11-03 给 Linux 补打包那一条时一并改的 —— 压出来之后还要解得开，
+    // 而「哪些机器上有 powershell」这件事，两头本来一样。
+    const r = process.platform === "win32"
+      ? spawnSync("powershell", ["-NoProfile", "-Command",
+        "Expand-Archive -Path '" + 出 + "' -DestinationPath '" + 解 + "' -Force"], { encoding: "utf8" })
+      : spawnSync("unzip", ["-q", "-o", 出, "-d", 解], { encoding: "utf8" });
     ok("解得开", fs.existsSync(path.join(解, "manifest.json")), String(r.status));
     ok("清单在里面", fs.existsSync(path.join(解, "manifest.json")));
     ok("源码在里面", fs.existsSync(path.join(解, "src", "eval.mjs")));

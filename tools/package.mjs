@@ -14,6 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 压目录 } from "../src/zip-writer.mjs";
 import { 只留源码 } from "./file-kind-hmyr.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -65,10 +66,18 @@ for (const p of 收) {
   fs.copyFileSync(p, 到);
 }
 fs.rmSync(出, { force: true });
-const 压 = spawnSync("powershell", ["-NoProfile", "-Command",
-  "Compress-Archive -Path '" + path.join(暂, "*") + "' -DestinationPath '" + 出 + "' -Force"], { encoding: "utf8" });
+// 压包按平台：Windows 用 Compress-Archive，别的平台用 src/zip-writer.mjs。
+// 2026-11-03 给 Linux 补这一条时发现 WSL 里连 zip 命令都没有（只有 unzip），
+// 于是选的是不借任何外部命令的那一条 —— 与「不依赖」那条目标是同一件事。
+let 压 = null;
+if (process.platform === "win32") {
+  压 = spawnSync("powershell", ["-NoProfile", "-Command",
+    "Compress-Archive -Path '" + path.join(暂, "*") + "' -DestinationPath '" + 出 + "' -Force"], { encoding: "utf8" });
+} else {
+  压目录(暂, 出);
+}
 fs.rmSync(暂, { recursive: true, force: true });
-if (!fs.existsSync(出)) { console.error("  压不出来：" + String(压.stderr).slice(0, 160)); process.exit(2); }
+if (!fs.existsSync(出)) { console.error("  压不出来：" + String(压 ? 压.stderr : "").slice(0, 160)); process.exit(2); }
 
 const 大小 = fs.statSync(出).size;
 console.log("  收了 " + 收.length + " 个文件");

@@ -928,6 +928,26 @@ C 版虚拟机：那台不是 JS 的机器
 
     196 通过 / 0 不通过 / 8 设计缺席 / 0 平台假设 / 0 未知。
 
+  第三件收掉了一半：package 与 release（2026-11-03 深夜）
+  --------------------------------------------------------------------
+
+  这两套原来按设计缺席，原因是 tools/package.mjs 用 powershell 的
+  Compress-Archive 压 zip。而 WSL 里连 zip 命令都没有（只有 unzip），
+  所以最后没有借任何外部命令：新写 src/zip-writer.mjs，用 Node 自带的
+  deflateRawSync 与 crc32 直接写 ZIP —— 本地头、中央目录、EOCD 各一段，
+  只支持「一个目录里的所有文件」这一种形状（不写目录项、不加密、不分卷）。
+
+  解包那一侧也按平台：Windows 是 Expand-Archive，别的平台是 unzip。
+
+  于是两套都不再缺席：package 十四项、release 十五项，在 Linux 上全过。
+  这让「按设计缺席」从八套降到六套（surface、parallel、ittgn、
+  color 三套）。
+
+  留下的：ittgn 还有自己的 powershell（tools/ittgn-to-zip.mjs），
+  parallel 的 deps/surface/parallel.ps1 也是；color 三套缺的是 ICC 而不是
+  powershell —— sRGB 那一张仓库自带（deps/color/profiles/sRGB-elle-V2-srgbtrc.icc），
+  SWOP 那张（CMYK 印刷 profile）没有。
+
   一句话收：清单有了，分类只分到「能看出来的」为止。第四类那二十来套要逐套查，
   而查法与这一轮相同 —— 单跑、读它吐出来的那一行。
 
