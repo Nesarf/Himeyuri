@@ -133,6 +133,34 @@ if (!有编译器) {
         r.status !== 0 ? ("退出码 " + r.status + " " + String(r.stderr || "").slice(0, 160)) : ("这边 " + 这));
     }
 
+    console.log("九、跑一份真实的示例：examples/hello.hmoca");
+    {
+      // 前面那些程序都是为了让判据可控而写的小程。这一条跑仓库里本来就在的那一份 ——
+      // 「跑得起来」这句话才有它字面上的意思。
+      const 源路 = path.join(ROOT, "examples/hello.hmoca");
+      const u = loadUnit(源路);
+      if (!u.ok) {
+        ok("examples/hello.hmoca 读得动", false, "加载器读不动");
+      } else {
+        const 码 = 写程序(合并程序(
+          u.order.map((f) => 编译模块(u.modules.get(f))),
+          编译模块(u.modules.get(u.order[u.order.length - 1])),
+        ));
+        const 码路 = path.join(临, "hello.hmoks");
+        fs.writeFileSync(码路, 码);
+        const vm = 跑字节码(u, { capabilities: 本机能力() });
+        const 那 = vm.调用("main", []);
+        const r = spawnSync(exe, [器路, 码路], {
+          encoding: "utf8", timeout: 600000,
+          env: { ...process.env, HMYR_STEPS: "2000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
+        });
+        const 这 = String(r.stdout || "").trim();
+        const 那边 = 那.ok ? String(那.值) : ("失败：" + 那.话);
+        ok("两边同答案（期望 " + 那边 + "）", r.status === 0 && 这 === 那边,
+          r.status !== 0 ? ("退出码 " + r.status + " " + String(r.stderr || "").slice(0, 160)) : ("这边 " + 这));
+      }
+    }
+
     console.log("三、跑不通的时候要说清是哪一种不通");
     {
       // 调一个不存在的名字：这一层要说出「没有这个函数」，而不是安静地压一个空。
