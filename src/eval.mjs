@@ -39,7 +39,14 @@ class TailCall {
   constructor(decl, args, fromEffects) { this.decl = decl; this.args = args; this.fromEffects = fromEffects; }
 }
 
-class Return extends Error { constructor(value) { super("return"); this.value = value; } }
+// return 也用抛出做控制流，于是同一个理由在这里同样成立 —— 而它被抛得比尾调用还频繁：
+// 每一个 return 一次。这一行原来写的是 extends Error，2026-11-03 用 --cpu-prof 量到
+// selfcov 里 Return 的构造函数占 59.9% 的 selfTime，第二名只有 7.2% —— 也就是说
+// 这门求值器一半以上的时间花在给控制流对象抓栈上，而那个栈没有任何人读。
+//
+// 它的三个用点都不碰 message 与 stack：抛出、instanceof 收下、取 .value。
+// 去掉继承之后 instanceof 照旧成立，所以这一处只删了 extends Error 与 super 调用。
+class Return { constructor(value) { this.value = value; } }
 
 // Stage 0 只要求这么多：跑 self/ 那六份时真正被走到的节点与内置。
 // 这张表是量出来的（test/stage0-eval.test.mjs 跑六条真实路径统计），不是设计出来的。
