@@ -168,6 +168,7 @@ curve	test/curve.test.mjs
 sha512	test/sha512.test.mjs
 ssh	test/ssh.test.mjs
 sign	test/sign.test.mjs
+signgen	test/sign-gen.test.mjs
 selfcov	tools/self-coverage.mjs
 selfratiohmyr	test/self-ratio-hmyr.test.mjs
 selfload	tools/self-loader.mjs
