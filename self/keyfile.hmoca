@@ -85,6 +85,36 @@
   返回 "ssh-ed25519 " + 成base64(公钥blob(材.公)) + " " + 注释 + chr(10)
 }
 
+// 成签名文：第二与第三个箭头要的东西 —— HMYR 签出来的 .sig，ssh-keygen 认不认。
+//
+// SSHSIG 的结构（PROTOCOL.sshsig）：
+//
+//   "SSHSIG" + uint32 version(1) + string publickey + string namespace
+//            + string reserved + string hash_algorithm + string signature
+//
+// 而被签的数据是另一件事（ssh.hmoca 的 造签名数据）：
+//
+//   "SSHSIG" + string namespace + string reserved + string hash_algorithm
+//            + string(hash(message))
+//
+// 两串都以 SSHSIG 开头，但内容不同 —— 这个同名容易让人以为是一份东西。
+//
+// 签名 blob 是「算法名 + 64 字节」，与 ssh.hmoca 的 验文件 解出来的那一块同形。
+公开 函数 成签名文(种子: Int, 消息: Int, 名: String) -> String {
+  变 零 = ()
+  定 材 = 从种子(种子)
+  定 消哈 = sha512字节(消息)
+  定 数据 = 造签名数据(文字节(名), 零, 文字节("sha512"), 消哈)
+  定 签 = 签名(种子, 数据)
+  定 签blob = 写串(文字节("ssh-ed25519")) + 写串(签)
+  定 头2 = 文字节("SSHSIG") + 写四(1) + 写串(公钥blob(材.公)) + 写串(文字节(名))
+  定 尾2 = 写串(零) + 写串(文字节("sha512")) + 写串(签blob)
+  定 体 = 头2 + 尾2
+  定 前 = "-----BEGIN SSH SIGNATURE-----" + chr(10)
+  定 后 = "-----END SSH SIGNATURE-----" + chr(10)
+  返回 前 + 折行(成base64(体), 70) + 后
+}
+
 // 折行：base64 太长，PEM 按 70 列折 —— ssh-keygen 不在乎列宽，但人也得看得下去。
 函数 折行(s: String, 宽: Int) -> String {
   变 出 = ""
