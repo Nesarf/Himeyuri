@@ -139,6 +139,7 @@ C. 真的在 HMYR 里做 16 位大整数 + SHA-512 + 曲线。
     三、若 r 仍不对，再查 r 的输入 —— 但那时至少是在一个已经验证过的尺度上查。
 
 不计入完成的部分：与 ssh-keygen 的双向互通（验旧包、旧验签器验新包）一步都没做。
+（2026-11-03 补：做完了，见下面第九节。这一句留着，因为「当时没做」也是一个事实。）
 
 七、更正：第一条矛盾是误读
 --------------------------------------------------------------------
@@ -280,3 +281,31 @@ PROTOCOL.sshsig 第 3 节里，被签数据只有五段：六字节魔数、命�
 
 仍然留在外面的只有「签」这一个动作，而它要一把私钥。私钥不该进语言运行时，
 所以那一步交给 ssh-keygen，也交给任何持有钥匙的人。
+
+九、双向互通：四个箭头（2026-11-03）
+--------------------------------------------------------------------
+
+  上面那句「仍然留在外面的只有签这一个动作」已经过时 —— 签现在也在语言里
+  （self/sign.hmoca 的 签名，Ed25519 的五步），而这一节记的是把它与 ssh-keygen
+  接起来的那四条路：
+
+    一、HMYR 从 32 字节 seed 写 OpenSSH 私钥（self/keyfile.hmoca，openssh-key-v1
+        结构、明文、base64 包成 PEM），而 ssh-keygen -y 读出的公钥与 RFC 8032 那一份
+        一字不差。判据在 test/sign-bridge.test.mjs 的第一、二节。
+    二、HMYR 用 seed 签出来的 64 字节与 RFC 8032 的两组向量逐字节相同。
+        判据在 test/sign-gen.test.mjs，四项。
+    三、HMYR 写的 .sig（SSHSIG 结构，self/keyfile.hmoca 的 成签名文），
+        ssh-keygen -Y verify 说「Good "file" signature」。
+    四、ssh-keygen -Y sign 签一份，HMYR 的 验文件 说「通过」。
+
+  四个都在 Linux 与 Windows 上跑过。而两边各有一处只有真跑才知道的差别：
+  POSIX 上私钥要 chmod 600；Windows 上 chmod 只改只读位、ssh-keygen 检查的是 ACL，
+  所以那一边要 icacls /inheritance:r 再加一条只留当前用户的授权。
+
+  还有一个格式上的坑值得单独记：allowed_signers 是「principal keytype key」，
+  而 .pub 是「keytype key comment」—— 同一个公钥两种顺序，拿错的那一种去填，
+  ssh-keygen 报的是「Could not verify signature」，让人以为签名本身不对。
+
+  这一节之前那四轮找的是「三位宽度」：k 乘 a 最多 507 位，而 模L乘 把它截到 504 位。
+  反推定位那一招记在这里：a' = (S - r) 乘 k 的逆 mod L，而 a' 正好等于 a mod L ——
+  于是知道公式全对，错的是宽度。

@@ -84,6 +84,53 @@ if (!有ssh) {
     // .pub 那一行自己也要对得上：它同样由 HMYR 写成。
     const 行 = fs.readFileSync(出行, "utf8").trim().split(/\s+/);
     ok("HMYR 写的 .pub 与它一致", 行[0] === "ssh-ed25519" && 行[1] === 出[1], String(行[1] || "").slice(0, 60));
+
+    console.log("三、ssh-keygen -Y verify 认 HMYR 签的东西");
+    // allowed_signers 是「<principal> <keytype> <key>」，与 .pub 的
+    // 「<keytype> <key> <comment>」不是同一个顺序 —— 2026-11-03 拿 .pub 的格式填过一次，
+    // ssh-keygen 说 Could not verify，而真正错的是这一行。
+    const 许可 = path.join(临, "allowed");
+    fs.writeFileSync(许可, "hmyr ssh-ed25519 " + 出[1] + "\n", "utf8");
+    const 消文 = "himeyuri-sign-bridge";
+    const 消路 = path.join(临, "msg.txt");
+    const 签路 = path.join(临, "msg.sig");
+    fs.writeFileSync(消路, 消文, "utf8");
+    // 一条 HMYR 程序写 .sig：成签名文(种子, 消息字节, 命名空间)。
+    const 源2 = [
+      '引入 "./self/keyfile.hmoca"',
+      "",
+      "函数 main() -> Int effects(file) {",
+      `  定 种 = 解base64十六进制("${种}")`,
+      `  write_text("${签路.replace(/\\/g, "/")}", 成签名文(种, 文字节("${消文}"), "file"), "utf8")`,
+      "  返回 0",
+      "}",
+      "",
+    ].join("\n");
+    const 路2 = path.join(ROOT, ".tmp-signwrite.hmoca");
+    fs.writeFileSync(路2, 源2, "utf8");
+    try {
+      spawnSync(process.execPath, [path.join(ROOT, "bin", "hmyr.mjs"), "--compile", 路2],
+        { encoding: "utf8", timeout: 300000, env: { ...process.env, HMYR_STEPS: "80000000000" } });
+    } finally {
+      fs.rmSync(路2, { force: true });
+    }
+    const 验 = spawnSync("ssh-keygen",
+      ["-Y", "verify", "-f", 许可, "-I", "hmyr", "-n", "file", "-s", 签路],
+      { encoding: "utf8", input: 消文 });
+    ok("ssh-keygen -Y verify 说 Good", 验.status === 0 && /Good "file" signature/.test(String(验.stdout || "")),
+       String(验.status) + " " + String(验.stdout || "").slice(0, 80) + String(验.stderr || "").slice(0, 120));
+
+    console.log("四、HMYR 认 ssh-keygen 签的东西");
+    const 反弹 = spawnSync("ssh-keygen", ["-Y", "sign", "-f", 私, "-n", "file", 消路], { encoding: "utf8" });
+    const 反弹签 = 消路 + ".sig";
+    ok("ssh-keygen 签得出来", 反弹.status === 0 && fs.existsSync(反弹签), String(反弹.status));
+    if (fs.existsSync(反弹签)) {
+      const 反验 = spawnSync(process.execPath,
+        [path.join(ROOT, "bin", "hmyr.mjs"), "--compile", path.join(ROOT, "self", "sign.hmoca"), 反弹签, 消路],
+        { encoding: "utf8", timeout: 300000, env: { ...process.env, HMYR_STEPS: "80000000000" } });
+      ok("HMYR 的 验文件 说通过", String(反验.stdout || "").trim() === "通过",
+         String(反验.stdout || "").slice(0, 40) + " " + String(反验.stderr || "").slice(0, 120));
+    }
   }
   fs.rmSync(临, { recursive: true, force: true });
 }
