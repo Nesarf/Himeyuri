@@ -168,6 +168,7 @@ const SUITES = [
   ["toolingledger", "test/tooling-ledger.test.mjs", "SPEC M7 - the tooling ledger: every item either moved with a real suite behind it, or is provably off the runtime path"],
   ["independence", "test/independence.test.mjs", "SPEC M7 - one command answers how independent it is today: seed, world surface, ledger, runtime path, and a conclusion that hides nothing"],
   ["crosscheck", "test/crosscheck.test.mjs", "SPEC M7 - the number-reporting tools have to agree with each other: the seed's byte count matches in three places, the builtin ledger's seventh column is not empty, two readings of the runtime path say zero together, and the tooling ledger's halves add up - with a broken header value to prove the identities can fail"],
+  ["readme", "test/readme.test.mjs", "SPEC M7 - the three numbers on the front page are true: the suite count matches the suite list, the design-document count matches design/, and the error-code count matches the registry - with one of them written wrong on purpose to prove the check can go red"],
   ["checkhmyr", "test/check-hmyr.test.mjs", "SPEC M7 - the test scheduler written in Himeyuri: it reads a list, runs three suites, and counts right"],
   ["embedhmyr", "test/embed-hmyr.test.mjs", "SPEC M7 - the embedder written in Himeyuri: read_bytes, hex bytes, a C array that starts with HMYRB"],
   ["ucdchmyr", "test/ucd-c-hmyr.test.mjs", "SPEC M7 - the table generator written in Himeyuri: two implementations, one sample, byte-for-byte identical tables"],
