@@ -134,6 +134,7 @@ reader	test/reader.test.mjs
 runtimepath	test/runtime-path.test.mjs
 toolingledger	test/tooling-ledger.test.mjs
 independence	test/independence.test.mjs
+crosscheck	test/crosscheck.test.mjs
 checkhmyr	test/check-hmyr.test.mjs
 embedhmyr	test/embed-hmyr.test.mjs
 ucdchmyr	test/ucd-c-hmyr.test.mjs
