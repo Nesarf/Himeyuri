@@ -79,6 +79,43 @@ console.log("二、反向：把 README 里的套件数改错一位，第一条�
   }
 }
 
+console.log("三、四台机器的名字与仓库里的文件对得上");
+{
+  // 只在那一段里抽路径：README 别处也提 src/（目录说明那一块），混进来会把判据弄松。
+  const 段 = (起, 止) => {
+    const a = 文.indexOf(起), b = 文.indexOf(止, a + 1);
+    return a >= 0 && b > a ? 文.slice(a, b) : "";
+  };
+  const 机器段 = 段("## 四台机器", "## 现在有什么");
+  ok("README 里有「四台机器」那一节", 机器段.length > 0, String(机器段.length));
+  const 抽到 = [...机器段.matchAll(/(?:src|vm)\/[\w.-]+/g)].map((m) => m[0]);
+  const 点名 = new Set(抽到);
+  ok("那一节点了四个文件", 点名.size === 4, [...点名].join(" "));
+  // 四台各是哪一台，写在这里当契约：README 改了一台的名字，这一条会红。
+  const 契约 = ["src/eval.mjs", "src/minimal-eval.mjs", "src/vm.mjs", "vm/hmyr.c"];
+  ok("四个名字与契约一致", 契约.every((p) => 点名.has(p)) && 点名.size === 契约.length,
+    [...点名].join(" "));
+  ok("四个文件都真的在", 契约.every((p) => fs.existsSync(path.join(ROOT, p))), "");
+}
+
+console.log("四、九种扩展名与 SPEC 2.11 一致");
+{
+  const 段 = (源, 起, 止) => {
+    const a = 源.indexOf(起), b = 源.indexOf(止, a + 1);
+    return a >= 0 && b > a ? 源.slice(a, b) : "";
+  };
+  // README 那一段写的是带点形式：.hmoca（源码）· .hmoks（字节码）……
+  const README段 = 段(文, "后缀是", "九个扩展名的判据");
+  const README的 = [...new Set([...README段.matchAll(/\.(hm[a-z]+)/g)].map((m) => m[1]))].sort();
+  const 规格 = fs.readFileSync(path.join(ROOT, "SPEC.txt"), "utf8");
+  const 规格段 = 段(规格, "九个扩展名，按", "[定] 源码只有一个扩展名");
+  const 规格的 = [...new Set([...规格段.matchAll(/hm[a-z]+/g)].map((m) => m[0]))].sort();
+  ok("README 里写着九个扩展名", README的.length === 9, README的.join(" "));
+  ok("SPEC 2.11 里也是九个", 规格的.length === 9, 规格的.join(" "));
+  ok("两处是同一组名字", JSON.stringify(README的) === JSON.stringify(规格的),
+    README的.join(" ") + " 对 " + 规格的.join(" "));
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
