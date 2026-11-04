@@ -58,7 +58,41 @@ console.log("三、每一行都写了判据，而那个套件真的在跑");
   ok("每个判据套件都在 check-all 里", 不存在.length === 0, 不存在.join(" "));
 }
 
-console.log("四、判据自己要被验一次");
+console.log("四、lib 与 self 的同名函数必须同义");
+{
+  // 模块合并没有命名空间：同名就是撞车，后引入的赢，而症状是「某个调用指到了
+  // 另一个函数」—— 2026-11-04 那天 self/wide.hmoca 的 乘二 撞掉 vmrun 十八项，
+  // 同日 lib/strings 的 查找（子串）与 self/eval 的 查找（符号表）同名。
+  //
+  // 判据不是「名字不得重复」—— 修剪 与 十六进制 两边同签名同义，撞了也没事。
+  // 判的是「同名的两边签名必须相同」：签名一不同，就说明是两件不同的东西共用一个名字。
+  const 取签名 = (文) => {
+    const 表 = new Map();
+    for (const m of 文.matchAll(/^函数\s+([^\s(]+)\(([^)]*)\)/gm)) {
+      // 参数只留类型：s: String, 子: String → String,String
+      const 型 = m[2].split(",").map((s) => s.trim()).filter(Boolean)
+        .map((s) => (s.includes(":") ? s.slice(s.indexOf(":") + 1).trim() : s)).join(",");
+      表.set(m[1], 型);
+    }
+    return 表;
+  };
+  const 库 = new Map();
+  for (const f of fs.readdirSync(path.join(ROOT, "lib")).filter((x) => x.endsWith(".hmoca"))) {
+    for (const [名, 型] of 取签名(fs.readFileSync(path.join(ROOT, "lib", f), "utf8"))) 库.set(名, { 型, 文件: f });
+  }
+  const 自 = new Map();
+  for (const f of fs.readdirSync(path.join(ROOT, "self")).filter((x) => x.endsWith(".hmoca"))) {
+    for (const [名, 型] of 取签名(fs.readFileSync(path.join(ROOT, "self", f), "utf8"))) 自.set(名, { 型, 文件: f });
+  }
+  const 撞 = [];
+  for (const [名, a] of 库) {
+    const b = 自.get(名);
+    if (b && b.型 !== a.型) 撞.push(名 + "（lib/" + a.文件 + " 是 " + a.型 + "，self/" + b.文件 + " 是 " + b.型 + "）");
+  }
+  ok("没有同名不同义的函数", 撞.length === 0, 撞.join(" · "));
+}
+
+console.log("五、判据自己要被验一次");
 {
   // 两个方向各造一段假索引，看数行与解析有没有真的在做事。
   const 数行 = (文) => 文.split("\n").filter((l) => /^- [A-Za-z0-9_-]+\.hmoca/.test(l))
