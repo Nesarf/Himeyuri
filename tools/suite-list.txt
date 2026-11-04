@@ -138,6 +138,7 @@ crosscheck	test/crosscheck.test.mjs
 readme	test/readme.test.mjs
 agenda	test/agenda.test.mjs
 errors	test/errors.test.mjs
+examples	test/examples.test.mjs
 checkhmyr	test/check-hmyr.test.mjs
 embedhmyr	test/embed-hmyr.test.mjs
 ucdchmyr	test/ucd-c-hmyr.test.mjs
