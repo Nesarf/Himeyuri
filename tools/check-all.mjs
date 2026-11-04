@@ -83,7 +83,7 @@ const SUITES = [
   ["minimaleval", "test/minimal-eval.test.mjs", "SPEC M6 - a second evaluator written to that table alone: same answers, same codes, and it still refuses what is outside it"],
   ["capabilitieslayer", "test/capabilities-layer.test.mjs", "SPEC M6 - the capability kernel: six groups, one static rule about node: imports, and a swapped implementation that changes nothing"],
   ["hostdeps", "test/host-deps.test.mjs", "SPEC M6 - what the executor asks of the host language itself: ten globals, eight constructs, and no Promise"],
-  ["bytecode", "test/bytecode.test.mjs", "SPEC M6 - the same programmes through a flat instruction stream: it compiles, and both execution models answer alike"],
+  ["bytecode", "test/bytecode.test.mjs", "SPEC M6 - the same programmes through a flat instruction stream: it compiles, and three execution models answer alike on six real paths - the minimal evaluator, the JS bytecode machine, and the VM written in Himeyuri itself (the third needs gcc and steps aside when there is none)"],
   ["scalars", "test/scalars.test.mjs", "SPEC M6 - what the scalars mean today: doubles, UTF-16 code units, and the three overloads of addition"],
   ["numbers", "test/numbers.test.mjs", "SPEC M6 - one place defines what a number means: 57 answers across three execution paths, and the bit pattern underneath"],
   ["text", "test/text.test.mjs", "SPEC M6 - one place defines what a string means: code units, half a surrogate pair, and the same answers on all three paths"],

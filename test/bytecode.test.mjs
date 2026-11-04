@@ -1,17 +1,26 @@
-// 字节码那条路：编译得通，而且六条真实路径与最小求值器给出同一个答案。
+// 字节码那条路：编译得通，而且六条真实路径给同一个答案。
 //
 // 这一套钉的是「执行模型换掉了」这件事，而不是「摆脱宿主机了」——后者还没有发生，
-// 见 design/VM.txt 第一节。两条执行路径给出同一个答案，才叫换掉了模型；
+// 见 design/VM.txt 第一节。几条执行路径给出同一个答案，才叫换掉了模型；
 // 一条通一条不通，那只是加了一条岔路。
+//
+// 2026-11-04：第二节从两台变三台 —— 第三台是用 HMYR 自己写的 VM（self/vm.hmoca），
+// 由 C 那台驮着跑。它是这一套里唯一一台「不是现成执行器」的机器，
+// 所以它进来之后，这一节量的东西也跟着变：不只是「换掉了模型」，
+// 而是「这门语言自己写的一台机器，与另外三台对同一份源码同答案」。
+// 前三台用不到 gcc；第三台要，没有就退回两台（判据的标签会跟着写「两边」）。
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { loadUnit } from "../src/loader.mjs";
 import { 最小运行 } from "../src/minimal-eval.mjs";
 import { 跑字节码 } from "../src/vm.mjs";
-import { 编译模块 } from "../src/bytecode.mjs";
+import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
+import { 写程序 } from "../src/code-file.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -66,7 +75,7 @@ console.log("一、六份 self/ 全部编译通过");
   ok("指令数在五千到一万七之间", 指令数 > 5000 && 指令数 < 17000, "insns=" + 指令数);
 }
 
-console.log("二、六条真实路径：两条执行路径给同一个答案");
+console.log("二、六条真实路径：三台执行路径给同一个答案");
 {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-vm-"));
   const 写 = (名, 文) => { const p = path.join(临, 名); fs.writeFileSync(p, 文); return p; };
@@ -76,6 +85,50 @@ console.log("二、六条真实路径：两条执行路径给同一个答案");
   fs.mkdirSync(path.join(临, "mod"), { recursive: true });
   fs.writeFileSync(path.join(临, "mod/lib.hmoca"), "fn 双(n: Int) -> Int {\n  return n * 2\n}\n");
   写("mod/main.hmoca", "import \"./lib.hmoca\"\n\nfn main() -> Int {\n  return 双(21)\n}\n");
+
+  // 第四台：用 HMYR 写的 VM 去跑同一份自举层。
+  //
+  // 它比前三台多绕一圈 —— 宿主（C 那台）跑 conformance/vm-boot.hmoca，那个探针
+  // 装载自举层的字节码、点名调它的 命令行入口。绕这一圈正是这一台的意思：
+  // 前三台都是现成的执行器，而这一台是「用这门语言自己写的一台」。
+  //
+  // 自举层那一份字节码这里现编，不读 runtime/run.hmoks：现编与上面那个 层 一定
+  // 同源，而仓库里那一份是别人跑的产物，可能过期 —— 一个过期的基准比没有更难查。
+  const 有编译器 = (() => {
+    try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
+  })();
+  let 第四台 = null, 第四台的临 = null;
+  if (有编译器) {
+    第四台的临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-bc4-"));
+    const exe = path.join(第四台的临, "hmyr");
+    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+    const 探针层 = loadUnit(path.join(ROOT, "conformance/vm-boot.hmoca"));
+    if (编.status === 0 && 探针层.ok) {
+      const 编法 = (u) => 写程序(合并程序(
+        u.order.map((f) => 编译模块(u.modules.get(f))),
+        编译模块(u.modules.get(u.order[u.order.length - 1])),
+      ));
+      const 探针码路 = path.join(第四台的临, "vm-boot.hmoks");
+      const 自举码路 = path.join(第四台的临, "run.hmoks");
+      fs.writeFileSync(探针码路, 编法(探针层));
+      fs.writeFileSync(自举码路, 编法(层));
+      第四台 = (目标) => {
+        const r = spawnSync(exe, [探针码路, 自举码路, 目标], {
+          encoding: "utf8", timeout: 600000, cwd: ROOT,
+          env: { ...process.env, HMYR_STEPS: "2000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
+        });
+        const 行们 = String(r.stdout || "").split("\n").filter((x) => x !== "");
+        const 末 = 行们.length ? 行们[行们.length - 1] : "";
+        // 探针最后一行是它自己说的退出码；再前面的行才是客人打出来的。
+        const m = 末.match(/^命令行入口 跑完，值 (-?\d+)$/);
+        return {
+          码: m ? Number(m[1]) : -1,
+          出: 行们.slice(0, -1).join("\n").trim(),
+          错: String(r.stderr || "").trim(),
+        };
+      };
+    }
+  }
 
   const 跑 = (目标, 用字节码) => {
     const 出 = { w: "", e: "" };
@@ -104,16 +157,34 @@ console.log("二、六条真实路径：两条执行路径给同一个答案");
   ];
   for (const [名, 目标, 应] of 例们) {
     const 小 = 跑(目标, false), 大 = 跑(目标, true);
-    ok(名 + "：两边都是 " + 应, 小.码 === 大.码 && 小.出 === 大.出 && 大.出 === 应,
-      "最小 " + 小.码 + " " + JSON.stringify(小.出) + " · 字节码 " + 大.码 + " " + JSON.stringify(大.出) + (大.错 ? "  " + 大.错 : ""));
+    const 两台对 = 小.码 === 大.码 && 小.出 === 大.出 && 大.出 === 应;
+    if (!第四台) {
+      ok(名 + "：两台都是 " + 应, 两台对,
+        "最小 " + 小.码 + " " + JSON.stringify(小.出) + " · 字节码 " + 大.码 + " " + JSON.stringify(大.出) + (大.错 ? "  " + 大.错 : ""));
+      continue;
+    }
+    const 四 = 第四台(目标);
+    ok(名 + "：三台都是 " + 应, 两台对 && 四.码 === 大.码 && 四.出 === 大.出,
+      "最小 " + 小.码 + " " + JSON.stringify(小.出) + " · 字节码 " + 大.码 + " " + JSON.stringify(大.出) +
+      " · HMYR 写的 VM " + 四.码 + " " + JSON.stringify(四.出) + (四.错 ? "  " + 四.错 : ""));
   }
   // 两条边界：缺文件与语法坏的目标。它们要的是一致，不是某个具体值。
+  //
+  // 这两条第四台也接得上，而它们比正向那四条更能说明问题：失败路径上的一致性
+  // 是「这一层把宿主的内置失败变成了客人的值」这件事的影子。
+  // 语法坏那一份三台都退 0、都打同一句话 —— 那是自举层自己的意思（它把语法错误
+  // 当成一条要报告的诊断，不是一次中止），不是哪一台漏了什么。
   for (const [名, 目标] of [["目标不存在", path.join(临, "nope.hmoca")], ["语法坏的目标", path.join(临, "bad.hmoca")]]) {
     const 小 = 跑(目标, false), 大 = 跑(目标, true);
-    ok(名 + "：两边退出码相同", 小.码 === 大.码, "最小 " + 小.码 + " · 字节码 " + 大.码);
-    ok(名 + "：两边输出相同", 小.出 === 大.出, JSON.stringify(小.出) + " 对 " + JSON.stringify(大.出));
+    const 四 = 第四台 ? 第四台(目标) : null;
+    const 谁 = 四 ? "三台" : "两边";
+    ok(名 + "：" + 谁 + "退出码相同", 小.码 === 大.码 && (!四 || 四.码 === 大.码),
+      "最小 " + 小.码 + " · 字节码 " + 大.码 + (四 ? " · VM " + 四.码 : ""));
+    ok(名 + "：" + 谁 + "输出相同", 小.出 === 大.出 && (!四 || 四.出 === 大.出),
+      JSON.stringify(小.出) + " 对 " + JSON.stringify(大.出) + (四 ? " 对 " + JSON.stringify(四.出) : ""));
   }
   fs.rmSync(临, { recursive: true, force: true });
+  if (第四台的临) fs.rmSync(第四台的临, { recursive: true, force: true });
 }
 
 console.log("三、聚合值不再靠宿主怎么看它们");
