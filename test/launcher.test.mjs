@@ -156,10 +156,14 @@ console.log("模块加载：import 进来的函数能调");
     fs.writeFileSync(path.join(模块目录, "b.hmoca"), 'import "./a.hmoca"\nfn main() -> Int {\n  return 2\n}\n', "utf8");
     const r2 = 启动([path.join(模块目录, "a.hmoca")]);
     ok("环状 import 不挂死（读过的不再读）", r2.status === 0 && String(r2.stdout).trim().length > 0, JSON.stringify(String(r2.stdout).trim()));
-    // import 一个不存在的文件：跳过，不该崩
+    // import 一个不存在的文件：2026-11-04 改了这条语义 —— 它原来「跳过、照样跑」，
+    // 而那与宿主装载器（报 HMYR-載-003）相反，也与「拒绝比猜好」相反。
+    // self/ 里三十七处引入没有一处是可选的，所以「可选文件」这个前提没有对象。
     fs.writeFileSync(path.join(模块目录, "miss.hmoca"), 'import "./nope.hmoca"\nfn main() -> Int {\n  return 4\n}\n', "utf8");
     const r3 = 启动([path.join(模块目录, "miss.hmoca")]);
-    ok("import 不存在的文件时跳过，照样跑 main", String(r3.stdout).trim() === "4", JSON.stringify(String(r3.stdout).trim()));
+    ok("import 不存在的文件要拒绝，并说出缺的是哪一个",
+       r3.status !== 0 && (String(r3.stderr) + String(r3.stdout)).includes("nope.hmoca"),
+       String(r3.status) + " " + JSON.stringify(String(r3.stderr || r3.stdout).slice(0, 120)));
   } finally {
     fs.rmSync(模块目录, { recursive: true, force: true });
   }

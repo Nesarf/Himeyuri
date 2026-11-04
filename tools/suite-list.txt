@@ -113,6 +113,7 @@ namespace	test/namespace.test.mjs
 pkgmanifest	test/pkg-manifest.test.mjs
 packbytes	test/pack-bytes.test.mjs
 hmget	test/hmget.test.mjs
+pkge2e	test/pkg-e2e.test.mjs
 surface	test/surface.test.mjs
 pixel	test/pixel.test.mjs
 parallel	test/parallel.test.mjs

@@ -139,6 +139,7 @@ const SUITES = [
   ["pkgmanifest", "test/pkg-manifest.test.mjs", "design/PKGMAN.txt - a package says who it is: four fields, a shape check while loading (HMYR-載-007), and a hash check by a tool that is allowed to borrow a crypto library"],
   ["packbytes", "test/pack-bytes.test.mjs", "design/COMPILER.txt - two packers, one bytecode: self/pack.hmoca and src/code-file.mjs write the same bytes for the same source; and two compilers, the JavaScript one and the bootstrap one, agree on what the program prints"],
   ["hmget", "test/hmget.test.mjs", "design/HMGET.txt - taking a package: a local directory or a file URL as the source, the manifest hash checked before anything moves, an existing different package refused unless asked, and http refused by name because the criterion has to be reproducible"],
+  ["pkge2e", "test/pkg-e2e.test.mjs", "SPEC M7 - a package from disk to a running program: hmget installs it, 引入 finds it through the package root, the packaged function is called and prints 42, and after hmget --remove the loader refuses the import by naming the missing package"],
   // surface 的两台各一份后端：Windows 是 deps/surface/win.ps1（WPF 真窗口），POSIX 是
   // deps/surface/win.py —— 那一份只做 -NoShow 那条路（参数、图像尺寸、帧计划、事件），
   // 真开窗要一份 X11 绑定，那是它自己的一件活。而套件走的正是 -NoShow：
