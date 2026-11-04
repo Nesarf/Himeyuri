@@ -205,6 +205,7 @@ const SUITES = [
   ["crc", "test/crc.test.mjs", "SPEC 2.2 - the CRC32 builtin: three implementations agree with each other and with node, and a blocked tuple equals the flat one"],
   ["releasehmyr", "test/release-hmyr.test.mjs", "SPEC M7 - release: manifest, archive and notes from one command, and the notes answer the three questions"],
   ["bigint", "test/bigint.test.mjs", "SPEC M7 - 256-bit integers built from 24-bit words: add, subtract, multiply and compare, checked against node's BigInt"],
+  ["wide", "test/wide.test.mjs", "SPEC M7 - 840-bit integers for decimal assembly: shift left and right with a sticky bit, multiply and divide by a small integer and the bit length, checked against node's BigInt"],
   ["rational", "test/lib-rational.test.mjs", "SPEC M7 - rational numbers on top of bigint: a third plus two thirds is exactly one, a third times three is one too, and a broken check hands back which line it was"],
   ["f64bits", "test/f64-hmyr.test.mjs", "SPEC M7 - the eight bytes of a double read back into a number, bootstrap side: round trips over regular, subnormal and infinite bit patterns, and a broken round trip names its line"],
   ["vmload", "test/vm-load.test.mjs", "SPEC M4 - the loader of an HMYR-written VM: three real .hmoks files come back with the same function table the JS reader gives, line for line, and bad headers are refused with a reason"],
