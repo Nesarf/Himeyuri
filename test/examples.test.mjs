@@ -1,16 +1,19 @@
 // examples/ 下每一份都要跑得通。
 //
 // 为什么要有这一份：README 里那句「跑得起来的示例比没有示例更糟」是自己写的，
-// 而 2026-11-04 之前没有任何判据在盯它 —— 二十四份示例里有两份跑不通：
+// 而 2026-11-04 之前没有任何判据在盯它 —— 那时二十四份里有两份跑不通：
 // view-window 与 probe-file 都把路径写死成 D:/himeyuri/...，在 Linux 上直接 ENOENT。
 // 它们在 Windows 上看起来是好的，所以「没人报」这件事很自然。
 //
+// 2026-11-04 更晚：probe-* 那十四份搬到 probes/ 去了。它们本来就是诊断探针，
+// 而其中两份真的 引入 ../self/run.hmoca —— 于是这一套从四十秒涨到二百三十二秒，
+// 占掉全量墙钟的一半。搬走之后这里只剩十份真正的示例，五秒跑完；
+// 探针那边由 test/probes.test.mjs 守住「编得动」。
+//
 // 判据只有三条：
-//   一、examples/ 下至少二十份（目录空了不能让判据永远绿）
+//   一、examples/ 下至少八份（目录空了不能让判据永远绿）
 //   二、每一份用默认路径跑，退出码为零
 //   三、跑不动的要被认出来（给一个不存在的文件，判据必须说它不通过）
-//
-// 跑一份大约一到两秒，二十四份四十秒上下 —— 这套的耗时主要花在那上面。
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -37,7 +40,7 @@ const 目录 = path.join(ROOT, "examples");
 const 份们 = fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca")).sort();
 
 console.log("一、examples/ 下有一批示例");
-ok("至少二十份", 份们.length >= 20, String(份们.length) + " 份");
+ok("至少八份", 份们.length >= 8, String(份们.length) + " 份");
 
 console.log("二、每一份都跑得通");
 {
@@ -46,7 +49,8 @@ console.log("二、每一份都跑得通");
     const r = 跑(path.join("examples", f));
     if (r.码 !== 0) 坏们.push(f + "（退出 " + r.码 + "：" + (r.末行 || r.错.split("\n")[0] || "").slice(0, 60) + "）");
   }
-  ok("二十四份全过（或这个数目本身）", 坏们.length === 0, 坏们.join(" · "));
+  // 判据不写死份数：目录会长大，而写死的数目一改就红，红的是数目不是坏的示例。
+  ok("这一批全过（" + 份们.length + " 份）", 坏们.length === 0, 坏们.join(" · "));
 }
 
 console.log("三、跑不动的会被认出来");

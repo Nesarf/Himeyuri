@@ -1170,7 +1170,7 @@
 
     一、先问形状，不猜
 
-    写了 examples/probe-decls.hmoca：把一份带 fn 声明的程序交给自举层的解析器，
+    写了 probes/probe-decls.hmoca：把一份带 fn 声明的程序交给自举层的解析器，
     打出 tokens 数、声明数、每项长度、语句数。
 
     C 机器上：
@@ -1230,7 +1230,7 @@
 
     三十一节把裂缝缩到 keep_lines 那一个开关。这一节用二分把它缩到最短。
 
-    examples/probe-lex2.hmoca 逐级加长源码，而第一档就崩：
+    probes/probe-lex2.hmoca 逐级加长源码，而第一档就崩：
 
       scan_lines("a")  →  index 1 is outside a value of length 1
 
