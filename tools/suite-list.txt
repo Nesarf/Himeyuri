@@ -179,6 +179,7 @@ vmload	test/vm-load.test.mjs
 vmrun	test/vm-run.test.mjs
 vmboot	test/vm-boot.test.mjs
 interval	test/lib-interval.test.mjs
+time	test/lib-time.test.mjs
 curve	test/curve.test.mjs
 sha512	test/sha512.test.mjs
 ssh	test/ssh.test.mjs
