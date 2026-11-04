@@ -68,7 +68,10 @@ const C = [...new Set([...读("vm/hmyr.c").matchAll(/name_is\((?:name_idx|名off
 // 它比别的几处多一样东西：表里还有一批中文名（数组 · 设 · 位与 … 与 校验和），
 // 那些不是宿主的 BUILTINS 键，只在 C 那台的 name_is 上。所以这一处只要求
 // 「宿主有的，这里都有」，不要求反向相等。
-const 自举编译 = [...new Set([...读("self/compile.hmoca").matchAll(/(?:if|若) 名 == "([^"]+)" \{ (?:return|返回) true \}/g)].map((m) => m[1]))];
+// 2026-11-04 修一处：这个正则原来只认英文的 true，而那份源码里写的是「真」——
+// 于是这一列整列为「无」，汇总行报「宿主有而自编没有：78 个」。那个数字看起来
+// 像一张欠账，其实是尺子坏了。两种写法都要认：if 与 若、return 与 返回、true 与 真。
+const 自举编译 = [...new Set([...读("self/compile.hmoca").matchAll(/(?:if|若) 名 == "([^"]+)" \{ (?:return|返回) (?:true|真) \}/g)].map((m) => m[1]))];
 
 const 去重 = (a) => [...new Set(a)].sort();
 const 宿 = 去重(宿主), 小 = 去重(最小), 编 = 去重(编译), 字 = 去重(字节码), 自 = 去重(自举), 机 = 去重(C);
