@@ -22,6 +22,8 @@ import { fileURLToPath } from "node:url";
 import { loadUnit } from "../src/loader.mjs";
 import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
 import { 写程序 } from "../src/code-file.mjs";
+import { 跑字节码 } from "../src/vm.mjs";
+import { 本机能力 } from "../src/capabilities.mjs";
 import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -79,7 +81,31 @@ if (!有编译器) {
       ok("探针报的退出码是 0", 出.includes("命令行入口 跑完，值 0"), 出.slice(-120));
     }
 
-    console.log("三、跑不通的时候要说清是哪一个入口不通");
+    console.log("三、客人自己的手：这一版新转手的那批内置");
+    {
+      // examples/hello.hmoca 只走到第七跳就到底，二十来个内置够它用 ——
+      // 而 self/vm.hmoca 的 内置的 在 2026-11-04 从二十二个补到六十六个。
+      // 补进来的那四十几条，hello 一条都不碰。conformance/vm-hands.hmoca 就是
+      // 为它们写的：数、串、位运算八条、数组与设、记录与索引、f64_bytes、时间。
+      //
+      // 期望值从 src/vm.mjs 来，不写死常数：写死常数等于把我对这语言的理解抄两遍，
+      // 抄错了两边就一起错。
+      const 源路 = path.join(ROOT, "conformance/vm-hands.hmoca");
+      const u = loadUnit(源路);
+      const vm = 跑字节码(u, { capabilities: 本机能力() });
+      const 那 = vm.调用("main", []);
+      const 期望 = 那.ok ? String(那.值) : ("失败：" + 那.话);
+      const r = spawnSync(exe, [器路, 自举, "conformance/vm-hands.hmoca"], {
+        encoding: "utf8", timeout: 900000, env: 环境, cwd: ROOT,
+      });
+      const 出 = String(r.stdout || "");
+      const 首行 = (出.split("\n")[0] || "").trim();
+      ok("自举层跑出与 src/vm.mjs 同一个数（期望 " + 期望 + "）",
+        r.status === 0 && 首行 === 期望,
+        "退出码 " + r.status + " 首行 " + 首行 + " " + String(r.stderr || "").slice(0, 160));
+    }
+
+    console.log("四、跑不通的时候要说清是哪一个入口不通");
     {
       // 点名一个不存在的入口：这一层要说出「没有 … 这个函数」，
       // 而不是安静地交回 0。探针把入口名从第五个参数接过来。
