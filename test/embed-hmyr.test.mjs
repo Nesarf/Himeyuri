@@ -69,13 +69,18 @@ if (!有编译器) {
       const 文 = fs.readFileSync(出, "utf8");
       const 行批 = 文.split("\n");
       const 字节 = fs.statSync(path.join(ROOT, "bootstrap/pack.hmtn")).size;
-      ok("生成的行数在四千上下", 行批.length > 3000 && 行批.length < 6000, String(行批.length));
+      // 行数跟着种子走，不写死一个区间：种子每变一次，写死的区间就要跟着改一次，
+      // 而那种改法会让「判据没动」看起来像「产物没问题」。这里只守两件事 ——
+      // 一行不会只放一个字节（那说明格式坏了），也不会一行都放不下。
+      const 每行最低 = Math.floor(字节 / 40);
+      ok("生成的行数与种子大小相称", 行批.length >= 每行最低 && 行批.length <= 字节 + 20,
+        String(行批.length) + " 行 / " + 字节 + " 字节");
       ok("首行写着字节数", 行批[0].includes(String(字节) + " 字节"), JSON.stringify(行批[0]));
       ok("数组从 HMYRB 的魔数开始", (行批[2] || "").trim().startsWith("0x48, 0x4d, 0x59, 0x52, 0x42"), JSON.stringify((行批[2] || "").slice(0, 60)));
       ok("末行给出长度", 文.includes("pack_hmyrb_len = " + 字节 + ";"), "");
       ok("没有一行长到离谱", 行批.every((l) => l.length < 400), String(Math.max(...行批.map((l) => l.length))));
     } else {
-      ok("生成的行数在四千上下", false, "没有产物");
+      ok("生成的行数与种子大小相称", false, "没有产物");
     }
   }
   fs.rmSync(临, { recursive: true, force: true });

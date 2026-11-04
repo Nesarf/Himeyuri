@@ -64,7 +64,12 @@ if (!有编译器) {
       const 回 = fs.readFileSync(解出);
       ok("往返逐字节一致", 原.length === 回.length && Buffer.compare(原, 回) === 0, 原.length + " 对 " + 回.length);
       const 压 = fs.readFileSync(压出);
-      ok("压缩比是 1.0（多出来的只是五个字节的块头）", 压.length === 原.length + 5, 压.length + " 对 " + 原.length);
+      // stored（不压缩）块最大 65535 字节，每块带五个字节的头，所以种子超过 64 KB
+      // 之后就不止一个块。判据写成「块数乘五」而不是写死的五：写死的那一版在种子
+      // 长到 74354 字节时才红，而那次红说的是「种子变大了」，不是「压缩器坏了」。
+      const 块数 = Math.ceil(原.length / 65535);
+      ok("压缩比是 1.0（多出来的只是每块五个字节的头，" + 块数 + " 块）",
+        压.length === 原.length + 块数 * 5, 压.length + " 对 " + 原.length);
 
       console.log("三、标准工具读得懂这个流");
       try {

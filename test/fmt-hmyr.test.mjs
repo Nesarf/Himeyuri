@@ -96,11 +96,16 @@ if (!有编译器) {
       const a = 跑全(源);
       const b = 跑全(String(a.stdout || ""));
       const 幂等 = String(a.stdout || "") === String(b.stdout || "");
-      const 出 = path.join(临, 名 + ".hmoca");
+      // 写到 self/ 里，不写临时目录：这几份源码里有 `引入 "./lex.hmoca"` 这样的相对引入，
+      // 而装载器是按「源文件所在目录」解析它们的。写到临时目录，依赖一个都找不到，
+      // 于是每份带引入的源码都会报 HMYR-載-003 —— 那种红说的是判据放错了地方，
+      // 不是被排版的源码有问题。名字带 .tmp- 前缀，跑完就删。
+      const 出 = path.join(ROOT, "self", ".tmp-fmt-" + 名 + ".hmoca");
       fs2.writeFileSync(出, String(a.stdout || ""), "utf8");
       const u = loadUnit(出);
       ok(名 + ".hmoca 缩进之后编得动", u.ok, JSON.stringify(u.diagnostics.errors.slice(0, 1).map((e) => e.code)));
       ok(名 + ".hmoca 再排一次不变", 幂等, "");
+      fs2.rmSync(出, { force: true });
     }
   }
   fs.rmSync(临, { recursive: true, force: true });
