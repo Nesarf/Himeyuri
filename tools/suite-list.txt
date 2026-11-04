@@ -166,6 +166,7 @@ rational	test/lib-rational.test.mjs
 f64bits	test/f64-hmyr.test.mjs
 vmload	test/vm-load.test.mjs
 vmrun	test/vm-run.test.mjs
+vmboot	test/vm-boot.test.mjs
 interval	test/lib-interval.test.mjs
 curve	test/curve.test.mjs
 sha512	test/sha512.test.mjs
