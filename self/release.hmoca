@@ -14,10 +14,6 @@
 引入 "./manifest.hmoca"
 引入 "./package.hmoca"
 
-函数 数字(s: String) -> String {
-  返回 s
-}
-
 // 一行一行攒成一段文字：每行后面带换行，末尾再切掉一个。
 函数 拼行(行集: Int) {
   变 块 = ()
