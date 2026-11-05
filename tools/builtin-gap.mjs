@@ -58,7 +58,7 @@ const 字节码 = 块里的键(读("src/vm-builtins.mjs"), "export const 内置�
 // 而空列读起来像「那台什么都没有」，不像「量具坏了」。2026-11-02 三条一起修。
 // 自举层的内置名分在两处：eval.hmoca 的 求调用 与 eval-files.hmoca 的 求内置文件
 // （2026-11-05 拆出去的九条文件类分支）。两处都要读，否则搬走的那九个会被算成「没有」。
-const 自举 = ["self/eval.hmoca", "self/eval-files.hmoca", "self/eval-index.hmoca", "self/eval-term.hmoca", "self/eval-thread.hmoca"]
+const 自举 = ["self/eval.hmoca", "self/eval-files.hmoca", "self/eval-index.hmoca", "self/eval-term.hmoca", "self/eval-thread.hmoca", "self/eval-scalars.hmoca"]
   .flatMap((f) => [...读(f).matchAll(/(?:if|若) 名 == "([a-zA-Z_][a-zA-Z0-9_]*)"/g)].map((m) => m[1]));
 const C = [...new Set([...读("vm/hmyr.c").matchAll(/name_is\((?:name_idx|名off), "([a-zA-Z_][a-zA-Z0-9_]*)"\)/g)].map((m) => m[1]))];
 // 第七处（2026-10-25 补）：自举编译器自己的「是内置」表，在 self/compile.hmyr 里。

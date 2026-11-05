@@ -30,7 +30,7 @@ console.log("一、这一格在六处都有");
     ["src/minimal-eval.mjs", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
     ["src/vm-builtins.mjs", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
     ["src/bytecode.mjs", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
-    ["self/eval.hmoca", ["bytes_to_text"]],
+    ["self/eval-scalars.hmoca", ["bytes_to_text"]],
     ["self/eval-files.hmoca", ["read_stdin_line", "read_stdin_bytes"]],
     ["vm/hmyr.c", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
   ];
