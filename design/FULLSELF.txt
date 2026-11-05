@@ -5339,3 +5339,27 @@ sleep_ms、run_program、argv、print_err 等零散条目。
 （它是独立程序，跑在 C 那台机器上），所以「引入链几份」「自举层几个声明」那些数
 不受它影响。而 stdin-line 与 embed-hmyr 之所以也没动，是甲的成果 —— 它们现在扫
 eval*.hmoca，与 vm 的拆法无关。
+
+第九十二件（2026-11-05）：一次推送失败，与它的三种假象。
+
+这一轮做完 vm.hmoca 的第四刀（输入、路径、本地化十四条进 self/vm-io.hmoca），提交
+9704bcb，然后推送失败三次，每次症状不同。
+
+  第一次   Please make sure you have the correct access rights —— 看上去像权限。
+  第二次   同一条，用 core.sshCommand 指定密钥与 ssh.exe —— 还是同一句。
+  第三次   直接 ssh -T git@github.com 成功（Hi Nesarf!），而 git push 失败。
+
+于是分清了：ssh 本身通，git 用错了 ssh。git 默认走 Git for Windows 自带的那份
+（/usr/bin/ssh），它提供的 ED25519 公钥 SHA256 与成功的那个一模一样，却被 GitHub 拒 ——
+差别在签名算法的协商，不在密钥。
+
+修法是把 git 的 ssh 换成 Windows 自带的那一份：
+
+  GIT_SSH=C:/Windows/System32/OpenSSH/ssh.exe
+  GIT_SSH_COMMAND="C:/Windows/System32/OpenSSH/ssh.exe -o IdentitiesOnly=yes -i <key>"
+
+这样之后推送成功一次（77e926a..9704bcb）。随后同样的命令又失败 —— 那是网络，
+不是配置：命令没变，两分钟前刚成功。
+
+三条假象值得记：权限被拒可能是算法协商、可能是 ssh 版本、可能是网络，而它们的
+报错是同一句。分清的办法是直接把 ssh 单独跑一遍 —— 它通了，问题就在 git 怎么调它。
