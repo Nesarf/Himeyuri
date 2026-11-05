@@ -41,7 +41,7 @@ runtime/        种子编出来的产物（.hmoks）
 bin/hmyr.mjs    启动器
 tools/          工具：产物编译、静态检查、基准
 conformance/    错误码表（108 个）与人话对照 · 符合性用例
-test/           228 个套件
+test/           229 个套件
 bench/          基准：解压 · 压缩 · 实时回调
 examples/       示例
 probes/         当时的诊断探针（不跑，只编得动）
