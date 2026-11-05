@@ -22,12 +22,19 @@ const ok = (label, condition, detail = "") => {
 
 console.log("一、这一格在六处都有");
 {
+  // 三台机器各有一份实现，而 HMYR 那一份 2026-11-05 分在两个文件里：读标准输入的两个
+  // 搬去了 eval-files.hmoca，bytes_to_text 还在 eval.hmoca。所以这一份按文件列名字，
+  // 而不是拿同一份名册去套每个文件 —— 那种写法在搬家当天就会假红。
   const 源 = [
-    "src/eval.mjs", "src/minimal-eval.mjs", "src/vm-builtins.mjs",
-    "src/bytecode.mjs", "self/eval.hmoca", "vm/hmyr.c",
+    ["src/eval.mjs", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
+    ["src/minimal-eval.mjs", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
+    ["src/vm-builtins.mjs", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
+    ["src/bytecode.mjs", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
+    ["self/eval.hmoca", ["bytes_to_text"]],
+    ["self/eval-files.hmoca", ["read_stdin_line", "read_stdin_bytes"]],
+    ["vm/hmyr.c", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
   ];
-  const 名册 = ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"];
-  for (const f of 源) {
+  for (const [f, 名册] of 源) {
     const 文 = fs.readFileSync(path.join(ROOT, f), "utf8");
     for (const 名 of 名册) ok(f + " 认识 " + 名, 文.includes(名), "");
   }
