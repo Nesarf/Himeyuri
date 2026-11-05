@@ -8,28 +8,8 @@
 //
 // 用法：hmyr self/ucd-c.hmyr <输入.txt> <输出目录>
 
-函数 十六进制值(文: String) -> Int {
-  变 v = 0
-  变 i = 0
-  当 i < len(文) {
-    定 c = 文[i]
-    变 d = 0 - 1
-    变 k = 0
-    当 k < 10 {
-      若 c == "0123456789"[k] { d = k }
-      k = k + 1
-    }
-    变 k2 = 0
-    当 k2 < 6 {
-      若 c == "abcdef"[k2] { d = 10 + k2 }
-      若 c == "ABCDEF"[k2] { d = 10 + k2 }
-      k2 = k2 + 1
-    }
-    若 d >= 0 { v = v * 16 + d }
-    i = i + 1
-  }
-  返回 v
-}
+
+引入 "./ucd-common.hmoca"
 
 函数 十六进制写法(n: Int) -> String {
   若 n == 0 { 返回 "0" }

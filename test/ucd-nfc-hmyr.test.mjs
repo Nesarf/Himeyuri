@@ -10,8 +10,7 @@ import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
 import { 写程序, 读程序 } from "../src/code-file.mjs";
 import { 虚拟机 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
-import { lex } from "../src/lexer.mjs";
-import { parse } from "../src/parser.mjs";
+import { loadUnit } from "../src/loader.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -34,8 +33,12 @@ if (failed === 0) {
   const 出 = path.join(临, "ucd-nfc.h");
 
   const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
-  const { ast } = parse(lex(fs.readFileSync(源路, "utf8"), { diagnostics: d }).tokens, { diagnostics: d });
-  const 字节 = 写程序(合并程序([编译模块(ast)]));
+  // 2026-11-05：修剪 搬到 self/ucd-trim.hmoca 之后，这一份要跟着 引入 走，
+  // 于是改用 loadUnit 拿模块顺序 —— 与 ucd-case 那一份同样的改法。
+  const 层 = loadUnit(源路);
+  ok("模块读得进来（含引入的 ucd-trim）", 层.ok, 层.diagnostics.errors.map((e) => e.code + " " + e.message).join(" · ").slice(0, 160));
+  const 模块们 = 层.order.map((f) => 编译模块(层.modules.get(f)));
+  const 字节 = 写程序(合并程序(模块们));
   const vm = new 虚拟机(读程序(字节), {
     capabilities: 本机能力(), stepLimit: 2000000000, maxDepth: 4000,
     argv: ["hmyr", 语料, 出],

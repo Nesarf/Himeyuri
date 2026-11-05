@@ -182,6 +182,7 @@ interval	test/lib-interval.test.mjs
 time	test/lib-time.test.mjs
 regex	test/lib-regex.test.mjs
 libindex	test/lib-index.test.mjs
+distinct	test/self-distinct.test.mjs
 curve	test/curve.test.mjs
 sha512	test/sha512.test.mjs
 ssh	test/ssh.test.mjs
