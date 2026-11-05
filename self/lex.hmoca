@@ -43,13 +43,13 @@
 
 函数 is_ident_start(c: String) -> Bool {
   // 字母由宿主判定，下划线是标识符自己的字符（\p{L} 并不包含它）。
-  返回 is_letter(c) || c == "_"
+  返回 is_alpha(c) || c == "_"
 }
 
 函数 is_ident_char(c: String) -> Bool {
   // 组合记号也属于标识符：café 的两种写法都是同一个名字的候选。
   // 归一不再「是下一步」—— tokenize 在产出标识符时已经调 nfc 了（2026-11-01 改）。
-  返回 is_letter(c) || is_mark(c) || is_digit(c) || c == "_"
+  返回 is_alpha(c) || is_mark(c) || is_digit(c) || c == "_"
 }
 
 函数 is_space(c: String) -> Bool {
