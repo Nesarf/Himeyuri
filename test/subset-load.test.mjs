@@ -48,7 +48,7 @@ console.log("一、self/run.hmoca：默认那条与宿主那条，模块与声�
   const 名序 = (u) => u.order.map((f) => u.modules.get(f).decls.map((d) => d.kind + ":" + d.name).join(",")).join(" | ");
   ok("每个模块的声明序列相同", 名序(默认) === 名序(宿主), 名序(宿主).slice(0, 70));
   // 2026-11-05：八份 —— trees.hmoca 与 paths.hmoca 先后加进自举层那条链。
-  ok("十份都在里面", 默认.order.length === 10, String(默认.order.length));
+  ok("十一份都在里面", 默认.order.length === 11, String(默认.order.length));
 }
 
 console.log("二、跑起来之后，函数表也是同一批名字");
