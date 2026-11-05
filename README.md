@@ -35,6 +35,8 @@ C 机器          vm/hmyr.c             跑同一份字节码，不经过 JavaSc
 ```
 src/            宿主：词法 · 语法 · 求值 · 编码 · 模块加载 · 静态检查器
 self/           自举：词法与语法 · 语句与体 · 求值器 · 编译器 · 打包器
+                （2026-11-05 起按职责拆成多份：eval-*.hmoca 九个、vm-*.hmoca 四个、
+                 run-*.hmoca 两个、compile-*.hmoca 两个，各自管一件事）
 vm/             C 机器与种子头文件
 bootstrap/      种子（.hmtn）
 runtime/        种子编出来的产物（.hmoks）
