@@ -50,7 +50,8 @@ console.log("一、六份，默认栈下，名字与顺序都与宿主一致");
   // stmt 不动 —— parse_while 是既有的那一个，改的是它的体；body 也不动。
   // 2026-11-05：chain 从 27 到 26 —— leaves 搬进 self/trees.hmoca 之后，chain 少了一个
   // 自己的函数声明（它仍然调用它，因为 trees 被引入了）。
-  const 期 = { lex: 31, chain: 26, stmt: 10, body: 33, eval: 61, run: 65 };
+  // 2026-11-05：run 从 65 到 59 —— 六个路径函数搬进 self/paths.hmoca。
+  const 期 = { lex: 31, chain: 26, stmt: 10, body: 33, eval: 61, run: 59 };
   for (const 名 of Object.keys(期)) {
     const 路 = path.join(ROOT, "self", 名 + ".hmoca");
     const 甲 = 算名(路);
