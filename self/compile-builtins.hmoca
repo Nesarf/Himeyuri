@@ -1,0 +1,108 @@
+// 这个名字是不是内置：一张判断表。
+//
+// 为什么单独立一份（2026-11-05）：compile.hmoca 的第二刀。这一件一百行、零依赖，
+// 是「调用这条指令到底是 CALLB 还是 CALLF」那个问题的全部答案 —— 编译期定，运行时不再猜。
+//
+// 表要与 src/bytecode.mjs 的 内置名、src/vm-builtins.mjs 与 vm/hmyr.c 里那一套对齐。
+// 这张表只回答「是不是」，具体怎么执行在每一台机器自己那边。
+
+公开 函数 是内置(名: String) -> Bool {
+  若 名 == "abs" { 返回 真 }
+  若 名 == "argv" { 返回 真 }
+  若 名 == "chr" { 返回 真 }
+  // 可变数组：编译期认这两个名字，运行时落到 vm/hmyr.c 的 name_is 上。
+  若 名 == "数组" { 返回 真 }
+  若 名 == "设" { 返回 真 }
+  // 位运算：八个别名，名字带前缀以免与用户函数同名。
+  若 名 == "位与" { 返回 真 }
+  若 名 == "位或" { 返回 真 }
+  若 名 == "位异或" { 返回 真 }
+  若 名 == "位非" { 返回 真 }
+  若 名 == "位右移" { 返回 真 }
+  若 名 == "位加" { 返回 真 }
+  若 名 == "位循环右移" { 返回 真 }
+  若 名 == "位循环左移" { 返回 真 }
+  若 名 == "field_get" { 返回 真 }
+  若 名 == "field_has" { 返回 真 }
+  若 名 == "field_names" { 返回 真 }
+  若 名 == "file_exists" { 返回 真 }
+  若 名 == "floor" { 返回 真 }
+  若 名 == "int" { 返回 真 }
+  若 名 == "校验和" { 返回 真 }
+  若 名 == "is_dir" { 返回 真 }
+  若 名 == "is_letter" { 返回 真 }
+  若 名 == "is_mark" { 返回 真 }
+  若 名 == "len" { 返回 真 }
+  若 名 == "max" { 返回 真 }
+  若 名 == "min" { 返回 真 }
+  若 名 == "nfc" { 返回 真 }
+  若 名 == "ord" { 返回 真 }
+  若 名 == "print" { 返回 真 }
+  若 名 == "print_err" { 返回 真 }
+  若 名 == "read_dir" { 返回 真 }
+  若 名 == "read_text" { 返回 真 }
+  若 名 == "record_new" { 返回 真 }
+  若 名 == "slice" { 返回 真 }
+  若 名 == "str" { 返回 真 }
+  若 名 == "to_int" { 返回 真 }
+  若 名 == "to_lower" { 返回 真 }
+  若 名 == "to_upper" { 返回 真 }
+  若 名 == "write_text" { 返回 真 }
+  若 名 == "write_bytes" { 返回 真 }
+  若 名 == "f64_bytes" { 返回 真 }
+  若 名 == "pack_value" { 返回 真 }
+  // 契约失败：三只旋钮里第三只的收尾（design/CONTRACTS.txt）。
+  // 这张表若漏了它，编一条契约的最后一条指令就成了「调一个用户函数」，
+  // 运行时给出 HMYR-行-005 —— 于是一份写错契约的程序报的是「没有这个函数」。
+  若 名 == "契约失败" { 返回 真 }
+  // 补：宿主那份名单有、这张表以前漏掉的。2026-10-25 一次补齐。
+  // 依据是 tools/seed-gap.mjs：它量的正是「种子认得哪些内置」，而种子就是这个函数的字节码。
+  若 名 == "arena" { 返回 真 }
+  若 名 == "owned" { 返回 真 }
+  若 名 == "bytes_view" { 返回 真 }
+  若 名 == "view_len" { 返回 真 }
+  若 名 == "view_get" { 返回 真 }
+  若 名 == "view_set" { 返回 真 }
+  若 名 == "fmt_number" { 返回 真 }
+  若 名 == "bytes_to_text" { 返回 真 }
+  若 名 == "chdir" { 返回 真 }
+  若 名 == "console_codepage" { 返回 真 }
+  若 名 == "cwd" { 返回 真 }
+  若 名 == "home_dir" { 返回 真 }
+  若 名 == "index_get" { 返回 真 }
+  若 名 == "index_has" { 返回 真 }
+  若 名 == "index_keys" { 返回 真 }
+  若 名 == "index_len" { 返回 真 }
+  若 名 == "index_new" { 返回 真 }
+  若 名 == "index_set" { 返回 真 }
+  若 名 == "key_available" { 返回 真 }
+  若 名 == "key_push" { 返回 真 }
+  若 名 == "key_read" { 返回 真 }
+  若 名 == "key_start" { 返回 真 }
+  若 名 == "locale_current" { 返回 真 }
+  若 名 == "locale_env" { 返回 真 }
+  若 名 == "locale_set" { 返回 真 }
+  若 名 == "now_ms" { 返回 真 }
+  若 名 == "python_path" { 返回 真 }
+  若 名 == "read_bytes" { 返回 真 }
+  若 名 == "read_line" { 返回 真 }
+  若 名 == "read_lines" { 返回 真 }
+  若 名 == "read_stdin_bytes" { 返回 真 }
+  若 名 == "read_stdin_line" { 返回 真 }
+  若 名 == "repo_path" { 返回 真 }
+  若 名 == "run_program" { 返回 真 }
+  若 名 == "sleep_ms" { 返回 真 }
+  若 名 == "split" { 返回 真 }
+  若 名 == "temp_path" { 返回 真 }
+  若 名 == "term_clear" { 返回 真 }
+  若 名 == "term_color" { 返回 真 }
+  若 名 == "term_escape" { 返回 真 }
+  若 名 == "term_hide" { 返回 真 }
+  若 名 == "term_show" { 返回 真 }
+  若 名 == "term_size" { 返回 真 }
+  若 名 == "thr_cancel" { 返回 真 }
+  若 名 == "thr_count" { 返回 真 }
+  若 名 == "thr_join" { 返回 真 }
+  若 名 == "thr_spawn" { 返回 真 }
+  返回 假
+}

@@ -79,7 +79,12 @@ const C = [...new Set([...读("vm/hmyr.c").matchAll(/name_is\((?:name_idx|名off
 // 2026-11-04 修一处：这个正则原来只认英文的 true，而那份源码里写的是「真」——
 // 于是这一列整列为「无」，汇总行报「宿主有而自编没有：78 个」。那个数字看起来
 // 像一张欠账，其实是尺子坏了。两种写法都要认：if 与 若、return 与 返回、true 与 真。
-const 自举编译 = [...new Set([...读("self/compile.hmoca").matchAll(/(?:if|若) 名 == "([^"]+)" \{ (?:return|返回) (?:true|真) \}/g)].map((m) => m[1]))];
+// 与自举那一列同一个道理：这一列也是「按目录扫」，不列文件名。
+// 2026-11-05：是内置 的表从 compile.hmoca 搬去 compile-builtins.hmoca 之后，
+// 这一列整列变成零 —— 判据当场红了（crosscheck 里那条「自编那一列不是空的」）。
+const 自举编译 = [...new Set(fs.readdirSync(path.join(ROOT, "self"))
+  .filter((f) => /^compile.*\.hmoca$/.test(f)).sort()
+  .flatMap((f) => [...读("self/" + f).matchAll(/(?:if|若) 名 == "([^"]+)" \{ (?:return|返回) (?:true|真) \}/g)].map((m) => m[1])))];
 
 const 去重 = (a) => [...new Set(a)].sort();
 const 宿 = 去重(宿主), 小 = 去重(最小), 编 = 去重(编译), 字 = 去重(字节码), 自 = 去重(自举), 机 = 去重(C);
