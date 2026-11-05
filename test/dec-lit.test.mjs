@@ -60,7 +60,9 @@ console.log("二、反向：把慢路换回旧写法，判据必须红");
   //
   // 改的是 self/compile.hmoca 本身，所以在 finally 里换回来：这一份跑在别人的
   // 源码上，留下半改的东西比这个判据红更糟。
-  const 原路 = path.join(ROOT, "self/compile.hmoca");
+  // 2026-11-05：数字值 从 compile.hmoca 搬去了 compile-number.hmoca，
+  // 所以这一节的破坏性改动要落在新家 —— 否则它找不到那四行，什么都不验就绿了。
+  const 原路 = path.join(ROOT, "self/compile-number.hmoca");
   const 原文 = fs.readFileSync(原路, "utf8");
   // 时间戳要一起复原：selfbridge 检查「runtime/*.hmoks 不比它依赖链里任何一份旧」，
   // 而这一节每跑一次都会把 compile.hmoca 的 mtime 推到当下 —— 于是每跑一次这个判据，
