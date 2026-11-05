@@ -4768,3 +4768,19 @@ inflate）、置（deflate、inflate、tree）、找匹配（deflate、tree、zi
 一个反复出现的操作错误也记在这里：从原文件里提取函数全文搬进共享文件时，函数是没有 公开
 的（原文件里它同模块内调用，不需要）。两轮都忘了补，而 HMYR-載-006 只是警告 ——
 程序照样跑对，判据才红。所以下一个共享文件搬完，要立刻 grep 一遍 公开 的条数对不对。
+
+第六十九件（2026-11-05）：查表 三份收进 self/bitlib.hmoca。
+
+这一组三份（deflate、tree、zip），逐字相同，而且自包含 —— 只用 len 与下标，不调任何
+别的自定义函数。所以它是这一系列里最省心的一组：搬完就能跑。
+
+一个判断值得记：它放在 bitlib.hmoca 里，严格说那个名字已经不够准 —— 那一份现在收的是
+「deflate 与 zip 共用的零件」：位运算（反转位、倍、放位）与 Huffman 表的查找（查表）。
+没有改名，因为改名要动四个文件的引入；但头注释里写清了它现在是什么。
+名字与内容不一致是小事，只要头注释先说清楚 —— 而不是让下一个人读到「bitlib」去找位运算
+却在这里撞见一张表。
+
+deflate、zip、zipmulti、tree、selfcontained、hmyrpack、distinct、namespace 八套全过。
+
+判据上限从 4 降到 3。剩下三组：拼平（compile、deflate、inflate）、置（deflate、
+inflate、tree）、找匹配（deflate、tree、zip）。
