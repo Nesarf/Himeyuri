@@ -1,0 +1,49 @@
+// VM 那台机器的输入与路径十六个内置：read_stdin_bytes、read_stdin_line、read_line、read_lines、home_dir、temp_path、repo_path、python_path、chdir、cwd、locale_current、locale_env、locale_set、console_codepage。
+//
+// 为什么单独立一份（2026-11-05）：内置的 那一大块分派的第四刀。这一组回答的都是「这台机器上是什么样」—— 标准输入、家里、临时、仓库根、Python 在哪、本地化、代码页。它们各三行、不调任何自定义函数。
+
+公开 函数 求内置输入(名: String, 实参: Int, 圈: Int) {
+若 名 == "read_stdin_bytes" {
+    返回 {认: 真, 值: {ok: 真, 值: read_stdin_bytes(实参[0]), 说: ""}}
+  }
+若 名 == "read_stdin_line" {
+    返回 {认: 真, 值: {ok: 真, 值: read_stdin_line(), 说: ""}}
+  }
+若 名 == "read_line" {
+    返回 {认: 真, 值: {ok: 真, 值: read_line(实参[0], 实参[1]), 说: ""}}
+  }
+若 名 == "read_lines" {
+    返回 {认: 真, 值: {ok: 真, 值: read_lines(实参[0]), 说: ""}}
+  }
+若 名 == "home_dir" {
+    返回 {认: 真, 值: {ok: 真, 值: home_dir(), 说: ""}}
+  }
+若 名 == "temp_path" {
+    返回 {认: 真, 值: {ok: 真, 值: temp_path(实参[0]), 说: ""}}
+  }
+若 名 == "repo_path" {
+    返回 {认: 真, 值: {ok: 真, 值: repo_path(实参[0]), 说: ""}}
+  }
+若 名 == "python_path" {
+    返回 {认: 真, 值: {ok: 真, 值: python_path(), 说: ""}}
+  }
+若 名 == "chdir" {
+    返回 {认: 真, 值: {ok: 真, 值: chdir(实参[0]), 说: ""}}
+  }
+若 名 == "cwd" {
+    返回 {认: 真, 值: {ok: 真, 值: cwd(), 说: ""}}
+  }
+若 名 == "locale_current" {
+    返回 {认: 真, 值: {ok: 真, 值: locale_current(), 说: ""}}
+  }
+若 名 == "locale_env" {
+    返回 {认: 真, 值: {ok: 真, 值: locale_env(), 说: ""}}
+  }
+若 名 == "locale_set" {
+    返回 {认: 真, 值: {ok: 真, 值: locale_set(实参[0]), 说: ""}}
+  }
+若 名 == "console_codepage" {
+    返回 {认: 真, 值: {ok: 真, 值: console_codepage(), 说: ""}}
+  }
+  返回 {认: 假, 值: 0}
+}
