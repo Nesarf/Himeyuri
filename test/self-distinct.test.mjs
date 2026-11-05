@@ -45,7 +45,9 @@ const 归一 = (行们) => 行们
   .join("\n");
 
 const 目录 = path.join(ROOT, "self");
-const 份们 = fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca")).sort();
+// 跳过临时文件：fmt-hmyr 那一套会往 self/ 写 .tmp-fmt-*.hmoca 再删掉，而全量是并行跑的 ——
+// 扫到那些中间态会让这一份在别的套件忙的时候红，而那不是「重复实现」，只是「现在正在被打字」.
+const 份们 = fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca") && !f.startsWith(".") && !f.includes("tmp-fmt")).sort();
 
 console.log("一、self/ 下没有成段的重复实现");
 {
@@ -90,7 +92,7 @@ console.log("一、self/ 下没有成段的重复实现");
   // 找匹配链留在 deflate。第八轮做掉 置（deflate、inflate、tree 三份，体完全相同，
   // 只有 deflate 那份签名少了 -> Int）。剩下的一组是 拼平 —— 而它不是三份相同的代码：
   // compile 那份签名是 (状态) ，另两份是 (块堆, 起, 止)。下一轮要按 找匹配 那样处理。
-  ok("重复组数不超过已记下的欠账（1）", 重.length <= 1, 重.length + " 组 · " + 重.join(" · "));
+  ok("没有同名同体的函数（欠账从十三组清到零）", 重.length === 0, 重.length + " 组 · " + 重.join(" · "));
 }
 
 console.log("二、判据自己要被验一次");
