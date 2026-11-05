@@ -5285,3 +5285,19 @@ is_dir、read_text、file_exists）—— 每条三行、不调任何自定义�
 
 产物这一轮没变：run.hmoks 100737、sign 28159、pack 71825、种子 74570，与搬之前一样。
 vm.hmoca 从 955 行到 937 行，vm-files.hmoca 三十三行。
+
+第八十九件（2026-11-05）：拆 vm.hmoca 的第二刀 —— 索引记录十条。
+
+与第一刀同形。十条（field_has、field_get、field_names、index_has、index_get、index_len、
+index_keys、index_new、index_set、record_new）各三行、不调任何自定义函数，搬进
+self/vm-index.hmoca 的 求内置索引(名, 实参, 圈)，交回 {认, 值}。
+
+上一刀踩的两个坑这次都避开了：引入插在第一处 引入 之后（不是「第一处 函数 之前」），
+包的右括号按原行是否已经收尾来判断 —— 一次就编得过。
+
+产物：run.hmoks 100737、sign 28159、pack 71825、种子 74570 —— 与搬之前完全一致。
+vm.hmoca 937 → 910 行，vm-index.hmoca 三十九行。
+
+两刀下来，内置的 从 273 行降到约 230 行，vm.hmoca 从 955 到 910。剩下四十四条分派，
+按 eval 那次量过的分组：标量十七条、标准输入四条、路径六条、本地化四条、杂项七条。
+下一刀按标量那组（最大、且 eval 里量过是自包含的）。

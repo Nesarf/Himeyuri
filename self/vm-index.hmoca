@@ -1,0 +1,39 @@
+// VM 那台机器的索引与记录十条：field_has、field_get、field_names、index_has、index_get、
+// index_len、index_keys、index_new、index_set、record_new。内置的 那一大块分派的第二刀。
+//
+// 为什么单独立一份（2026-11-05）：与 vm-files.hmoca 同一件事、同一个形状 —— 每条分支
+// 三行、不调任何自定义函数，交回 {认, 值}，由 内置的 按顺序问。
+
+公开 函数 求内置索引(名: String, 实参: Int, 圈: Int) {
+若 名 == "field_has" {
+    返回 {认: 真, 值: {ok: 真, 值: field_has(实参[0], 实参[1]), 说: ""}}
+  }
+若 名 == "field_get" {
+    返回 {认: 真, 值: {ok: 真, 值: field_get(实参[0], 实参[1]), 说: ""}}
+  }
+若 名 == "index_has" {
+    返回 {认: 真, 值: {ok: 真, 值: index_has(实参[0], 实参[1]), 说: ""}}
+  }
+若 名 == "index_get" {
+    返回 {认: 真, 值: {ok: 真, 值: index_get(实参[0], 实参[1]), 说: ""}}
+  }
+若 名 == "record_new" {
+    返回 {认: 真, 值: {ok: 真, 值: record_new(实参[0]), 说: ""}}
+  }
+若 名 == "field_names" {
+    返回 {认: 真, 值: {ok: 真, 值: field_names(实参[0]), 说: ""}}
+  }
+若 名 == "index_len" {
+    返回 {认: 真, 值: {ok: 真, 值: index_len(实参[0]), 说: ""}}
+  }
+若 名 == "index_keys" {
+    返回 {认: 真, 值: {ok: 真, 值: index_keys(实参[0]), 说: ""}}
+  }
+若 名 == "index_new" {
+    返回 {认: 真, 值: {ok: 真, 值: index_new(), 说: ""}}
+  }
+若 名 == "index_set" {
+    返回 {认: 真, 值: {ok: 真, 值: index_set(实参[0], 实参[1], 实参[2]), 说: ""}}
+  }
+  返回 {认: 假, 值: 0}
+}
