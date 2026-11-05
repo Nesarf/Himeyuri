@@ -5487,7 +5487,7 @@ HMYR-形-002 期望语句结束，见到 punct ")"，而它让 pack.hmoca 编不
 以及「按文件扫」这件事在 builtin-gap 里有两列（自举、自举编译），甲那一轮只收了一列 ——
 剩下那一列今天才被填上。
 
-compile.hmoca 从 666 行到 566 行，compile-builtins.hmoca 一百一十二行。
+compile.hmoca 从 769 行到 666 行，compile-builtins.hmoca 一百零八行。
 产物三份都没变：run.hmoks 100737、sign 28159、pack 71825、种子 74570。
 
 第九十八件（2026-11-05）：把 codeseval 的一百三十秒量到一半，顺手更新地图与账。
