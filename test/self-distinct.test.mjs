@@ -77,8 +77,11 @@ console.log("一、self/ 下没有成段的重复实现");
   // 两次。这一条还没查清，所以那次抽取回滚了，上限留回 13。
   // 又做掉一组：十六进制写法 在 ucd-case 与 ucd-nfc 各一份（大写），收进 ucd-common.hmoca；
   // 而 ucd-c 那份是 十六进制小写 —— 名字说的是同一件事，输出的大小写不同，所以它改名而不是合并。
-  // 剩下的十二组是解压内核七组、pack/run 四组、chain 与 pipeline 的 leaves。
-  ok("重复组数不超过已记下的欠账（12）", 重.length <= 12, 重.length + " 组 · " + 重.join(" · "));
+  // 再下一组是 leaves：chain 与 pipeline 各一份，逐字相同，收进 self/trees.hmoca。
+  // 这一次产物字节一个都没变（run.hmoks 97164、种子 74568）—— 与上一次 paths 那次
+  // 尝试同样的零字节，而这一次全绿：两者的区别是 leaves 不依赖任何别的函数。
+  // 剩下的十一组是解压内核七组与 pack/run 四组。
+  ok("重复组数不超过已记下的欠账（11）", 重.length <= 11, 重.length + " 组 · " + 重.join(" · "));
 }
 
 console.log("二、判据自己要被验一次");

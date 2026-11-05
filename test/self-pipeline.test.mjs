@@ -47,7 +47,9 @@ function loadAll(files) {
   return { ok: true, rt };
 }
 
-const loaded = loadAll(["self/lex.hmoca", "self/parse.hmoca", "self/pipeline.hmoca"]);
+// 2026-11-05：leaves 搬进 self/trees.hmoca 之后，就多这一份要加载 ——
+// 这一份测试是手工把几个文件喂进同一个求值器的，它不看 引入，所以要显式列出来。
+const loaded = loadAll(["self/lex.hmoca", "self/parse.hmoca", "self/trees.hmoca", "self/pipeline.hmoca"]);
 console.log("three files, one evaluator");
 ok("they all load", loaded.ok, loaded.ok ? "" : loaded.errors.join("; "));
 ok("scan() is there, from the lexer file", loaded.ok && loaded.rt.functions.has("scan"));

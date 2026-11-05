@@ -117,7 +117,9 @@ try {
     ok("a file with no imports loads on its own", unit.ok, codes(unit).join(","));
     ok("and brings nothing else with it", unit.order.length === 1, describeUnit(unit));
     const chained = loadUnit(path.join(ROOT, "self/chain.hmoca"));
-    ok("a file that declares a dependency brings it along", chained.order.length === 2 &&
+    // 2026-11-05：chain.hmoca 现在多引入 self/trees.hmoca（leaves 搬过去了），
+    // 所以这一条链是三个文件，不是两个。
+    ok("a file that declares a dependency brings it along", chained.order.length === 3 &&
       chained.order.some((f) => f.endsWith("lex.hmoca")), describeUnit(chained));
   }
 } finally {

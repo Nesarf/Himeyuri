@@ -38,8 +38,8 @@ const attempt = (fn) => { try { return { value: fn() }; } catch (e) { return { e
 console.log("the loader brings the whole dependency chain in");
 const unit = loadUnit(path.join(ROOT, "self/stmt.hmoca"));
 ok("it loads", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
-ok("three files arrive: lexer, chain, statements",
-  unit.order.length === 3 && unit.order.some((f) => f.endsWith("lex.hmoca")) && unit.order.some((f) => f.endsWith("chain.hmoca")),
+ok("four files arrive: lexer, trees, chain, statements",
+  unit.order.length === 4 && unit.order.some((f) => f.endsWith("lex.hmoca")) && unit.order.some((f) => f.endsWith("chain.hmoca")) && unit.order.some((f) => f.endsWith("trees.hmoca")),
   unit.order.map((f) => path.basename(f)).join(", "));
 ok("the dependency order puts the dependency first", unit.order.findIndex((f) => f.endsWith("lex.hmoca")) < unit.order.findIndex((f) => f.endsWith("chain.hmoca")));
 

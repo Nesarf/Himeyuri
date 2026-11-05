@@ -4,6 +4,7 @@
 // 这一件才是链：**输入就是词法的产出**（token 元组），游标是一个整数下标。
 //
 引入 "./lex.hmoca"
+引入 "./trees.hmoca"
 
 // 上面这行是实话：本文件吃的是 lex 切出来的 token，形状由它定义。
 // 有了模块加载，宿主不必再手工把两个文件塞进同一个求值器了。
@@ -262,15 +263,6 @@
 }
 
 // 树上的叶子，方便与词法再对一次。
-函数 leaves(tree: Int, acc: Int) -> Int {
-  若 tree.kind == "二元" {
-    返回 leaves(tree.right, leaves(tree.left, acc))
-  }
-  若 tree.kind == "字" || tree.kind == "名" {
-    返回 acc + (tree.text,)
-  }
-  返回 acc
-}
 
 函数 main() -> Int {
   // 手工造三个 token，验证这条链最小的一步能走

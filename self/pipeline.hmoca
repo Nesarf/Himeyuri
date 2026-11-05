@@ -9,6 +9,8 @@
 //   ・语法树上的叶子（num 与 name 的文本）
 // 两者一一对应，才算这条路真的通了。
 
+引入 "./trees.hmoca"
+
 函数 is_space(c: String) -> Bool {
   返回 c == " " || c == "\t"
 }
@@ -46,15 +48,6 @@
 }
 
 // 语法树上的叶子，按顺序取出来。
-函数 leaves(tree: Int, acc: Int) -> Int {
-  若 tree.kind == "二元" {
-    返回 leaves(tree.right, leaves(tree.left, acc))
-  }
-  若 tree.kind == "字" || tree.kind == "名" {
-    返回 acc + (tree.text,)
-  }
-  返回 acc
-}
 
 // 词法挑出的字面量，按顺序取出来。
 函数 literals(tokens: Int, n: Int, acc: Int) -> Int {

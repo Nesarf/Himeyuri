@@ -39,7 +39,8 @@ const attempt = (fn) => { try { return { value: fn() }; } catch (e) { return { e
 console.log("the loader brings the tokenizer in with the chain");
 const unit = loadUnit(path.join(ROOT, "self/chain.hmoca"));
 ok("it loads", unit.ok, unit.diagnostics.errors.map((e) => e.code + " " + e.message).join("; "));
-ok("the dependency was followed", unit.order.length === 2 && unit.order.some((f) => f.endsWith("lex.hmoca")),
+// 2026-11-05：多了一个 self/trees.hmoca（leaves 搬过去了）。
+ok("the dependency was followed", unit.order.length === 3 && unit.order.some((f) => f.endsWith("lex.hmoca")),
   unit.order.map((f) => path.basename(f)).join(", "));
 {
   const conflicts = unit.diagnostics.items.filter((d) => d.code === "HMYR-載-004");

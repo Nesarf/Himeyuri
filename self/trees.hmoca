@@ -1,0 +1,22 @@
+// 一棵表达式树上的叶子：把所有的 字 与 名 按顺序收进一个元组。
+//
+// 为什么单独立一份（2026-11-05）：这一件原先在 self/chain.hmoca 与
+// self/pipeline.hmoca 各一份，逐字相同。两件都不依赖别的函数 —— 它只看 tree 的四个
+// 字段（kind、left、right、text），所以抽出来不会带进别的依赖，这一点与上一轮
+// self/paths.hmoca 那次尝试不同（那一次的四个函数里有 目录部分 这样的外部依赖）。
+//
+// 这一行必须带 公开：它被 chain 与 pipeline 两个模块调用，而跨模块调用要 pub ——
+// 2026-11-05 第一版漏了它，十套判据红在 HMYR-載-006 上（"declared in trees.hmoca
+// without pub, and it is called in chain.hmoca"）。
+//
+// 顺序是「左、右」，因为 二元 那一支先递归左边再右边。空树交回传进来的 acc。
+
+公开 函数 leaves(tree: Int, acc: Int) -> Int {
+  若 tree.kind == "二元" {
+    返回 leaves(tree.right, leaves(tree.left, acc))
+  }
+  若 tree.kind == "字" || tree.kind == "名" {
+    返回 acc + (tree.text,)
+  }
+  返回 acc
+}
