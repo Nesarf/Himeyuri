@@ -22,20 +22,24 @@ const ok = (label, condition, detail = "") => {
 
 console.log("一、这一格在六处都有");
 {
-  // 三台机器各有一份实现，而 HMYR 那一份 2026-11-05 分在两个文件里：读标准输入的两个
-  // 搬去了 eval-files.hmoca，bytes_to_text 还在 eval.hmoca。所以这一份按文件列名字，
-  // 而不是拿同一份名册去套每个文件 —— 那种写法在搬家当天就会假红。
+  // 三台机器各有一份实现。自举层那一份 2026-11-05 拆成了好几个 eval*.hmoca，
+  // 所以这里把那一组文件拼成一片文本来问「自举层认不认识这个名字」——
+  // 判据的意思是「自举层有它」，与它在哪个文件里无关。
+  const 自举文 = fs.readdirSync(path.join(ROOT, "self"))
+    .filter((f) => /^eval.*\.hmoca$/.test(f))
+    .map((f) => fs.readFileSync(path.join(ROOT, "self", f), "utf8"))
+    .join("\n");
   const 源 = [
     ["src/eval.mjs", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
     ["src/minimal-eval.mjs", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
     ["src/vm-builtins.mjs", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
     ["src/bytecode.mjs", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
-    ["self/eval-scalars.hmoca", ["bytes_to_text"]],
-    ["self/eval-files.hmoca", ["read_stdin_line", "read_stdin_bytes"]],
+    ["self/eval*.hmoca", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
     ["vm/hmyr.c", ["read_stdin_line", "read_stdin_bytes", "bytes_to_text"]],
   ];
+  const 文表 = new Map(源.map(([f]) => [f, f === "self/eval*.hmoca" ? 自举文 : fs.readFileSync(path.join(ROOT, f), "utf8")]));
   for (const [f, 名册] of 源) {
-    const 文 = fs.readFileSync(path.join(ROOT, f), "utf8");
+    const 文 = 文表.get(f);
     for (const 名 of 名册) ok(f + " 认识 " + 名, 文.includes(名), "");
   }
 }

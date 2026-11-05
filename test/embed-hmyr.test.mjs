@@ -40,10 +40,14 @@ console.log("二、读字节那一格在四处都有");
     ["src/vm-builtins.mjs", fs.readFileSync(path.join(ROOT, "src/vm-builtins.mjs"), "utf8")],
     ["src/bytecode.mjs", fs.readFileSync(path.join(ROOT, "src/bytecode.mjs"), "utf8")],
     // 每份带一个只在它里面出现的词 —— 嵌入器要证明的是「文本原样进了 C 数组」，
-    // 而这个词是那个证明的锚点。2026-11-05：eval.hmoca 的 read_bytes 搬去了
-    // eval-files.hmoca，所以前者换成 求调用、后者接手 read_bytes。
-    ["self/eval.hmoca", fs.readFileSync(path.join(ROOT, "self/eval.hmoca"), "utf8"), "求调用"],
-    ["self/eval-files.hmoca", fs.readFileSync(path.join(ROOT, "self/eval-files.hmoca"), "utf8"), "read_bytes"],
+    // 而这个词是那个证明的锚点。
+    //
+    // 自举层那一份写成一项、把 eval*.hmoca 全拼起来：2026-11-05 那里从一个文件拆成了
+    // 九个，而每拆一次都要回来改这份名单。拼成一片之后，再拆也不动这里。
+    ["self/eval*.hmoca",
+      fs.readdirSync(path.join(ROOT, "self")).filter((f) => /^eval.*\.hmoca$/.test(f)).sort()
+        .map((f) => fs.readFileSync(path.join(ROOT, "self", f), "utf8")).join("\n"),
+      "求调用"],
     ["vm/hmyr.c", fs.readFileSync(path.join(ROOT, "vm/hmyr.c"), "utf8"), "read_bytes"],
   ];
   // 没写第三个元素的项（列表里别的文件）按 read_bytes 认 —— 它们的锚点一直是它。
