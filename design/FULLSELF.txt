@@ -4784,3 +4784,28 @@ deflate、zip、zipmulti、tree、selfcontained、hmyrpack、distinct、namespac
 
 判据上限从 4 降到 3。剩下三组：拼平（compile、deflate、inflate）、置（deflate、
 inflate、tree）、找匹配（deflate、tree、zip）。
+
+第七十件（2026-11-05）：找匹配 不是三份相同的代码，而是两种算法。
+
+判据说这一组有三份（deflate、tree、zip），拿行数与签名逐份看才看清：
+
+  deflate  20 行，签名 (字节串, 链, i)，吃一条哈希链：链[i] 指向上一次出现的位置，
+           沿链往回走，只看到窗口边界为止
+  tree     21 行，签名 (字节串, i)，不吃链 —— 从 i 减 4096 起直接扫窗口
+  zip      21 行，与 tree 那一份逐字相同
+
+所以这不是「同一段逻辑抄了三遍」，是两种算法共用一个名字。deflate 那一份是 LZ77 的
+链式搜索，另两份是朴素扫描（窗口 4096 乘 258，代价差一个量级）。
+
+处理办法与前几轮遇到 十六进制写法 时一样，分两步：
+
+  一、tree 与 zip 那两份（逐字相同）收进 self/bitlib.hmoca 作 找匹配；
+  二、deflate 那一份改名成 找匹配链 —— 名字里说清它要一条链，与 查表 那种「表在
+      第一列」的命名同一个思路：把参数里那个要紧的东西写进名字。
+
+同名的两种算法比同名的同一段代码更危险：撞车时程序照样跑，只是慢一个量级，
+而慢不会报错。这一条也写进了 bitlib 的头注释。
+
+八套全过。判据上限从 3 降到 2。剩下两组：拼平（compile、deflate、inflate）与
+置（deflate、inflate、tree）—— 它们都跨到 compile 与 inflate，而那两个文件比
+deflate/zip 更靠内。
