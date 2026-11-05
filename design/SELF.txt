@@ -1,0 +1,127 @@
+self/ 的 64 份文件：谁管什么
+--------------------------------------------------------------------
+
+一句话的用法：改某件事之前，先在这里找它的家。每一行是「文件名 · 行数 · 管什么」，
+那一句是文件自己头注释的开头。这份表由 tools/selfmap.mjs 生成，判据是 test/selfmap.test.mjs。
+
+前端：源码文本到语法树
+-----------
+  scan.hmoca                119  用 Himeyuri 写的第一个前端部件：把源码切成行，并认出每一行的声明。
+  lex.hmoca                 358  用 Himeyuri 写的第二个前端部件：词法扫描。
+  chain.hmoca               275  用 Himeyuri 写的第五件：吃 token 元组的解析器。
+  parse.hmoca               125  用 Himeyuri 写的第三件前端部件：一个表达式解析器。
+  pipeline.hmoca             94  用 Himeyuri 写的第四件：把前两件串起来用。
+  stmt.hmoca                163  用 Himeyuri 写的第六件：语句级解析。
+  sig.hmoca                 210  用 Himeyuri 写的第七件：函数声明的签名。
+  body.hmoca                495  用 Himeyuri 写的第八件：函数体。
+  trees.hmoca                23  一棵表达式树上的叶子：把所有的 字 与 名 按顺序收进一个元组。
+
+求值：eval 家族
+----------
+  eval.hmoca               1113  用 Himeyuri 写的求值器：吃 self/chain.hmyr 造出来的节点，交回一个值。
+  eval-core.hmoca            47  求值器的最小零件：一次求值的结果与环境查找。
+  eval-files.hmoca           66  文件类九条：读、写、目录、标准输入。
+  eval-index.hmoca           53  索引与记录十条：字段、索引、记录。
+  eval-term.hmoca            55  终端与按键十条：清屏、颜色、光标、键队列。
+  eval-thread.hmoca          32  线程四条：起、等、取消、数。
+  eval-scalars.hmoca         96  标量十七条：长度、转换、大小写、取整、顺序。
+  eval-view.hmoca            58  视图四条：一段只读窗口的长度与取值。
+  eval-bits.hmoca            45  位运算八条：与、或、异或、非、移、加、两个循环移。
+  eval-path.hmoca            53  路径与环境十条：工作目录、临时、仓库根、本地化、代码页。
+  eval-io.hmoca              36  输出两条：print 与 print_err。
+  paths.hmoca                74  加载路径上的六件公用零件：拆行、拼路径、是包名字、找包根从、目录部分、最后一个分隔从。
+
+字节码：编译与机器
+---------
+  vm.hmoca                  817  用 HMYR 写的字节码机器：第一层是装载。
+  vm-files.hmoca             34  字节码机的文件类七条。
+  vm-index.hmoca             40  字节码机的索引与记录十条。
+  vm-scalars.hmoca           70  字节码机的标量十七条。
+  vm-io.hmoca                50  字节码机的输入、路径、本地化十四条。
+  compile.hmoca             667  HMYR 自己的编译器：AST → 字节码指令。
+  compile-number.hmoca      124  数字字面量变成值：尾数、指数、快慢两条路。
+  compile-builtins.hmoca    109  哪些名字算内置：一张判断表（CALLB 与 CALLF 的分界）。
+  pack.hmoca                459  HMYR 自己把程序打成 .hmyrb。
+
+加载与入口
+-----
+  run.hmoca                 497  自举的最后一步：把四件串起来，让 Himeyuri 自己跑 Himeyuri。
+  run-load.hmoca             97  读一棵源码树：找到文件、读它、把它的 引入 也读掉。
+  run-build.hmoca           315  把一棵语法树变成「可以跑的模块」：翻表达式、翻语句、包块、包声明、造模块、解析程序。
+  adapter.hmoca              31  适配层的入口：把「加载顺序」交回宿主。
+  adapter2.hmoca             10  最小的一刀（2026-11-01）：与 probes/probe-load2.hmoca 同样的形状，
+  check.hmoca                63  测试调度器：读清单，一个一个跑，汇总。
+  cat.hmoca                  22  回显：从标准输入读一行，写出来，直到读完。
+
+数：大整数、浮点、位运算
+------------
+  bigint.hmoca              493  大整数：24 位字组成的小端序列，11 个字 = 264 位，够放 mod 2^255-19 那一族数。
+  wide.hmoca                273  宽整数：24 位字组成的小端序列，35 个字 = 840 位。
+  f64.hmoca                 299  双精度：从那八个字节读回一个数。
+  bitlib.hmoca              141  位运算的家：几个被多处用到的位操作，放在一个没有 main 的文件里。
+  bitops.hmoca              106  32 位位运算：SHA-256 要它们，而 HMYR 没有位运算符。
+
+曲线与哈希
+-----
+  curve.hmoca               504  Ed25519 的曲线运算：twisted Edwards 曲线 -x^2 + y^2 = 1 + d x^2 y^2。
+  sha256.hmoca              207  SHA-256：清单里每一个文件的哈希与整份的 digest 都要它。
+  sha512.hmoca              286  SHA-512：64 位字用两个 32 位半表示（小半在前）。
+
+签名与清单
+-----
+  ssh.hmoca                 259  OpenSSH 的分离签名：base64 里包着一个二进制结构。
+  sign.hmoca                129  一条 OpenSSH 分离签名与它签的文件：读进来、拼被签数据、交给 Ed25519 验。
+  verify.hmoca              211  验一份清单：逐行扫，不做整份解析。
+  keyfile.hmoca             132  OpenSSH 私钥的写法：从 32 字节 seed 交出一份 ssh-keygen 认得的私钥文件。
+
+压缩与容器
+-----
+  deflate.hmoca             633  deflate：stored 块与固定 Huffman 两支。
+  inflate.hmoca             670  inflate：deflate 的解码侧。认两种块：stored（BTYPE=00）与固定 Huffman（BTYPE=01）。
+  zip.hmoca                 362  ZIP 容器：stored 与 deflate 两种成员。用自家写的压缩器与 CRC32，不借 zlib。
+  ittgn.hmoca               276  容器：.hm-ittgn-krgn-m 的最小形状 —— 能装、能列、能取。
+  tree.hmoca                284  只建树：输入文件，打印字长与距长的码长分布、最大树深、Kraft 和。
+
+生成器与工具
+------
+  ucd-c.hmoca               141  从 codepoints.txt 生成两张 C 用的区间表：字母（L*）与记号（M*）。
+  ucd-case.hmoca            341  从 data/ucd/ 生成 C 那台要的大小写表（简单映射、完整映射、两个属性区间）。
+  ucd-nfc.hmoca             249  从 data/ucd/ 生成 C 那台要的归一化数据（分解、组合类、组合对）。
+  ucd-common.hmoca           68  两个小函数，三份程序都要用它们：修剪 与 十六进制值。
+  manifest.hmoca            563  造一份清单：四个目录的顶层，外加 check-all 里登记的套件。
+  package.hmoca             155  打一个包：把几个目录下的文件收进一个 ZIP。
+  release.hmoca             133  一条命令出一个发布：清单、包、说明书。
+  embed.hmoca                65  嵌入：把一份 .hmyrb 摊成 C 源码。
+  fmt.hmoca                 144  格式化器：整文件的缩进与行尾规范化；表达式那一条留在 --expr 上。
+  lsp.hmoca                 375  语言服务器：JSON-RPC 走标准输入与标准输出，照 LSP 的 Content-Length 框。
+
+分寸：那份表里没有的大小标准，写在这里
+--------------------------------------------------------------------
+
+拆分不是为了「越小越好」。两头都有代价，而这一周两头都摸到过。
+
+  上界：一个函数不该比它所属的模块还大。
+        eval.hmoca 拆之前，求调用 一个函数五百八十二行、八十多条互不相干的分支 ——
+        那是过载，不是「一个大函数」。判据是：想改其中一件事，要不要读完大半个函数。
+        按这一条拆的：eval 家族九刀、vm 家族四刀、run 两刀、compile 两刀。
+
+  下界：小于约三十行的文件要问一句「它是不是只该是别人的一部分」。
+        专门给一件事一个文件，收益是「名字即说明」，成本是每个读者多一次跳转、
+        每次加载多一次引入。三十行以下，那个收益常常还不够付跳转。
+
+  而 run.hmoca 拆到四百九十七行就停手，是同一条标准的另一面：剩下两块互相依赖，
+  再拆只是把同一段代码换个文件名 —— 那是成本，不是收益。
+
+今天最小的九个（行数 · 文件）：
+
+     9  adapter2.hmoca     与 adapter.hmoca 只差一点，值得再看是否该并回去
+    21  cat.hmoca          一个独立的小程序（标准输入回显），边界清楚，留
+    22  trees.hmoca        只有一个函数（一棵树的叶子），可以并回 tree.hmoca
+    30  adapter.hmoca      与 adapter2.hmoca 成对，一起看
+    31  eval-thread.hmoca  线程四条，职责独立，留
+    33  vm-files.hmoca     字节码机的文件类七条，与 eval-files 对称，留
+    35  eval-io.hmoca      输出两条，太窄 —— 但它是最新一刀，先观察
+    39  vm-index.hmoca     字节码机的索引十条，与 eval-index 对称，留
+    44  eval-bits.hmoca    位运算八条，留
+
+四个「值得再看」的：adapter2、trees、adapter、eval-io。它们不是错，是没到值。
