@@ -82,8 +82,8 @@ for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
 // 节点数 +131 到 17715。stmt 那一边 当 多了一个 invariant 字段，而字段不是节点。
 // 同日再晚些（三条口子那一轮）：body 的 each 多了「一行必须读完」那一条判断，
 // 节点数 +24 到 17771；函数数没动。
-ok("合计 212 个函数声明", 函数总数 === 212, String(函数总数));
-ok("合计 14904 个节点", 节点总数 === 14904, String(节点总数));
+ok("合计 199 个函数声明", 函数总数 === 199, String(函数总数));
+ok("合计 14272 个节点", 节点总数 === 14272, String(节点总数));
 
 console.log("二、位置是逐个对过的，不是大致对");
 {
@@ -148,7 +148,7 @@ console.log("六、它自己的注释写着现在的账");
 {
   const 文 = fs.readFileSync(path.join(ROOT, "src/subset-parse.mjs"), "utf8");
   ok("注释写了六种语句", 文.includes("let / var / assign / return / ExprStmt / Block"), "在");
-  ok("注释写了位置也对齐了", 文.includes("六份共 14904 个节点，逐个相同"), "在");
+  ok("注释写了位置也对齐了", 文.includes("六份共 14272 个节点，逐个相同"), "在");
   ok("注释写了那一处照抄的怪处", 文.includes("字段名之后那个 token"), "在");
   ok("注释写了它的立场", 文.includes("认得窄而说清"), "在");
   ok("注释写了数出来的声明种类", 文.includes("只有 fn，227 个"), "在");

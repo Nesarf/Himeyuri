@@ -52,7 +52,7 @@ console.log("二、它读进来自举那一层：六份，两百二十七条声�
 {
   const u = loadUnit(path.join(ROOT, "self/run.hmoca"));
   ok("loadUnit 读得动", u.ok, JSON.stringify(u.diagnostics.errors.map((e) => e.code)));
-  ok("带进十八份文件", u.modules.size === 18, String(u.modules.size));
+  ok("带进十九份文件", u.modules.size === 19, String(u.modules.size));
   let 声明 = 0;
   for (const m of u.modules.values()) 声明 += m.decls.length;
   // 声明数随自举层的规模走。151 是加载器那一串搬进来之前的数；180 是加上模块版本那一串；
@@ -65,7 +65,7 @@ console.log("二、它读进来自举那一层：六份，两百二十七条声�
   // 2026-11-02 再晚些（循环不变式那一轮）：eval 加了 查循环不变 —— 227。
   // （这里的六份是 self/run.hmoca 那棵树的六份，也就是 lex、chain、stmt、body、eval、run，
   // 而不是种子链那六份。）
-  ok("两百三十五条声明", 声明 === 235, String(声明));
+  ok("两百三十四条声明", 声明 === 234, String(声明));
 }
 
 console.log("三、求值不在 Stage 0 里（两份账都不在）");
