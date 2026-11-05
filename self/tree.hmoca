@@ -6,15 +6,8 @@
 //
 // 用法：hmyr self/tree.hmyr <文件>
 
-函数 倍(n: Int) -> Int {
-  变 v = 1
-  变 i = 0
-  当 i < n {
-    v = v * 2
-    i = i + 1
-  }
-  返回 v
-}
+
+引入 "./bitlib.hmoca"
 
 函数 置(元组: Int, 下标: Int, 值: Int) -> Int {
   变 出 = ()

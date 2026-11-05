@@ -5,15 +5,8 @@
 //
 // 用法：这一份是被 self/sha256.hmyr 引用的库，不单独跑。
 
-函数 倍(n: Int) -> Int {
-  变 v = 1
-  变 i = 0
-  当 i < n {
-    v = v * 2
-    i = i + 1
-  }
-  返回 v
-}
+
+引入 "./bitlib.hmoca"
 
 函数 与(a: Int, b: Int) -> Int {
   变 出 = 0
