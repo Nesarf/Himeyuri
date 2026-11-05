@@ -15,7 +15,7 @@
 // 后来用 ord 写成范围判断，如今连范围判断也不必留。
 
 // 一个字符是不是空白。空白只有四种，而它们都不能用「或」连起来。
-函数 空白一(c: String) -> Bool {
+公开 函数 空白一(c: String) -> Bool {
   若 c == " " {
     返回 真
   }
@@ -31,16 +31,16 @@
   返回 假
 }
 
-函数 大写(s: String) -> String {
+公开 函数 大写(s: String) -> String {
   返回 to_upper(s)
 }
 
-函数 小写(s: String) -> String {
+公开 函数 小写(s: String) -> String {
   返回 to_lower(s)
 }
 
 // 修剪两头的空白。
-函数 修剪(s: String) -> String {
+公开 函数 修剪(s: String) -> String {
   定 n = len(s)
   变 起 = 0
   变 走 = 真
@@ -75,7 +75,7 @@
 }
 
 // s 从位置 起 开始是不是那一段。越界当假。
-函数 匹配在(s: String, 起: Int, 子: String) -> Bool {
+公开 函数 匹配在(s: String, 起: Int, 子: String) -> Bool {
   定 n = len(s)
   定 m = len(子)
   若 起 < 0 {
@@ -97,16 +97,16 @@
   返回 好
 }
 
-函数 开始于(s: String, 前: String) -> Bool {
+公开 函数 开始于(s: String, 前: String) -> Bool {
   返回 匹配在(s, 0, 前)
 }
 
-函数 结束于(s: String, 后: String) -> Bool {
+公开 函数 结束于(s: String, 后: String) -> Bool {
   返回 匹配在(s, len(s) - len(后), 后)
 }
 
 // 找子串，交回下标；没有就交回 -1。
-函数 串_查找(s: String, 子: String) -> Int {
+公开 函数 串_查找(s: String, 子: String) -> Int {
   定 n = len(s)
   定 m = len(子)
   若 m == 0 {
@@ -131,14 +131,14 @@
   返回 -1
 }
 
-函数 含(s: String, 子: String) -> Bool {
+公开 函数 含(s: String, 子: String) -> Bool {
   若 串_查找(s, 子) >= 0 {
     返回 真
   }
   返回 假
 }
 
-函数 重复(s: String, 次: Int) -> String {
+公开 函数 重复(s: String, 次: Int) -> String {
   变 出 = ""
   变 i = 0
   当 i < 次 {
@@ -149,7 +149,7 @@
 }
 
 // 把每一处 旧 换成 新。空的老串原样交回 —— 换空串会无限长。
-函数 替换(s: String, 旧: String, 新: String) -> String {
+公开 函数 替换(s: String, 旧: String, 新: String) -> String {
   若 len(旧) == 0 {
     返回 s
   }
@@ -174,7 +174,7 @@
   返回 出
 }
 
-函数 左填(s: String, 宽: Int, 填: String) -> String {
+公开 函数 左填(s: String, 宽: Int, 填: String) -> String {
   定 n = len(s)
   若 n >= 宽 {
     返回 s
@@ -182,7 +182,7 @@
   返回 重复(填, 宽 - n) + s
 }
 
-函数 右填(s: String, 宽: Int, 填: String) -> String {
+公开 函数 右填(s: String, 宽: Int, 填: String) -> String {
   定 n = len(s)
   若 n >= 宽 {
     返回 s
@@ -191,7 +191,7 @@
 }
 
 // 一个非负整数写成十六进制。零写成 0，不补前导零 —— 补零是调用方的事。
-函数 十六进制(n: Int) -> String {
+公开 函数 十六进制(n: Int) -> String {
   若 n < 0 {
     返回 十六进制(0 - n)
   }
@@ -221,7 +221,7 @@
 // 因为「声明两个元素却交回三个」在眼下的语言里不会报错，而那不是一件可以装看不见的事。
 //
 // 空的分隔原样交回一整段：切空串会切出无数段。
-函数 切分(s: String, 分隔: String) -> (String,) {
+公开 函数 切分(s: String, 分隔: String) -> (String,) {
   变 出 = ()
   定 m = len(分隔)
   若 m == 0 {
@@ -249,12 +249,12 @@
 }
 
 // 按换行切。
-函数 分行(s: String) -> (String,) {
+公开 函数 分行(s: String) -> (String,) {
   返回 切分(s, "\n")
 }
 
 // 把一串段接回去。空的段表交回空串。
-函数 连接(段批: (String,), 分隔: String) -> String {
+公开 函数 连接(段批: (String,), 分隔: String) -> String {
   若 len(段批) == 0 {
     返回 ""
   }
