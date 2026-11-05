@@ -12,17 +12,17 @@
 每个库的头注释里写着它自己的边界（支持什么、不做什么、为什么）。这一页只做索引：
 哪个库能干什么，以及**谁在验它**。
 
-- interval.hmoca —— 区间数：一对双精度当上下界，按舍入方向取端点。判据：interval 套件
-- json.hmoca —— JSON 的解析与生成。判据：json 套件
-- maps.hmoca —— map 与 set，底是内置索引；键可以是任意字符串（这是它与 tables 的分界）。判据：maps 套件
-- numbers.hmoca —— 整数与实数的常用函数。判据：numbers 套件
-- protocol.hmoca —— 帧：长度前缀 + 类型字节 + 载荷，整数按小端写。判据：cvm 套件（跑 conformance/lib-protocol.hmoca）
-- rational.hmoca —— 有理数：分子与分母各一个大整数。判据：rational 套件
-- regex.hmoca —— 回溯正则：捕获组、懒惰量词、零宽断言；不认命名组与旗标。判据：regex 套件
-- strings.hmoca —— 字符串库：用这门语言自己的内置写出来的常用函数。判据：cvm 套件（跑 conformance/lib-strings.hmoca）
-- tables.hmoca —— 表库：拿记录当字典，键必须是标识符形状。判据：cvm 套件（跑 conformance/lib-tables.hmoca）
-- time.hmoca —— 时间：毫秒 ↔ 年月日时分秒，ISO 8601 的一进一出；只做 UTC，时区交给调用方。判据：time 套件
-- tuples.hmoca —— 元组：排序、反转、查找、求和、极值、子段。判据：cvm 套件（跑 conformance/lib-tuples.hmoca）
+- interval.hmoca —— 区间数：一对双精度当上下界，按舍入方向取端点。判据：interval 套件。例子：[interval-tour.hmoca](../examples/interval-tour.hmoca)
+- json.hmoca —— JSON 的解析与生成。判据：json 套件。例子：还没有
+- maps.hmoca —— map 与 set，底是内置索引；键可以是任意字符串（这是它与 tables 的分界）。判据：maps 套件。例子：[maps-tour.hmoca](../examples/maps-tour.hmoca)
+- numbers.hmoca —— 整数与实数的常用函数。判据：numbers 套件。例子：[numbers-tour.hmoca](../examples/numbers-tour.hmoca)
+- protocol.hmoca —— 帧：长度前缀 + 类型字节 + 载荷，整数按小端写。判据：cvm 套件（跑 conformance/lib-protocol.hmoca）。例子：[protocol-tour.hmoca](../examples/protocol-tour.hmoca)
+- rational.hmoca —— 有理数：分子与分母各一个大整数。判据：rational 套件。例子：[rational-tour.hmoca](../examples/rational-tour.hmoca)
+- regex.hmoca —— 回溯正则：捕获组、懒惰量词、零宽断言；不认命名组与旗标。判据：regex 套件。例子：[regex-tour.hmoca](../examples/regex-tour.hmoca)
+- strings.hmoca —— 字符串库：用这门语言自己的内置写出来的常用函数。判据：cvm 套件（跑 conformance/lib-strings.hmoca）。例子：[lib-tour.hmoca](../examples/lib-tour.hmoca)
+- tables.hmoca —— 表库：拿记录当字典，键必须是标识符形状。判据：cvm 套件（跑 conformance/lib-tables.hmoca）。例子：[tables-tour.hmoca](../examples/tables-tour.hmoca)
+- time.hmoca —— 时间：毫秒 ↔ 年月日时分秒，ISO 8601 的一进一出；只做 UTC，时区交给调用方。判据：time 套件。例子：[time-tour.hmoca](../examples/time-tour.hmoca)
+- tuples.hmoca —— 元组：排序、反转、查找、求和、极值、子段。判据：cvm 套件（跑 conformance/lib-tuples.hmoca）。例子：[lib-tour.hmoca](../examples/lib-tour.hmoca)
 
 「判据」那一列写的是**跑得起来的那一条**：前七个各有自己的套件，后四个的探针挂在
 c-vm 套件里 —— 它们在 C 机器上跑，因为那四个库是自举层与工具链自己反复用到的东西，
@@ -35,3 +35,11 @@ c-vm 套件里 —— 它们在 C 机器上跑，因为那四个库是自举层�
 3. 在 `conformance/` 下写一个探针，在 `test/` 下写一个套件（或者明确挂到已有的套件上，
    并在这里那一行里写清挂在哪），然后回到这一页加一行 —— 这一页自己也有判据：
    `test/lib-index.test.mjs` 会核对「每个库都在这一页上」与「这一页上的每个库都存在」。
+
+## 例子
+
+`examples/` 下有九份 `*-tour.hmoca`，每一份都自己判自己（不对就返回非零），所以
+examples 那一条判据同时验了「库好用」。上表每一行的末尾就是它对应那一份。
+
+十一个库里只有 json 还没有例子 —— 它的公开面很小（解析与生成各一个入口），
+而 `self/manifest.hmoca` 与 `self/verify.hmoca` 都在用它们，那两处就是这个库的活例子。
