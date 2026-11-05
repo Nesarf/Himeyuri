@@ -1,7 +1,7 @@
 // 最小的一刀（2026-11-01）：与 probes/probe-load2.hmoca 同样的形状，
 // 但放在 self/ 里 —— 于是它能分开两件事：是「引入 run.hmoca」本身，
 // 还是 adapter.hmoca 的内容。
-引入 "./run.hmoca"
+引入 "../self/run.hmoca"
 
 函数 main() -> Int 效果串(process) {
   print("self 里的最小探针跑起来了" + chr(10))

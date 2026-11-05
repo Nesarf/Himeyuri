@@ -1,4 +1,4 @@
-self/ 的 64 份文件：谁管什么
+self/ 的 63 份文件：谁管什么
 --------------------------------------------------------------------
 
 一句话的用法：改某件事之前，先在这里找它的家。每一行是「文件名 · 行数 · 管什么」，
@@ -49,7 +49,6 @@ self/ 的 64 份文件：谁管什么
   run-load.hmoca             97  读一棵源码树：找到文件、读它、把它的 引入 也读掉。
   run-build.hmoca           315  把一棵语法树变成「可以跑的模块」：翻表达式、翻语句、包块、包声明、造模块、解析程序。
   adapter.hmoca              31  适配层的入口：把「加载顺序」交回宿主。
-  adapter2.hmoca             10  最小的一刀（2026-11-01）：与 probes/probe-load2.hmoca 同样的形状，
   check.hmoca                63  测试调度器：读清单，一个一个跑，汇总。
   cat.hmoca                  22  回显：从标准输入读一行，写出来，直到读完。
 
@@ -114,17 +113,24 @@ self/ 的 64 份文件：谁管什么
 
 今天最小的九个（行数 · 文件）：
 
-     9  adapter2.hmoca     与 adapter.hmoca 只差一点，值得再看是否该并回去
     21  cat.hmoca          一个独立的小程序（标准输入回显），边界清楚，留
     22  trees.hmoca        只有一个函数（一棵树的叶子），可以并回 tree.hmoca
-    30  adapter.hmoca      与 adapter2.hmoca 成对，一起看
+    30  adapter.hmoca      交回加载顺序给宿主，是真实出口，留
     31  eval-thread.hmoca  线程四条，职责独立，留
     33  vm-files.hmoca     字节码机的文件类七条，与 eval-files 对称，留
     35  eval-io.hmoca      输出两条，太窄 —— 但它是最新一刀，先观察
     39  vm-index.hmoca     字节码机的索引十条，与 eval-index 对称，留
     44  eval-bits.hmoca    位运算八条，留
 
-四个「值得再看」的：adapter2、trees、adapter、eval-io。它们不是错，是没到值。
+四个「值得再看」的，逐个处理过了（2026-11-05）：
+
+    adapter2（9 行）   一个诊断工具（分开「引入 run.hmoca 本身」与「adapter 的内容」两件事），
+                      没人引用它 —— 移到 probes/probe-self-load.hmoca，那里正是这种文件的家。
+    trees（22 行）     一个函数，被 chain 与 pipeline 两处调用。共享件独立成文件是对的：
+                      并回任一边，另一边就要跨模块依赖它。
+    adapter（30 行）   交回加载顺序给宿主的出口，src/loader.mjs 的替身用它 —— 真实用途，留。
+    eval-io（35 行）   输出两条，与 eval-term / eval-scratch 那几份同形；单独一份是这一族的
+                      统一形状，留。
 
 四个「更靠内」的文件量过了（2026-11-05）
 --------------------------------------------------------------------
