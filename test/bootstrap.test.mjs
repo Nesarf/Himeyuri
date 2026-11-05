@@ -52,7 +52,7 @@ console.log("二、它读进来自举那一层：六份，两百二十七条声�
 {
   const u = loadUnit(path.join(ROOT, "self/run.hmoca"));
   ok("loadUnit 读得动", u.ok, JSON.stringify(u.diagnostics.errors.map((e) => e.code)));
-  ok("带进十九份文件", u.modules.size === 19, String(u.modules.size));
+  ok("带进二十份文件", u.modules.size === 20, String(u.modules.size));
   let 声明 = 0;
   for (const m of u.modules.values()) 声明 += m.decls.length;
   // 声明数随自举层的规模走。151 是加载器那一串搬进来之前的数；180 是加上模块版本那一串；

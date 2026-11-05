@@ -13,6 +13,7 @@
 引入 "./lex.hmoca"
 引入 "./paths.hmoca"
 引入 "./run-load.hmoca"
+引入 "./run-build.hmoca"
 引入 "./chain.hmoca"
 引入 "./stmt.hmoca"
 引入 "./body.hmoca"
@@ -28,37 +29,8 @@
   返回 str(r.value)
 }
 
-// 跑一段源码并把它写出来。打印放在这里，因为这一层就是那个「调用方」。
-// 跑一整段程序：scan_lines 保留换行，于是语句边界有着落；
-// parse_body 按换行切开、逐条交给 parse_statement；再交给求值器的语句层。
-//
-// 与上面那条「跑一个表达式」的路并存：表达式用 scan（不保留换行），程序用 scan_lines。
-// 两条路的产出形状不同，所以不能混着用——这一点写在明处。
-// 源码里有没有声明：行首（可带空白、可夹注释）是 函数 才算。
-//
-// 只认 函数 是有意的：一段裸语句也可能以 变 或 常量 开头（`变 i = 0` 是普通的局部声明），
-// 认了它们就会把「一串语句」误判成「一份声明」—— 症状是「声明里没有 函数」，
-// 而那句话会让人去查解析器。有 函数 的文件里照样可以有顶层 常量 与 变，
-// 因为判据问的是「这一份是不是声明式程序」，不是「第一个词是什么」。
-函数 跳到行尾(s: String, i: Int) -> Int {
-  若 i >= len(s) { 返回 i }
-  若 s[i] == chr(10) { 返回 i + 1 }
-  返回 跳到行尾(s, i + 1)
-}
 
-函数 行首是声明从(s: String, i: Int) -> Bool {
-  若 i >= len(s) { 返回 假 }
-  定 c = s[i]
-  若 c == " " || c == "\t" || c == "\n" || c == "\r" { 返回 行首是声明从(s, i + 1) }
-  // 注释行要跳过。一份文件以注释开头是常态，而「以注释开头」不等于「不是声明」。
-  若 c == "/" && i + 1 < len(s) && s[i + 1] == "/" { 返回 行首是声明从(s, 跳到行尾(s, i)) }
-  若 i + 1 < len(s) && s[i] == "f" && s[i + 1] == "n" { 返回 真 }
-  返回 假
-}
 
-函数 行首是声明(s: String) -> Bool {
-  返回 行首是声明从(s, 0)
-}
 
 // 跑一整段源码。
 //
@@ -181,236 +153,20 @@
   返回 加载多(目录, 路串, i + 1, 栈, r.已载)
 }
 
-// ---- 声明层：把元组包成节点 ----
-//
-// 宿主的树有三层：Module → Fn → Block → 语句。这一侧以前只有元组
-// （名字, 参数名册, 语句批, 效果名册, 行, 列），于是两边的节点数永远对不上 ——
-// 比较只能问「self 的位置宿主有没有」，问不了「节点对不对得上」。
-//
-// 这两个函数只做包装，不动解析：解析仍是 parse_decls 与 parse_body 干的活。
-// 包一层不是为了好看：Module、Fn、Block 是宿主 loader 与 runUnit 认得的那三种东西，
-// 有了它们，换掉 src/loader.mjs 才谈得上。
-// 宿主的语句层把 若 与 当 包成 ExprStmt（它把 若 当表达式，语句层再包一层）。
-// 形状要一致就得跟着包 —— 而这只在包装这一层做，解析与求值两条路一个字都不动。
-// 位置的安全读法：语法错的节点本来就可能没有位置（越界时连 token 都没有）。
-// 这里缺就填 0，而不是让一次缺字段把整棵树造失败 —— 诊断要的是「尽力说清」，不是「全有或全无」。
-函数 行(n: Int) -> Int {
-  若 field_has(n, "line") { 返回 n.line }
-  返回 0
-}
 
-函数 列(n: Int) -> Int {
-  若 field_has(n, "column") { 返回 n.column }
-  返回 0
-}
 // 按基读 与 数字值 在 eval.hmyr：求值器那条路也要认 0x1_0，所以它们住在那儿，
 // 这一层通过 引入 直接用（这里的 翻表达式 仍在调 数字值）。
 
-// 把表达式树翻成宿主那边认的形状：Literal 补 value 与 raw，Ident 的 text 改叫 name。
-//
-// 这三件（字面量的值、空 返回、Ident 的字段名）是适配器里最后的翻译。把它们挪进 HMYR，
-// 工具那一层就只剩搬运 —— 而「宿主一口吃下去」这句话才算有证据。
-函数 翻表达式(n: Int) {
-  若 n.kind == "字" {
-    若 n.类型 == "int" {
-      返回 {kind: "字", 类型: "int", value: 数字值(n.text), raw: n.text, text: n.text, line: 行(n), column: 列(n)}
-    }
-    返回 {kind: "字", 类型: "string", value: n.text, raw: 假, text: n.text, line: 行(n), column: 列(n)}
-  }
-  若 n.kind == "名" {
-    // 真 与 假 在这一侧是标识符（词法把关键字也归在 ident 里），在宿主那边是字面量。
-    // 不转的话，宿主会去找一个叫 假 的名字 —— 报 HMYR-行-005，而那句话听起来像拼写错误。
-    若 n.text == "true" { 返回 {kind: "字", 类型: "bool", value: 真, raw: 假, text: n.text, line: 行(n), column: 列(n)} }
-    若 n.text == "false" { 返回 {kind: "字", 类型: "bool", value: 假, raw: 假, text: n.text, line: 行(n), column: 列(n)} }
-    // 空 在宿主那边是一个字面量（类型 "nil"、值 null），不是名字。
-    若 n.text == "nil" { 返回 {kind: "字", 类型: "nil", value: (), raw: 假, text: n.text, line: 行(n), column: 列(n)} }
-    返回 {kind: "名", name: n.text, text: n.text, line: 行(n), column: 列(n)}
-  }
-  若 n.kind == "二元" {
-    返回 {kind: "二元", op: n.op, left: 翻表达式(n.left), right: 翻表达式(n.right), line: 行(n), column: 列(n)}
-  }
-  若 n.kind == "一元" {
-    返回 {kind: "一元", op: n.op, operand: 翻表达式(n.operand), line: 行(n), column: 列(n)}
-  }
-  若 n.kind == "调用" {
-    返回 {kind: "调用", callee: 翻表达式(n.callee), args: 翻表达式批(n.args, 0, ()), line: 行(n), column: 列(n)}
-  }
-  若 n.kind == "字段" {
-    返回 {kind: "字段", target: 翻表达式(n.target), name: n.name, line: 行(n), column: 列(n)}
-  }
-  若 n.kind == "索引" {
-    返回 {kind: "索引", target: 翻表达式(n.target), index: 翻表达式(n.index), line: 行(n), column: 列(n)}
-  }
-  若 n.kind == "组" {
-    返回 {kind: "组", items: 翻表达式批(n.items, 0, ()), line: 行(n), column: 列(n)}
-  }
-  // 记录字面量：字段的值也是表达式，也要翻。漏了这一步不会报错 —— 它只是把没翻过的
-  // Ident 原样交给宿主，然后宿主去找一个叫 undefined 的名字。
-  若 n.kind == "记录" {
-    返回 {kind: "记录", fields: 翻字段批(n.fields, 0, ()), line: 行(n), column: 列(n)}
-  }
-  返回 n
-}
 
-函数 翻字段批(们: Int, i: Int, acc: Int) {
-  若 i >= len(们) { 返回 acc }
-  定 f = 们[i]
-  返回 翻字段批(们, i + 1, acc + ({name: f.name, value: 翻表达式(f.value)},))
-}
 
-函数 翻表达式批(们: Int, i: Int, acc: Int) {
-  若 i >= len(们) { 返回 acc }
-  返回 翻表达式批(们, i + 1, acc + (翻表达式(们[i]),))
-}
 
-// 语句里的那几个表达式字段也要翻。空 返回 干脆不带 value —— 宿主读出来是 undefined，
-// 与它自己的 null 同效；而这一侧本来就没有 null 这个词。
-函数 翻语句(n: Int) {
-  若 n.kind == "定" { 返回 {kind: "定", name: n.name, value: 翻表达式(n.value), line: 行(n), column: 列(n)} }
-  若 n.kind == "变" { 返回 {kind: "变", name: n.name, value: 翻表达式(n.value), line: 行(n), column: 列(n)} }
-  若 n.kind == "赋值" { 返回 {kind: "赋值", name: n.name, value: 翻表达式(n.value), line: 行(n), column: 列(n)} }
-  若 n.kind == "返回" {
-    若 n.value.kind == "nil" { 返回 {kind: "返回", line: 行(n), column: 列(n)} }
-    返回 {kind: "返回", value: 翻表达式(n.value), line: 行(n), column: 列(n)}
-  }
-  若 n.kind == "表达式语句" { 返回 {kind: "表达式语句", expr: 翻表达式(n.value), line: 行(n), column: 列(n)} }
-  返回 n
-}
 
-函数 转语句批(语句批: Int, i: Int, acc: Int) {
-  若 i >= len(语句批) { 返回 acc }
-  定 n = 语句批[i]
-  变 出 = 翻语句(n)
-  // If 与 While 在这一侧还要换字段名：cond 对 condition，then/otherwise/body 要包成 Block。
-  // 解析那一层不动（求值器读的还是 cond 与语句元组），只在包装这一层翻。
-  若 n.kind == "若" {
-    定 内 = {kind: "若", condition: 翻表达式(n.cond), then: 包块(n.then, n.line), otherwise: 包块(n.otherwise, n.line), line: 行(n), column: 列(n)}
-    出 = {kind: "表达式语句", expr: 内, line: 行(n), column: 列(n)}
-  }
-  若 n.kind == "当" {
-    定 内 = {kind: "当", condition: 翻表达式(n.cond), body: 包块(n.body, n.line), line: 行(n), column: 列(n)}
-    出 = {kind: "表达式语句", expr: 内, line: 行(n), column: 列(n)}
-  }
-  返回 转语句批(语句批, i + 1, acc + (出,))
-}
 
-函数 包块(语句批: Int, 行: Int) {
-  返回 {kind: "块", statements: 转语句批(语句批, 0, ()), line: 行}
-}
 
-// 参数名 → {name, passing}。宿主的参数是记录（带 类型 与 passing），而这一侧
-// 原来只交 {name} —— 于是「跨模块的借用分析」在自举层那条路上什么都看不见：
-// 它判的第一件事就是 params[].passing 是不是 借用（2026-11-02 实测，
-// ownedcheck 那套的「跨模块的转移被看见」因此拿到空数组）。
-//
-// 借用 与 拥有 是两个前缀词，收名 那一层把它们也当名字收进来了 —— 所以这里
-// 见到它们就把下一个名字配上去。没有前缀的参数 passing 留空。
-函数 转参数批(名册: Int, i: Int, acc: Int) {
-  若 i >= len(名册) { 返回 acc }
-  定 名 = 名册[i]
-  若 名 == "borrow" || 名 == "own" {
-    若 i + 1 < len(名册) { 返回 转参数批(名册, i + 2, acc + ({name: 名册[i + 1], passing: 名},)) }
-    返回 acc
-  }
-  返回 转参数批(名册, i + 1, acc + ({name: 名, passing: ()},))
-}
 
-函数 包声明(声明批: Int, i: Int, acc: Int) {
-  若 i >= len(声明批) { 返回 acc }
-  定 d = 声明批[i]
-  变 名 = ""
-  变 参 = ()
-  变 句 = ()
-  变 效 = ()
-  变 行 = 1
-  变 列 = 1
-  若 len(d) > 0 { 名 = d[0] }
-  若 len(d) > 1 { 参 = d[1] }
-  若 len(d) > 2 { 句 = d[2] }
-  若 len(d) > 3 { 效 = d[3] }
-  若 len(d) > 4 { 行 = d[4] }
-  若 len(d) > 5 { 列 = d[5] }
-  // 第九件是 "macro" 的时候，第三件放的是表达式而不是语句批 —— 宏的 body 是一个
-  // 表达式（src/expand.mjs 的换回按表达式走），所以这里不能包成 Block。
-  若 len(d) > 8 && d[8] == "macro" {
-    返回 包声明(声明批, i + 1, acc + ({kind: "宏", name: 名, params: 参, body: 句, line: 行, column: 列},))
-  }
-  变 返 = ()
-  若 len(d) > 6 { 返 = d[6] }
-  // 第八件是「这个声明是不是 公开」（self/body.hmoca 的 decls_from 现在收它）。
-  变 是公开 = 0
-  若 len(d) > 7 { 是公开 = d[7] }
-  定 体 = 包块(句, 行)
-  定 函 = {kind: "函数", name: 名, params: 转参数批(参, 0, ()), returns: 返, 效果串: 效, contracts: (), body: 体, 公开: 是公开, line: 行, column: 列}
-  返回 包声明(声明批, i + 1, acc + (函,))
-}
 
-// 从 token 流里找出 引入 行，包成 Import 节点。
-//
-// 为什么从 token 找而不是从文本找：位置要得从 token 来，而 找导入批 只交回路径字符串。
-// 宿主那边 Import 的位置记在 引入 这个关键字上，这一侧照同一个规矩。
-// alias 与 rev 先留空：这一层的语法还不认它们，等认了再填 —— 空的与「没有」不是一回事，
-// 所以量具只比 path 与位置，不比这两项。
-// 模块版本：顶上那句 `rev N`。找不到就是 0（宿主那边不写 rev 是 null，
-// 而这一侧用一个数表示「不提要求」，桥再决定怎么落）。
-函数 模块版本(tokens: Int, i: Int) {
-  若 i + 1 >= len(tokens) { 返回 0 }
-  定 t = tokens[i]
-  // 只看模块顶上那一句：碰到 引入 或声明就该停 —— 记录里的 `rev: 版` 是字段，不是版本。
-  若 t.kind == "ident" && (t.text == "import" || t.text == "fn" || t.text == "let" || t.text == "var") { 返回 0 }
-  若 t.kind == "ident" && t.text == "rev" {
-    若 tokens[i + 1].kind == "int" { 返回 to_int(tokens[i + 1].text) }
-    返回 0 - 1
-  }
-  返回 模块版本(tokens, i + 1)
-}
 
-函数 导入节点批(tokens: Int, i: Int, acc: Int) {
-  若 i >= len(tokens) { 返回 acc }
-  定 t = tokens[i]
-  若 t.kind == "ident" && t.text == "import" && i + 1 < len(tokens) && tokens[i + 1].kind == "string" {
-    定 s = tokens[i + 1]
-    // 引入 "x.hmoca" rev N —— 不写就是 0（这一侧用 0 表示「不提要求」）。
-    变 版 = 0
-    若 i + 2 < len(tokens) && tokens[i + 2].kind == "ident" && tokens[i + 2].text == "rev" {
-      若 i + 3 < len(tokens) && tokens[i + 3].kind == "int" { 版 = to_int(tokens[i + 3].text) } 否则 { 版 = 0 - 1 }
-    }
-    // 作 别名：`引入 "x" 作 名`。与 rev 可以并存而顺序不固定，所以两个位置都看。
-    //
-    // 原来这里写死 alias: ""（上面那条注释还写着「这一层的语法还不认它们」）——
-    // 于是 Runtime.模块成员 那条路永远查不到别名，「别名点成员调得动」那一条恒红
-    // （2026-11-02 实测：桥交出的 别名表 是空的）。空串与「没有」在这里是同一件事，
-    // 而调用方只问真不真，所以初值用空串没有歧义。
-    变 别 = ""
-    若 i + 2 < len(tokens) && tokens[i + 2].kind == "ident" && tokens[i + 2].text == "as" {
-      若 i + 3 < len(tokens) && tokens[i + 3].kind == "ident" { 别 = tokens[i + 3].text }
-    }
-    若 i + 3 < len(tokens) && tokens[i + 3].kind == "ident" && tokens[i + 3].text == "as" {
-      若 i + 4 < len(tokens) && tokens[i + 4].kind == "ident" { 别 = tokens[i + 4].text }
-    }
-    定 节 = {kind: "引入", path: s.text, alias: 别, rev: 版, line: t.line, column: t.column}
-    返回 导入节点批(tokens, i + 2, acc + (节,))
-  }
-  返回 导入节点批(tokens, i + 1, acc)
-}
 
-// 一整个文件 → Module。有声明就按声明走；没有就照旧包一层 函数 main 的壳（老用法）。
-函数 造模块(源: String) {
-  定 净 = 去导入(源)
-  // 引入 行被 去导入 剥掉了，所以找它们要用原始源码。
-  定 全toks = scan_lines(源)
-  定 导入 = 导入节点批(全toks, 0, ())
-  // 判断「这是不是一份带声明的程序」看 parse_decls 的结果，不看第一行 —— 文件以注释开头
-  // 时会误判（lex.hmyr 就是这样：第一行是注释，于是整份被当成裸语句包进 函数 main 的壳）。
-  // 解析用**原始** token 流：去导入 会把行号整体上移，两边就对不上位置了。
-  定 全部 = parse_decls(全toks)
-  若 len(全部.fns) > 0 {
-    返回 {kind: "模块", imports: 导入, decls: 包声明(全部.fns, 0, ()), rev: 模块版本(全toks, 0)}
-  }
-  定 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
-  定 体 = parse_body(scan_lines(有壳))
-  返回 {kind: "模块", imports: 导入, decls: 包声明((("main", (), 体.list, (), 1, 1),), 0, ()), rev: 0}
-}
 
 // 整棵 引入 树：加载（递归、去重、环拒绝、后序）+ 造形状，一步做完。
 //
@@ -436,30 +192,7 @@
   返回 {ok: 真, 错: "", 模块族: 模块族, 路径串: r.已载}
 }
 
-// 只解析、不求值，交回声明树。
-//
-// 量「节点位置」时用它：求值会把树丢掉，而位置在树上。函数的形状与 parse_decls 交回的
-// 一致 —— 声明是 (名字, 参数名册, 语句批)。
-函数 解析程序(源: String) {
-  定 净 = 去导入(源)
-  若 行首是声明(净) {
-    定 全部 = parse_decls(scan_lines(净))
-    返回 全部.fns
-  }
-  定 有壳 = "fn main() -> Int {\n" + 净 + "\n}\n"
-  定 体 = parse_body(scan_lines(有壳))
-  返回 (体.list,)
-}
 
-// 量具与启动器传进来的是「相对当前目录的路径」，可能不写 ./ 开头（self/sign.hmoca 这样）。
-// 而 加载走 现在按 引入 说明的三种形状去判（路径 / 绝对 / 包名）—— 于是这里补一个 ./，
-// 别让「包名」那条分支抓住一条本来就能读的相对路径（2026-11-02 实测：不补的话
-// self-load 那套量出空 order，四棵树一起红）。
-函数 当路径(相对: String) -> String {
-  若 是路径(相对) { 返回 相对 }
-  若 是绝对(相对) { 返回 相对 }
-  返回 "./" + 相对
-}
 
 // 给一个入口（相对当前目录），交回 "ok <文件数>" 或 "错 <码> <路径>"。
 函数 只加载(入口: String) -> String 效果串(file) {
@@ -494,26 +227,7 @@
   返回 有
 }
 
-// 跑几个模块：每一段都扫出它的声明，把函数表合起来，然后跑 main。
-//
-// 合并的规矩是「后到者覆盖先到者」——与 定 的重定义一致。
-// 读文件不在这里：那是启动器（能力内核）的事，于是自举不必背上 file 效果。
-// 去掉 引入 行：那些行只用来找路径，解析器不认它们。
-//
-// 为什么需要它：带 引入 的目标程序在自举层跑时，引入 那一行会被当成语句解析，
-// 于是报「不认识的运算符：...」—— 报出来的东西是引号里的路径，
-// 看着像是在别处出的错。引号里 只在「这一行是 引入」时才交回路径，
-// 所以用它判断既准又省一个函数。
-函数 去导入从(行批: Int, i: Int, acc: String) -> String {
-  若 i >= len(行批) { 返回 acc }
-  定 路 = 引号里(行批[i])
-  若 路 == "" { 返回 去导入从(行批, i + 1, acc + 行批[i] + chr(10)) }
-  返回 去导入从(行批, i + 1, acc)
-}
 
-函数 去导入(源码: String) -> String {
-  返回 去导入从(拆行(源码), 0, "")
-}
 
 函数 合并从(已收: Int, 源码批: Int, i: Int) -> Int {
   若 i >= len(源码批) { 返回 已收 }
