@@ -1,0 +1,52 @@
+// 路径与环境这十个内置：cwd、home_dir、temp_path、repo_path、python_path、locale_current、locale_set、locale_env、console_codepage、chdir。
+//
+// 为什么单独立一份（2026-11-05）：求调用 那一大块分派的第七刀。与前面几刀同形 ——
+// 只依赖 eval-core.hmoca 里的 好 坏 要效果，交回 {有, 结果}。
+//
+// 它们回答的都是「这台机器上是什么样」：工作目录、家里、临时、仓库根、Python 在哪、本地化、代码页。
+
+引入 "./eval-core.hmoca"
+
+公开 函数 求内置路径(名: String, 值簇: Int, 环境: Int) {
+若 名 == "cwd" {
+    若 len(值簇) != 0 { 返回 {有: 真, 结果: 坏("cwd 不要参数")} }
+    返回 {有: 真, 结果: 好(cwd())}
+  }
+若 名 == "home_dir" {
+    若 len(值簇) != 0 { 返回 {有: 真, 结果: 坏("home_dir 不要参数")} }
+    返回 {有: 真, 结果: 好(home_dir())}
+  }
+若 名 == "temp_path" {
+    若 len(值簇) != 1 { 返回 {有: 真, 结果: 坏("temp_path 要一个参数")} }
+    返回 {有: 真, 结果: 好(temp_path(值簇[0]))}
+  }
+若 名 == "repo_path" {
+    若 len(值簇) != 1 { 返回 {有: 真, 结果: 坏("repo_path 要一个参数")} }
+    返回 {有: 真, 结果: 好(repo_path(值簇[0]))}
+  }
+若 名 == "python_path" {
+    若 len(值簇) != 0 { 返回 {有: 真, 结果: 坏("python_path 不要参数")} }
+    返回 {有: 真, 结果: 好(python_path())}
+  }
+若 名 == "locale_current" {
+    若 len(值簇) != 0 { 返回 {有: 真, 结果: 坏("locale_current 不要参数")} }
+    返回 {有: 真, 结果: 好(locale_current())}
+  }
+若 名 == "locale_set" {
+    若 len(值簇) != 1 { 返回 {有: 真, 结果: 坏("locale_set 要一个参数")} }
+    返回 {有: 真, 结果: 好(locale_set(值簇[0]))}
+  }
+若 名 == "locale_env" {
+    若 len(值簇) != 0 { 返回 {有: 真, 结果: 坏("locale_env 不要参数")} }
+    返回 {有: 真, 结果: 好(locale_env())}
+  }
+若 名 == "console_codepage" {
+    若 len(值簇) != 0 { 返回 {有: 真, 结果: 坏("console_codepage 不要参数")} }
+    返回 {有: 真, 结果: 好(console_codepage())}
+  }
+若 名 == "chdir" {
+    若 len(值簇) != 1 { 返回 {有: 真, 结果: 坏("chdir 要一个参数")} }
+    返回 {有: 真, 结果: 好(chdir(值簇[0]))}
+  }
+  返回 {有: 假, 结果: 0}
+}
