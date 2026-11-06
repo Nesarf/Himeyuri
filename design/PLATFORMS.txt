@@ -104,3 +104,35 @@ mkdir 失败之后什么也没改 —— 于是那边的下一次写是成功的
 两条被排除的嫌疑也记在这里，因为它们看起来都像真原因：混分隔符不是问题
 （单独写一份 E:\...\tmp/mix-probe.txt 成功），路径编码也不是（temp_path 交回的
 四十个字符逐个查过，全是可打印 ASCII）。
+
+2026-11-06：arm 那一套在 Windows 上红了很久，而红的那一条把后面五条藏了
+--------------------------------------------------------------------
+
+今天跑全量，232 套里一套没通过：arm。它报的是
+
+  make[1]: mkdir: No such file or directory
+  make[1]: 三个星号 [Makefile:108: build/hmyr.o] Error 127
+  （那一行原文是以三个星号开头的，这里按文档的规矩不照抄）
+
+根因在套件自己那一行。test/arm.test.mjs 拿绝对路径找到 make（这台机器是
+D:\msys64\usr\bin\make.exe），找到了就直接 spawn，而 msys 的 bin 并不因此就在
+子进程的 PATH 上。port/Makefile 的配方写的是 @mkdir -p $(BUILD) —— POSIX 写法，
+make 去 PATH 上找 mkdir，找不到，于是 127（Error 127 的意思是「命令没找到」，
+不是「命令失败」）。mkdir.exe、sh.exe、rm.exe 都躺在 D:\msys64\usr\bin\ 里。
+
+修法一行：spawnSync 时把 path.dirname(make) 前置进 PATH —— 找到谁，就带着它的邻居。
+Makefile 本来就是按 MSYS2 写的（CROSS 默认值 /d/msys64/ucrt64/bin/arm-none-eabi-），
+它只在那个环境里成立，所以缺的只是把环境给它。
+
+值得记的是第二件事，也是这一条真正的收获：那一条红把后面五条判据一起藏了。
+第一节「一之三」的写法是
+
+  ok("make h723 链得出来", ...);
+  if (fs.existsSync(映)) { 向量表、入口、栈顶、Flash、RAM 五项 }
+
+而映像不存在时那五项连跑都不跑。于是那一套报的是 26 passed, 1 failed ——
+红线之外还有五条，从来没有在 Windows 上过过。修好之后它是 32 passed, 0 failed。
+
+一条红的失败往往不止它自己。一段被 if 包住的判据，前提不成立时是静默的，
+而静默在总数里看不出来：27 与 32 都是「只有一条不通过」，区别在那一套当时
+到底验了几件事。所以看「几项通过」这个数时，要知道它是被前提缩过的。

@@ -108,7 +108,17 @@ console.log("一之三、链到 H723：编得过之后的下一关是链得出�
     const 映 = path.join(端口, "build", "hmyr-board.elf");
     fs.rmSync(映, { force: true });
     const 前缀 = gcc.replace(/gcc(\.exe)?$/i, "");
-    const r = spawnSync(make, ["h723", "CROSS=" + 前缀], { cwd: 端口, encoding: "utf8", timeout: 900000 });
+    // make 的配方里写的是 @mkdir -p $(BUILD)，而它会去 PATH 上找 mkdir。
+    // 上面那一行是拿绝对路径找到 make 的 —— 而它的同目录工具（mkdir、rm、sh）
+    // 并不因此就在 PATH 上，于是 Windows 上这一步报的是「mkdir: No such file
+    // or directory」加 Error 127。找到谁，就带着它的邻居。
+    const 环境 = {
+      ...process.env,
+      PATH: path.dirname(make) + path.delimiter + (process.env.PATH || ""),
+    };
+    const r = spawnSync(make, ["h723", "CROSS=" + 前缀], {
+      cwd: 端口, encoding: "utf8", timeout: 900000, env: 环境,
+    });
     ok("make h723 链得出来", r.status === 0 && fs.existsSync(映),
       String(r.status) + " " + String(r.stderr || "").slice(-300));
     if (fs.existsSync(映)) {
