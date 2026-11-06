@@ -51,29 +51,32 @@ const 要总图 = 参数.includes("--map");
 //   node tools/check-all.mjs --only "$(node tools/impact.mjs src/parser.mjs --suites)"
 // 这是「改一份跑哪些」那句话的可执行形态 —— 那句话原来写在纪律里，靠人记。
 const 要套件 = 参数.includes("--suites");
-const 目标 = 参数.find((a) => !a.startsWith("--"));
+// 2026-11-06：从「一个目标」改成「一组目标」。--suites 原来一次只吃一个路径，
+// 于是 test/impact.test.mjs 起了十六次子进程、每次重建整张图（扫全仓 .hmoca、
+// 读每一份、解 import）—— 而那张图在两次调用之间一个字都没变。
+const 目标集 = 参数.filter((a) => !a.startsWith("--"));
 
 // ---- 一、.hmyr 之间谁 import 谁（全仓，不只 self/）----
 // 只看 self/ 会漏：json.hmyr 被 manifest.hmyr 用、lib/json.hmyr 被 lsp.hmyr 用 ——
 // 而改 json.hmyr 会波及 manifest 那一串套件。所以扫描范围是整棵树。
 const 跳过 = new Set(["node_modules", ".git", "dist", "swap", ".tmp-index", ".tmp-sign"]);
-const hmyr们 = [];
+const hmyr集 = [];
 const 走目录 = (相对) => {
   const 全 = path.join(ROOT, 相对);
-  let 项们;
-  try { 项们 = fs.readdirSync(全, { withFileTypes: true }); } catch { return; }
-  for (const 项 of 项们) {
+  let 项集;
+  try { 项集 = fs.readdirSync(全, { withFileTypes: true }); } catch { return; }
+  for (const 项 of 项集) {
     if (跳过.has(项.name)) continue;
     const 子 = 相对 ? 相对 + "/" + 项.name : 项.name;
     if (项.isDirectory()) 走目录(子);
-    else if (项.name.endsWith(".hmoca")) hmyr们.push(子);
+    else if (项.name.endsWith(".hmoca")) hmyr集.push(子);
   }
 };
 走目录("");
-hmyr们.sort();
+hmyr集.sort();
 
 const self依赖 = new Map(); // 文件（仓库相对路径）→ 它 import 的文件
-for (const 路 of hmyr们) {
+for (const 路 of hmyr集) {
   const 源 = fs.readFileSync(path.join(ROOT, 路), "utf8");
   const 依赖 = [];
   const 本目录 = path.posix.dirname(路);
@@ -122,30 +125,30 @@ for (const [名, 脚本] of 清单) {
   // 单独一个集合而不是并进 载入：混进去会让 --map 把 .mjs 列在
   // 「每个套件加载的 .hmyr」那个标题底下，标题就成了假话。
   // 只收仓库内的相对路径，所以 from "../src/x.mjs" 这一种不会被误收 —— 它由下面那一条管。
-  const 脚本们 = new Set();
-  for (const m of 源.matchAll(/["']((?:tools|bin|src|test|vm)\/[A-Za-z0-9_./-]+\.mjs)["']/g)) 脚本们.add(m[1]);
+  const 脚本集 = new Set();
+  for (const m of 源.matchAll(/["']((?:tools|bin|src|test|vm)\/[A-Za-z0-9_./-]+\.mjs)["']/g)) 脚本集.add(m[1]);
   // 第二种写法：path.join(ROOT, "tools", "hmget.mjs")。test/hmget.test.mjs 就是这么拼的，
   // 而上面那一条正则要求整段字符串以 tools/ 开头 —— 拆成两段它就看不见了。
-  for (const m of 源.matchAll(/path\.join\(ROOT,\s*"([^"]+)",\s*"([^"]+\.mjs)"\)/g)) 脚本们.add(m[1] + "/" + m[2]);
-  const src们 = new Set([...源.matchAll(/from "\.\.\/src\/([^"]+)"/g)].map((m) => "src/" + m[1]));
+  for (const m of 源.matchAll(/path\.join\(ROOT,\s*"([^"]+)",\s*"([^"]+\.mjs)"\)/g)) 脚本集.add(m[1] + "/" + m[2]);
+  const src集 = new Set([...源.matchAll(/from "\.\.\/src\/([^"]+)"/g)].map((m) => "src/" + m[1]));
   // 被 spawn 的工具脚本自己也 import src，那些依赖也要算进这个套件。
   // 少了这一步，改 src/vm.mjs（curve-batch.mjs 正是用它跑字节码）不会选中 curve，
   // 而曲线套件就是会红的那个。这条缺口是 2026-11-02 加探针时当场露出来的。
-  for (const 工 of 脚本们) {
+  for (const 工 of 脚本集) {
     let 工源 = "";
     try { 工源 = fs.readFileSync(path.join(ROOT, 工), "utf8"); } catch { continue; }
-    for (const m of 工源.matchAll(/from\s+"\.\.\/src\/([^"]+)"/g)) src们.add("src/" + m[1]);
+    for (const m of 工源.matchAll(/from\s+"\.\.\/src\/([^"]+)"/g)) src集.add("src/" + m[1]);
   }
-  套件.push({ 名, 脚本, 载入, 脚本们, src: src们 });
+  套件.push({ 名, 脚本, 载入, 脚本集, src: src集 });
 }
 
 // ---- 二半、src 模块之间谁 import 谁 ----
 // 为什么要有这一段：查 src/parser.mjs 时，只算「直接 import 它的套件」会漏掉一批 ——
 // src/loader.mjs 自己也 import parser，而那几个套件只 import loader。改 parser 会波及它们，
 // 它们却不在答案里。所以 src 这一侧也要走一遍闭包。
-const src文件们 = fs.readdirSync(path.join(ROOT, "src")).filter((f) => f.endsWith(".mjs")).sort();
+const src文件集 = fs.readdirSync(path.join(ROOT, "src")).filter((f) => f.endsWith(".mjs")).sort();
 const src依赖 = new Map(); // src/xxx.mjs → 它 import 的 src 文件
-for (const 名 of src文件们) {
+for (const 名 of src文件集) {
   const 路 = "src/" + 名;
   const 源 = fs.readFileSync(path.join(ROOT, 路), "utf8");
   const 依赖 = [];
@@ -168,7 +171,7 @@ const src上游 = (路) => {
 
 // ---- 三、总图 ----
 if (要总图) {
-  console.log("工程地图 · " + hmyr们.length + " 份 HMYR 源码 · " + 套件.length + " 个套件");
+  console.log("工程地图 · " + hmyr集.length + " 份 HMYR 源码 · " + 套件.length + " 个套件");
   console.log("");
   console.log("一、谁被 import（左边是被用的，右边是用它的）");
   const 被用 = new Map();
@@ -178,10 +181,10 @@ if (要总图) {
       被用.get(d).push(path.basename(子));
     }
   }
-  for (const [被, 用们] of [...被用].sort((a, b) => b[1].length - a[1].length)) {
-    console.log("  " + 被.padEnd(24) + " ← " + 用们.join(" "));
+  for (const [被, 用者] of [...被用].sort((a, b) => b[1].length - a[1].length)) {
+    console.log("  " + 被.padEnd(24) + " ← " + 用者.join(" "));
   }
-  const 孤立 = hmyr们.filter((f) => !被用.has(f));
+  const 孤立 = hmyr集.filter((f) => !被用.has(f));
   if (孤立.length) console.log("  （没人 import 的入口：" + 孤立.join(" ") + "）");
   console.log("");
   console.log("二、每个套件加载的 .hmyr（只列前三个；单个文件的完整答案用单文件模式查）");
@@ -210,54 +213,68 @@ if (要总图) {
   process.exit(0);
 }
 
-if (!目标) {
-  console.error("用法：node tools/impact.mjs <相对仓库根的路径> [--all]  或  --map");
+if (目标集.length === 0) {
+  console.error("用法：node tools/impact.mjs <相对仓库根的路径> [<路径> ...] [--all]  或  --map");
   process.exit(2);
 }
-const 目标键 = 目标.split("\\").join("/");
 
 // ---- 四、答一个文件 ----
-const 是src = 目标键.startsWith("src/");
-// src 模块也要走闭包：改 parser 会波及 import loader 的套件，而它们没直接 import parser。
-const src链 = 是src ? new Set([目标键, ...src上游(目标键)]) : new Set();
-const 目标链 = 是src ? new Set() : new Set([目标键, ...上游(目标键)]);
-
-const 直接 = [];
-const 间接 = [];
-const 无关 = [];
-for (const s of 套件) {
-  const 载了本体 = s.载入.has(目标键);
-  const 用src本体 = 是src && s.src.has(目标键);
-  // 套件把这个文件当命令行参数 spawn 出去，也算直接依赖：它跑的就是那一步。
-  const 用工具本体 = s.脚本们.has(目标键);
-  const 载了 = [...目标链].some((f) => s.载入.has(f));
-  const 用src间 = 是src && !用src本体 && [...src链].some((f) => s.src.has(f));
-  if (载了本体 || 用src本体 || 用工具本体) 直接.push(s.名);
-  else if (载了 || 用src间) 间接.push(s.名);
-  else 无关.push(s.名);
+// 一段吃参数、交结果的东西，不再往全局的三个数组里填。理由不是好看：
+// 原来那一段用全局的 目标键（那段里出现十一次），于是 --suites 一次只能问一个文件，
+// 而问十六个就得建十六次图 —— 图在两次调用之间一个字都没变。这一改把「问几个」
+// 与「建几次图」分开。
+function 算名单(目标键) {
+  const 是src = 目标键.startsWith("src/");
+  // src 模块也要走闭包：改 parser 会波及 import loader 的套件，而它们没直接 import parser。
+  const src链 = 是src ? new Set([目标键, ...src上游(目标键)]) : new Set();
+  const 目标链 = 是src ? new Set() : new Set([目标键, ...上游(目标键)]);
+  const 直接 = [];
+  const 间接 = [];
+  const 无关 = [];
+  for (const s of 套件) {
+    const 载了本体 = s.载入.has(目标键);
+    const 用src本体 = 是src && s.src.has(目标键);
+    // 套件把这个文件当命令行参数 spawn 出去，也算直接依赖：它跑的就是那一步。
+    const 用工具本体 = s.脚本集.has(目标键);
+    const 载了 = [...目标链].some((f) => s.载入.has(f));
+    const 用src间 = 是src && !用src本体 && [...src链].some((f) => s.src.has(f));
+    if (载了本体 || 用src本体 || 用工具本体) 直接.push(s.名);
+    else if (载了 || 用src间) 间接.push(s.名);
+    else 无关.push(s.名);
+  }
+  return { 目标键, 是src, 直接, 间接, 无关 };
 }
+
+// 会进「字节产物」的那几类要另说：它们的扩散不走 import 图，而走
+// self/*.hmoca → runtime/*.hmoks → bootstrap/pack.hmtn → vm/pack_seed.h → 每一个
+// 跑 C 那台或读那份字节的套件。地图读的是源码里的路径与 import，这条边它看不见
+// （实测：改 self/body.hmoca，名单里没有 selfvmcompile，而那一套读的正是它的字节）。
+// 所以这几类一律报全量 —— 不是保险起见，是那条边真的绕过了它读的所有东西。
+const 进产物 = [
+  /^self\/[^/]*\.hmoca$/,
+  /^runtime\//,
+  /^bootstrap\//,
+  /^vm\/pack_seed\.h$/,
+  /^vm\/hmyr\.c$/,
+  /^bin\/hmyr\.mjs$/,
+];
+const 全量名 = () => 套件.map((s) => s.名);
 
 if (要套件) {
-  // 会进「字节产物」的那几类要另说：它们的扩散不走 import 图，而走
-  // self/*.hmoca → runtime/*.hmoks → bootstrap/pack.hmtn → vm/pack_seed.h → 每一个
-  // 跑 C 那台或读那份字节的套件。地图读的是源码里的路径与 import，这条边它看不见
-  // （实测：改 self/body.hmoca，名单里没有 selfvmcompile，而那一套读的正是它的字节）。
-  // 所以这几类一律报全量 —— 不是保险起见，是那条边真的绕过了它读的所有东西。
-  const 进产物 = [
-    /^self\/[^/]*\.hmoca$/,
-    /^runtime\//,
-    /^bootstrap\//,
-    /^vm\/pack_seed\.h$/,
-    /^vm\/hmyr\.c$/,
-    /^bin\/hmyr\.mjs$/,
-  ];
-  if (进产物.some((r) => r.test(目标键))) {
-    console.log(套件.map((s) => s.名).join(","));
-    process.exit(0);
+  // 一个路径一行，行内逗号分隔。问一个的时候输出与从前一字不差；
+  // 问多个的时候图只建一次 —— 这是这一份唯一的批量形态。
+  for (const 目标键 of 目标集) {
+    if (进产物.some((r) => r.test(目标键))) { console.log(全量名().join(",")); continue; }
+    const 案 = 算名单(目标键);
+    console.log([...案.直接, ...案.间接].join(","));
   }
-  console.log([...直接, ...间接].join(","));
   process.exit(0);
 }
+
+// 详细模式一次只答一个：它的输出是给人读的一段，多给几个也只答第一个。
+const 目标键 = 目标集[0];
+const 案 = 算名单(目标键);
+const { 直接, 间接, 无关, 是src } = 案;
 
 const 列 = (arr) => (要全部 ? arr : arr.slice(0, 12));
 const 略 = (arr) => (!要全部 && arr.length > 12 ? " …另有 " + (arr.length - 12) : "");
