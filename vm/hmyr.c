@@ -5283,7 +5283,11 @@ static Value run_func(Func *f, Value *args, int nargs) {
     switch (in->op) {
       case OP_CONST: push(in->val); pc++; break;
       case OP_LOAD:
-        if (in->a < 0 || (uint32_t)in->a >= f->nslots) {
+        /* 一次无符号比较就够：负数转成无符号之后必然大过任何 nslots，所以
+         * 「a < 0 || a >= nslots」与「(unsigned)a >= (unsigned)nslots」等价。
+         * 2026-11-06 量这一处：取 占全部步数的三成（三份分布都是这个量级），
+         * 而它每条只做三件事 —— 边界检查、读槽、压栈。 */
+        if ((uint32_t)in->a >= (uint32_t)f->nslots) {
           char *m = g_诊m;
           snprintf(m, sizeof g_诊m, "load from slot %lld, but this function has %u", (long long)in->a, (unsigned)f->nslots);
           fail("HMYR-行-010", m);
