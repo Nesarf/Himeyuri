@@ -25,7 +25,13 @@ const SKIP = new Set(["node_modules", ".git", "build", "data", "swap", "ucd", "c
 
 const MARKERS = [
   [/^#{1,6}\s/m, "hash heading"],
-  [/\*\*[^*\n]+\*\*/m, "bold marker"],
+  // 这一条 2026-11-06 收紧了：原来是「两颗星、中间不含星号的文字、两颗星」，
+  // 也就是只认成对的。而 HMYR 那一份（tools/check-docs.hmoca）一直是「只要出现
+  // 两颗星就算」—— 两份检查器因此在同一份文档上给了不同判决，docshmyr 抓住了
+  // 那次不一致。往严的那一边对齐，理由是「成对才算」有一个安静的后果：只写一边
+  // 的时候看不见，而那正是最容易出的错。收之前数过：58 份受检文档里含两颗星的
+  // 行是 0 行，所以这一次收紧没有让任何一份变红。
+  [/\*\*/m, "bold marker"],
   [/`[^`\n]+`/m, "backtick code span"],
   [/^\s*\|.*\|\s*$/m, "table row"],
   [/^\s*>\s/m, "blockquote"],

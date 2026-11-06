@@ -51,7 +51,11 @@ if (!fs.existsSync(exe)) {
 const 解析 = (出) => {
   const 表 = new Map();
   for (const 行 of String(出).split("\n")) {
-    const m = /^\s*\[(通过|不通过)\]\s+(\S+)\s*$/.exec(行);
+    // 路径之后可能还跟着理由：这一份写 bold marker，JS 那一份写 bold marker (line 114)，
+    // 两侧格式不同。而这里只问「哪一份、判什么」，理由不该让这一行读不出来。
+    // 原来的写法要求路径之后直接行尾，于是有违规的时候那一份会从清单里消失，
+    // 比较也就悄悄少了一份 —— 而这一套的本事恰好只在零违规时成立。
+    const m = /^\s*\[(通过|不通过)\]\s+(\S+)(?:\s+\S.*)?$/.exec(行);
     if (m) 表.set(m[2], m[1]);
   }
   const t = /(\d+) document\(s\) checked, (\d+) with rendering syntax/.exec(String(出));
@@ -59,16 +63,27 @@ const 解析 = (出) => {
 };
 
 console.log("一、两份清单");
+// 这里问的是「跑完并把清单打出来」，不是「零违规」。
+// 零违规由 docs 那一套（tools/check-docs.mjs）管，它单独跑就是一条判据；
+// 而这一套管的是「两侧看同一棵树给同一张清单」。两条混在一起的时候，
+// 一出现违规这一套就先红在第 1、2 项上，「违规时两侧清单还对不对得上」永远测不到
+// —— 而 2026-11-06 那一天恰好证明了它测不到：一份文档被判不通过，那一份却从
+// HMYR 侧的清单里整行消失，四项比较全部落空，套件报的第 1、2 项之外一片安静。
+// 所以判据是「退出码是 0 或 1，并且末行有那份计数」：崩了（段错误、超时）
+// 不会有末行，那时照旧红。
+const 跑完了 = (码, 出) =>
+  (码 === 0 || 码 === 1) && /document\(s\) checked/.test(String(出));
 const 宿主 = spawnSync(process.execPath, [path.join(ROOT, "tools/check-docs.mjs")],
   { cwd: ROOT, encoding: "utf8", timeout: 600000 });
-ok("宿主那一份跑完（退出码 0）", 宿主.status === 0, String(宿主.stderr).slice(0, 200));
+ok("宿主那一份跑完并打出清单", 跑完了(宿主.status, 宿主.stdout),
+  String(宿主.stderr).slice(0, 200));
 const 甲 = 解析(宿主.stdout);
 
 const 乙跑 = spawnSync(exe, ["tools/check-docs.hmoca"], {
   cwd: ROOT, encoding: "utf8", timeout: 900000,
   env: { ...process.env, HMYR_STEPS: "2000000000" },
 });
-ok("HMYR 那一份跑完（退出码 0）", 乙跑.status === 0,
+ok("HMYR 那一份跑完并打出清单", 跑完了(乙跑.status, 乙跑.stdout),
   (String(乙跑.stdout) + String(乙跑.stderr)).slice(0, 300));
 const 乙 = 解析(乙跑.stdout);
 
