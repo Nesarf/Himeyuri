@@ -66,5 +66,26 @@ console.log("三、行数那格不能是瞎写的");
 }
 
 console.log("");
+console.log("四、最后一格指向的那份稿子里，真的提到了这份探针");
+// 第四节只验「写了没写」，而这一页出过一次八格全错的事故：那八格写着「没有」，
+// 其实每一份的答案都在 BOARD.txt 与 FULLSELF.txt 里，只是搜的时候按带扩展名的
+// 文件名搜、又按「答案」的样子找，于是判成了没写。所以这里验的是「在不在」：
+// 那格写了哪份稿，就去那份稿里指名找一次。写了「没有」的跳过 —— 那是没找到，
+// 不是写错了，两者要分开。
+{
+  const 缺 = [];
+  for (const x of 表) {
+    if (x.答 === "没有") continue;
+    const 基 = x.文件.replace(/\.hmoca$/, "");
+    const re = new RegExp(基.replace(/-/g, "\\-") + "(?![0-9A-Za-z_-])");
+    if (!x.答.endsWith(".txt")) { 缺.push(x.文件 + " → " + x.答 + "（不是设计稿名）"); continue; }
+    const p = path.join(ROOT, "design", x.答);
+    if (!fs.existsSync(p)) { 缺.push(x.文件 + " → " + x.答 + "（没有这份稿）"); continue; }
+    if (!re.test(fs.readFileSync(p, "utf8"))) 缺.push(x.文件 + " → " + x.答 + "（稿里没提到它）");
+  }
+  ok("每一格指向的稿里都指名提到了那份探针", 缺.length === 0, JSON.stringify(缺));
+}
+
+console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
