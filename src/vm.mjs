@@ -325,17 +325,17 @@ export class 虚拟机 {
           if (叫要 && 叫数 < 叫上限) {
             // 与 C 那台同一行：事件号、被调者位置、调用前的栈深、实参数。
             // 栈深是这一轮最要紧的一列 —— 它两边第一次不同，就说明那一步多压了东西。
-            let 类们 = "";
+            let 类族 = "";
             for (let q = 栈.length - n; q < 栈.length; q++) {
               const a = 栈[q];
-              if (a && (a.tag === "tuple" || a.tag === "array")) 类们 += " 4";
-              else if (a && a.tag === "record") 类们 += " 5";
-              else if (数.是数(a)) 类们 += " 1";
-              else if (this.文.是串(a)) 类们 += " 2";
-              else if (a === true || a === false) 类们 += " 3";
-              else 类们 += " 0";
+              if (a && (a.tag === "tuple" || a.tag === "array")) 类族 += " 4";
+              else if (a && a.tag === "record") 类族 += " 5";
+              else if (数.是数(a)) 类族 += " 1";
+              else if (this.文.是串(a)) 类族 += " 2";
+              else if (a === true || a === false) 类族 += " 3";
+              else 类族 += " 0";
             }
-            process.stderr.write("EV " + 事件号() + " CALL " + this.名序.get(指令.a) + " sn=" + 栈.length + " n=" + n + " tags=" + 类们 + "\n");
+            process.stderr.write("EV " + 事件号() + " CALL " + this.名序.get(指令.a) + " sn=" + 栈.length + " n=" + n + " tags=" + 类族 + "\n");
             叫数++;
           }
           const 实参 = 栈.splice(栈.length - n, n);

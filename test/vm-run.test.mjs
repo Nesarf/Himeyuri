@@ -73,7 +73,7 @@ if (!有编译器) {
     fs.writeFileSync(器路, 跑步器);
 
     // 三组程序写在临时目录里，因为它们的 .hmoks 也要跟着生成。
-    const 程序们 = [
+    const 程序册 = [
       ["算一", "一、纯算术", "函数 main() -> Int {\n  定 a = 2 + 3 * 4\n  定 b = a - 5\n  返回 b * 2\n}\n"],
       ["算二", "一、带乘除与取余", "函数 main() -> Int {\n  定 a = 17\n  定 b = 5\n  返回 a - a / b * b\n}\n"],
       ["支一", "二、分支：真跳", "函数 main() -> Int {\n  定 x = 7\n  若 x > 5 {\n    返回 100\n  }\n  返回 200\n}\n"],
@@ -107,7 +107,7 @@ if (!有编译器) {
     ];
 
     console.log("二、三组程序：两边跑出同一个值");
-    for (const [名, 说, 源] of 程序们) {
+    for (const [名, 说, 源] of 程序册) {
       const 源路 = path.join(临, 名 + ".hmoca");
       fs.writeFileSync(源路, 源, "utf8");
       const u = loadUnit(源路);

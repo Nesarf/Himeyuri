@@ -43,8 +43,8 @@ if (failed === 0) {
   // 报的是「没有名字 修剪」，而源码里明明写着。
   const 层 = loadUnit(源路);
   ok("模块读得进来（含引入的 ucd-trim）", 层.ok, 层.diagnostics.errors.map((e) => e.code + " " + e.message).join(" · ").slice(0, 160));
-  const 模块们 = 层.order.map((f) => 编译模块(层.modules.get(f)));
-  const 字节 = 写程序(合并程序(模块们));
+  const 模块册 = 层.order.map((f) => 编译模块(层.modules.get(f)));
+  const 字节 = 写程序(合并程序(模块册));
   const vm = new 虚拟机(读程序(字节), {
     capabilities: 本机能力(), stepLimit: 400000000, maxDepth: 4000,
     argv: ["hmyr", 语料, 出],

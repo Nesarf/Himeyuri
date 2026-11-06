@@ -315,7 +315,7 @@ export function parse(tokens, options = {}) {
     return { kind: "顶层变", name: name ? name.value : "<error>", value, line: kw.line, column: kw.column };
   }
 
-  // 宏：macro 名(参数们) = 表达式
+  // 宏：macro 名(参数册) = 表达式
   //
   // 一行一条，与 const 同一条形状 —— 只是右边那棵树里，参数名是占位。
   // 展开在 src/expand.mjs 里，与解析分开放：解析器只管认形状，不管要不要展开。

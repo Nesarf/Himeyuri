@@ -46,8 +46,8 @@ if (!fs.existsSync(exe)) {
 }
 
 const 种子 = path.join(ROOT, "bootstrap/pack.hmtn");
-const 跑 = (参数们, 选项 = {}) => {
-  const r = spawnSync(exe, 参数们, {
+const 跑 = (参数册, 选项 = {}) => {
+  const r = spawnSync(exe, 参数册, {
     encoding: "utf8",
     cwd: 选项.cwd || ROOT,
     timeout: 180000,

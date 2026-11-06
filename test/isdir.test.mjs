@@ -44,14 +44,14 @@ fs.writeFileSync(程序路, 程序, "utf8");
 
 // 目录、文件、中文名目录、不存在的路径 —— 四条各一种结局。
 const 期望 = "目录\n不是\n目录\n不是\n";
-const 参数们 = [目录, 文件, 中文目录, 没有];
+const 参数册 = [目录, 文件, 中文目录, 没有];
 
 console.log("一、宿主解释器");
 const 层 = loadUnit(程序路);
 ok("程序读得动", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
 let 出A = "";
 const rt = runUnit(层, { write: (t) => { 出A += t; }, capabilities: 本机能力() });
-rt.argv = ["hmyr", ...参数们];
+rt.argv = ["hmyr", ...参数册];
 const 码A = rt.callFunction(rt.functions.get("main"), [], null);
 ok("退出码 0", 码A === 0, String(码A));
 ok("目录是 true，文件与不存在是 false，中文名目录也是 true", 出A === 期望, JSON.stringify(出A));
@@ -60,7 +60,7 @@ console.log("二、字节码机器");
 const 出B = [];
 const vm = 跑字节码(层, {
   write: (t) => 出B.push(t), writeErr: () => {},
-  argv: ["hmyr", ...参数们], capabilities: 本机能力(), stepLimit: 2000000,
+  argv: ["hmyr", ...参数册], capabilities: 本机能力(), stepLimit: 2000000,
 });
 const rB = vm.调用("main", [], null);
 ok("退出码 0", rB.ok, rB.ok ? "" : rB.码 + " " + rB.话);
@@ -82,7 +82,7 @@ if (!有编译器) {
     const e = spawnSync("node", ["tools/emit-code.mjs", 程序路, 码路], { cwd: ROOT, encoding: "utf8" });
     ok("字节码落盘", e.status === 0 && fs.existsSync(码路), String(e.stderr || "").slice(0, 160));
     if (e.status === 0) {
-      const r = spawnSync(exe, [码路, ...参数们], { encoding: "utf8" });
+      const r = spawnSync(exe, [码路, ...参数册], { encoding: "utf8" });
       ok("C 那台退出码 0", r.status === 0, String(r.stderr || "").slice(0, 160));
       ok("C 那台与另两台逐字相同", String(r.stdout || "") === 期望, JSON.stringify(String(r.stdout || "")));
     }

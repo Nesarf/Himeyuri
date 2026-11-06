@@ -31,10 +31,10 @@ for (let i = 源.indexOf("{", 起); i < 源.length; i++) {
   else if (源[i] === "}") { 深--; if (深 === 0) { 终 = i; break; } }
 }
 const 主体 = 源.slice(源.indexOf("{", 起) + 1, 终);
-const 内置们 = [];
+const 内置册 = [];
 for (const 行 of 主体.split("\n")) {
   const m = /^  ([a-z_][a-z0-9_]*):/.exec(行);
-  if (m) 内置们.push(m[1]);
+  if (m) 内置册.push(m[1]);
 }
 
 const 运行时文档 = 读("design/RUNTIME.txt");
@@ -70,12 +70,12 @@ const 走 = (dir) => {
 
 // 三、套件：check-all 里登记的
 const 检查 = 读("tools/check-all.mjs");
-const 套件们 = Array.from(检查.matchAll(/\["([a-z0-9]+)", "([^"]+)"/g)).map((m) => ({ name: m[1], path: m[2], sha256: 哈(m[2]) }));
+const 套件册 = Array.from(检查.matchAll(/\["([a-z0-9]+)", "([^"]+)"/g)).map((m) => ({ name: m[1], path: m[2], sha256: 哈(m[2]) }));
 
 // 四、工具与文档
 const 工具册 = fs.readdirSync(path.join(ROOT, "tools")).filter((n) => n.endsWith(".mjs")).sort()
   .map((n) => ({ name: n, sha256: 哈("tools/" + n) }));
-const 文档们 = fs.readdirSync(path.join(ROOT, "design")).filter((n) => n.endsWith(".txt")).sort()
+const 文档册 = fs.readdirSync(path.join(ROOT, "design")).filter((n) => n.endsWith(".txt")).sort()
   .map((n) => ({ name: n, sha256: 哈("design/" + n) }));
 
 // 版本号用 git 的短哈希：那是最诚实的一种版本号——
@@ -98,13 +98,13 @@ const 清单 = {
   commit: commit,
   generatedAt: new Date().toISOString().slice(0, 10),
   kernel: {
-    builtins: 内置们.length,
+    builtins: 内置册.length,
     minimalSet: 最小集,
   },
   standardLibrary: 库,
-  suites: 套件们,
+  suites: 套件册,
   tools: 工具册,
-  documents: 文档们,
+  documents: 文档册,
 };
 
 // 整份清单的 digest：先算不含它的那一份，再补进去。

@@ -30,8 +30,8 @@ const 读尽 = async () => {
   return Buffer.concat(块).toString("utf8");
 };
 
-const 任务们 = JSON.parse(await 读尽());
-if (!Array.isArray(任务们) || 任务们.length === 0) {
+const 任务批 = JSON.parse(await 读尽());
+if (!Array.isArray(任务批) || 任务批.length === 0) {
   console.error("curve-batch: 标准输入要一个非空的任务数组");
   process.exit(2);
 }
@@ -52,13 +52,13 @@ process.stderr.write("加载与编译 " + Math.round(载毫秒) + " ms\n");
 const vm = 跑字节码(层, {
   capabilities: 本机能力(),
   argv: [],
-  stepLimit: 任务们[0].步限,
+  stepLimit: 任务批[0].步限,
   contracts: process.env.HMYR_CONTRACTS === "1",
   字符串用码元序列: true,
 });
 
 const 结果 = [];
-for (const 任务 of 任务们) {
+for (const 任务 of 任务批) {
   // 每一回都还原成「原来的一次新进程」：参数、步数、输出口、停机标志。
   // 停机那一项必须清，因为新进程之间不共享它 —— 留着就等于让前一回的错误
   // 把一个本来会跑通的下一回也判成失败。清掉才是等价，不是把错误藏起来。

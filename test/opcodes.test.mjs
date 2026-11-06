@@ -32,15 +32,15 @@ const 名册 = 名块 ? [...名块[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]) :
 
 // 形状的表：函数 形状(...) 里那一串数字。
 const 形块 = /函数 形状\(号: Int\) -> Int \{\n  定 表 = \((.*?)\)/s.exec(vm);
-const 形们 = 形块 ? 形块[1].split(",").map((s) => s.trim()).filter((s) => s !== "") : [];
+const 形册 = 形块 ? 形块[1].split(",").map((s) => s.trim()).filter((s) => s !== "") : [];
 
 const comp = fs.readFileSync(path.join(ROOT, "self", "compile.hmoca"), "utf8");
 
 console.log("一、两张表读得出来，而且条数一样");
 ok("读到操作名", 名册.length > 0, String(名册.length));
-ok("读到形状", 形们.length > 0, String(形们.length));
-ok("两张表条数相同（" + 名册.length + " 条）", 名册.length === 形们.length,
-  名册.length + " 对 " + 形们.length);
+ok("读到形状", 形册.length > 0, String(形册.length));
+ok("两张表条数相同（" + 名册.length + " 条）", 名册.length === 形册.length,
+  名册.length + " 对 " + 形册.length);
 
 console.log("二、每一条都有生成点");
 {
@@ -51,8 +51,8 @@ console.log("二、每一条都有生成点");
 console.log("三、判据自己要被验一次");
 {
   // 造一个名字，它肯定不在编译器里 —— 检测要能把它挑出来。
-  const 假名们 = [...名册, "不存在的操作用"];
-  const 缺 = 假名们.filter((n) => !comp.includes('"' + n + '"'));
+  const 假名册 = [...名册, "不存在的操作用"];
+  const 缺 = 假名册.filter((n) => !comp.includes('"' + n + '"'));
   ok("假名字会被挑出来", 缺.length === 1 && 缺[0] === "不存在的操作用", JSON.stringify(缺));
   // 条数不一致也要能看出来。
   ok("两张表条数不一致会被看出来", 名册.length !== 名册.length + 1, "");

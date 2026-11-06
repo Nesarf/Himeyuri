@@ -72,8 +72,8 @@ const 起服务端 = () => {
 
 // 跑一次启动器，等它退出。二十秒是兜底：没有它，一个卡住的子进程会让整套挂死，
 // 那比报一条不通过更难查。
-const 跑 = (参数们) => new Promise((resolve) => {
-  const 子 = spawn(process.execPath, [启动器, 源路, ...参数们], { cwd: ROOT, stdio: ["ignore", "ignore", "pipe"] });
+const 跑 = (参数册) => new Promise((resolve) => {
+  const 子 = spawn(process.execPath, [启动器, 源路, ...参数册], { cwd: ROOT, stdio: ["ignore", "ignore", "pipe"] });
   let 错 = "";
   子.stderr.on("data", (b) => { 错 += String(b); });
   const 记 = setTimeout(() => { try { 子.kill(); } catch { /* 已经退了 */ } }, 20000);

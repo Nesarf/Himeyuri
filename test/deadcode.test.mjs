@@ -36,12 +36,12 @@ const 目录 = path.join(ROOT, "self");
 const 份簇 = fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca") && !f.includes("tmp")).sort();
 
 // 定义：`函数 X(` 或 `公开 函数 X(`
-const 定义们 = [];
+const 定义册 = [];
 for (const f of 份簇) {
   const 行批 = fs.readFileSync(path.join(目录, f), "utf8").split("\n");
   for (let i = 0; i < 行批.length; i++) {
     const m = /^(?:公开\s+)?函数\s+([^\s(]+)\(/.exec(行批[i]);
-    if (m) 定义们.push({ 名: m[1], 文件: f, 行: i + 1 });
+    if (m) 定义册.push({ 名: m[1], 文件: f, 行: i + 1 });
   }
 }
 
@@ -64,24 +64,24 @@ const 外文 = 外部.join("\n");
 console.log("一、扫出从没被调用的函数");
 // 先把 self/ 的每一行读进内存：753 个定义逐个去读全部文件是 O(n^2) 次磁盘读，
 // 第一版这样跑一次七十八秒。读一遍再扫，同一件事一秒。
-const 行们全 = [];
+const 全行批 = [];
 for (const f of 份簇) {
-  for (const l of fs.readFileSync(path.join(目录, f), "utf8").split("\n")) 行们全.push(l);
+  for (const l of fs.readFileSync(path.join(目录, f), "utf8").split("\n")) 全行批.push(l);
 }
-const 死们 = [];
-for (const d of 定义们) {
+const 死例 = [];
+for (const d of 定义册) {
   let 用 = 0;
   const 定义正则 = new RegExp("^(?:公开\\s+)?函数\\s+" + d.名.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\(");
-  for (const l of 行们全) {
+  for (const l of 全行批) {
     if (定义正则.test(l)) continue;
     if (l.includes(d.名 + "(")) 用++;
   }
   if (外文.includes(d.名 + "(") || 外文.includes('"' + d.名 + '"')) 用++;
-  if (用 === 0) 死们.push(d);
+  if (用 === 0) 死例.push(d);
 }
-console.log("    （定义 " + 定义们.length + " 个，没被调用的 " + 死们.length + " 个）");
+console.log("    （定义 " + 定义册.length + " 个，没被调用的 " + 死例.length + " 个）");
 
-const 实有 = 死们.map((d) => d.名).sort();
+const 实有 = 死例.map((d) => d.名).sort();
 const 应有 = Object.keys(白名单).sort();
 
 console.log("二、清单与白名单一致");
@@ -89,7 +89,7 @@ console.log("二、清单与白名单一致");
   const 多 = 实有.filter((n) => !应有.includes(n));
   const 少 = 应有.filter((n) => !实有.includes(n));
   ok("没有白名单之外的新死函数", 多.length === 0,
-     多.map((n) => n + "（" + (死们.find((d) => d.名 === n) || {}).文件 + "）").join(" · "));
+     多.map((n) => n + "（" + (死例.find((d) => d.名 === n) || {}).文件 + "）").join(" · "));
   ok("白名单里没有已经过期的那条", 少.length === 0, 少.join(" · "));
   ok("白名单每一条都写了理由", Object.values(白名单).every((r) => r && r.length >= 8), "");
 }

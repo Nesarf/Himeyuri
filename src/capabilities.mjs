@@ -349,9 +349,9 @@ export const 空能力 = (记下) => {
     if (记下) 记下(组 + "." + 名);
     throw new Error("这一份能力没有实现：" + 组 + "." + 名);
   };
-  const 组 = (名, 项目们) => {
+  const 组 = (名, 项目册) => {
     const out = {};
-    for (const 项 of 项目们) out[项] = 拒(名, 项);
+    for (const 项 of 项目册) out[项] = 拒(名, 项);
     return out;
   };
   return {

@@ -24,20 +24,20 @@ const 索文 = fs.readFileSync(索引路, "utf8");
 const 行批 = 索文.split("\n").filter((l) => /^- [A-Za-z0-9_-]+\.hmoca/.test(l));
 const 提到 = 行批.map((l) => /^- ([A-Za-z0-9_-]+)\.hmoca/.exec(l)[1]);
 
-const 库们 = fs.readdirSync(path.join(ROOT, "lib"))
+const 库册 = fs.readdirSync(path.join(ROOT, "lib"))
   .filter((f) => f.endsWith(".hmoca"))
   .map((f) => f.slice(0, -".hmoca".length))
   .sort();
 
 console.log("一、每个库都在索引上");
 {
-  const 缺 = 库们.filter((n) => !提到.includes(n));
-  ok("lib/ 下 " + 库们.length + " 个库都有行", 缺.length === 0, 缺.join(" "));
+  const 缺 = 库册.filter((n) => !提到.includes(n));
+  ok("lib/ 下 " + 库册.length + " 个库都有行", 缺.length === 0, 缺.join(" "));
 }
 
 console.log("二、索引上的每个库都真的存在");
 {
-  const 多 = 提到.filter((n) => !库们.includes(n));
+  const 多 = 提到.filter((n) => !库册.includes(n));
   ok("索引里没有指向空处的行", 多.length === 0, 多.join(" "));
 }
 
@@ -45,14 +45,14 @@ console.log("三、每一行都写了判据，而那个套件真的在跑");
 {
   // check-all 的列表是判据权威：套件名在这里出现，就说明它在全量里。
   const 全 = fs.readFileSync(path.join(ROOT, "tools", "check-all.mjs"), "utf8");
-  const 套件们 = new Set([...全.matchAll(/^\s*\["([^"]+)",\s*"([^"]+)"/gm)].map((m) => m[1]));
+  const 套件册 = new Set([...全.matchAll(/^\s*\["([^"]+)",\s*"([^"]+)"/gm)].map((m) => m[1]));
   const 没写 = [];
   const 不存在 = [];
   for (const 行 of 行批) {
     const 名 = /^- ([A-Za-z0-9_-]+)\.hmoca/.exec(行)[1];
     const m = /判据：([A-Za-z0-9_-]+) 套件/.exec(行);
     if (!m) { 没写.push(名); continue; }
-    if (!套件们.has(m[1])) 不存在.push(名 + "→" + m[1]);
+    if (!套件册.has(m[1])) 不存在.push(名 + "→" + m[1]);
   }
   ok("每一行都有「判据：X 套件」", 没写.length === 0, 没写.join(" "));
   ok("每个判据套件都在 check-all 里", 不存在.length === 0, 不存在.join(" "));

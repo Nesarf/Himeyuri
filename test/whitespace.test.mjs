@@ -50,13 +50,13 @@ console.log("二、幂等：排两遍与排一遍一样");
 
 console.log("三、那条客观标准：AST 不变");
 {
-  const 原们 = [
+  const 原文批 = [
     "fn main() {\n\tprint(\"hi\")   \n\n\n  return 0\n}",
     "fn f(a: Int) -> Int {\n  return a\n}\nfn main() -> Int {\n\treturn f(1)\n}\n\n\n",
     "fn main() -> Int {\n  let x = 1\n  return x\n}\n",
   ];
   let 全同 = true;
-  for (const 原 of 原们) {
+  for (const 原 of 原文批) {
     if (树(原) !== 树(规(原))) { 全同 = false; console.log("    有一处不同：" + JSON.stringify(原.slice(0, 30))); }
   }
   ok("三份源码重排前后是同一个 AST", 全同);

@@ -177,16 +177,16 @@ export const functions = (源码) => {
   const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
   const { ast } = parse(lex(源码, { diagnostics: d }).tokens, { diagnostics: d });
   const 表 = [];
-  const 错们 = [];
+  const 错例 = [];
   for (const 声 of ast.decls || []) {
     if (声.kind !== "函数") continue;
     const 体 = 块(声.body);
     const 坏的 = 体.find((s) => s && s.kind === "err");
-    if (坏的) { 错们.push(声.name + "：" + 坏的.text); continue; }
+    if (坏的) { 错例.push(声.name + "：" + 坏的.text); continue; }
     // 三件：名字、参数名册、语句批。自举那边要用参数名去绑环境。
     表.push([String(声.name), (声.params || []).map((p) => String(p.name)), 体]);
   }
-  return { 表, 错们 };
+  return { 表, 错例 };
 };
 
 export { 转, 语句 };

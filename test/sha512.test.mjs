@@ -29,14 +29,14 @@ const 跑 = (字节) => {
 };
 
 // 四份样本：空、三字节、正好落在填充边界、跨两块。
-const 样本们 = [
+const 样本批 = [
   ["空串", Buffer.alloc(0)],
   ["abc", Buffer.from("abc")],
   ["112 字节（填充边界）", Buffer.alloc(112, 0x61)],
   ["200 字节（跨块）", Buffer.alloc(200, 0x62)],
 ];
 
-for (const [名, 字节] of 样本们) {
+for (const [名, 字节] of 样本批) {
   const 应 = crypto.createHash("sha512").update(字节).digest("hex");
   const { 得, 坏 } = 跑(字节);
   ok(名 + "：跑得动", !坏, 坏);

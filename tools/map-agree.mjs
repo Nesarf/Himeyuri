@@ -61,13 +61,13 @@ const 表 = [
 for (const [目标, 要的测试, 要的套件] of 表) {
   const 甲 = projectMap(ROOT, { op: "affects", file: 目标 });
   const 乙 = execFileSync(process.execPath, [path.join(ROOT, "tools/impact.mjs"), 目标, "--suites"], { encoding: "utf8" }).trim();
-  const 套件们 = 乙.split(",").map((s) => s.trim()).filter(Boolean);
+  const 套件册 = 乙.split(",").map((s) => s.trim()).filter(Boolean);
   ok("MIM 说改 " + 目标 + " 会碰到 " + 要的测试,
     甲.ok === true && (甲.tests || []).includes(要的测试),
     "它给了 " + (甲 && 甲.ok ? (甲.tests || []).length : 0) + " 个测试");
   ok("impact 说改 " + 目标 + " 会碰到 " + 要的套件,
-    套件们.includes(要的套件),
-    套件们.join(",") || "（空）");
+    套件册.includes(要的套件),
+    套件册.join(",") || "（空）");
 }
 
 console.log("");

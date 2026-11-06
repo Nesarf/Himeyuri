@@ -51,7 +51,7 @@ const 拆应答 = (buf) => {
   return 出;
 };
 
-const 消息们 = [
+const 消息批 = [
   { jsonrpc: "2.0", id: 1, method: "initialize", params: {} },
   { jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: 基址, languageId: "hmyr", version: 1, text: fs.readFileSync(基路, "utf8") } } },
   // 2：别的 —— 只在 other.hmoca 里
@@ -65,7 +65,7 @@ const 消息们 = [
 ];
 
 const 宿 = spawnSync(process.execPath, [path.join(ROOT, "src/lsp.mjs"), "--stdio"], {
-  input: Buffer.concat(消息们.map(装框)), encoding: "buffer", timeout: 60000,
+  input: Buffer.concat(消息批.map(装框)), encoding: "buffer", timeout: 60000,
 });
 const 答 = 拆应答(宿.stdout);
 ok("拿到了三条 definition 的应答", 答.has(2) && 答.has(3) && 答.has(4), String(宿.status));
@@ -112,7 +112,7 @@ console.log("四、自举那一份也跳得过去");
     const 码r = spawnSync(process.execPath, [path.join(ROOT, "tools/emit-code.mjs"), path.join(ROOT, "self/lsp.hmoca"), 码路], { encoding: "utf8" });
     ok("self/lsp.hmoca 编得出字节码", 码r.status === 0 && fs.existsSync(码路), String(码r.stderr || "").slice(0, 160));
 
-    const 自 = spawnSync(exe, [码路], { input: Buffer.concat(消息们.map(装框)), encoding: "buffer", timeout: 120000 });
+    const 自 = spawnSync(exe, [码路], { input: Buffer.concat(消息批.map(装框)), encoding: "buffer", timeout: 120000 });
     const 自答 = 拆应答(自.stdout);
     ok("自举拿到了三条应答", 自答.has(2) && 自答.has(3) && 自答.has(4),
       String(自.status) + " " + String(自.stderr || "").slice(0, 120));

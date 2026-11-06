@@ -22,7 +22,7 @@ const call = (name, args) => {
   if (!fn) throw new Error("没有这个函数：" + name);
   return rt.callFunction(fn, args, null);
 };
-const 会话 = (键们) => call("跑一次会话", [键们]);
+const 会话 = (键串) => call("跑一次会话", [键串]);
 
 console.log("打字：每喂一个键画一帧");
 {

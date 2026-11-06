@@ -32,12 +32,12 @@ const 树 = (src) => {
   return JSON.stringify(ast).replace(/"(line|column|col|offset)":\d+,?/g, "");
 };
 
-const 规则们 = [["每当", "while"], ["否则", "if"]];
+const 规则族 = [["每当", "while"], ["否则", "if"]];
 
 console.log("一、记号整个换掉");
 {
   const 原 = "fn main() -> Int {\n  每当 1 < 2 { 1 }\n  return 0\n}\n";
-  const 出 = call("展开", [原, 规则们]);
+  const 出 = call("展开", [原, 规则族]);
   ok("每当 变成了 while", 出.indexOf("while") >= 0 && 出.indexOf("每当") < 0, JSON.stringify(出.slice(0, 40)));
   ok("而别的字没动", 出.indexOf("return 0") >= 0);
 }
@@ -62,13 +62,13 @@ console.log("四、那条定义：展开之后是同一棵树");
 {
   const 手写 = "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n";
   const 改写 = "fn main() -> Int {\n  var i = 0\n  每当 i < 3 {\n    i = i + 1\n  }\n  return i\n}\n";
-  ok("展开之后与手写的树相同", 树(call("展开", [改写, 规则们])) === 树(手写));
+  ok("展开之后与手写的树相同", 树(call("展开", [改写, 规则族])) === 树(手写));
 }
 
 console.log("五、工具能问「这个文件用了哪条规则」");
 {
-  ok("用了 每当 就说用了", call("用到", ["每当 1", 规则们, 0]) === true);
-  ok("没用就说没用", call("用到", ["while 1", 规则们, 0]) === false);
+  ok("用了 每当 就说用了", call("用到", ["每当 1", 规则族, 0]) === true);
+  ok("没用就说没用", call("用到", ["while 1", 规则族, 0]) === false);
 }
 
 console.log("");

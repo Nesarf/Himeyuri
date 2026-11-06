@@ -23,7 +23,7 @@ import * as 数 from "./numbers.mjs";
 // 一个进程里能起的线程数是进程的事，不是某一台虚拟机的事。
 // 这也是「两台字节码机各跑一段、互不干扰」与「一个进程里有几个线程」
 // 之所以是两件事的原因。
-const 线程们 = new Map();
+const 线程族 = new Map();
 let 下一个线程号 = 1;
 
 // CRC32 的表：256 项，第一次用时生成。与 src/eval.mjs 和 C 那台同一张表
@@ -45,7 +45,7 @@ import { 藏路径, 在用脱敏 } from "./redact.mjs";
 
 // locale 的名字与当前选择。四套档案由 design/LOCALES.txt 定义，
 // 这里只认名字，不做格式化 —— 格式化在标准库里。
-const locale名字们 = ["zh-CN.gbk", "zh-CN.utf8", "ja-JP.shift_jis", "en-US.utf8"];
+const locale名字册 = ["zh-CN.gbk", "zh-CN.utf8", "ja-JP.shift_jis", "en-US.utf8"];
 let 当前locale = "";
 
 // 键队列：套件塞键、真终端读键，共用这一条。无界（C 那台 64 项有界，写在契约里）。
@@ -129,8 +129,8 @@ export const 内置表 = {
     // 档位里「线程池」那一项在这里落地 —— 在那之前它只是预设里的一个数字，没人读。
     // 0 表示不设限：普通 .hmoca 的跑法不该因为多了两档而变。
     const 上限 = vm.cap.thread.上限 || 0;
-    if (上限 > 0 && 线程们.size >= 上限) {
-      return vm.坏("HMYR-內-022", "thread pool is full: " + 线程们.size + " alive, limit " + 上限 + "（steady 那一档只给一个；要更多就用 hmhsr 那一档）");
+    if (上限 > 0 && 线程族.size >= 上限) {
+      return vm.坏("HMYR-內-022", "thread pool is full: " + 线程族.size + " alive, limit " + 上限 + "（steady 那一档只给一个；要更多就用 hmhsr 那一档）");
     }
     const source = String(vm.成串(a[0]));
     const entry = String(vm.成串(a[1]));
@@ -151,12 +151,12 @@ export const 内置表 = {
     handle.worker.on("exit", (code) => {
       if (vm.cap.thread.load(handle.flag) === 0) vm.cap.thread.store(handle.flag, code === 0 ? 1 : 9);
     });
-    线程们.set(id, handle);
+    线程族.set(id, handle);
     return 数.造(id);
   } },
   thr_join: { 做: (vm, a) => {
     const id = 数.下整(vm.成数(a[0]));
-    const h = 线程们.get(id);
+    const h = 线程族.get(id);
     if (!h) return vm.坏("HMYR-內-020", "no such thread handle: " + id);
     const 限 = a[1] === undefined || a[1] === null ? 30000 : 数.下整(vm.成数(a[1]));
     const 到 = Date.now() + 限;
@@ -168,21 +168,21 @@ export const 内置表 = {
     let 结果 = null;
     try { 结果 = JSON.parse(String(vm.cap.file.read(h.outPath))); } catch (err) { 结果 = null; }
     try { vm.cap.file.remove(h.outPath); } catch (err) { /* 已经没了就算清过 */ }
-    线程们.delete(id);
+    线程族.delete(id);
     // 线程里失败时交回空串，与宿主那一侧同一个选择：失败不是这一门语言的值。
     if (!结果 || !结果.ok) return vm.文.由宿主("");
     return vm.文.由宿主(String(结果.text));
   } },
   thr_cancel: { 效果: "thread", 做: (vm, a) => {
     const id = 数.下整(vm.成数(a[0]));
-    const h = 线程们.get(id);
+    const h = 线程族.get(id);
     if (!h) return vm.坏("HMYR-內-020", "no such thread handle: " + id);
     try { if (h.worker) h.worker.terminate(); } catch (err) { /* 已经没了就算停住 */ }
     try { vm.cap.file.remove(h.outPath); } catch (err) { /* 同上 */ }
-    线程们.delete(id);
+    线程族.delete(id);
     return 数.造(id);
   } },
-  thr_count: { 做: (vm) => 数.造(Array.from(线程们.values()).filter((h) => vm.cap.thread.load(h.flag) === 0).length) },
+  thr_count: { 做: (vm) => 数.造(Array.from(线程族.values()).filter((h) => vm.cap.thread.load(h.flag) === 0).length) },
   // arena：区在这一台也是真的了（2026-10-27）。交回的是一条索引 —— 与自举层
   // （self/eval.hmoca）同一个表示，因为 close 要改状态而记录不可变。
   // 六个方法由 vm.mjs 的 CALLM 分派，分派表在文件末尾的 调区方法。
@@ -261,10 +261,10 @@ export const 内置表 = {
   run_program: { 效果: "process", 做: (vm, a) => {
     const 命令 = vm.成串(a[0]);
     if (命令 === "") return vm.坏("HMYR-內-013", "run_program needs a program name: an empty string names nothing");
-    const 参们 = a[1] && a[1].tag === "tuple" ? a[1].items.map((x) => vm.成串(x)) : [];
+    const 参册 = a[1] && a[1].tag === "tuple" ? a[1].items.map((x) => vm.成串(x)) : [];
     const 超时 = a[2] === undefined || a[2] === null ? 10000 : vm.成数(a[2]);
     const 编码 = a[3] === undefined || a[3] === null ? "utf8" : vm.成串(a[3]);
-    const r = vm.cap.process.exec(命令, 参们, { timeout: 超时, windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
+    const r = vm.cap.process.exec(命令, 参册, { timeout: 超时, windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
     const 解 = (buf) => {
       try { return new TextDecoder(编码 === "gbk" || 编码 === "gb2312" ? "gbk" : "utf-8").decode(buf || new Uint8Array()); }
       catch { return String(buf || ""); }
@@ -294,8 +294,8 @@ export const 内置表 = {
   locale_current: { 做: (vm) => vm.文.由宿主(当前locale) },
   locale_set: { 做: (vm, a) => {
     const 名 = vm.成串(a[0]);
-    if (!locale名字们.includes(名)) {
-      return vm.坏("HMYR-內-005", "no such locale profile: '" + 名 + "' (have: " + locale名字们.join(", ") + ")");
+    if (!locale名字册.includes(名)) {
+      return vm.坏("HMYR-內-005", "no such locale profile: '" + 名 + "' (have: " + locale名字册.join(", ") + ")");
     }
     当前locale = 名;
     return vm.文.由宿主(当前locale);

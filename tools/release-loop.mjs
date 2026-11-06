@@ -110,17 +110,17 @@ try {
   }
 
   console.log("四、每个成员与仓库里的源相同");
-  let 同 = 0, 异们 = [];
+  let 同 = 0, 异例 = [];
   for (const 项 of 项册) {
     if (项.名 === "manifest.json") continue; // 这一份没有仓库里的对应物，上一节单独比过
     const 源 = path.join(ROOT, 项.名);
-    if (!fs.existsSync(源)) { 异们.push(项.名 + "（仓库里没有）"); continue; }
+    if (!fs.existsSync(源)) { 异例.push(项.名 + "（仓库里没有）"); continue; }
     const a = fs.readFileSync(源);
     if (a.length === 项.数据.length && a.equals(项.数据)) 同++;
-    else 异们.push(项.名 + "（字节不同）");
+    else 异例.push(项.名 + "（字节不同）");
   }
   ok("比过的成员数超过两百", 同 > 200, String(同));
-  ok("没有一个成员与源不同", 异们.length === 0, 异们.slice(0, 3).join("、"));
+  ok("没有一个成员与源不同", 异例.length === 0, 异例.slice(0, 3).join("、"));
 
   console.log("五、拿包当根，用 HMYR 自己验包里那份清单");
   const 验 = spawnSync(process.execPath,

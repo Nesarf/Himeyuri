@@ -166,9 +166,9 @@ const 收集返回 = (node, acc) => {
 
 // 对一份声明表核对每个函数的返回类型。
 // 交回问题列表（空的表示都对）。
-export const 核对返回类型 = (声明们) => {
+export const 核对返回类型 = (声明册) => {
   const 声明表 = new Map();
-  for (const d of 声明们) if (d.kind === "函数") 声明表.set(d.name, d);
+  for (const d of 声明册) if (d.kind === "函数") 声明表.set(d.name, d);
   const 问题册 = [];
   const 查调用形状 = (n) => {
     const 被 = 声明表.get(n.callee && n.callee.name);
@@ -180,7 +180,7 @@ export const 核对返回类型 = (声明们) => {
     // 表达式里套着调用时，只对最外层判断 —— 深一层不去追，免得把「说不清」说成「不合」。
     return 表达式形状(n);
   };
-  for (const d of 声明们) {
+  for (const d of 声明册) {
     if (d.kind !== "函数" || !d.returns || !d.body) continue;
     const 类型 = 类型形状(d.returns);
     if (!类型 || 类型.k === "?") continue;
@@ -202,11 +202,11 @@ export const 核对返回类型 = (声明们) => {
 const 编译函数 = (decl, 契约) => {
   const 码 = [];
   // 作用域栈：每层是 name -> { 槽, 可写 }
-  let 层们 = [new Map()];
+  let 层批 = [new Map()];
   let 槽数 = 0;
   const 分配 = (名, 可写) => {
     const 槽 = 槽数++;
-    层们[层们.length - 1].set(名, { 槽, 可写 });
+    层批[层批.length - 1].set(名, { 槽, 可写 });
     // 槽号与名字的对照默认不留 —— 但查「HMYR-行-017 的槽 38 是谁」时它是唯一的路。
     // 打开方式：HMYR_SLOTS=1，输出走 stderr，不碰产物。
     if (process.env.HMYR_SLOTS) {
@@ -215,14 +215,14 @@ const 编译函数 = (decl, 契约) => {
     return 槽;
   };
   const 查 = (名) => {
-    for (let i = 层们.length - 1; i >= 0; i--) {
-      const 有 = 层们[i].get(名);
+    for (let i = 层批.length - 1; i >= 0; i--) {
+      const 有 = 层批[i].get(名);
       if (有) return 有;
     }
     return null;
   };
-  const 进层 = () => 层们.push(new Map());
-  const 出层 = () => 层们.pop();
+  const 进层 = () => 层批.push(new Map());
+  const 出层 = () => 层批.pop();
   const 发 = (op, a, b) => { 码.push({ op, a, b }); return 码.length - 1; };
 
   for (const p of decl.params || []) 分配(p.name, true);   // 参数在宿主那边也是可写的槽

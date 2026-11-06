@@ -137,7 +137,7 @@ const 生成块函数 = () => {
 // 分批写：一百一十万行如果先拼成一个大字符串再落盘，会先吃掉几百兆内存。
 export const 生成全码点表 = () => {
   const 块堆 = 块表();
-  const 脚本们 = 脚本表();
+  const 脚本册 = 脚本表();
   const 出 = path.join(产物目录, "codepoints.txt");
   const fd = fs.openSync(出, "w");
   let 批 = [];
@@ -150,7 +150,7 @@ export const 生成全码点表 = () => {
       "U+" + cp.toString(16).toUpperCase().padStart(4, "0") + ";" +
       名 + ";" + 类 + ";" +
       (二分查(块堆, cp) || "No_Block") + ";" +
-      (二分查(脚本们, cp) || "Unknown")
+      (二分查(脚本册, cp) || "Unknown")
     );
     行数++;
     // 每两千行落一次盘，不攒两万行：一百一十万行如果攒成大数组，
@@ -168,10 +168,10 @@ export const 主 = () => {
   // 跑一次生成器要吃掉两百多兆 —— 而那一份重复的数据从头到尾只在算类别分布。
   const 字符 = [...字符表.values()];
   const 块堆 = 块表();
-  const 脚本们 = 脚本表();
+  const 脚本册 = 脚本表();
   const 类别 = new Map();
   for (const c of 字符) 类别.set(c.类别, (类别.get(c.类别) || 0) + 1);
-  const 脚本名册 = new Set(脚本们.map((s) => s.名));
+  const 脚本名册 = new Set(脚本册.map((s) => s.名));
 
   fs.mkdirSync(产物目录, { recursive: true });
   const 摘要 = {

@@ -145,14 +145,14 @@ export const 比 = (a, b) => (走自家
 // 它们都是「一个有符号的零也照 IEEE 走」的形状 —— 绝对值的负数零仍是零。
 export const 绝对 = (n) => (n < 0 ? -n : n);
 export const 截断 = (n) => (n < 0 ? -Math.floor(-n) : Math.floor(n));
-export const 最小 = (们) => {
-  let 佳 = 们[0];
-  for (const x of 们) if (x < 佳) 佳 = x;
+export const 最小 = (数串) => {
+  let 佳 = 数串[0];
+  for (const x of 数串) if (x < 佳) 佳 = x;
   return 佳;
 };
-export const 最大 = (们) => {
-  let 佳 = 们[0];
-  for (const x of 们) if (x > 佳) 佳 = x;
+export const 最大 = (数串) => {
+  let 佳 = 数串[0];
+  for (const x of 数串) if (x > 佳) 佳 = x;
   return 佳;
 };
 

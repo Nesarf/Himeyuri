@@ -58,7 +58,7 @@ export function 持有格检查(ast, 选项 = {}) {
   }
   const 外部 = 选项.外部;
   if (外部 && 外部.签名) {
-    for (const [名, 参们] of 外部.签名) if (!签名表.has(名)) 签名表.set(名, 参们);
+    for (const [名, 参册] of 外部.签名) if (!签名表.has(名)) 签名表.set(名, 参册);
   }
 
   for (const decl of ast.decls) {
@@ -148,11 +148,11 @@ function 走块(语句批, 状态, 报, 签名表) {
     // 回到调用者这边还以为它是空的，于是把一次合法的取判成了 HMYR-碼-006。
     // borrow 保持：那个词的意思就是「只借不改」，信它。
     if (调 && 调.kind === "调用" && 调.callee && 调.callee.kind === "名" && 签名表.has(调.callee.name)) {
-      const 参数们 = 签名表.get(调.callee.name) || [];
-      const 实参们 = 调.args || [];
-      for (let i = 0; i < 实参们.length; i++) {
-        const 形 = 参数们[i];
-        const 实 = 实参们[i];
+      const 参数册 = 签名表.get(调.callee.name) || [];
+      const 实参批 = 调.args || [];
+      for (let i = 0; i < 实参批.length; i++) {
+        const 形 = 参数册[i];
+        const 实 = 实参批[i];
         if (!实 || 实.kind !== "名" || !状态.has(实.name)) continue;
         const 传法 = 形 ? 形.passing : null;
         if (传法 === "own") 状态.set(实.name, 移);
@@ -266,12 +266,12 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
           if (方法 === "放" || 方法 === "取" || 方法 === "关") 记脏(d.name, 位簇.get(主.name));
         }
         if (n.callee.kind === "名" && 签名表.has(n.callee.name)) {
-          const 形们 = 签名表.get(n.callee.name) || [];
-          const 实们 = n.args || [];
-          for (let i = 0; i < 实们.length; i++) {
-            const 实 = 实们[i];
+          const 形册 = 签名表.get(n.callee.name) || [];
+          const 实参批 = n.args || [];
+          for (let i = 0; i < 实参批.length; i++) {
+            const 实 = 实参批[i];
             if (!实 || 实.kind !== "名" || !位簇.has(实.name)) continue;
-            const 形 = 形们[i];
+            const 形 = 形册[i];
             if (形 && 形.passing === "own") 记脏(d.name, 位簇.get(实.name));
             else 记传(d.name, 位簇.get(实.name), n.callee.name, i);
           }
@@ -291,9 +291,9 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
     for (const d of 函数族) {
       const m = 传.get(d.name);
       const 本脏 = 脏.get(d.name);
-      for (const [位, 目标们] of m) {
+      for (const [位, 目标册] of m) {
         if (本脏.has(位)) continue;
-        for (const 目 of 目标们) {
+        for (const 目 of 目标册) {
           const [名, 位文] = 目.split("#");
           if (查脏(名) && 查脏(名).has(Number(位文))) { 本脏.add(位); 变了 = true; break; }
         }
@@ -327,9 +327,9 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
           }
         }
         if (n.callee.kind === "名" && 签名表.has(n.callee.name)) {
-          const 实们 = n.args || [];
-          for (let i = 0; i < 实们.length; i++) {
-            const 实 = 实们[i];
+          const 实参批 = n.args || [];
+          for (let i = 0; i < 实参批.length; i++) {
+            const 实 = 实参批[i];
             if (!实 || 实.kind !== "名" || !位簇.has(实.name)) continue;
             if (!该报.has(位簇.get(实.name))) continue;
             报("'" + 实.name + "' is borrowed, and it goes into '" + n.callee.name + "' here, which changes it: a borrow promises to leave it alone all the way down", n);

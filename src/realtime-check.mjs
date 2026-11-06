@@ -59,7 +59,7 @@ export function 实时检查(ast, 选项 = {}) {
   if (!ast || !Array.isArray(ast.decls)) return 出;
 
   // 哪些函数声明了实时档位；哪些函数是用户写的（第四条的判据要这两张表）。
-  const 实时们 = new Set();
+  const 实时族 = new Set();
   const 用户函数 = new Set();
   for (const decl of ast.decls) {
     if (decl.kind !== "函数") continue;
@@ -68,9 +68,9 @@ export function 实时检查(ast, 选项 = {}) {
     // 后者是把档位写在权限位上的那段将就，而仓库里还有按那个写法写的文档与程序。
     const 真语法 = decl.realtime === true;
     const 旧写法 = Array.isArray(decl.effects) && decl.effects.includes(实时);
-    if (真语法 || 旧写法) 实时们.add(decl.name);
+    if (真语法 || 旧写法) 实时族.add(decl.name);
   }
-  if (实时们.size === 0) return 出;
+  if (实时族.size === 0) return 出;
 
   const 走 = (n) => {
     if (!n || typeof n !== "object") return;
@@ -105,7 +105,7 @@ export function 实时检查(ast, 选项 = {}) {
         报("arena() allocates in the managed zone; a realtime function must use an arena built before the callback started", n);
       } else if (阻塞类别(名) !== null) {
         报("'" + 名 + "' touches the " + 阻塞类别(名) + " world, and a realtime function may not wait on anything", n);
-      } else if (用户函数.has(名) && !实时们.has(名)) {
+      } else if (用户函数.has(名) && !实时族.has(名)) {
         报("'" + 名 + "' does not declare " + 实时 + ", so this call would run past the point where the promise stops", n);
       }
       走(n.callee);
@@ -120,7 +120,7 @@ export function 实时检查(ast, 选项 = {}) {
   };
 
   for (const decl of ast.decls) {
-    if (decl.kind !== "函数" || !decl.body || !实时们.has(decl.name)) continue;
+    if (decl.kind !== "函数" || !decl.body || !实时族.has(decl.name)) continue;
     走(decl.body);
   }
   return 出;

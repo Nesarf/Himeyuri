@@ -66,7 +66,7 @@ export function 述(v) {
 
 // 内置：只这二十一个。实现照宿主的语义写，包括它们的失败编号。
 // locale 的名字与当前选择：与字节码那一份同一组名字（design/LOCALES.txt）。
-const locale名字们 = ["zh-CN.gbk", "zh-CN.utf8", "ja-JP.shift_jis", "en-US.utf8"];
+const locale名字册 = ["zh-CN.gbk", "zh-CN.utf8", "ja-JP.shift_jis", "en-US.utf8"];
 let 当前locale = "";
 // 键队列：与字节码那一份同一件事。
 const 键队列 = [];
@@ -249,8 +249,8 @@ const 内置 = {
   locale_current: () => 当前locale,
   locale_set: (rt, a) => {
     const 名 = rt.成串(a[0]);
-    if (!locale名字们.includes(名)) {
-      rt.坏("HMYR-內-005", "no such locale profile: '" + 名 + "' (have: " + locale名字们.join(", ") + ")");
+    if (!locale名字册.includes(名)) {
+      rt.坏("HMYR-內-005", "no such locale profile: '" + 名 + "' (have: " + locale名字册.join(", ") + ")");
     }
     当前locale = 名;
     return 当前locale;
@@ -328,10 +328,10 @@ const 内置 = {
   run_program: (rt, a) => {
     const 命令 = rt.成串(a[0]);
     if (命令 === "") rt.坏("HMYR-內-013", "run_program needs a program name: an empty string names nothing");
-    const 参们 = Array.isArray(a[1]) ? a[1].map((x) => rt.成串(x)) : [];
+    const 参册 = Array.isArray(a[1]) ? a[1].map((x) => rt.成串(x)) : [];
     const 超时 = a[2] === undefined || a[2] === null ? 10000 : rt.成数(a[2]);
     const 编码 = a[3] === undefined || a[3] === null ? "utf8" : rt.成串(a[3]);
-    const r = rt.cap.process.exec(命令, 参们, { timeout: 超时, windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
+    const r = rt.cap.process.exec(命令, 参册, { timeout: 超时, windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
     const 解 = (buf) => {
       try { return new TextDecoder(编码 === "gbk" || 编码 === "gb2312" ? "gbk" : "utf-8").decode(buf || new Uint8Array()); }
       catch (err) { return String(buf || ""); }

@@ -42,12 +42,12 @@ async function 主() {
   }
   const 是全部 = 参[0] === "--all";
   const 根 = path.resolve(是全部 ? (参[1] || ".") : 参[0]);
-  const 包们 = 是全部
+  const 包册 = 是全部
     ? fs.readdirSync(根, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => path.join(根, e.name))
     : [根];
 
   let 坏 = 0;
-  for (const 目录 of 包们) {
+  for (const 目录 of 包册) {
     const 名 = path.basename(目录);
     const 清单路 = path.join(目录, "hmyr.hmkit");
     const 入口 = path.join(目录, "index.hmoca");

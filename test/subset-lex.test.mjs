@@ -40,7 +40,7 @@ for (const 名 of ["lex", "chain", "stmt", "body", "eval", "run"]) {
   总数 += 主.length;
 }
 
-const 数换行 = (简们) => 简们.filter((t) => t.startsWith("newline:")).length;
+const 数换行 = (记号批) => 记号批.filter((t) => t.startsWith("newline:")).length;
 
 console.log("二、行尾是 ident、前一个是运算符时，换行必须出得来（就是那个笔误的形状）");
 for (const [标, 源] of [

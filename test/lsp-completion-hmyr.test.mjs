@@ -32,7 +32,7 @@ const 源 = [
 ].join("\n");
 const 地址 = "file:///tmp/probe.hmoca";
 
-const 消息们 = [
+const 消息批 = [
   { jsonrpc: "2.0", id: 1, method: "initialize", params: {} },
   { jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: 地址, languageId: "hmyr", version: 1, text: 源 } } },
   { jsonrpc: "2.0", id: 2, method: "textDocument/completion", params: { textDocument: { uri: 地址 }, position: { line: 0, character: 0 } } },
@@ -44,7 +44,7 @@ const 装框 = (m) => {
   const body = Buffer.from(JSON.stringify(m), "utf8");
   return Buffer.concat([Buffer.from("Content-Length: " + body.length + "\r\n\r\n", "utf8"), body]);
 };
-const 输入 = Buffer.concat(消息们.map(装框));
+const 输入 = Buffer.concat(消息批.map(装框));
 
 const 拆应答 = (buf) => {
   const 出 = new Map();

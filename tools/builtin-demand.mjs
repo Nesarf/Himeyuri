@@ -60,10 +60,10 @@ for (const [名, 跳] of 首见) {
   if (!分层.has(跳)) 分层.set(跳, []);
   分层.get(跳).push(名);
 }
-const 跳们 = [...分层.keys()].sort((a, b) => a - b);
+const 跳册 = [...分层.keys()].sort((a, b) => a - b);
 
 console.log("入口 " + 入口 + " · 可达 " + 距.size + " 个函数 · 要 " + 首见.size + " 个内置");
-for (const 跳 of 跳们) {
+for (const 跳 of 跳册) {
   const 批 = 分层.get(跳).sort();
   console.log("第 " + 跳 + " 跳（" + 批.length + "）：" + 批.join(" "));
 }

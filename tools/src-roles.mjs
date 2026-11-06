@@ -64,9 +64,9 @@ const 行数 = (相对) => {
 
 const 运行时 = [], 只验收 = [], 没人 = [];
 for (const f of 全部src) {
-  const 们 = [...(引用者.get(f) || [])];
+  const 引用册 = [...(引用者.get(f) || [])];
   if (闭包.has(f)) 运行时.push(f);
-  else if (们.length) 只验收.push(f);
+  else if (引用册.length) 只验收.push(f);
   else 没人.push(f);
 }
 

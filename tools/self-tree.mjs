@@ -42,7 +42,7 @@ const 列 = (x) => {
 };
 
 // 子节点怎么对：给同一层的两个节点，交回若干 [self 子, 宿主子] 对。
-const 子对们 = (s, h) => {
+const 子对批 = (s, h) => {
   switch (s.kind) {
     case "模块": return [...列(s.imports).map((x, i) => [x, 列(h.imports)[i]]), ...列(s.decls).map((x, i) => [x, 列(h.decls)[i]])];
     case "函数": return [[s.body, h.body]];
@@ -114,7 +114,7 @@ const 走 = (s, h, 路, 计) => {
     }
   }
   // if 与 while 的内层语句：self 是语句数组，宿主是 Block —— 结构对不上时先在这里停，
-  // 免得 子对们 拿数组去对一个 Block 而报出难读的差异。
+  // 免得 子对批 拿数组去对一个 Block 而报出难读的差异。
   const 数 = (x) => {
     if (x === null || x === undefined) return 0;
     if (typeof x.statements !== "undefined") return x.statements.length;
@@ -129,7 +129,7 @@ const 走 = (s, h, 路, 计) => {
   if (s.kind === "当") {
     if (数(s.body) !== 数(h.body)) return { 路: 路 + "/body", 因: "语句数 self=" + 数(s.body) + " 宿主=" + 数(h.body) };
   }
-  for (const [己子, 彼子] of 子对们(s, h)) {
+  for (const [己子, 彼子] of 子对批(s, h)) {
     const r = 走(己子, 彼子, 路 + "/" + (己子 && 己子.kind ? 己子.kind : "?"), 计);
     if (r) return r;
   }

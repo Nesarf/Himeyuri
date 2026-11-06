@@ -26,9 +26,9 @@ if (!unit.ok) {
 // 只查得动「能确定形状」的表达式（字面量、元组字面量、调用、算术与比较的结果），
 // 变量与下标一律放过 —— 静态检查的价值在于「说了就一定对」，猜出来的错比不查更坏。
 {
-  const 声明们 = [];
-  for (const 文件 of unit.order) for (const d of unit.modules.get(文件).decls || []) 声明们.push(d);
-  const 问题册 = 核对返回类型(声明们);
+  const 声明册 = [];
+  for (const 文件 of unit.order) for (const d of unit.modules.get(文件).decls || []) 声明册.push(d);
+  const 问题册 = 核对返回类型(声明册);
   if (问题册.length > 0) {
     for (const p of 问题册.slice(0, 8)) console.error((p.行 ? "第 " + p.行 + " 行：" : "") + p.话);
     if (问题册.length > 8) console.error("……还有 " + (问题册.length - 8) + " 处");

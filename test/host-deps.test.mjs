@@ -28,8 +28,8 @@ const 剥 = (文) => 文
   .replace(/`(?:[^`\\]|\\.)*`/g, "``");
 
 const 份簇 = ["src/minimal-eval.mjs", "src/loader.mjs", "src/subset-lex.mjs", "src/subset-parse.mjs", "src/diagnostics.mjs"];
-const 源们 = 份簇.map((相对) => 剥(fs.readFileSync(path.join(ROOT, 相对), "utf8")));
-const 全部 = 源们.join("\n");
+const 源批 = 份簇.map((相对) => 剥(fs.readFileSync(path.join(ROOT, 相对), "utf8")));
+const 全部 = 源批.join("\n");
 
 const 计 = (词) => (全部.match(new RegExp("\\b" + 词 + "\\b", "g")) || []).length;
 
@@ -94,7 +94,7 @@ console.log("三、跑几条真实路径时，那十项全局没有一项是虚�
   const { spawnSync } = await import("node:child_process");
   const os = await import("node:os");
   const 临时 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-hostcov-"));
-  const 目标们 = [
+  const 目标册 = [
     path.join(ROOT, "examples/hello.hmoca"),
     (() => { const p = path.join(临时, "w.hmoca"); fs.writeFileSync(p, "fn main() -> Int {\n  var i = 0\n  while i < 3 {\n    i = i + 1\n  }\n  return i\n}\n"); return p; })(),
     (() => { const p = path.join(临时, "r.hmoca"); fs.writeFileSync(p, "fn main() -> Int {\n  let r = {a: 1}\n  return r.a\n}\n"); return p; })(),
@@ -121,7 +121,7 @@ console.log("三、跑几条真实路径时，那十项全局没有一项是虚�
     })(),
   ];
   try {
-    for (const 目标 of 目标们) {
+    for (const 目标 of 目标册) {
       const r = spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), 目标], {
         encoding: "utf8", env: { ...process.env, NODE_V8_COVERAGE: 临时 },
       });

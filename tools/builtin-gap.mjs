@@ -107,7 +107,7 @@ const 组 = [
 ];
 
 const 分组 = new Map();
-for (const [名, 们] of 组) for (const x of 们) 分组.set(x, 名);
+for (const [名, 名字批] of 组) for (const x of 名字批) 分组.set(x, 名);
 const 未归组 = 全部.filter((x) => !分组.has(x));
 
 if (process.argv.includes("--missing")) {
@@ -120,7 +120,7 @@ if (process.argv.includes("--missing")) {
     按组.get(g).push(x);
   }
   console.log("宿主有、C 那台没有的内置：" + 缺.length + " 个");
-  for (const [g, 们] of 按组) console.log("  " + g + "  " + 们.join(" "));
+  for (const [g, 名字批] of 按组) console.log("  " + g + "  " + 名字批.join(" "));
   const 自缺 = 宿.filter((x) => !自.includes(x));
   console.log("宿主有、自举求值器没有： " + 自缺.length + " 个");
   process.exit(0);

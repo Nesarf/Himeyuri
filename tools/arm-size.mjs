@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const 找 = (候选们) => 候选们.filter(Boolean).find((p) => {
+const 找 = (候选册) => 候选册.filter(Boolean).find((p) => {
   try { return spawnSync(p, ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
 });
 

@@ -49,7 +49,7 @@ if (!有编译器) {
     const 码路 = path.join(临, "lsp.hmoks");
     fs.writeFileSync(码路, 写程序(程序));
     const 源码 = "fn 一() -> Int {\n  return 1\n}\n\nfn 二() -> Int {\n  return 2\n}\n";
-    const 消息们 = [
+    const 消息批 = [
       { jsonrpc: "2.0", id: 1, method: "initialize", params: {} },
       { jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: "file:///t.hmoca", languageId: "hmyr", version: 1, text: 源码 } } },
       { jsonrpc: "2.0", id: 2, method: "textDocument/documentSymbol", params: { textDocument: { uri: "file:///t.hmoca" } } },
@@ -58,7 +58,7 @@ if (!有编译器) {
       { jsonrpc: "2.0", id: 3, method: "shutdown" },
       { jsonrpc: "2.0", method: "exit" },
     ];
-    const 输入 = 消息们.map((m) => {
+    const 输入 = 消息批.map((m) => {
       const 体 = JSON.stringify(m);
       return "Content-Length: " + Buffer.byteLength(体) + "\r\n\r\n" + 体;
     }).join("");

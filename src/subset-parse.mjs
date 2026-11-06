@@ -203,7 +203,7 @@ export const 子集解 = (tokens, options = {}) => {
     return { kind: 种, name: 名 ? 名.value : "<error>", value, line: kw.line, column: kw.column };
   }
 
-  // 宏：macro 名(参数们) = 表达式 —— 与宿主那份同一个形状，展开也共用 src/expand.mjs。
+  // 宏：macro 名(参数册) = 表达式 —— 与宿主那份同一个形状，展开也共用 src/expand.mjs。
   // 这一份只认 fn 与 macro；type/const/effect/pub 仍然抛，那是边界，不是漏。
   function 解析宏() {
     const kw = 进();
@@ -228,12 +228,12 @@ export const 子集解 = (tokens, options = {}) => {
     const 名 = 要("ident", "函数名");
     if (是标("<")) 不认("子集不含类型参数");
     要标("(", "开参数表");
-    const params = 是标(")") ? [] : 解析参数们();
+    const params = 是标(")") ? [] : 解析参数册();
     要标(")", "关参数表");
     let returns = null;
     if (是标("->")) { 进(); returns = 解析类型(); }
     let effects = null;
-    if (是("keyword", "effects")) effects = 解析效果们();
+    if (是("keyword", "effects")) effects = 解析效果册();
     // realtime：档位修饰符，与宿主那一份同一个位置与同一个形状。
     let realtime = false;
     if (是("ident", "realtime")) { 进(); realtime = true; }
@@ -267,7 +267,7 @@ export const 子集解 = (tokens, options = {}) => {
     return { kind: "函数", name: 名 ? 名.value : "<error>", typeParams: [], params, returns, effects, realtime, contracts, body, pub: false, line: kw.line, column: kw.column };
   }
 
-  function 解析参数们() {
+  function 解析参数册() {
     const list = [];
     while (!是标(")") && !是("eof")) {
       // own 与 borrow 是参数上的两个标注，不是「子集不认的写法」。宿主那一份在
@@ -286,7 +286,7 @@ export const 子集解 = (tokens, options = {}) => {
     return list;
   }
 
-  function 解析效果们() {
+  function 解析效果册() {
     进();
     要标("(", "开效果表");
     const list = [];

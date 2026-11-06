@@ -28,8 +28,8 @@ const 走目录 = (根) => {
 
 export const 压目录 = (根, 出) => {
   const 文件册 = 走目录(根);
-  const 部们 = [];
-  const 中央们 = [];
+  const 部件批 = [];
+  const 中央册 = [];
   let 偏 = 0;
   // DOS 时间戳取 1980-01-01 00:00：zip 里没有「不知道」这一说，而固定值让
   // 同一份内容压两次得到同一串字节 —— 可复现比「看起来新」重要。
@@ -52,7 +52,7 @@ export const 压目录 = (根, 出) => {
     本地.writeUInt32LE(原.length, 22);
     本地.writeUInt16LE(名.length, 26);
     本地.writeUInt16LE(0, 28);
-    部们.push(本地, 名, 压);
+    部件批.push(本地, 名, 压);
 
     const 央 = Buffer.alloc(46);
     央.writeUInt32LE(0x02014b50, 0);
@@ -72,11 +72,11 @@ export const 压目录 = (根, 出) => {
     央.writeUInt16LE(0, 36);
     央.writeUInt32LE(0, 38);
     央.writeUInt32LE(偏, 42);
-    中央们.push(央, 名);
+    中央册.push(央, 名);
 
     偏 += 本地.length + 名.length + 压.length;
   }
-  const 中央 = Buffer.concat(中央们);
+  const 中央 = Buffer.concat(中央册);
   const 尾 = Buffer.alloc(22);
   尾.writeUInt32LE(0x06054b50, 0);
   尾.writeUInt16LE(0, 4);
@@ -86,6 +86,6 @@ export const 压目录 = (根, 出) => {
   尾.writeUInt32LE(中央.length, 12);
   尾.writeUInt32LE(偏, 16);
   尾.writeUInt16LE(0, 20);
-  fs.writeFileSync(出, Buffer.concat([...部们, 中央, 尾]));
+  fs.writeFileSync(出, Buffer.concat([...部件批, 中央, 尾]));
   return 文件册.length;
 };

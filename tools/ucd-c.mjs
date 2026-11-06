@@ -19,8 +19,8 @@ const 出目录 = process.argv[3] ? path.resolve(process.argv[3]) : path.join(RO
 const 文 = fs.readFileSync(源, "utf8");
 const 行批 = 文.split("\n");
 
-const 字们 = [];   // 字母区间
-const 记们 = [];   // 记号区间
+const 字批 = [];   // 字母区间
+const 记批 = [];   // 记号区间
 
 let 当前码 = -2;
 const 收集 = (列, cp) => {
@@ -40,8 +40,8 @@ for (const 行 of 行批) {
   const cp = parseInt(码文.slice(2), 16);
   if (Number.isNaN(cp)) continue;
   const 类 = 段[2];
-  if (类.startsWith("L")) 收集(字们, cp);
-  else if (类.startsWith("M")) 收集(记们, cp);
+  if (类.startsWith("L")) 收集(字批, cp);
+  else if (类.startsWith("M")) 收集(记批, cp);
 }
 
 const 写表 = (名, 列, 说明) => {
@@ -75,5 +75,5 @@ static const size_t ${名.toLowerCase()}_count = ${列.length};
   console.log(名 + "：" + 列.length + " 段 → " + path.relative(ROOT, 出));
 };
 
-写表("UCD_LETTER", 字们, "Unicode 里所有 L* 类（字母）的码点区间");
-写表("UCD_MARK", 记们, "Unicode 里所有 M* 类（记号，组合用）的码点区间");
+写表("UCD_LETTER", 字批, "Unicode 里所有 L* 类（字母）的码点区间");
+写表("UCD_MARK", 记批, "Unicode 里所有 M* 类（记号，组合用）的码点区间");

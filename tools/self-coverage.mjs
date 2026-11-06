@@ -28,8 +28,8 @@ const 跑程序 = (源) => rt.callFunction(rt.functions.get("跑程序文字"), 
 
 let 对 = 0, 错 = 0;
 const 明细 = [];
-for (const [类型, 样本们] of [["Int", 整数样本], ["Bool", 布尔样本]]) {
-  for (const 表达式 of 样本们) {
+for (const [类型, 样本批] of [["Int", 整数样本], ["Bool", 布尔样本]]) {
+  for (const 表达式 of 样本批) {
     const 源 = 包成程序(类型, 表达式);
     let 自己 = null, 宿主 = null;
     try { 自己 = String(跑程序(源)).trim(); } catch (e) { 自己 = "抛：" + String(e && e.message).slice(0, 40); }

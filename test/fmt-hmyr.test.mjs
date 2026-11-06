@@ -36,7 +36,7 @@ const 有编译器 = (() => {
 })();
 
 console.log("二、排版与括号都照规矩");
-const 例子们 = [
+const 例子批 = [
   ["1+2*3", "1 + 2 * 3"],
   ["(1+2)*3", "(1 + 2) * 3"],
   ["a-(b-c)", "a - (b - c)"],
@@ -58,12 +58,12 @@ if (!有编译器) {
       input: 输入 + "\n", encoding: "utf8", timeout: 120000,
       env: { ...process.env, HMYR_STEPS: "2000000000" },
     });
-    for (const [源, 期望] of 例子们) {
+    for (const [源, 期望] of 例子批) {
       const r = 跑(源);
       ok(源 + " 排成 " + 期望, String(r.stdout || "").trim() === 期望, JSON.stringify(String(r.stdout || "").trim()));
     }
     console.log("三、幂等：排好的再排一次还是它");
-    for (const [, 期望] of 例子们) {
+    for (const [, 期望] of 例子批) {
       const r = 跑(期望);
       ok(期望 + " 再排一次不变", String(r.stdout || "").trim() === 期望, JSON.stringify(String(r.stdout || "").trim()));
     }

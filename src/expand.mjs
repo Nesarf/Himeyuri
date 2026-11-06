@@ -47,9 +47,9 @@ function 换回(x, 表, 深) {
   return 变了 ? { ...出, kind: x.kind } : x;
 }
 
-function 展开式(x, 宏们, 深) {
+function 展开式(x, 宏族, 深) {
   if (深 > 上限) throw new Error("HMYR-形-006 macro expansion went past " + 上限 + " levels");
-  if (Array.isArray(x)) return x.map((y) => 展开式(y, 宏们, 深));
+  if (Array.isArray(x)) return x.map((y) => 展开式(y, 宏族, 深));
   if (!x || typeof x !== "object") return x;
 
   // 先把子节点展开，再看这一层本身是不是一个宏调用。
@@ -59,21 +59,21 @@ function 展开式(x, 宏们, 深) {
   for (const k of Object.keys(x)) {
     const v = x[k];
     if (不递归.has(k)) { 出[k] = v; continue; }
-    const w = 展开式(v, 宏们, 深);
+    const w = 展开式(v, 宏族, 深);
     出[k] = w;
     if (w !== v) 变了 = true;
   }
   const 节点 = 变了 ? { ...出, kind: x.kind } : x;
 
-  if (节点.kind === "调用" && 节点.callee && 节点.callee.kind === "名" && 宏们.has(节点.callee.name)) {
-    const 宏 = 宏们.get(节点.callee.name);
+  if (节点.kind === "调用" && 节点.callee && 节点.callee.kind === "名" && 宏族.has(节点.callee.name)) {
+    const 宏 = 宏族.get(节点.callee.name);
     if (!Array.isArray(节点.args) || 节点.args.length !== 宏.params.length) {
       throw new Error("HMYR-形-006 macro " + 宏.name + " takes " + 宏.params.length +
         " argument(s), got " + (Array.isArray(节点.args) ? 节点.args.length : 0));
     }
     const 表 = new Map();
     宏.params.forEach((p, i) => 表.set(p, 节点.args[i]));
-    return 展开式(换回(宏.body, 表, 深 + 1), 宏们, 深 + 1);
+    return 展开式(换回(宏.body, 表, 深 + 1), 宏族, 深 + 1);
   }
   return 节点;
 }
@@ -81,13 +81,13 @@ function 展开式(x, 宏们, 深) {
 // 把一个模块里的宏收起来，然后展开它的每一条声明。没有宏的模块原样交回 —— 恒等，不是近似。
 export function 展开模块(模块) {
   if (!模块 || !Array.isArray(模块.decls)) return 模块;
-  const 宏们 = new Map();
-  for (const d of 模块.decls) if (d && d.kind === "宏") 宏们.set(d.name, d);
-  if (宏们.size === 0) return 模块;
+  const 宏族 = new Map();
+  for (const d of 模块.decls) if (d && d.kind === "宏") 宏族.set(d.name, d);
+  if (宏族.size === 0) return 模块;
   const decls = [];
   for (const d of 模块.decls) {
     if (d && d.kind === "宏") continue;
-    decls.push(展开式(d, 宏们, 0));
+    decls.push(展开式(d, 宏族, 0));
   }
   return { ...模块, decls };
 }

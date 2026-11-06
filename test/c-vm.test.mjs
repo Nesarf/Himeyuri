@@ -198,14 +198,14 @@ console.log("七、真库跑在 C 机器上");
   // C 那台的弹栈会越过帧基线，于是实参整体错位一格。
   // 修好之后，五个标准库的验收程序都能在 C 上跑出零。
   const 码路 = path.join(临, "self.hmoks");
-  const 库们 = [
+  const 库册 = [
     ["字符串库", "conformance/lib-strings.hmoca"],
     ["元组库", "conformance/lib-tuples.hmoca"],
     ["表库", "conformance/lib-tables.hmoca"],
     ["JSON 库", "conformance/lib-json.hmoca"],
     ["帧库", "conformance/lib-protocol.hmoca"],
   ];
-  for (const [标, 路] of 库们) {
+  for (const [标, 路] of 库册) {
     if (!fs.existsSync(码路)) { ok(标 + "在 C 机器上全过", false, "没有自举层字节码"); continue; }
     const r = spawnSync(exe, [码路, path.join(ROOT, 路)], { encoding: "utf8", timeout: 120000, env: { ...process.env, HMYR_STEPS: "200000000" } });
     ok(标 + "在 C 机器上全过", r.status === 0 && String(r.stdout).trim() === "0",
@@ -336,7 +336,7 @@ console.log("十、大小写：表搬过来了，两台机器逐单元一样");
   fs.writeFileSync(清单, 样本.join("\n") + "\n", "utf8");
   const 路径 = 清单.replace(/\\/g, "/");
   const 源码 = [
-    "fn 单元们(s: String) -> String {",
+    "fn 单元册(s: String) -> String {",
     "  var i = 0",
     '  var 出 = ""',
     "  while i < len(s) {",
@@ -351,7 +351,7 @@ console.log("十、大小写：表搬过来了，两台机器逐单元一样");
     "  var i = 0",
     "  while i < len(行批) {",
     "    var 字 = chr(to_int(行批[i]))",
-    '    print(单元们(to_upper(字)) + " | " + 单元们(to_lower(字)) + " | " + 单元们(to_lower(chr(913) + 字)) + " | " + 单元们(to_lower(字 + chr(913))) + " | " + 单元们(to_upper(chr(913) + 字)) + "\\n")',
+    '    print(单元册(to_upper(字)) + " | " + 单元册(to_lower(字)) + " | " + 单元册(to_lower(chr(913) + 字)) + " | " + 单元册(to_lower(字 + chr(913))) + " | " + 单元册(to_upper(chr(913) + 字)) + "\\n")',
     "    i = i + 1",
     "  }",
     "  return 0",
@@ -407,8 +407,8 @@ console.log("十、大小写：表搬过来了，两台机器逐单元一样");
   ok("样本不是空跑", 乙.length > 5000, String(乙.length));
 
   // 词尾那一条规则单独钉住：同一个字母，位置不同形状就不同。
-  const 单元们 = [
-    "fn 单元们(s: String) -> String {",
+  const 单元册 = [
+    "fn 单元册(s: String) -> String {",
     "  var i = 0",
     '  var 出 = ""',
     "  while i < len(s) {",
@@ -419,11 +419,11 @@ console.log("十、大小写：表搬过来了，两台机器逐单元一样");
     "  return 出",
     "}",
   ];
-  const 词尾 = [...单元们,
+  const 词尾 = [...单元册,
     "fn main() -> Int {",
-    '  print(单元们(to_lower(chr(931))) + "\\n")',
-    '  print(单元们(to_lower(chr(913) + chr(931))) + "\\n")',
-    '  print(单元们(to_lower(chr(913) + chr(931) + chr(913))) + "\\n")',
+    '  print(单元册(to_lower(chr(931))) + "\\n")',
+    '  print(单元册(to_lower(chr(913) + chr(931))) + "\\n")',
+    '  print(单元册(to_lower(chr(913) + chr(931) + chr(913))) + "\\n")',
     "  return 0",
     "}",
   ].join("\n");
@@ -469,7 +469,7 @@ console.log("十一、归一化：分解、排序、组合，这台机器也做"
   const 组合对 = [...头.split("ucd_comp[] = {")[1].split("};")[0]
     .matchAll(/\{0x([0-9A-F]+)u, 0x([0-9A-F]+)u, 0x([0-9A-F]+)u\}/g)]
     .map((m) => [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)]);
-  const 组合类们 = [...头.split("ucd_ccc[] = {")[1].split("};")[0].matchAll(/\{0x([0-9A-F]+)u, (\d+)u\}/g)]
+  const 组合类族 = [...头.split("ucd_ccc[] = {")[1].split("};")[0].matchAll(/\{0x([0-9A-F]+)u, (\d+)u\}/g)]
     .map((m) => [parseInt(m[1], 16), Number(m[2])]);
 
   const 单码 = new Set(分解码);
@@ -509,14 +509,14 @@ console.log("十一、归一化：分解、排序、组合，这台机器也做"
   // 组合类的次序：拿两个类不同的记号，和同一个起头按两种先后排，两行该给同一个结果。
   // 类相同的两个不换位，所以挑的时候要挑不同的类 —— 这一点本身也是那条规则的边界。
   const 各类代表 = new Map();
-  for (const [cp, c] of 组合类们) {
+  for (const [cp, c] of 组合类族) {
     if (c === 0 || cp >= 0x10000) continue;
     if (!各类代表.has(c)) 各类代表.set(c, cp);
   }
-  const 代表们 = [...各类代表.entries()].sort((a, b) => a[0] - b[0]).map(([, cp]) => cp);
-  for (let k = 0; k + 1 < 代表们.length; k += 1) {
-    const 前 = String.fromCodePoint(0x41, 代表们[k], 代表们[k + 1]);
-    const 后 = String.fromCodePoint(0x41, 代表们[k + 1], 代表们[k]);
+  const 代表册 = [...各类代表.entries()].sort((a, b) => a[0] - b[0]).map(([, cp]) => cp);
+  for (let k = 0; k + 1 < 代表册.length; k += 1) {
+    const 前 = String.fromCodePoint(0x41, 代表册[k], 代表册[k + 1]);
+    const 后 = String.fromCodePoint(0x41, 代表册[k + 1], 代表册[k]);
     行批.push({ 种: "序", 文: 前, 伴: 后 });
     行批.push({ 种: "序", 文: 后, 伴: 前 });
   }
@@ -532,7 +532,7 @@ console.log("十一、归一化：分解、排序、组合，这台机器也做"
   fs.writeFileSync(清单, 行批.map((r) => r.文).join("\n") + "\n", "utf8");
   const 路径 = 清单.replace(/\\/g, "/");
   const 源码 = [
-    "fn 单元们(s: String) -> String {",
+    "fn 单元册(s: String) -> String {",
     "  var i = 0",
     '  var 出 = ""',
     "  while i < len(s) {",
@@ -546,7 +546,7 @@ console.log("十一、归一化：分解、排序、组合，这台机器也做"
     '  var 行批 = read_lines("' + 路径 + '")',
     "  var i = 0",
     "  while i < len(行批) {",
-    '    print(单元们(nfc(行批[i])) + "\\n")',
+    '    print(单元册(nfc(行批[i])) + "\\n")',
     "    i = i + 1",
     "  }",
     "  return 0",

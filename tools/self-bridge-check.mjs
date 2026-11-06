@@ -82,13 +82,13 @@ console.log("五、字节码产物：在，而且不比它的链旧");
   // 「测试按新字段名去取，取到 undefined」，看上去像改名改坏了，其实是产物旧了。
   // 四份的读法各不相同（run 是桥，pack 是打包器，fmt 是格式化器，sign 是签名），
   // 但它们都是「一份 .hmoca 编出来的字节码」，所以该由同一条判据盯着。
-  const 产物们 = [
+  const 产物册 = [
     ["self/run.hmoca", "runtime/run.hmoks"],
     ["self/pack.hmoca", "runtime/pack.hmoks"],
     ["self/fmt.hmoca", "runtime/fmt.hmoks"],
     ["self/sign.hmoca", "runtime/sign.hmoks"],
   ];
-  for (const [源相对, 产物相对] of 产物们) {
+  for (const [源相对, 产物相对] of 产物册) {
     const 字节路 = path.join(ROOT, 产物相对);
     const 在 = fs.existsSync(字节路);
     ok(产物相对 + " 在", 在);

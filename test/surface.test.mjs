@@ -278,9 +278,9 @@ if (process.platform !== "linux") {
     ok("算出的 DPI 在 72 到 300 之间（超出就说明毫米是假值）", 点 >= 72 && 点 <= 300, String(点));
   }
 
-  const 屏们 = spawnSync("python3", ["deps/surface/xprobe.py", "--screens"], { cwd: ROOT, encoding: "utf8", timeout: 60000 });
-  const 行批 = String(屏们.stdout || "").trim().split("\n").filter((l) => l.startsWith("monitor:"));
-  ok("Xinerama 至少答一个显示器", 行批.length >= 1, String(屏们.status) + " " + String(屏们.stderr || "").slice(0, 120));
+  const 屏批 = spawnSync("python3", ["deps/surface/xprobe.py", "--screens"], { cwd: ROOT, encoding: "utf8", timeout: 60000 });
+  const 行批 = String(屏批.stdout || "").trim().split("\n").filter((l) => l.startsWith("monitor:"));
+  ok("Xinerama 至少答一个显示器", 行批.length >= 1, String(屏批.status) + " " + String(屏批.stderr || "").slice(0, 120));
   ok("每个显示器都报得出位置与尺寸", 行批.every((l) => /monitor:\d+ -?\d+,-?\d+ \d+x\d+/.test(l)), 行批.join(" | ").slice(0, 160));
 }
 
@@ -292,9 +292,9 @@ console.log("deps/surface 下的 .ps1 只许 ASCII —— 这是 powershell.exe 
   // win.ps1 与 parallel.ps1 都在 2026-11-02 踩过，所以立这条判据代替「记得」。
   // .py 不受这一条约束：Python 3 按 UTF-8 读源码，注释里的中文是安全的。
   const 目录 = path.join(ROOT, "deps", "surface");
-  const 脚本们 = fs.readdirSync(目录).filter((f) => f.endsWith(".ps1")).sort();
-  ok("找到了 .ps1 脚本", 脚本们.length > 0, 脚本们.join(","));
-  for (const f of 脚本们) {
+  const 脚本册 = fs.readdirSync(目录).filter((f) => f.endsWith(".ps1")).sort();
+  ok("找到了 .ps1 脚本", 脚本册.length > 0, 脚本册.join(","));
+  for (const f of 脚本册) {
     const 字节 = fs.readFileSync(path.join(目录, f));
     let 越界 = 0;
     for (const b of 字节) if (b > 127) 越界++;

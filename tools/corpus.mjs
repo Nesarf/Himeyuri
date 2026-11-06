@@ -72,15 +72,15 @@ const 解析Unihan = () => {
 const 写Unihan = (表) => {
   const 出 = path.join(语料目录, "unihan.txt");
   const fd = fs.openSync(出, "w");
-  const 码点们 = [...表.keys()].sort((a, b) => a - b);
+  const 码点册 = [...表.keys()].sort((a, b) => a - b);
   let 批 = [];
-  for (const cp of 码点们) {
+  for (const cp of 码点册) {
     批.push(键(cp) + ";" + 表.get(cp).join(";"));
     if (批.length >= 20000) { fs.writeSync(fd, 批.join("\n") + "\n"); 批 = []; }
   }
   if (批.length) fs.writeSync(fd, 批.join("\n") + "\n");
   fs.closeSync(fd);
-  return 码点们.length;
+  return 码点册.length;
 };
 
 export const 主 = () => {

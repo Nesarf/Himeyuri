@@ -27,9 +27,9 @@ const 查 = (源码) => {
   fs.writeFileSync(路, 源码, "utf8");
   const unit = loadUnit(路);
   if (!unit.ok) return { 加载错: unit.diagnostics.errors.map((e) => e.code) };
-  const 声明们 = [];
-  for (const 文件 of unit.order) for (const d of unit.modules.get(文件).decls || []) 声明们.push(d);
-  return { 问题册: 核对返回类型(声明们) };
+  const 声明册 = [];
+  for (const 文件 of unit.order) for (const d of unit.modules.get(文件).decls || []) 声明册.push(d);
+  return { 问题册: 核对返回类型(声明册) };
 };
 
 console.log("一、对的东西不报");

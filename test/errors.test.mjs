@@ -40,10 +40,10 @@ const 数绕路 = (文) => {
 console.log("一、self/ 里的绕路处数在观察范围内");
 {
   const 目录 = path.join(ROOT, "self");
-  const 文们 = fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca")).sort();
+  const 文串 = fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca")).sort();
   let 总 = 0;
   const 明细 = [];
-  for (const f of 文们) {
+  for (const f of 文串) {
     const 命 = 数绕路(fs.readFileSync(path.join(目录, f), "utf8"));
     if (命.length) 明细.push(f + ":" + 命.join(","));
     总 += 命.length;

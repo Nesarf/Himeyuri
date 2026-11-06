@@ -32,7 +32,7 @@ const 数 = (相对, 后缀) => {
   return { 文, 行 };
 };
 
-const 组们 = [
+const 组册 = [
   { 名: "自举", 语: "HMYR", 据: 数("self", ".hmoca") },
   { 名: "自举的宿主侧", 语: "JS", 据: 数("self", ".mjs") },
   { 名: "宿主执行器", 语: "JS", 据: 数("src", ".mjs") },
@@ -40,12 +40,12 @@ const 组们 = [
   { 名: "C 机器", 语: "C", 据: 数("vm", ".c") },
 ];
 
-const 总行 = 组们.reduce((s, g) => s + g.据.行, 0);
-const 自举行 = 组们.filter((g) => g.语 === "HMYR").reduce((s, g) => s + g.据.行, 0);
+const 总行 = 组册.reduce((s, g) => s + g.据.行, 0);
+const 自举行 = 组册.filter((g) => g.语 === "HMYR").reduce((s, g) => s + g.据.行, 0);
 
 console.log("自举比例（不含 test/，不含 data/ 与 deps/ 里的语料）");
 console.log("");
-for (const g of 组们) {
+for (const g of 组册) {
   const 份 = 总行 === 0 ? 0 : (g.据.行 / 总行) * 100;
   console.log(
     "  " + g.名.padEnd(14) + String(g.据.文).padStart(4) + " 份  " +

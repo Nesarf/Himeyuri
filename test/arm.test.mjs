@@ -23,7 +23,7 @@ const ok = (label, condition, detail = "") => {
 // 两家工具链都认：GNU 免费，谁都能装；Arm 那一支是 Keil 自带的。
 // 先找 GNU —— 它的链接脚本与启动文件是另外两份（port/link.ld 与 port/startup_cm4_gnu.s），
 // 与 link.sct / startup_cm4.s 一一对应。换工具链换的是这两件，不是布局。
-const 找 = (们) => 们.filter(Boolean).find((p) => {
+const 找 = (候选串) => 候选串.filter(Boolean).find((p) => {
   try { return spawnSync(p, ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
 });
 const gcc = 找([

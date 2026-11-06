@@ -39,8 +39,8 @@ const 找C机器 = () => {
   return null;
 };
 
-const 程序们 = process.argv.slice(2);
-if (程序们.length === 0) {
+const 程序册 = process.argv.slice(2);
+if (程序册.length === 0) {
   console.error("用法：node tools/heap-census.mjs <程序.hmoca> [...]");
   process.exit(2);
 }
@@ -55,7 +55,7 @@ if (!exe) {
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-heap-"));
 const 行批 = [];
 
-for (const 相 of 程序们) {
+for (const 相 of 程序册) {
   const 源 = path.isAbsolute(相) ? 相 : path.join(ROOT, 相);
   if (!fs.existsSync(源)) { 行批.push({ 程序: 相, 备注: "没有这个文件" }); continue; }
   const 码 = path.join(临, path.basename(相).replace(/\.hmoca$/, "") + ".hmoks");

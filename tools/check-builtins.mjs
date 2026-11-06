@@ -41,10 +41,10 @@ const 契约 = 读("design/CAPABILITIES.txt");
 const 契约里 = Array.from(new Set(Array.from(契约.matchAll(/[a-z_][a-z0-9_]*/g)).map((m) => m[0])));
 
 let 问题 = 0;
-const 报 = (说明, 名字们) => {
-  if (名字们.length === 0) return;
+const 报 = (说明, 名字册) => {
+  if (名字册.length === 0) return;
   问题++;
-  console.log("  [不通过] " + 说明 + "（" + 名字们.length + " 个）：" + 名字们.join(" "));
+  console.log("  [不通过] " + 说明 + "（" + 名字册.length + " 个）：" + 名字册.join(" "));
 };
 
 console.log("  代码里的内置 " + 代码里.length + " 个 · 第一圈点名 " + 环里.length + " 个 · 契约里出现 " + 契约里.length + " 个");
