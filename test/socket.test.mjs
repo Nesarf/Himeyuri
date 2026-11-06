@@ -148,15 +148,19 @@ console.log("五、pipe: 前缀认得出命名管道的名字");
         const 出 = Buffer.concat(收到).toString("utf8");
         try { 服务端.close(); } catch { /* 已经关了 */ }
         ok("pipe: 前缀连得上", 出.startsWith("第一行\n"), JSON.stringify(出.slice(0, 20)));
-        resolve();
+        // 这里不 resolve：下面那条「管道那条也退出 0」还没跑，而先 resolve 会让
+        // 文件末尾的 process.exit 赶在它前面 —— 与 pipe 那一套同一个形状，
+        // 2026-11-06 用 cond-census 在同一天量到的第二处。收尾交给下面那一支。
+        try { 服务端.close(); } catch { /* 已经关了 */ }
       });
     });
     服务端.on("error", (err) => { ok("命名管道服务端起得来", false, String(err && err.message)); resolve(); });
     服务端.listen(名, () => {
       跑(["--socket", "pipe:" + 名]).then((果) => {
         ok("管道那条也退出 0", 果.码 === 0, String(果.码) + " " + 果.错.slice(0, 80));
-        // 服务端靠 end 收尾；若 hmyr 那边没关干净，这里兜底，免得整套挂在等一个不来的事件上。
-        setTimeout(() => { try { 服务端.close(); } catch { /* 已经关了 */ } resolve(); }, 3000).unref();
+        // 判据跑完才收尾：这里是整段的唯一出口，end 那一支只打自己的判据。
+        try { 服务端.close(); } catch { /* 已经关了 */ }
+        resolve();
       });
     });
   });

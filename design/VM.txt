@@ -62,7 +62,7 @@
     JMPT_KEEP n
 
     TUPLE n            弹 n 个造元组
-    RECORD 名们        弹同样多个值造记录
+    RECORD 名册        弹同样多个值造记录
     FIELD 名 / INDEX   取字段 / 取下标
 
     CALLB 名, 实参数   调内置（效果在调用点检查）
