@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { loadUnit } from "../src/loader.mjs";
 import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
 import { 写程序 } from "../src/code-file.mjs";
-import { 平台参数, 编C机器 } from "../src/cc.mjs";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -59,7 +59,7 @@ if (!有编译器) {
   ok("JS 那一份跑完了", js.status === 0, String(js.stderr).slice(0, 160));
 
   const exe = path.join(临, "hmyr.exe");
-  const c = 编C机器(exe);
+  const c = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
     const 码路 = path.join(临, "ucdc.hmoks");

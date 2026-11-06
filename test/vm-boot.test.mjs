@@ -24,7 +24,7 @@ import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
 import { 写程序 } from "../src/code-file.mjs";
 import { 跑字节码 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
-import { 平台参数, 编C机器 } from "../src/cc.mjs";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -58,7 +58,7 @@ if (!有编译器) {
 } else if (探针) {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-vmboot-"));
   const exe = path.join(临, "hmyr");
-  const c = 编C机器(exe);
+  const c = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 200));
 
   if (c.status === 0) {

@@ -16,7 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { 平台参数, 编C机器 } from "../src/cc.mjs";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -56,7 +56,7 @@ console.log("二、gcc 加上种子，重建出种子自己（这条路里没有
     const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-seed-"));
     const exe = path.join(临, "hmyr.exe");
     第一: {
-      const c = 编C机器(exe);
+      const c = spawnSync("gcc", ["-std=c11", "-O3", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
       ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
       if (c.status !== 0) break 第一;
       const 链 = ["lex", "chain", "stmt", "body", "compile", "pack"].map((n) => path.join(ROOT, "self", n + ".hmoca"));
@@ -95,7 +95,7 @@ console.log("三、种子跑得动真实程序（它不只是能重建自己）"
   } else {
     const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-seed2-"));
     const exe = path.join(临, "hmyr.exe");
-    const c = 编C机器(exe);
+    const c = spawnSync("gcc", ["-std=c11", "-O3", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     if (c.status === 0) {
       // 用种子造一份「跑程序的自举层」：种子本身就是编译器，编出来的是 run.hmoca 那条链。
       const 链 = ["lex", "chain", "stmt", "body", "eval", "run"].map((n) => path.join(ROOT, "self", n + ".hmoca"));

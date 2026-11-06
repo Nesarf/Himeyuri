@@ -20,7 +20,7 @@ import { 跑字节码 } from "../src/vm.mjs";
 import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
 import { 写程序 } from "../src/code-file.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
-import { 平台参数, 编C机器 } from "../src/cc.mjs";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -101,7 +101,7 @@ console.log("二、六条真实路径：三台执行路径给同一个答案");
   if (有编译器) {
     第四台的临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-bc4-"));
     const exe = path.join(第四台的临, "hmyr");
-    const 编 = 编C机器(exe);
+    const 编 = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     const 探针层 = loadUnit(path.join(ROOT, "conformance/vm-boot.hmoca"));
     if (编.status === 0 && 探针层.ok) {
       const 编法 = (u) => 写程序(合并程序(

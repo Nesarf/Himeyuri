@@ -18,7 +18,7 @@ import { 最小运行 } from "../src/minimal-eval.mjs";
 import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
 import { 读程序, 写程序 } from "../src/code-file.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
-import { 平台参数, 编C机器 } from "../src/cc.mjs";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -197,7 +197,7 @@ console.log("十一、C 那台：契约已经在字节码里，所以它只差�
   } else {
     const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-contract-c-"));
     const exe = path.join(临, "hmyr.exe");
-    const cc = 编C机器(exe);
+    const cc = spawnSync("gcc", ["-std=c11", "-O3", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得出来", cc.status === 0, String(cc.stderr).slice(0, 160));
     if (cc.status === 0) {
       const 新诊断3 = () => ({

@@ -8,7 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { 平台参数, 编C机器 } from "../src/cc.mjs";
+import { 平台参数 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -73,7 +73,7 @@ if (!有编译器) {
 
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-lspsym-"));
 const exe = path.join(临, "hmyr.exe");
-const 编r = 编C机器(exe);
+const 编r = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
 ok("C 那台编得动", 编r.status === 0, String(编r.stderr || "").slice(0, 120));
 
 const 码路 = path.join(临, "lsp.hmoks");
