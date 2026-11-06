@@ -1,0 +1,67 @@
+{
+  "说明": "每一份探针今天的输出。test/probes.test.mjs 会真的跑它们并与这里比 —— 数字变了就红，而红了之后要判断的是「探针该更新」还是「世界变了」，那正是这一份存在的理由。路径里的仓库根归一成 <root>。",
+  "测于": "2026-11-06",
+  "怎么改": "改这一份之前先跑一次 node test/probes.test.mjs，看是哪几份变了、变成什么。不要凭印象改。",
+  "项": {
+    "probe-and.hmoca": {
+      "码": 0,
+      "出": "完\n0"
+    },
+    "probe-argv.hmoca": {
+      "码": 0,
+      "出": "len=1\n0=[<root>\\probes\\probe-argv.hmoca]\n0"
+    },
+    "probe-cmp.hmoca": {
+      "码": 0,
+      "出": "1<1=false\n1<2=true\n0<1=true\n1<=1=true\n2<=1=false\n0"
+    },
+    "probe-decls.hmoca": {
+      "码": 0,
+      "出": "tokens=28\nfns=1\n首项=9\n语句批=2\n0"
+    },
+    "probe-decls2.hmoca": {
+      "码": 0,
+      "出": "只解析 -> ok 1\n只解析两函数 -> ok 2\n0"
+    },
+    "probe-file.hmoca": {
+      "码": 0,
+      "出": "长度=334\n0"
+    },
+    "probe-gt.hmoca": {
+      "码": 0,
+      "出": "1>2=false\n2>1=true\n1>=2=false\n0"
+    },
+    "probe-len.hmoca": {
+      "码": 0,
+      "出": "len=32\n末码=10\n第十八个=10\n0"
+    },
+    "probe-lex.hmoca": {
+      "码": 0,
+      "出": "scan=10\ntokens=13\n0"
+    },
+    "probe-lex2.hmoca": {
+      "码": 0,
+      "出": "好 长1 词1\n好 长2 词2\n好 长3 词2\n好 长4 词3\n好 长3 词2\n好 长5 词3\n好 长6 词4\n好 长7 词5\n好 长9 词6\n0"
+    },
+    "probe-load.hmoca": {
+      "码": 0,
+      "出": "自举层词法在宿主上跑通，词数=13\n0"
+    },
+    "probe-load2.hmoca": {
+      "码": 0,
+      "出": "这是探针的 main\n0"
+    },
+    "probe-prec.hmoca": {
+      "码": 0,
+      "出": "错：这一版只认按名字调用"
+    },
+    "probe-row.hmoca": {
+      "码": 0,
+      "出": "甲\n乙\n丙\n0"
+    },
+    "probe-self-load.hmoca": {
+      "码": 0,
+      "出": "self 里的最小探针跑起来了\n0"
+    }
+  }
+}

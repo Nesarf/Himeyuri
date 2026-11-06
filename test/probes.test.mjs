@@ -1,15 +1,20 @@
-// probes/ 下的诊断探针：每一份都要编得动。
+// probes/ 下的诊断探针：编得动，而且今天跑得动的那一批要跑一遍。
 //
 // 这些文件原来是 examples/probe-*.hmoca —— 它们是当时为了缩一个问题写的一次性诊断，
 // 不是给新人的示例。2026-11-04 把它们搬到 probes/，因为它们是 examples 判据从 41 秒
-// 涨到 232 秒的原因：其中两份（probe-decls2 与 probe-row）真的 引入 ../self/run.hmoca，
-// 于是每跑一次都要把整份自举层加载一遍。
+// 涨到 232 秒的原因。
 //
-// 搬走之后 examples 只跑真正的示例，而这一份守住「探针不是坏文件」这条底线：
-// 每一份都过一遍装载器，编得动就算过，不执行。为什么只编不跑：探针的价值是当时
-// 的诊断记录，而它们跑起来要么慢（加载自举层），要么需要参数（probe-argv 之类）。
+// 2026-11-06 改了这一套的立意：原来只编不跑，理由是「跑起来要么慢、要么要参数」。
+// 那天把十五份挨个跑了一遍，全部跑得动，最慢的一份二十秒，一共七十九秒。于是
+// 「跑不动」这个理由不成立了，而只编不跑留下一个更大的空子 —— 探针记的是当时的
+// 症状与当时的数字，问题修好之后那些数字会变，而只看编译永远看不出来。
+//
+// 所以现在分两条：编得动（底线），以及「输出与 probes/expected.json 记的一样」。
+// 后者是「答案的时效」这一件事的判据：数字变了就红，而红了之后要判断的是
+// 「探针该更新」还是「世界变了」—— 那正是留这些探针的意义。
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { loadUnit } from "../src/loader.mjs";
 
@@ -28,7 +33,7 @@ const 份簇 = fs.existsSync(目录)
 console.log("一、probes/ 下有一批探针");
 ok("至少十份", 份簇.length >= 10, String(份簇.length) + " 份");
 
-console.log("二、每一份都编得动（不执行）");
+console.log("二、每一份都编得动");
 {
   const 坏例 = [];
   for (const f of 份簇) {
@@ -41,7 +46,32 @@ console.log("二、每一份都编得动（不执行）");
   ok("这一批都编得动（" + 份簇.length + " 份）", 坏例.length === 0, 坏例.join(" · "));
 }
 
-console.log("三、examples/ 里不再有 probe-*（搬干净了）");
+console.log("");
+console.log("三、跑一遍，输出与 probes/expected.json 记的一样");
+{
+  const 期望路 = path.join(目录, "expected.json");
+  if (!fs.existsSync(期望路)) {
+    ok("expected.json 在", false, "缺那一份就没有可比的");
+  } else {
+    const 期望 = JSON.parse(fs.readFileSync(期望路, "utf8"));
+    const 归一 = (s) => String(s || "").trim().split("\n").map((l) => l.split(ROOT).join("<root>")).join("\n");
+    const 变 = [];
+    for (const [f, 项] of Object.entries(期望.项)) {
+      const r = spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), path.join(目录, f)], {
+        cwd: ROOT, encoding: "utf8", timeout: 120000,
+      });
+      const 出 = 归一(r.stdout);
+      if (r.status !== 项.码 || 出 !== 项.出) {
+        变.push(f + "：" + (r.status !== 项.码 ? "退出码 " + r.status + " 对 " + 项.码
+          : "输出 " + JSON.stringify(出.slice(0, 40)) + " 对 " + JSON.stringify(项.出.slice(0, 40))));
+      }
+    }
+    ok("十五份的输出都没变", 变.length === 0, 变.slice(0, 3).join(" · "));
+  }
+}
+
+console.log("");
+console.log("四、examples/ 里不再有 probe-*（搬干净了）");
 {
   const 例子 = path.join(ROOT, "examples");
   const 剩 = fs.readdirSync(例子).filter((f) => f.startsWith("probe-"));
