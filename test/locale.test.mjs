@@ -154,7 +154,7 @@ console.log("fmt_number：按档案格式化，而四台一致");
   })();
   if (有gcc) {
     const exe = path.join(临, "hmyr-c.exe");
-    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", ...平台参数(), "-o", exe,
+    const 编 = spawnSync("gcc", ["-std=c11", "-O3", "-w", ...平台参数(), "-o", exe,
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     if (编.status === 0) {
       const 码 = path.join(临, "f.hmoks");

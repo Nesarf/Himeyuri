@@ -104,7 +104,7 @@ if (!有编译器) {
   console.log("  跳过  这台机器上没有 gcc");
 } else {
   const exe = path.join(临, "hmyr.exe");
-  const g = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const g = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", g.status === 0, String(g.stderr || "").slice(0, 160));
   if (g.status === 0) {
     const 码路 = path.join(临, "probe.hmoks");

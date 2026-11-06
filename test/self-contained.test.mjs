@@ -45,7 +45,7 @@ if (!有编译器) {
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-self-"));
   const exe = path.join(临, "hmyr.exe");
-  const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const c = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来（带着内置种子）", c.status === 0, String(c.stderr).slice(0, 160));
   ok("那个目录里没有 bootstrap/", !fs.existsSync(path.join(临, "bootstrap")), "");
   if (c.status === 0) {

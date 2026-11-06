@@ -44,7 +44,7 @@ if (!有编译器) {
 const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-thrc-"));
 const exe = path.join(临, "hmyr-vm.exe");
 {
-  const r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const r = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("vm/hmyr.c 编得出来", r.status === 0, String(r.stderr).slice(0, 200));
 }
 if (!fs.existsSync(exe)) {

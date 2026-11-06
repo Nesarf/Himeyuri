@@ -49,7 +49,7 @@ if (!有编译器) {
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-fmt-"));
   const exe = path.join(临, "hmyr.exe");
-  const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const c = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
     const 码路 = path.join(临, "fmt.hmoks");
@@ -77,7 +77,7 @@ if (!有编译器) {
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-fmt-file-"));
   const exe = path.join(临, "hmyr.exe");
-  const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const c = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
     const { loadUnit } = await import("../src/loader.mjs");

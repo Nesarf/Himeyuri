@@ -65,7 +65,7 @@ if (!有编译器) {
 } else if (跑步器) {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-vmrun-"));
   const exe = path.join(临, "hmyr");
-  const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const c = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 200));
 
   if (c.status === 0) {

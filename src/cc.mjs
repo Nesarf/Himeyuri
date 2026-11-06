@@ -3,7 +3,7 @@
 // 为什么要有这一页：2026-11-03 在 WSL（Nyarch Linux）里跑全量，四十套红，而其中
 // 绝大多数的根因是同一个字符串 —— 每一套要编 C 机器的测试都自带一份
 //
-//   ["-std=c11", "-O2", "-Wall", "-Wl,--stack,67108864", ...]
+//   ["-std=c11", "-O3", "-Wall", "-Wl,--stack,67108864", ...]
 //
 // 而 -Wl,--stack 是 PE 链接器的选项，GNU ld 不认，于是一到 Linux 就
 // "unrecognized option '--stack'"。全仓五十八处，散在 test/、bench/、tools/。

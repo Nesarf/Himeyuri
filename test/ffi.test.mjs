@@ -117,7 +117,7 @@ console.log("四、C 那台一致");
     console.log("  跳过  这台机器上没有 gcc —— 第四台不验");
   } else {
     const exe = path.join(临, "hmyr-ffi.exe");
-    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", ...平台参数(), "-o", exe,
+    const 编 = spawnSync("gcc", ["-std=c11", "-O3", "-w", ...平台参数(), "-o", exe,
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得出来", 编.status === 0, String(编.stderr || "").slice(0, 160));
     if (编.status === 0) {
@@ -171,7 +171,7 @@ console.log("五、可写窗口：写进窗口，源也跟着变");
     try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
   })();
   if (有gcc) {
-    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", ...平台参数(), "-o", exe2,
+    const 编 = spawnSync("gcc", ["-std=c11", "-O3", "-w", ...平台参数(), "-o", exe2,
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     if (编.status === 0) {
       const 码 = path.join(临, "可.hmoks");
@@ -235,7 +235,7 @@ console.log("六、call_c 的三条失败");
     const 子 = path.join(临, "call");
     try { fs.mkdirSync(子, { recursive: true }); } catch { /* 已经有了就用 */ }
     const exe = path.join(子, "hmyr-call.exe");
-    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", ...平台参数(), "-o", exe,
+    const 编 = spawnSync("gcc", ["-std=c11", "-O3", "-w", ...平台参数(), "-o", exe,
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     if (编.status !== 0) console.log("  跳过  call_c 那台这一次没编出来：" + String(编.stderr || "").slice(0, 100));
     if (编.status === 0) {
@@ -293,7 +293,7 @@ console.log("六、call_c 的三条失败");
       // 路径里的反斜杠要先换成正斜杠：它要进 HMYR 的字符串字面量，而那个词法不认
       // \f 这种转义（2026-11-03 在 Windows 上踩到，报的是「子集不含这种转义」）。
       const 库出 = path.join(子, process.platform === "win32" ? "fixtures.dll" : "fixtures.so").replace(/\\/g, "/");
-      const 编库 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-shared", ...平台参数(), "-o", 库出, 库源], { encoding: "utf8" });
+      const 编库 = spawnSync("gcc", ["-std=c11", "-O3", "-w", "-shared", ...平台参数(), "-o", 库出, 库源], { encoding: "utf8" });
       if (编库.status !== 0) {
         console.log("  跳过  判据用的共用库没编出来：" + String(编库.stderr || "").slice(0, 120));
       } else {

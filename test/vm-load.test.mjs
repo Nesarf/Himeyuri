@@ -49,7 +49,7 @@ if (!有编译器) {
 } else if (装载器) {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-vmload-"));
   const exe = path.join(临, "hmyr");
-  const 编译 = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const 编译 = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", 编译.status === 0, String(编译.stderr).slice(0, 200));
 
   if (编译.status === 0) {

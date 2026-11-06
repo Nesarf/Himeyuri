@@ -105,7 +105,7 @@ console.log("四、自举那一份也跳得过去");
   } else {
     const 临二 = 临时mkdtempSync("hmyr-lspmod-c-");
     const exe = path.join(临二, "hmyr.exe");
-    const 编r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+    const 编r = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得动", 编r.status === 0, String(编r.stderr || "").slice(0, 120));
 
     const 码路 = path.join(临二, "lsp.hmoks");

@@ -89,7 +89,7 @@ console.log("四、C 那台（要 gcc 编一次）");
     console.log("  跳过  这台机器上没有 gcc —— C 那台那一侧不验");
   } else {
     const exe = path.join(临, "hmyr-c.exe");
-    const 编 = spawnSync("gcc", ["-std=c11", "-O2", ...平台参数(), "-o", exe,
+    const 编 = spawnSync("gcc", ["-std=c11", "-O3", ...平台参数(), "-o", exe,
       path.join(ROOT, "vm", "hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得出来", 编.status === 0, String(编.stderr || "").slice(0, 160));
     const p = 投(计数程序, "丁.hmoca");

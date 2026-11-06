@@ -50,7 +50,7 @@ if (!有编译器) {
 const 栈参数 = 平台参数();
 const exe = path.join(临, "hmyr-vm.exe");
 {
-  const r = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...栈参数, "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const r = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...栈参数, "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("vm/hmyr.c 编得出来", r.status === 0, String(r.stderr).slice(0, 200));
   ok("而且没有警告", String(r.stderr).trim() === "", String(r.stderr).slice(0, 200));
 }

@@ -33,7 +33,7 @@ console.log("一、一个 C 程序调到 HMYR");
     console.log("  跳过  这台机器上没有 gcc —— 嵌入那一侧不验");
   } else {
     const exe = path.join(临, "c-embed.exe");
-    const 编 = spawnSync("gcc", ["-std=c11", "-O2", "-w", "-DHMYR_NO_MAIN", "-I", path.join(ROOT, "vm"),
+    const 编 = spawnSync("gcc", ["-std=c11", "-O3", "-w", "-DHMYR_NO_MAIN", "-I", path.join(ROOT, "vm"),
       "-o", exe, path.join(ROOT, "test", "c-embed.c"), path.join(ROOT, "vm", "hmyr.c"), "-lm"],
       { encoding: "utf8" });
     ok("库模式编得出来", 编.status === 0, String(编.stderr || "").slice(0, 200));

@@ -40,7 +40,7 @@ if (!有编译器) {
   // 当时没有数 —— 编 C 机器（6347 行加 466 KB 的 pack_seed.h）与跑 HMYR 程序是两件事，
   // 而它们对负载的反应不一样。
   const 编起 = Date.now();
-  const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const c = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   const 编毫秒 = Date.now() - 编起;
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {

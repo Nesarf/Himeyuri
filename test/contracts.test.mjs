@@ -197,7 +197,7 @@ console.log("十一、C 那台：契约已经在字节码里，所以它只差�
   } else {
     const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-contract-c-"));
     const exe = path.join(临, "hmyr.exe");
-    const cc = spawnSync("gcc", ["-std=c11", "-O2", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+    const cc = spawnSync("gcc", ["-std=c11", "-O3", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
     ok("C 那台编得出来", cc.status === 0, String(cc.stderr).slice(0, 160));
     if (cc.status === 0) {
       const 新诊断3 = () => ({

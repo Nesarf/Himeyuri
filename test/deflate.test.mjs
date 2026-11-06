@@ -45,7 +45,7 @@ if (!有编译器) {
   // 编译与跑分开记 —— 与 tree 那一套同一个理由：二十一分钟那次，手里没有数说得出
   // 时间花在编 C 机器上还是花在跑 HMYR 程序上。
   const 编起 = Date.now();
-  const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const c = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   const 编毫秒 = Date.now() - 编起;
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
