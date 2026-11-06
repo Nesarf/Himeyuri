@@ -536,5 +536,55 @@ if (process.env.HMYR_TIMES) {
 }
 if (已知缺) console.log(已知缺 + " suite(s) are known missing: counted here, not failed — they are the target acceptance");
 if (意外通过) console.log(意外通过 + " suite(s) passed although the table says they cannot yet: fix the bookkeeping, not the suite");
+
+// ---- 收尾：差额只能变小，不能变大 ----
+//
+// 差额 = 这个套件写下的断言数（静态数）减去它真的跑了几项。加一条判据时两边同时
+// 加一，差额不变；修好一处被藏起来的判据时实跑加一，差额变小；而有人把一组判据
+// 包进 if 而没交代时实跑减几，差额变大 —— arm、pipe、socket 那一周就是三次这种形状。
+//
+// 只在全量时算这一笔：--only / --skip / --affects 时没跑的套件会被算成「少跑了」，
+// 那种时候比就是在制造噪声。
+//
+// 它让全量红。理由：差额变大只有两种来路 —— 藏了判据（真问题），或者刚删掉一条
+// 判据（那时刻意更新基线，而基线的变化会进 commit、可审查）。不红就会被忽略，
+// 而这一周已经三次见过「绿着但验得少」。
+//
+// 但它只在全绿时算：2026-11-06 那次改完，deflate 与 tree 在重负载下各跑了二十
+// 一分钟然后超时，于是它们少跑了几项 —— 判据报的是「deflate 从 10 涨到 13」，
+// 看上去像有人藏了判据，其实是机器跑不动。红的套件本来就会被看见，差额那一笔
+// 等它们绿了再说。
+if (选中.length === SUITES.length && failed === 0) {
+  const 基线路 = path.join(ROOT, "tools/gap-baseline.json");
+  if (existsSync(基线路)) {
+    const 基 = JSON.parse(readFileSync(基线路, "utf8"));
+    const 断言式 = /\b(ok|检查|判)\(/g;
+    const 变大 = [];
+    for (const [名, 脚本] of 选中) {
+      // 取**末行**的匹配，不是第一个：有的套件自己会跑几个子套件（checkhmyr 跑三套），
+      // 那些子套件的「N passed」也在它的输出里。第一版取第一个匹配，于是 checkhmyr
+      // 被算成只跑了三条、差额从 0 涨到 8 —— 判据抓到的第一个错是它自己。
+      const 出 = String((结果.get(名) || {}).出 || "").trim().split("\n").filter(Boolean).pop() || "";
+      const m = /(\d+) passed, (\d+) failed/.exec(出);
+      if (!m) continue;                       // 四个套件的末行不是那种形状
+      const 路 = path.join(ROOT, 脚本);
+      if (!existsSync(路)) continue;
+      const 静态 = [...readFileSync(路, "utf8").matchAll(断言式)].length;
+      const 差额 = 静态 - (Number(m[1]) + Number(m[2]));
+      const 旧 = (基.差额 || {})[名];
+      if (typeof 旧 === "number" && 差额 > 旧) 变大.push(名 + " 从 " + 旧 + " 涨到 " + 差额);
+    }
+    if (变大.length === 0) {
+      console.log("差额：没有一个套件变大（基线记于 " + (基.测于 || "未知") + "）");
+    } else {
+      console.log("差额变大 " + 变大.length + " 个 —— 有判据从「跑」变成了「不跑」：");
+      for (const x of 变大) console.log("  " + x);
+      console.log("查清之后才改基线：node tools/cond-census.mjs <一次全量的日志> --保存");
+      failed += 变大.length;
+    }
+    console.log("");
+  }
+}
+
 console.log(failed === 0 ? "all suites held" : failed + " suite(s) did not hold");
 process.exit(failed === 0 ? 0 : 1);
