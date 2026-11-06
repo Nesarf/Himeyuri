@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { 平台参数 } from "../src/cc.mjs";
+import { 平台参数, 编C机器 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -87,7 +87,7 @@ console.log("四、C 那台也认：同一份程序给出同一个答案");
     console.log("  跳过  这台机器上没有 gcc");
   } else {
     const exe = path.join(临, "hmyr-array.exe");
-    const c = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+    const c = 编C机器(exe);
     ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 200));
     if (c.status === 0) {
       const r = spawnSync(exe, [源], { encoding: "utf8", timeout: 300000 });

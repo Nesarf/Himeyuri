@@ -10,7 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { 平台参数 } from "../src/cc.mjs";
+import { 平台参数, 编C机器 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -34,7 +34,7 @@ if (!有编译器) {
 
 const exe = path.join(临, "hmyr.exe");
 {
-  const r = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const r = 编C机器(exe);
   ok("vm/hmyr.c 编得出来", r.status === 0, String(r.stderr).slice(0, 300));
   ok("而且没有警告", String(r.stderr).trim() === "", String(r.stderr).slice(0, 300));
 }

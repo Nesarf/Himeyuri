@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import { loadUnit } from "../src/loader.mjs";
 import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
 import { 写程序, 读程序 } from "../src/code-file.mjs";
-import { 平台参数 } from "../src/cc.mjs";
+import { 平台参数, 编C机器 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -49,7 +49,7 @@ if (!有编译器) {
 } else if (装载器) {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-vmload-"));
   const exe = path.join(临, "hmyr");
-  const 编译 = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const 编译 = 编C机器(exe);
   ok("C 那台编得出来", 编译.status === 0, String(编译.stderr).slice(0, 200));
 
   if (编译.status === 0) {
