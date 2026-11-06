@@ -52,7 +52,11 @@ console.log("一、print 写进命名管道，那头收得到");
         ok("管道那头收到了两行", 出.startsWith("第一行\n第二行\n"), JSON.stringify(出));
         ok("末尾那一行没有丢", 出.includes("第二行\n"), JSON.stringify(出.slice(-12)));
         ok("程序返回值也走同一个出口", 出.trimEnd().endsWith("0"), JSON.stringify(出));
-        resolve();
+        // 这里不再直接 resolve：子进程那一条「退出码是 0」还在排队。
+        // 先 resolve 会让文件末尾的 process.exit 赶在它前面，于是那条判据一次都不跑，
+        // 而总数里只看得出来「少了一项」—— 2026-11-06 用 cond-census 量出来的。
+        // 三秒是兜底：正常情况下 exit 那一支会先 resolve。
+        setTimeout(resolve, 3000);
       });
     });
     服务端.on("error", (err) => { ok("管道服务端起得来", false, String(err && err.message)); resolve(); });
@@ -62,8 +66,9 @@ console.log("一、print 写进命名管道，那头收得到");
       子.stderr.on("data", (b) => { 错 += String(b); });
       子.on("exit", (码) => {
         ok("hmyr 退出码是 0", 码 === 0, String(码) + " " + 错.slice(0, 100));
-        // 服务端那边靠 end 收尾；若 hmyr 没关管道，这里兜底。
-        setTimeout(() => { try { 服务端.close(); } catch { /* 已经关了 */ } resolve(); }, 1500);
+        // 这一条跑完才 resolve，于是它一定会被验到。
+        try { 服务端.close(); } catch { /* 已经关了 */ }
+        resolve();
       });
     });
   });
