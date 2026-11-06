@@ -40,16 +40,31 @@ if (!有编译器) {
   console.log("  跳过  这台机器上没有 gcc");
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-deflate-"));
+  const 账 = [];   // 每一趟的步数与耗时：正常跑也记，因为「异常」要有个东西比
   const exe = path.join(临, "hmyr.exe");
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
     const 码路 = path.join(临, "deflate.hmoks");
     fs.writeFileSync(码路, 写程序(程序));
-    const 跑 = (参) => spawnSync(exe, [码路, ...参], {
-      encoding: "utf8", timeout: 600000,
-      env: { ...process.env, HMYR_STEPS: "40000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
-    });
+    const 跑 = (参) => {
+      const t0 = Date.now();
+      const r = spawnSync(exe, [码路, ...参], {
+        encoding: "utf8", timeout: 600000,
+        // HMYR_OPS=1 是 hmyr.c 自带的出口（第 6237 行），把这趟跑掉的步数打到 stderr。
+        // 为什么需要它：2026-11-06 全量里这一套有一次跑了二十一分钟，而单独跑只要
+        // 七十九秒。当时手里只有「秒」这一个数，于是两种解释分不开 —— 撞了步数上限，
+        // 还是步数真的多了一两个数量级。实测之后知道：正常最慢的一趟是 5.8 亿步，
+        // 而上限是 400 亿，所以「撞上限」这条不成立；要分清「走错路」与「每步变贵」，
+        // 缺的就是这个数。
+        env: { ...process.env, HMYR_STEPS: "40000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0", HMYR_OPS: "1" },
+      });
+      r.毫秒 = Date.now() - t0;
+      const m = /ops=(\d+)/.exec(String(r.stderr || ""));
+      r.步 = m ? Number(m[1]) : null;
+      账.push({ 什么: 参.join(" "), 步: r.步, 毫秒: r.毫秒 });
+      return r;
+    };
 
     console.log("二、stored：往返一个字节都不差");
     const 源 = path.join(ROOT, "bootstrap/pack.hmtn");
@@ -183,6 +198,14 @@ if (!有编译器) {
           }
         }
       }
+    }
+
+    // 步数最多的一趟：它是这一套的基线，而「某一次跑了二十一分钟」只有与它比才
+    // 看得出是几倍。失败时上面那几条会把 ops 带在 detail 里，成功时看这一行。
+    const 最重 = 账.filter((x) => x.步 !== null).sort((a, b) => b.步 - a.步)[0];
+    if (最重) {
+      console.log("");
+      console.log("步数最多的一趟：" + 最重.步 + " 步 / " + 最重.毫秒 + " ms（" + 最重.什么 + "）");
     }
 
     fs.rmSync(临, { recursive: true, force: true });

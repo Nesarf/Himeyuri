@@ -43,16 +43,29 @@ if (!有编译器) {
     fs.writeFileSync(码路, 写程序(程序));
     const 样本 = path.join(临, "sample.bin");
     fs.writeFileSync(样本, fs.readFileSync(path.join(ROOT, "bootstrap/pack.hmtn")).subarray(0, 4096));
+    const t0 = Date.now();
     const r = spawnSync(exe, [码路, 样本], {
       encoding: "utf8", timeout: 600000,
-      env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
+      // HMYR_OPS=1：把这趟跑掉的步数打到 stderr。与 deflate 那一套同一个理由 ——
+      // 2026-11-06 全量里这一套跑了二十一分钟，而单独跑八十六秒；当时缺的就是这个数，
+      // 于是「撞步限」与「走错路」两种解释分不开。实测正常是 1.38 亿步。
+      env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0", HMYR_OPS: "1" },
     });
+    const 毫秒 = Date.now() - t0;
+    const 步 = (() => { const m = /ops=(\d+)/.exec(String(r.stderr || "")); return m ? Number(m[1]) : null; })();
     const 出 = String(r.stdout || "");
-    ok("跑得动", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 160));
+    ok("跑得动", r.status === 0,
+       String(r.status) + (步 === null ? "" : " · " + 步 + " 步") + " " + String(r.stderr).slice(0, 160));
     ok("字长那张表的 Kraft 和是 32768", /字长：.*Kraft 和 32768/.test(出), 出.split("\n").find((l) => l.startsWith("字长")) || "");
     ok("距长那张表的 Kraft 和是 32768", /距长：.*Kraft 和 32768/.test(出), 出.split("\n").find((l) => l.startsWith("距长")) || "");
     ok("码长码表那张表的 Kraft 和是 32768", /码长码表.*Kraft 和 32768/.test(出), 出.split("\n").find((l) => l.startsWith("码长码表")) || "");
     ok("最大深没有超过十五", !/最大深 1[6-9]|最大深 [2-9][0-9]/.test(出), "");
+    // 步数是这一套的基线：正常 1.38 亿步。某一次跑了二十一分钟而没有这一行，
+    // 那种时候说不出「是走错路还是每步变贵」—— 现在有得比了。
+    if (步 !== null) {
+      console.log("");
+      console.log("这一趟：" + 步 + " 步 / " + 毫秒 + " ms");
+    }
   }
   fs.rmSync(临, { recursive: true, force: true });
 }

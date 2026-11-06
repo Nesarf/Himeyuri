@@ -6226,6 +6226,12 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
   if (g_trace_on) trace_dump();
   if (g_failed) {
     报一行(g_fail_msg);
+    /* 失败那趟也要报步数：2026-11-06 全量里 deflate 跑了二十一分钟然后红了一项，
+     * 而当时手里只有「秒」这一个数 —— 缺的正是这一行。撞到步限时这里给出的是步限
+     * 附近的值，走错路时给的是真实的巨额步数，两者分得开。 */
+    if (getenv("HMYR_OPS")) {
+      fprintf(stderr, "ops=%ld\n", g_机->步数);
+    }
     return 1;
   }
   /* HMYR_OPS=1：把这一次跑掉的步数报出来。
