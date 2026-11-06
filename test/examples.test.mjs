@@ -32,25 +32,25 @@ const 跑 = (相对) => {
     cwd: ROOT, encoding: "utf8", timeout: 180000,
     env: { ...process.env, HMYR_STEPS: "2000000000" },
   });
-  const 行们 = String(r.stdout || "").trim().split("\n");
-  return { 码: r.status, 末行: (行们[行们.length - 1] || "").trim(), 错: String(r.stderr || "") };
+  const 行批 = String(r.stdout || "").trim().split("\n");
+  return { 码: r.status, 末行: (行批[行批.length - 1] || "").trim(), 错: String(r.stderr || "") };
 };
 
 const 目录 = path.join(ROOT, "examples");
-const 份们 = fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca")).sort();
+const 份簇 = fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca")).sort();
 
 console.log("一、examples/ 下有一批示例");
-ok("至少八份", 份们.length >= 8, String(份们.length) + " 份");
+ok("至少八份", 份簇.length >= 8, String(份簇.length) + " 份");
 
 console.log("二、每一份都跑得通");
 {
-  const 坏们 = [];
-  for (const f of 份们) {
+  const 坏例 = [];
+  for (const f of 份簇) {
     const r = 跑(path.join("examples", f));
-    if (r.码 !== 0) 坏们.push(f + "（退出 " + r.码 + "：" + (r.末行 || r.错.split("\n")[0] || "").slice(0, 60) + "）");
+    if (r.码 !== 0) 坏例.push(f + "（退出 " + r.码 + "：" + (r.末行 || r.错.split("\n")[0] || "").slice(0, 60) + "）");
   }
   // 判据不写死份数：目录会长大，而写死的数目一改就红，红的是数目不是坏的示例。
-  ok("这一批全过（" + 份们.length + " 份）", 坏们.length === 0, 坏们.join(" · "));
+  ok("这一批全过（" + 份簇.length + " 份）", 坏例.length === 0, 坏例.join(" · "));
 }
 
 console.log("三、跑不动的会被认出来");

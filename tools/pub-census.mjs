@@ -9,15 +9,15 @@
 import path from "node:path";
 import { loadUnit } from "../src/loader.mjs";
 
-const 入口们 = process.argv.slice(2);
-if (入口们.length === 0) {
+const 入口册 = process.argv.slice(2);
+if (入口册.length === 0) {
   console.error("用法：node tools/pub-census.mjs <入口文件> [...]");
   process.exit(2);
 }
 
 const 分文件 = new Map();
 let 总 = 0;
-for (const 入口 of 入口们) {
+for (const 入口 of 入口册) {
   const 单 = loadUnit(path.resolve(入口));
   for (const w of 单.diagnostics.warnings) {
     if (w.code !== "HMYR-載-006") continue;

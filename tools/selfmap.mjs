@@ -16,12 +16,12 @@ const 表路 = path.join(ROOT, "design/SELF.txt");
 // 表里的每一行：两格以上的空格之后是行数，再两格之后是职责。
 export function 读表() {
   const 文 = fs.readFileSync(表路, "utf8");
-  const 行们 = [];
+  const 行批 = [];
   for (const l of 文.split("\n")) {
     const m = l.match(/^ {2}(\S+\.hmoca) +(\d+) +(.*)$/);
-    if (m) 行们.push({ 文件: m[1], 行数: Number(m[2]), 职责: m[3].trim() });
+    if (m) 行批.push({ 文件: m[1], 行数: Number(m[2]), 职责: m[3].trim() });
   }
-  return 行们;
+  return 行批;
 }
 
 export function 实际的() {

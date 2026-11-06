@@ -117,13 +117,13 @@ console.log("二、六条真实路径：三台执行路径给同一个答案");
           encoding: "utf8", timeout: 600000, cwd: ROOT,
           env: { ...process.env, HMYR_STEPS: "2000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
         });
-        const 行们 = String(r.stdout || "").split("\n").filter((x) => x !== "");
-        const 末 = 行们.length ? 行们[行们.length - 1] : "";
+        const 行批 = String(r.stdout || "").split("\n").filter((x) => x !== "");
+        const 末 = 行批.length ? 行批[行批.length - 1] : "";
         // 探针最后一行是它自己说的退出码；再前面的行才是客人打出来的。
         const m = 末.match(/^命令行入口 跑完，值 (-?\d+)$/);
         return {
           码: m ? Number(m[1]) : -1,
-          出: 行们.slice(0, -1).join("\n").trim(),
+          出: 行批.slice(0, -1).join("\n").trim(),
           错: String(r.stderr || "").trim(),
         };
       };
@@ -149,13 +149,13 @@ console.log("二、六条真实路径：三台执行路径给同一个答案");
     return { 码, 出: 出.w.trim(), 错: 出.e.trim() };
   };
 
-  const 例们 = [
+  const 例册 = [
     ["hello", path.join(ROOT, "examples/hello.hmoca"), "5"],
     ["while 与赋值", path.join(临, "w.hmoca"), "3"],
     ["记录", path.join(临, "r.hmoca"), "1"],
     ["import 一件库", path.join(临, "mod/main.hmoca"), "42"],
   ];
-  for (const [名, 目标, 应] of 例们) {
+  for (const [名, 目标, 应] of 例册) {
     const 小 = 跑(目标, false), 大 = 跑(目标, true);
     const 两台对 = 小.码 === 大.码 && 小.出 === 大.出 && 大.出 === 应;
     if (!第四台) {

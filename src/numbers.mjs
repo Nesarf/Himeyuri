@@ -44,8 +44,8 @@ export const 解析 = (文, 进制 = 0) => {
     }
     return Number(值);
   }
-  const 位们 = 十进.解析(净);
-  return 位们 === null ? NaN : 由位(位们);
+  const 位簇 = 十进.解析(净);
+  return 位簇 === null ? NaN : 由位(位簇);
 };
 
 const 数字值 = (ch) => {

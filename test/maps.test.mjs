@@ -93,10 +93,10 @@ ok("conformance/maps.hmoca 跑得动", 实.码 === 0, 实.错.slice(0, 160));
 console.log("二、每一项都与 Map/Set 相同");
 {
   const 应 = 期望();
-  const 名们 = Object.keys(应);
-  ok("两边的项数相同", Object.keys(实.表).length === 名们.length,
-    Object.keys(实.表).length + " 对 " + 名们.length);
-  for (const 名 of 名们) {
+  const 名册 = Object.keys(应);
+  ok("两边的项数相同", Object.keys(实.表).length === 名册.length,
+    Object.keys(实.表).length + " 对 " + 名册.length);
+  for (const 名 of 名册) {
     ok(名 + " = " + 应[名], 实.表[名] === 应[名], "这边 " + (实.表[名] === undefined ? "没打出来" : 实.表[名]));
   }
 }

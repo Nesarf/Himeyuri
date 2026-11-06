@@ -40,20 +40,20 @@ console.log("一、探针跑得动");
 const r = 跑();
 ok("conformance/time.hmoca 编得动、跑得动", r.status === 0, String(r.stderr || "").slice(0, 200));
 
-const 行们 = String(r.stdout || "").trim().split(/\r?\n/);
-ok("打出十二行加一行拒绝", 行们.length === 样本.length + 1, String(行们.length));
+const 行批 = String(r.stdout || "").trim().split(/\r?\n/);
+ok("打出十二行加一行拒绝", 行批.length === 样本.length + 1, String(行批.length));
 
 console.log("二、每一行与 Date 相同");
 for (let i = 0; i < 样本.length; i++) {
   const ms = 样本[i];
   const d = new Date(ms);
   const 应 = [d.toISOString(), String(d.getUTCDay()), String(ms), String(ms)].join("|");
-  ok(ms + " → " + d.toISOString(), 行们[i] === 应, "这边 " + 行们[i]);
+  ok(ms + " → " + d.toISOString(), 行批[i] === 应, "这边 " + 行批[i]);
 }
 
 console.log("三、认不出的串要被拒绝，而不是猜一个日子");
 {
-  const 末 = 行们[行们.length - 1];
+  const 末 = 行批[行批.length - 1];
   ok("坏串被拒绝", 末 === "坏串被拒绝", 末);
 }
 

@@ -279,9 +279,9 @@ if (process.platform !== "linux") {
   }
 
   const 屏们 = spawnSync("python3", ["deps/surface/xprobe.py", "--screens"], { cwd: ROOT, encoding: "utf8", timeout: 60000 });
-  const 行们 = String(屏们.stdout || "").trim().split("\n").filter((l) => l.startsWith("monitor:"));
-  ok("Xinerama 至少答一个显示器", 行们.length >= 1, String(屏们.status) + " " + String(屏们.stderr || "").slice(0, 120));
-  ok("每个显示器都报得出位置与尺寸", 行们.every((l) => /monitor:\d+ -?\d+,-?\d+ \d+x\d+/.test(l)), 行们.join(" | ").slice(0, 160));
+  const 行批 = String(屏们.stdout || "").trim().split("\n").filter((l) => l.startsWith("monitor:"));
+  ok("Xinerama 至少答一个显示器", 行批.length >= 1, String(屏们.status) + " " + String(屏们.stderr || "").slice(0, 120));
+  ok("每个显示器都报得出位置与尺寸", 行批.every((l) => /monitor:\d+ -?\d+,-?\d+ \d+x\d+/.test(l)), 行批.join(" | ").slice(0, 160));
 }
 
 console.log("deps/surface 下的 .ps1 只许 ASCII —— 这是 powershell.exe 5.1 的代码页，不是洁癖");

@@ -33,14 +33,14 @@ const 白名单 = {
 };
 
 const 目录 = path.join(ROOT, "self");
-const 份们 = fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca") && !f.includes("tmp")).sort();
+const 份簇 = fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca") && !f.includes("tmp")).sort();
 
 // 定义：`函数 X(` 或 `公开 函数 X(`
 const 定义们 = [];
-for (const f of 份们) {
-  const 行们 = fs.readFileSync(path.join(目录, f), "utf8").split("\n");
-  for (let i = 0; i < 行们.length; i++) {
-    const m = /^(?:公开\s+)?函数\s+([^\s(]+)\(/.exec(行们[i]);
+for (const f of 份簇) {
+  const 行批 = fs.readFileSync(path.join(目录, f), "utf8").split("\n");
+  for (let i = 0; i < 行批.length; i++) {
+    const m = /^(?:公开\s+)?函数\s+([^\s(]+)\(/.exec(行批[i]);
     if (m) 定义们.push({ 名: m[1], 文件: f, 行: i + 1 });
   }
 }
@@ -65,7 +65,7 @@ console.log("一、扫出从没被调用的函数");
 // 先把 self/ 的每一行读进内存：753 个定义逐个去读全部文件是 O(n^2) 次磁盘读，
 // 第一版这样跑一次七十八秒。读一遍再扫，同一件事一秒。
 const 行们全 = [];
-for (const f of 份们) {
+for (const f of 份簇) {
   for (const l of fs.readFileSync(path.join(目录, f), "utf8").split("\n")) 行们全.push(l);
 }
 const 死们 = [];
@@ -108,11 +108,11 @@ console.log("三、判据自己要被验一次");
     "  返回 有人用(1)",
     "}",
   ].join("\n");
-  const 名们 = [...假.matchAll(/^(?:公开\s+)?函数\s+([^\s(]+)\(/gm)].map((m) => m[1]);
-  const 判 = 名们.filter((n) => {
-    const 行们 = 假.split("\n");
+  const 名册 = [...假.matchAll(/^(?:公开\s+)?函数\s+([^\s(]+)\(/gm)].map((m) => m[1]);
+  const 判 = 名册.filter((n) => {
+    const 行批 = 假.split("\n");
     let 用 = 0;
-    for (const l of 行们) {
+    for (const l of 行批) {
       if (new RegExp("^(?:公开\\s+)?函数\\s+" + n + "\\(").test(l)) continue;
       if (l.includes(n + "(")) 用++;
     }

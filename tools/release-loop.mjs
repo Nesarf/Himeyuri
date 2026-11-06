@@ -50,7 +50,7 @@ function 读包(包) {
   if (尾位 < 0) throw new Error("找不到尾记录，这不像一个 zip");
   const 条数 = 包.readUInt16LE(尾位 + 10);
   const 目录偏移 = 包.readUInt32LE(尾位 + 16);
-  const 项们 = [];
+  const 项册 = [];
   let p = 目录偏移;
   for (let k = 0; k < 条数; k++) {
     if (!(包[p] === 0x50 && 包[p + 1] === 0x4b && 包[p + 2] === 1 && 包[p + 3] === 2)) {
@@ -66,10 +66,10 @@ function 读包(包) {
     const 本名长 = 包.readUInt16LE(本地 + 26);
     const 本额长 = 包.readUInt16LE(本地 + 28);
     const 起 = 本地 + 30 + 本名长 + 本额长;
-    项们.push({ 名, 方法, 数据: 包.subarray(起, 起 + 压缩长) });
+    项册.push({ 名, 方法, 数据: 包.subarray(起, 起 + 压缩长) });
     p += 46 + 名长 + 额长 + 注长;
   }
-  return { 条数, 项们 };
+  return { 条数, 项册 };
 }
 
 try {
@@ -84,13 +84,13 @@ try {
 
   console.log("二、把包解出来");
   const 包 = fs.readFileSync(包路);
-  const { 条数, 项们 } = 读包(包);
-  ok("成员数与尾记录一致", 项们.length === 条数, 项们.length + " / " + 条数);
+  const { 条数, 项册 } = 读包(包);
+  ok("成员数与尾记录一致", 项册.length === 条数, 项册.length + " / " + 条数);
   ok("成员数超过两百", 条数 > 200, String(条数));
-  ok("全部成员都是 stored", 项们.every((项) => 项.方法 === 0));
+  ok("全部成员都是 stored", 项册.every((项) => 项.方法 === 0));
   fs.mkdirSync(解, { recursive: true });
   let 解不开 = 0;
-  for (const 项 of 项们) {
+  for (const 项 of 项册) {
     if (项.名.endsWith("/")) continue;
     const 路 = path.join(解, 项.名);
     fs.mkdirSync(path.dirname(路), { recursive: true });
@@ -100,7 +100,7 @@ try {
     fs.readdirSync(解).length > 0 && 解不开 === 0, String(解不开));
 
   console.log("三、包内外是同一批字节");
-  const 内清单项 = 项们.find((项) => 项.名 === "manifest.json");
+  const 内清单项 = 项册.find((项) => 项.名 === "manifest.json");
   ok("包里带着 manifest.json", !!内清单项);
   if (内清单项) {
     const 外 = fs.readFileSync(外清单);
@@ -111,7 +111,7 @@ try {
 
   console.log("四、每个成员与仓库里的源相同");
   let 同 = 0, 异们 = [];
-  for (const 项 of 项们) {
+  for (const 项 of 项册) {
     if (项.名 === "manifest.json") continue; // 这一份没有仓库里的对应物，上一节单独比过
     const 源 = path.join(ROOT, 项.名);
     if (!fs.existsSync(源)) { 异们.push(项.名 + "（仓库里没有）"); continue; }

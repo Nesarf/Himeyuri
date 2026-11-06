@@ -23,8 +23,8 @@ ok("self/release.hmoca 在", fs.existsSync(源路));
 const 层 = loadUnit(源路);
 ok("加载没有诊断", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
 if (层.ok) {
-  const 份们 = 层.order.map((f) => 编译模块(层.modules.get(f)));
-  const 程序 = 合并程序(份们, 份们[份们.length - 1]);
+  const 份簇 = 层.order.map((f) => 编译模块(层.modules.get(f)));
+  const 程序 = 合并程序(份簇, 份簇[份簇.length - 1]);
   ok("编得过（函数表非空）", 程序.函数族.size > 20, String(程序.函数族.size));
   ok("入口函数叫 发布（main 与 打包 都已有主）", 程序.函数族.has("发布") && 程序.函数族.has("main"));
 }

@@ -21,24 +21,24 @@ const ok = (label, condition, detail = "") => {
 };
 
 const 目录 = path.join(ROOT, "probes");
-const 份们 = fs.existsSync(目录)
+const 份簇 = fs.existsSync(目录)
   ? fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca")).sort()
   : [];
 
 console.log("一、probes/ 下有一批探针");
-ok("至少十份", 份们.length >= 10, String(份们.length) + " 份");
+ok("至少十份", 份簇.length >= 10, String(份簇.length) + " 份");
 
 console.log("二、每一份都编得动（不执行）");
 {
-  const 坏们 = [];
-  for (const f of 份们) {
+  const 坏例 = [];
+  for (const f of 份簇) {
     const u = loadUnit(path.join(目录, f));
     if (!u.ok) {
       const 码 = u.diagnostics.errors.slice(0, 1).map((e) => e.code).join(",");
-      坏们.push(f + "(" + 码 + ")");
+      坏例.push(f + "(" + 码 + ")");
     }
   }
-  ok("这一批都编得动（" + 份们.length + " 份）", 坏们.length === 0, 坏们.join(" · "));
+  ok("这一批都编得动（" + 份簇.length + " 份）", 坏例.length === 0, 坏例.join(" · "));
 }
 
 console.log("三、examples/ 里不再有 probe-*（搬干净了）");

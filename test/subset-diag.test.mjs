@@ -34,7 +34,7 @@ const 新诊断 = () => ({
 const 首条解析错 = (d) => d.items.find((i) => /HMYR-形-\d{3}/.test(i.code));
 const 示 = (x) => x ? x.code + " 行 " + x.line + " 列 " + x.column : "（没有）";
 
-const 例们 = [
+const 例册 = [
   ["顶层一个 let", "let a = \n"],
   ["return 后面是坏 token", "fn f() {\n  return * 2\n}\n"],
   ["参数表没关", "fn f(a: Int {\n  return 1\n}\n"],
@@ -46,7 +46,7 @@ const 例们 = [
 ];
 
 console.log("一、八种语法错：同一个码、同一个位置");
-for (const [名, 源] of 例们) {
+for (const [名, 源] of 例册) {
   const 主D = 新诊断();
   parse(lex(源, { diagnostics: 主D }).tokens, { diagnostics: 主D });
   const 主 = 首条解析错(主D);
@@ -97,7 +97,7 @@ console.log("五、那一张对照表自己也要能核");
   const 应 = ["HMYR-形-003@1:1", "HMYR-形-004@2:10", "HMYR-形-001@1:13", "HMYR-形-002@2:13",
     "HMYR-形-001@3:1", "HMYR-形-001@2:14", "HMYR-形-001@2:9", "HMYR-形-001@1:8"];
   const 实 = [];
-  for (const [, 源] of 例们) {
+  for (const [, 源] of 例册) {
     const d = 新诊断();
     parse(lex(源, { diagnostics: d }).tokens, { diagnostics: d });
     const 首 = 首条解析错(d);

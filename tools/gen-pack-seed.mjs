@@ -79,14 +79,14 @@ if (跑.status !== 0 || !fs.existsSync(主体)) {
   // 于是头生成不出来；而头生成不出来，机器就永远是旧的。JS 这一侧不参与自举，
   // 所以它能把这一个环剪断。头写出来之后，下一轮自然走第一条路。
   const 原始 = fs.readFileSync(种子);
-  const 段们 = [];
+  const 段批 = [];
   for (let i = 0; i < 原始.length; i += 12) {
     const 一行 = [];
     for (let k = i; k < Math.min(i + 12, 原始.length); k++) 一行.push("0x" + 原始[k].toString(16).padStart(2, "0"));
-    段们.push("  " + 一行.join(", ") + ", ");
+    段批.push("  " + 一行.join(", ") + ", ");
   }
   fs.writeFileSync(主体, "/* 由 tools/gen-pack-seed.mjs 直接编出：" + 原始.length + " 字节 */\n"
-    + "static const unsigned char " + 符号 + "[] = {\n" + 段们.join("\n") + "\n};\n"
+    + "static const unsigned char " + 符号 + "[] = {\n" + 段批.join("\n") + "\n};\n"
     + "static const size_t " + 符号 + "_len = " + 原始.length + ";\n", "utf8");
   跑 = { status: 0, stderr: "" };
   用了退路 = "JS 直接编数组（救援路）";

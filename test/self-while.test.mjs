@@ -46,14 +46,14 @@ console.log("一、解析层认 while");
 
 console.log("二、跑得对，而且与宿主一样");
 {
-  const 例们 = [
+  const 例册 = [
     ["累加到五", 写(["fn main() -> Int {", "  var i = 0", "  var s = 0", "  while i < 5 {", "    s = s + i", "    i = i + 1", "  }", "  return s", "}"]), 10],
     ["条件一开始就假", 写(["fn main() -> Int {", "  var i = 99", "  var s = 7", "  while i < 5 {", "    s = 0", "  }", "  return s", "}"]), 7],
     ["两个变量一起改", 写(["fn main() -> Int {", "  var i = 0", "  var s = 1", "  while i < 4 {", "    s = s * 2", "    i = i + 1", "  }", "  return s", "}"]), 16],
     ["while 里套 if", 写(["fn main() -> Int {", "  var i = 0", "  var s = 0", "  while i < 10 {", "    if i < 3 {", "      s = s + 1", "    }", "    i = i + 1", "  }", "  return s", "}"]), 3],
     ["while 里调函数", 写(["fn sq(x: Int) -> Int {", "  return x * x", "}", "fn main() -> Int {", "  var i = 0", "  var s = 0", "  while i < 4 {", "    s = s + sq(i)", "    i = i + 1", "  }", "  return s", "}"]), 14],
   ];
-  for (const [标签, 源, 答] of 例们) {
+  for (const [标签, 源, 答] of 例册) {
     const 甲 = 宿主的(源);
     const 乙 = 那边的(源);
     ok(标签.padEnd(12) + " → 两边都是 " + 答, 甲 === 答 && 乙.value === 答, "宿主 " + 甲 + " · 自举 " + JSON.stringify(乙).slice(0, 80));

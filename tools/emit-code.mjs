@@ -28,22 +28,22 @@ if (!unit.ok) {
 {
   const 声明们 = [];
   for (const 文件 of unit.order) for (const d of unit.modules.get(文件).decls || []) 声明们.push(d);
-  const 问题们 = 核对返回类型(声明们);
-  if (问题们.length > 0) {
-    for (const p of 问题们.slice(0, 8)) console.error((p.行 ? "第 " + p.行 + " 行：" : "") + p.话);
-    if (问题们.length > 8) console.error("……还有 " + (问题们.length - 8) + " 处");
+  const 问题册 = 核对返回类型(声明们);
+  if (问题册.length > 0) {
+    for (const p of 问题册.slice(0, 8)) console.error((p.行 ? "第 " + p.行 + " 行：" : "") + p.话);
+    if (问题册.length > 8) console.error("……还有 " + (问题册.length - 8) + " 处");
     process.exit(1);
   }
 }
-const 份们 = unit.order.map((文件) => 编译模块(unit.modules.get(文件)));
+const 份簇 = unit.order.map((文件) => 编译模块(unit.modules.get(文件)));
 // 入口文件的 main 覆盖别人那一份 —— 这条规矩现在在 合并程序 里，不在这里。
 const 入口名 = unit.order[unit.order.length - 1];
-const 入口份 = 份们[份们.length - 1];
+const 入口份 = 份簇[份簇.length - 1];
 if (!入口份.函数族.get("main")) {
   console.error("入口文件里没有 main：" + 入口名);
   process.exit(1);
 }
-const 程序 = 合并程序(份们, 入口份);
+const 程序 = 合并程序(份簇, 入口份);
 const 字节 = 写程序(程序);
 fs.writeFileSync(path.resolve(输出), 字节);
 const 指令数 = [...程序.函数族.values()].reduce((n, f) => n + f.码.length, 0);

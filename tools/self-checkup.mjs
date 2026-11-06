@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const 段们 = [
+const 段批 = [
   ["解释    self-vm-eval", "tools/self-vm-eval.mjs", "自举的解释器跑在虚拟机上，四段程序与宿主给出同样的答案"],
   ["造字节  self-vm-compile", "tools/self-vm-compile.mjs", "自举的编译与打包跑在虚拟机上，五段字节与 JS 那位一致，并验一次真实签名"],
   ["验签    sign", "test/sign.test.mjs", "真实发布的签名验得过，改一个字节验不过"],
@@ -21,7 +21,7 @@ console.log("");
 let 总过 = 0;
 let 总败 = 0;
 const 行批 = [];
-for (const [名, 脚本, 说明] of 段们) {
+for (const [名, 脚本, 说明] of 段批) {
   const t0 = Date.now();
   const r = spawnSync(process.execPath, [path.join(ROOT, 脚本)], { cwd: ROOT, encoding: "utf8", timeout: 600000 });
   const 用时 = ((Date.now() - t0) / 1000).toFixed(1);

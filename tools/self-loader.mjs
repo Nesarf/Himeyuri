@@ -35,14 +35,14 @@ const 根目录 = 只留源码(fs.readdirSync(ROOT)).sort();
 const 自助名单 = 全部
   ? 只留源码(fs.readdirSync(path.join(ROOT, "self"))).sort()
   : ["lex.hmoca", "chain.hmoca", "stmt.hmoca", "body.hmoca", "eval.hmoca", "run.hmoca"];
-const 文件们 = [
+const 文件册 = [
   ...根目录.map((n) => path.join(ROOT, n)),
   ...自助名单.map((n) => path.join(ROOT, "self", n)),
 ];
 
 let 宿主认 = 0, 自己认 = 0, 一致 = 0;
 const 分歧 = [];
-for (const 路 of 文件们) {
+for (const 路 of 文件册) {
   const 源 = fs.readFileSync(路, "utf8");
   let 自己 = "";
   try { 自己 = String(只解析(源)).trim(); } catch (e) { 自己 = "抛：" + String(e && e.message).slice(0, 40); }
@@ -56,7 +56,7 @@ for (const 路 of 文件们) {
   else 分歧.push(path.relative(ROOT, 路).padEnd(28) + " self=" + 自己.slice(0, 40) + "  宿主=" + 宿主.slice(0, 40));
 }
 
-console.log("样本 " + 文件们.length + " 个文件（根目录 " + 根目录.length + " + self/ " + 自助名单.length + "）");
+console.log("样本 " + 文件册.length + " 个文件（根目录 " + 根目录.length + " + self/ " + 自助名单.length + "）");
 console.log("宿主认得 " + 宿主认 + " · self 认得 " + 自己认 + " · 判据一致 " + 一致);
 if (分歧.length) {
   console.log("");

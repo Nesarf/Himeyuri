@@ -73,7 +73,7 @@ const 检查 = 读("tools/check-all.mjs");
 const 套件们 = Array.from(检查.matchAll(/\["([a-z0-9]+)", "([^"]+)"/g)).map((m) => ({ name: m[1], path: m[2], sha256: 哈(m[2]) }));
 
 // 四、工具与文档
-const 工具们 = fs.readdirSync(path.join(ROOT, "tools")).filter((n) => n.endsWith(".mjs")).sort()
+const 工具册 = fs.readdirSync(path.join(ROOT, "tools")).filter((n) => n.endsWith(".mjs")).sort()
   .map((n) => ({ name: n, sha256: 哈("tools/" + n) }));
 const 文档们 = fs.readdirSync(path.join(ROOT, "design")).filter((n) => n.endsWith(".txt")).sort()
   .map((n) => ({ name: n, sha256: 哈("design/" + n) }));
@@ -103,7 +103,7 @@ const 清单 = {
   },
   standardLibrary: 库,
   suites: 套件们,
-  tools: 工具们,
+  tools: 工具册,
   documents: 文档们,
 };
 

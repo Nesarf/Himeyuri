@@ -199,9 +199,9 @@ export const 内置表 = {
   } },
   // 字节元组转文本：按 UTF-8 解码。read_stdin_bytes 交回字节，而请求体是 UTF-8。
   bytes_to_text: { 做: (vm, a) => {
-    const 项们 = a[0].items;
+    const 项册 = a[0].items;
     const 字节串 = [];
-    for (let i = 0; i < 项们.length; i++) 字节串.push(数.下整(项们[i].num) & 0xFF);
+    for (let i = 0; i < 项册.length; i++) 字节串.push(数.下整(项册[i].num) & 0xFF);
     return vm.文.由宿主(Buffer.from(字节串).toString("utf8"));
   } },
   // 从标准输入读 N 个字节：交回 {字节串, 结束}。结束表示没读满（EOF 先到了）。
@@ -222,16 +222,16 @@ export const 内置表 = {
   } },
   // 从标准输入读一行：交回 {行, 结束}。结束是 EOF，与空行是两件事。
   read_stdin_line: { 做: (vm) => {
-    const 段们 = [];
+    const 段批 = [];
     let 结束 = false;
     for (;;) {
       let b;
       try { b = vm.cap.terminal.readSync(1); } catch { b = null; }
       if (!b || b.length === 0) { 结束 = true; break; }
       if (b[0] === 10) break;
-      段们.push(b);
+      段批.push(b);
     }
-    let s = Buffer.concat(段们).toString("utf8");
+    let s = Buffer.concat(段批).toString("utf8");
     // 去尾 CR 不用宿主方法：这一份里有断言盯着「不借字符串的方法」。
     if (s.length > 0 && s[s.length - 1] === "\r") {
       let t = "";

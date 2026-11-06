@@ -92,26 +92,26 @@ const 跑 = () => spawnSync(process.execPath,
 console.log("一、探针跑得动");
 const r = 跑();
 ok("conformance/regex.hmoca 编得动、跑得动", r.status === 0, String(r.stderr || "").slice(0, 200));
-const 行们 = String(r.stdout || "").trim().split(/\r?\n/);
-ok("打出 " + 样本.length + " 行加两行收尾", 行们.length === 样本.length + 2, String(行们.length));
+const 行批 = String(r.stdout || "").trim().split(/\r?\n/);
+ok("打出 " + 样本.length + " 行加两行收尾", 行批.length === 样本.length + 2, String(行批.length));
 
 console.log("二、每一行与 RegExp 相同（含每组的位置）");
 for (let i = 0; i < 样本.length; i++) {
   const [式, 文, 组数] = 样本[i];
   const 应 = 式 + "|" + 文 + "|" + 期望(式, 文, 组数);
-  ok(式 + " 对 " + 文 + " → " + 期望(式, 文, 组数), 行们[i] === 应, "这边 " + 行们[i]);
+  ok(式 + " 对 " + 文 + " → " + 期望(式, 文, 组数), 行批[i] === 应, "这边 " + 行批[i]);
 }
 
 console.log("三、认不出的模式要被拒绝");
 {
-  const 那行 = 行们[样本.length];
+  const 那行 = 行批[样本.length];
   ok("坏模式被拒绝", 那行 === "坏模式被拒绝", 那行);
 }
 
 console.log("四、全找给出每一个位置");
 {
   const 应 = [..."banana".matchAll(/a/g)].map((m) => m.index + "-" + (m.index + 1)).join(";");
-  const 那行 = 行们[样本.length + 1];
+  const 那行 = 行批[样本.length + 1];
   ok("全找=" + 应, 那行 === "全找=" + 应, 那行);
 }
 

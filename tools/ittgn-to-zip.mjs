@@ -35,7 +35,7 @@ if (!r.ok) { console.error(r.错); process.exit(1); }
 const 目录 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-ittgn-x-"));
 // 摊开那一层与启动器共用 src/ittgn.mjs 的 摊开：路径归一与跳出目录这两条规矩
 // 只该写一遍，否则两个工具迟早会对「什么样的成员名算合法」给出不同答案。
-const 开 = 摊开(r.成员们, 目录);
+const 开 = 摊开(r.成员册, 目录);
 if (!开.ok) { console.error(开.错); process.exit(1); }
 
 const 入口 = 找入口(目录, 包路);
@@ -57,7 +57,7 @@ for (const 档 of ["hmsnp", "hmhsr"]) {
 // 容器基名要记，因为根目录那两个入口是按容器名命名的（演示.hmsnp），
 // 而 zip 自己可能叫别的（中.zip）—— 反方向只拿 zip 名去猜会找不到入口。
 // 它是明文，因为拿到包的人该能一眼看出这个包原本长什么样。
-const 行批 = ["1", 包名, 入口名, ...r.成员们.map((m) => m.名)];
+const 行批 = ["1", 包名, 入口名, ...r.成员册.map((m) => m.名)];
 fs.writeFileSync(path.join(目录, 成员表名), 行批.join("\n") + "\n", "utf8");
 
 // 压包按平台：Windows 用 Compress-Archive，别的平台用 src/zip-writer.mjs ——

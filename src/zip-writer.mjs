@@ -27,14 +27,14 @@ const 走目录 = (根) => {
 };
 
 export const 压目录 = (根, 出) => {
-  const 文件们 = 走目录(根);
+  const 文件册 = 走目录(根);
   const 部们 = [];
   const 中央们 = [];
   let 偏 = 0;
   // DOS 时间戳取 1980-01-01 00:00：zip 里没有「不知道」这一说，而固定值让
   // 同一份内容压两次得到同一串字节 —— 可复现比「看起来新」重要。
   const 时 = 0, 日 = 0x21;
-  for (const 相 of 文件们) {
+  for (const 相 of 文件册) {
     const 原 = fs.readFileSync(path.join(根, 相));
     const 压 = zlib.deflateRawSync(原);
     const 名 = Buffer.from(相, "utf8");
@@ -81,11 +81,11 @@ export const 压目录 = (根, 出) => {
   尾.writeUInt32LE(0x06054b50, 0);
   尾.writeUInt16LE(0, 4);
   尾.writeUInt16LE(0, 6);
-  尾.writeUInt16LE(文件们.length, 8);
-  尾.writeUInt16LE(文件们.length, 10);
+  尾.writeUInt16LE(文件册.length, 8);
+  尾.writeUInt16LE(文件册.length, 10);
   尾.writeUInt32LE(中央.length, 12);
   尾.writeUInt32LE(偏, 16);
   尾.writeUInt16LE(0, 20);
   fs.writeFileSync(出, Buffer.concat([...部们, 中央, 尾]));
-  return 文件们.length;
+  return 文件册.length;
 };

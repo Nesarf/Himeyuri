@@ -27,8 +27,8 @@ const 剥 = (文) => 文
   .replace(/'(?:[^'\\]|\\.)*'/g, "''")
   .replace(/`(?:[^`\\]|\\.)*`/g, "``");
 
-const 份们 = ["src/minimal-eval.mjs", "src/loader.mjs", "src/subset-lex.mjs", "src/subset-parse.mjs", "src/diagnostics.mjs"];
-const 源们 = 份们.map((相对) => 剥(fs.readFileSync(path.join(ROOT, 相对), "utf8")));
+const 份簇 = ["src/minimal-eval.mjs", "src/loader.mjs", "src/subset-lex.mjs", "src/subset-parse.mjs", "src/diagnostics.mjs"];
+const 源们 = 份簇.map((相对) => 剥(fs.readFileSync(path.join(ROOT, 相对), "utf8")));
 const 全部 = 源们.join("\n");
 
 const 计 = (词) => (全部.match(new RegExp("\\b" + 词 + "\\b", "g")) || []).length;
@@ -140,7 +140,7 @@ console.log("三、跑几条真实路径时，那十项全局没有一项是虚�
       for (const 条目 of JSON.parse(fs.readFileSync(path.join(临时, 文件), "utf8")).result || []) {
         const m = /^file:\/\/\/(.+)$/.exec(条目.url);
         if (!m) continue;
-        const 相对 = 份们.find((x) => m[1].endsWith(x));
+        const 相对 = 份簇.find((x) => m[1].endsWith(x));
         if (!相对) continue;
         const 源文 = fs.readFileSync(path.join(ROOT, 相对), "utf8");
         for (const 函 of 条目.functions || []) {

@@ -6,7 +6,7 @@
 //
 // 它不证明「工具没用」，只证明「跑程序不需要它们」。
 // 两者不是一回事，而这一套说的只是后者。
-import { 工具们, 闭包, 入口们 } from "../tools/runtime-path.mjs";
+import { 工具册, 闭包, 入口册 } from "../tools/runtime-path.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,15 +20,15 @@ const ok = (label, condition, detail = "") => {
 
 console.log("一、工具清单里的文件都在");
 {
-  const 缺 = [...工具们].filter((f) => !fs.existsSync(path.join(ROOT, f)));
-  ok("清单里 " + 工具们.size + " 个文件都存在", 缺.length === 0, 缺.join(" "));
+  const 缺 = [...工具册].filter((f) => !fs.existsSync(path.join(ROOT, f)));
+  ok("清单里 " + 工具册.size + " 个文件都存在", 缺.length === 0, 缺.join(" "));
 }
 
 console.log("二、五个入口的闭包里没有工具模块");
 {
-  for (const 入口 of 入口们) {
+  for (const 入口 of 入口册) {
     const 见 = 闭包(入口);
-    const 越界 = [...见].filter((f) => 工具们.has(f)).sort();
+    const 越界 = [...见].filter((f) => 工具册.has(f)).sort();
     ok(入口 + " 的闭包（" + 见.size + " 个文件）干净", 越界.length === 0, 越界.join(" "));
   }
 }

@@ -23,8 +23,8 @@ ok("self/manifest.hmoca 在", fs.existsSync(源路));
 const 层 = loadUnit(源路);
 ok("加载没有诊断", 层.ok, JSON.stringify((层.diagnostics.errors || []).slice(0, 1).map((e) => e.code)));
 if (层.ok) {
-  const 份们 = 层.order.map((f) => 编译模块(层.modules.get(f)));
-  const 程序 = 合并程序(份们, 份们[份们.length - 1]);
+  const 份簇 = 层.order.map((f) => 编译模块(层.modules.get(f)));
+  const 程序 = 合并程序(份簇, 份簇[份簇.length - 1]);
   ok("编得过（函数表非空）", 程序.函数族.size > 10, String(程序.函数族.size));
   // 造项的那三个函数各自读写文件，必须自己声明 file 效果 —— 这一条错在
   // 「解释器能跑、字节码那台报 HMYR-內-001」的分界上，而且只在真跑的时候现形。

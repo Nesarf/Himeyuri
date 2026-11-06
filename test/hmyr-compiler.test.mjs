@@ -60,7 +60,7 @@ const 编 = (() => {
         }),
       });
     }
-    return { 程序: { 函数族, 全局们: [] } };
+    return { 程序: { 函数族, 全局册: [] } };
   };
 })();
 
@@ -82,7 +82,7 @@ const 跑 = (程序) => {
 
 console.log("一、两位编译者对同一个程序交回同样的答案");
 {
-  const 例们 = [
+  const 例册 = [
     ["直接返回一个数", "fn main() -> Int { return 7 }\n", 7],
     ["两个数相加", "fn main() -> Int { return 20 + 22 }\n", 42],
     ["先乘后加", "fn main() -> Int { return 2 + 3 * 4 }\n", 14],
@@ -102,7 +102,7 @@ console.log("一、两位编译者对同一个程序交回同样的答案");
     ["或：一边真", "fn main() -> Int {\n  if 1 == 2 || 3 == 3 {\n    return 1\n  }\n  return 0\n}\n", 1],
     ["或：两边都假", "fn main() -> Int {\n  if 1 == 2 || 3 == 4 {\n    return 1\n  }\n  return 0\n}\n", 0],
     ["三元短路也算得对", "fn main() -> Int {\n  let x = 1 == 2 && 3 == 3\n  if x {\n    return 1\n  }\n  return 0\n}\n", 0],
-  ];  for (const [标, 源码, 期望] of 例们) {
+  ];  for (const [标, 源码, 期望] of 例册) {
     const a = 编(源码);
     const b = 编JS(源码);
     if (a.错) { ok(标, false, "HMYR 编译器： " + a.错); continue; }

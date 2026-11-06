@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // 「工具」这一类：它们只服务于人在开发时的动作，不参与跑程序。
-export const 工具们 = new Set([
+export const 工具册 = new Set([
   "src/format.mjs",
   "src/lsp.mjs",
   "src/embed.mjs",
@@ -72,16 +72,16 @@ function 闭包(入口) {
 export { 闭包 };
 
 // 五个入口：node 启动器（它把目标交给自举层）与三份执行器，外加一个只当命令用的入口。
-export const 入口们 = ["bin/hmyr.mjs", "bin/run-eval.mjs", "src/eval.mjs", "src/minimal-eval.mjs", "src/vm.mjs"];
+export const 入口册 = ["bin/hmyr.mjs", "bin/run-eval.mjs", "src/eval.mjs", "src/minimal-eval.mjs", "src/vm.mjs"];
 
 // 被别的文件 import（测试）时不出声、不退出；只有直接运行时才是命令。
 const 直接运行 = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (直接运行) {
   let 越界总数 = 0;
   const 行批 = [];
-  for (const 入口 of 入口们) {
+  for (const 入口 of 入口册) {
     const 见 = 闭包(入口);
-    const 越界 = [...见].filter((f) => 工具们.has(f)).sort();
+    const 越界 = [...见].filter((f) => 工具册.has(f)).sort();
     越界总数 += 越界.length;
     行批.push(入口 + "：闭包 " + 见.size + " 个文件" + (越界.length ? "，碰到工具 " + 越界.join(" ") : "，一个工具都没碰"));
   }
@@ -92,5 +92,5 @@ if (直接运行) {
     process.exit(越界总数 === 0 ? 0 : 1);
   }
   for (const 行 of 行批) console.log(行);
-  console.log("工具模块 " + 工具们.size + " 个；越界 " + 越界总数 + " 处");
+  console.log("工具模块 " + 工具册.size + " 个；越界 " + 越界总数 + " 处");
 }

@@ -26,12 +26,12 @@ const ok = (label, condition, detail = "") => {
 // 而逐处看过的结论是六处：manifest 142 与 vm 612 是同一段逻辑被连带数进来的。
 // 粗筛偏多没关系，因为它守的是上限；逐处分类写在 design/ERRORS.txt 的第三节。
 const 数绕路 = (文) => {
-  const 行们 = 文.split("\n");
+  const 行批 = 文.split("\n");
   const 命中 = [];
-  for (let i = 0; i < 行们.length; i++) {
-    if (!行们[i].includes("file_exists(")) continue;
-    if (行们[i].includes('名 == "file_exists"')) continue;   // 内置表里的名字，不是调用
-    const 附近 = 行们.slice(i + 1, i + 5).join("\n") + 行们[i];
+  for (let i = 0; i < 行批.length; i++) {
+    if (!行批[i].includes("file_exists(")) continue;
+    if (行批[i].includes('名 == "file_exists"')) continue;   // 内置表里的名字，不是调用
+    const 附近 = 行批.slice(i + 1, i + 5).join("\n") + 行批[i];
     if (附近.includes("read_text(") || 附近.includes("read_bytes(")) 命中.push(i + 1);
   }
   return 命中;

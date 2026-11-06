@@ -21,8 +21,8 @@ const 索引路 = path.join(ROOT, "lib", "README.md");
 const 索文 = fs.readFileSync(索引路, "utf8");
 
 // 那一页上「- 名字.hmoca —— 说明 …… 判据：xxx 套件」的行。
-const 行们 = 索文.split("\n").filter((l) => /^- [A-Za-z0-9_-]+\.hmoca/.test(l));
-const 提到 = 行们.map((l) => /^- ([A-Za-z0-9_-]+)\.hmoca/.exec(l)[1]);
+const 行批 = 索文.split("\n").filter((l) => /^- [A-Za-z0-9_-]+\.hmoca/.test(l));
+const 提到 = 行批.map((l) => /^- ([A-Za-z0-9_-]+)\.hmoca/.exec(l)[1]);
 
 const 库们 = fs.readdirSync(path.join(ROOT, "lib"))
   .filter((f) => f.endsWith(".hmoca"))
@@ -48,7 +48,7 @@ console.log("三、每一行都写了判据，而那个套件真的在跑");
   const 套件们 = new Set([...全.matchAll(/^\s*\["([^"]+)",\s*"([^"]+)"/gm)].map((m) => m[1]));
   const 没写 = [];
   const 不存在 = [];
-  for (const 行 of 行们) {
+  for (const 行 of 行批) {
     const 名 = /^- ([A-Za-z0-9_-]+)\.hmoca/.exec(行)[1];
     const m = /判据：([A-Za-z0-9_-]+) 套件/.exec(行);
     if (!m) { 没写.push(名); continue; }

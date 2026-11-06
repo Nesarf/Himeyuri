@@ -166,9 +166,9 @@ const 内置 = {
   },
   // 字节元组转文本：按 UTF-8 解码。解码手写，理由同 read_stdin_line 那一条。
   bytes_to_text: (rt, a) => {
-    const 项们 = a[0];
+    const 项册 = a[0];
     const 字节串 = [];
-    for (let i = 0; i < 项们.length; i++) 字节串.push(Number(项们[i]) & 0xFF);
+    for (let i = 0; i < 项册.length; i++) 字节串.push(Number(项册[i]) & 0xFF);
     let s = "";
     let i = 0;
     while (i < 字节串.length) {

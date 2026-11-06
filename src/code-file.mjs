@@ -155,8 +155,8 @@ export const 写程序 = (程序) => {
       else if (形 === "value") w.值(指令.a);
     }
   }
-  w.u16(程序.全局们.length);
-  for (const 全 of 程序.全局们) { w.串(全.name); }
+  w.u16(程序.全局册.length);
+  for (const 全 of 程序.全局册) { w.串(全.name); }
   return w.取();
 };
 
@@ -205,7 +205,7 @@ export const 读程序 = (字节, 工厂) => {
     函数族.set(名, { 名, 参数量, 槽数, 效果, 码: 码列 });
   }
   const 全局数 = r.u16();
-  const 全局们 = [];
-  for (let i = 0; i < 全局数; i++) 全局们.push({ name: r.串() });
-  return { 函数族, 全局们 };
+  const 全局册 = [];
+  for (let i = 0; i < 全局数; i++) 全局册.push({ name: r.串() });
+  return { 函数族, 全局册 };
 };

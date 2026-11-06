@@ -158,14 +158,14 @@ console.log("五、整仓现有 .hmoca 零误报");
     }
     return 出;
   };
-  const 份们 = 收(ROOT).sort();
+  const 份簇 = 收(ROOT).sort();
   let 总数 = 0, 读不动 = 0;
-  for (const p of 份们) {
+  for (const p of 份簇) {
     let 出 = [];
     try { 出 = 查(fs.readFileSync(p, "utf8")); } catch { 读不动++; continue; }
     总数 += 出.length;
   }
-  ok(份们.length + " 份 .hmoca 零诊断", 总数 === 0, String(总数));
+  ok(份簇.length + " 份 .hmoca 零诊断", 总数 === 0, String(总数));
   ok("没有一份是读不动而跳过的", 读不动 === 0, String(读不动));
 }
 

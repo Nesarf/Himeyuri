@@ -169,7 +169,7 @@ const 收集返回 = (node, acc) => {
 export const 核对返回类型 = (声明们) => {
   const 声明表 = new Map();
   for (const d of 声明们) if (d.kind === "函数") 声明表.set(d.name, d);
-  const 问题们 = [];
+  const 问题册 = [];
   const 查调用形状 = (n) => {
     const 被 = 声明表.get(n.callee && n.callee.name);
     if (!被) return { k: "?" };
@@ -188,14 +188,14 @@ export const 核对返回类型 = (声明们) => {
       const 形 = 形状带调用(返.value);
       const 不合 = 核对(类型, 形);
       if (不合) {
-        问题们.push({
+        问题册.push({
           名: d.name,
           行: 返.line,
           话: "函数 " + d.name + " 声明返回 " + 形状名(类型) + "，" + 不合,
         });      }
     }
   }
-  return 问题们;
+  return 问题册;
 };
 
 // 一个函数编译出来的东西：指令、槽数、名字、参数个数、声明效果。
@@ -459,23 +459,23 @@ export const 顶层段名 = "__hmyr_top__";
 // 模块 → 一个程序：函数表 + 全局常量表 + 顶层指令（用来登记常量）。
 export const 编译模块 = (ast, options = {}) => {
   const 函数族 = new Map();   // 名 -> 编译结果
-  const 全局们 = [];          // 常量声明（Const）
+  const 全局册 = [];          // 常量声明（Const）
   for (const decl of ast.decls) {
     if (decl.kind === "函数") 函数族.set(decl.name, 编译函数(decl, options.contracts === true));
     // Const 与 VarTop 都进上一级那张表：它们的初值都在顶层段里算。
     // 两者的差别只在「函数里能不能写它」—— 而那一半由 Ident / Assign 两支决定，
     // 不由这里决定。
-    else if (decl.kind === "常量" || decl.kind === "顶层变") 全局们.push(decl);
+    else if (decl.kind === "常量" || decl.kind === "顶层变") 全局册.push(decl);
     else throw new 编译错("这一份只认 fn 与 const 声明：" + decl.kind);
   }
   // 有常量就有一段初始化。它走的是普通函数那条路（编译、装栈、RET 交回 nil），
   // 这样两台机器不必为一个「顶层段」各长一套机制 —— 少一套机制就少一处分叉。
-  if (全局们.length) {
-    函数族.set(顶层段名, 编译函数({ name: 顶层段名, params: [], body: null, 顶层常量: 全局们 }));
+  if (全局册.length) {
+    函数族.set(顶层段名, 编译函数({ name: 顶层段名, params: [], body: null, 顶层常量: 全局册 }));
   }
   // 多份模块合成一个程序时，一个名字只能有一段代码——重名在加载器那边已经警告过，
   // 这里不覆盖：先到的那一份赢，与「后到的覆盖」相反，所以要说清。
-  return { 函数族, 全局们 };
+  return { 函数族, 全局册 };
 };
 
 // 把几份模块合起来：函数表并集，全局常量并集。重名保留先到的。
@@ -486,10 +486,10 @@ export const 编译模块 = (ast, options = {}) => {
 // 症状是「跑起来没输出、退出码是某个自测数出来的值」—— 那种错最难猜。
 export const 合并程序 = (几份, 入口) => {
   const 函数族 = new Map();
-  const 全局们 = [];
+  const 全局册 = [];
   for (const 一份 of 几份) {
     for (const [名, 函] of 一份.函数族) if (!函数族.has(名)) 函数族.set(名, 函);
-    全局们.push(...一份.全局们);
+    全局册.push(...一份.全局册);
   }
   if (入口) {
     /* 入口文件的入口函数覆盖别人那一份。名单有两个，因为 C 机器有两条入口：
@@ -503,5 +503,5 @@ export const 合并程序 = (几份, 入口) => {
       if (入口函) 函数族.set(名, 入口函);
     }
   }
-  return { 函数族, 全局们 };
+  return { 函数族, 全局册 };
 };

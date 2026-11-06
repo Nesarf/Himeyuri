@@ -28,9 +28,9 @@ const 源路 = path.join(ROOT, "self/lsp.hmoca");
 ok("self/lsp.hmoca 在", fs.existsSync(源路));
 const unit = loadUnit(源路);
 ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0, 1).map((e) => e.code)));
-const 份们 = unit.order.map((文件) => 编译模块(unit.modules.get(文件)));
+const 份簇 = unit.order.map((文件) => 编译模块(unit.modules.get(文件)));
 // 入口 main 覆盖别人那一份 —— 这条规矩在 合并程序 里，不再由每个调用者各抄一遍。
-const 程序 = 合并程序(份们, 份们[份们.length - 1]);
+const 程序 = 合并程序(份簇, 份簇[份簇.length - 1]);
 ok("它把前端与 JSON 库都带了进来", 程序.函数族.size > 60, String(程序.函数族.size));
 
 const 有编译器 = (() => {

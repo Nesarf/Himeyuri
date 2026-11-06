@@ -28,14 +28,14 @@ const 未决行 = (文) => 文.split("\n")
 console.log("一、design/ 下没有未决的 [议]");
 {
   const 目录 = path.join(ROOT, "design");
-  const 文件们 = fs.readdirSync(目录).filter((f) => f.endsWith(".txt")).sort();
-  const 坏们 = [];
-  for (const f of 文件们) {
+  const 文件册 = fs.readdirSync(目录).filter((f) => f.endsWith(".txt")).sort();
+  const 坏例 = [];
+  for (const f of 文件册) {
     const 命 = 未决行(fs.readFileSync(path.join(目录, f), "utf8"));
-    if (命.length) 坏们.push(f + ":" + 命.map((x) => x.号).join(","));
+    if (命.length) 坏例.push(f + ":" + 命.map((x) => x.号).join(","));
   }
-  ok("扫了 " + 文件们.length + " 份设计稿", 文件们.length > 40, String(文件们.length));
-  ok("每一份都没有未决的 [议]", 坏们.length === 0, 坏们.join(" · "));
+  ok("扫了 " + 文件册.length + " 份设计稿", 文件册.length > 40, String(文件册.length));
+  ok("每一份都没有未决的 [议]", 坏例.length === 0, 坏例.join(" · "));
 }
 
 console.log("二、判据自己要被验一次");
@@ -56,11 +56,11 @@ console.log("三、十条决议各写了「怎么验」或者「为什么不定�
     .map((f) => ({ 名: f, 文: fs.readFileSync(path.join(ROOT, "design", f), "utf8") }));
   let 有 = 0, 缺 = [];
   for (const { 名, 文 } of 两篇) {
-    const 行们 = 文.split("\n");
-    for (let i = 0; i < 行们.length; i++) {
-      if (!行们[i].includes("[定]") && !行们[i].includes("[悬]")) continue;
+    const 行批 = 文.split("\n");
+    for (let i = 0; i < 行批.length; i++) {
+      if (!行批[i].includes("[定]") && !行批[i].includes("[悬]")) continue;
       // 只看这次改过的那几行：它们的下一行（或同段紧接的几行）里要有说法。
-      const 附近 = 行们.slice(i + 1, i + 3).join("\n");
+      const 附近 = 行批.slice(i + 1, i + 3).join("\n");
       if (附近.includes("怎么验") || 附近.includes("为什么不定")) 有++;
       else 缺.push(名 + ":" + (i + 1));
     }

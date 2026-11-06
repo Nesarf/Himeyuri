@@ -24,14 +24,14 @@ const ok = (label, condition, detail = "") => {
 
 // 把一份源码拆成「函数名 + 函数体」。函数体从 函数 那一行开始，到行首单独的 } 为止。
 const 拆函数 = (文) => {
-  const 行们 = 文.split("\n");
+  const 行批 = 文.split("\n");
   const 出 = [];
   let 起 = -1, 名 = "";
-  for (let i = 0; i < 行们.length; i++) {
-    const m = /^函数\s+([^\s(]+)\(/.exec(行们[i]);
+  for (let i = 0; i < 行批.length; i++) {
+    const m = /^函数\s+([^\s(]+)\(/.exec(行批[i]);
     if (m && 起 < 0) { 起 = i; 名 = m[1]; continue; }
-    if (起 >= 0 && 行们[i].replace(/\s+$/, "") === "}") {
-      出.push({ 名, 体: 行们.slice(起, i + 1) });
+    if (起 >= 0 && 行批[i].replace(/\s+$/, "") === "}") {
+      出.push({ 名, 体: 行批.slice(起, i + 1) });
       起 = -1;
     }
   }
@@ -39,7 +39,7 @@ const 拆函数 = (文) => {
 };
 
 // 归一化：去掉注释行、空行与每行两端的空白。
-const 归一 = (行们) => 行们
+const 归一 = (行批) => 行批
   .map((l) => l.trim())
   .filter((l) => l !== "" && !l.startsWith("//"))
   .join("\n");
@@ -47,12 +47,12 @@ const 归一 = (行们) => 行们
 const 目录 = path.join(ROOT, "self");
 // 跳过临时文件：fmt-hmyr 那一套会往 self/ 写 .tmp-fmt-*.hmoca 再删掉，而全量是并行跑的 ——
 // 扫到那些中间态会让这一份在别的套件忙的时候红，而那不是「重复实现」，只是「现在正在被打字」.
-const 份们 = fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca") && !f.startsWith(".") && !f.includes("tmp-fmt")).sort();
+const 份簇 = fs.readdirSync(目录).filter((f) => f.endsWith(".hmoca") && !f.startsWith(".") && !f.includes("tmp-fmt")).sort();
 
 console.log("一、self/ 下没有成段的重复实现");
 {
   const 见 = new Map();   // 归一后的体 → [{名, 文件, 行数}]
-  for (const f of 份们) {
+  for (const f of 份簇) {
     const 文 = fs.readFileSync(path.join(目录, f), "utf8");
     for (const 函 of 拆函数(文)) {
       const 体 = 归一(函.体);
@@ -67,10 +67,10 @@ console.log("一、self/ 下没有成段的重复实现");
     if (组.length < 2) continue;
     // 只有同名才算「同一段逻辑被抄了两遍」—— 不同名的相同体可能只是恰好同形，
     // 而那种情况抽出来的收获不如风险大。
-    const 名们 = new Set(组.map((x) => x.名));
-    if (名们.size === 1) 重.push(组[0].名 + "（" + 组.map((x) => x.文件 + ":" + x.行数 + "行").join(" · ") + "）");
+    const 名册 = new Set(组.map((x) => x.名));
+    if (名册.size === 1) 重.push(组[0].名 + "（" + 组.map((x) => x.文件 + ":" + x.行数 + "行").join(" · ") + "）");
   }
-  ok("扫了 " + 份们.length + " 份 self 源文件", 份们.length > 30, String(份们.length));
+  ok("扫了 " + 份簇.length + " 份 self 源文件", 份簇.length > 30, String(份簇.length));
   // 2026-11-05 盘出来 13 组历史欠账。做过两处：十六进制值 收进 self/ucd-common.hmoca。
   // 另一次尝试回滚了 —— 把 pack 与 run 那四组（拆行、拼路径、是包名字、找包根从）抽进
   // self/paths.hmoca 之后，产物与种子的字节完全不变（run.hmoks 97164、种子 74568），

@@ -85,8 +85,8 @@ if (!有编译器) {
     const 码2 = path.join(临, "fmt2.hmoks");
     const 源路 = path.join(ROOT, "self/fmt.hmoca");
     const u0 = loadUnit(源路);
-    const 份们 = u0.order.map((文件) => 编译模块(u0.modules.get(文件)));
-    fs2.writeFileSync(码2, 写程序(合并程序(份们, 份们[份们.length - 1])));
+    const 份簇 = u0.order.map((文件) => 编译模块(u0.modules.get(文件)));
+    fs2.writeFileSync(码2, 写程序(合并程序(份簇, 份簇[份簇.length - 1])));
     const 跑全 = (输入) => spawnSync(exe, [码2], {
       input: 输入, encoding: "utf8", timeout: 120000,
       env: { ...process.env, HMYR_STEPS: "2000000000" },

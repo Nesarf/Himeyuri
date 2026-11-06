@@ -29,12 +29,12 @@ const 查 = (源码) => {
   if (!unit.ok) return { 加载错: unit.diagnostics.errors.map((e) => e.code) };
   const 声明们 = [];
   for (const 文件 of unit.order) for (const d of unit.modules.get(文件).decls || []) 声明们.push(d);
-  return { 问题们: 核对返回类型(声明们) };
+  return { 问题册: 核对返回类型(声明们) };
 };
 
 console.log("一、对的东西不报");
 {
-  const 例们 = [
+  const 例册 = [
     ["数交点回数", "fn f() -> Int {\n  return 1\n}\n"],
     ["串交点回串", 'fn f() -> String {\n  return "a"\n}\n'],
     ["布尔交点回布尔", "fn f() -> Bool {\n  return 1 == 1\n}\n"],
@@ -45,15 +45,15 @@ console.log("一、对的东西不报");
     ["变量放过（推不出来）", "fn f() -> Int {\n  let x = 1\n  return x\n}\n"],
     ["没写返回类型就不查", "fn f() {\n  return \"随便\"\n}\n"],
   ];
-  for (const [标, 源码] of 例们) {
+  for (const [标, 源码] of 例册) {
     const r = 查(源码);
-    ok(标, !r.加载错 && r.问题们.length === 0, JSON.stringify(r.加载错 || r.问题们));
+    ok(标, !r.加载错 && r.问题册.length === 0, JSON.stringify(r.加载错 || r.问题册));
   }
 }
 
 console.log("二、不对的要说出来，而且说清楚");
 {
-  const 例们 = [
+  const 例册 = [
     ["声明 String 交回数", "fn f() -> String {\n  return 1\n}\n", "String"],
     ["声明 Int 交回串", 'fn f() -> Int {\n  return "a"\n}\n', "Int"],
     ["声明 Bool 交回数", "fn f() -> Bool {\n  return 1\n}\n", "Bool"],
@@ -61,10 +61,10 @@ console.log("二、不对的要说出来，而且说清楚");
     ["元组长度不对", 'fn f() -> (Int, String) {\n  return (1, "a", 2)\n}\n', "3 个"],
     ["声明数交回元组", "fn f() -> Int {\n  return (1, 2)\n}\n", "Int"],
   ];
-  for (const [标, 源码, 该提到] of 例们) {
+  for (const [标, 源码, 该提到] of 例册) {
     const r = 查(源码);
-    const 话 = (r.问题们 || []).map((p) => p.话).join(" / ");
-    ok(标, (r.问题们 || []).length > 0 && 话.includes(该提到), JSON.stringify(话 || r.加载错));
+    const 话 = (r.问题册 || []).map((p) => p.话).join(" / ");
+    ok(标, (r.问题册 || []).length > 0 && 话.includes(该提到), JSON.stringify(话 || r.加载错));
   }
 }
 
@@ -80,7 +80,7 @@ console.log("三、调用的返回类型也照着核");
     "",
   ].join("\n");
   const r = 查(源码);
-  ok("乙 声明 Int 而 甲 交回 String，要报出来", (r.问题们 || []).length === 1, JSON.stringify(r.问题们));
+  ok("乙 声明 Int 而 甲 交回 String，要报出来", (r.问题册 || []).length === 1, JSON.stringify(r.问题册));
 }
 
 fs.rmSync(临, { recursive: true, force: true });

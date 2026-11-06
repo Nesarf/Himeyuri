@@ -69,9 +69,9 @@ console.log("二、深度各自算，上限 12");
 {
   // 造两个各自 12 层的路径：11 个斜杠。
   const 深12 = (i) => {
-    const 段们 = [];
-    for (let k = 1; k <= 11; k++) 段们.push("d" + i + "_" + k);
-    return 段们.join("/") + "/x" + i + ".txt";
+    const 段批 = [];
+    for (let k = 1; k <= 11; k++) 段批.push("d" + i + "_" + k);
+    return 段批.join("/") + "/x" + i + ".txt";
   };
   const 名甲 = 造(深12(1), [1, 2, 3]);
   const 名乙 = 造(深12(2), [4, 5, 6]);
@@ -83,9 +83,9 @@ console.log("二、深度各自算，上限 12");
   ok("第二个 12 层也装得进（不累加）", 乙.status === 0, (乙.stdout || "").slice(0, 120) + (乙.stderr || "").slice(0, 120));
 
   // 13 层：12 个斜杠。
-  const 段们 = [];
-  for (let k = 1; k <= 12; k++) 段们.push("e" + k);
-  const 名丙 = 造(段们.concat(["y.txt"]).join("/"), [7, 8, 9]);
+  const 段批 = [];
+  for (let k = 1; k <= 12; k++) 段批.push("e" + k);
+  const 名丙 = 造(段批.concat(["y.txt"]).join("/"), [7, 8, 9]);
   ok("13 层的路径斜杠数对", (名丙.match(/\//g) || []).length === 12, String((名丙.match(/\//g) || []).length));
   const 丙 = 跑(["--装", "太深.hm-ittgn-krgn-m", 名丙]);
   ok("13 层要拒", (丙.stdout || "").includes("上限 12"), (丙.stdout || "").slice(0, 100));

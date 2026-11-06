@@ -29,7 +29,7 @@ export const 读容器 = (路) => {
   if (字节[9] !== 版) return { ok: false, 错: "HMYR-器-005 版本不认识：" + 字节[9] };
   const 数 = 字节.readUInt16LE(10);
   let 位 = 12;
-  const 成员们 = [];
+  const 成员册 = [];
   for (let i = 0; i < 数; i++) {
     if (位 + 2 > 字节.length) return { ok: false, 错: "HMYR-器-006 成员表截断" };
     const 名长 = 字节.readUInt16LE(位);
@@ -40,28 +40,28 @@ export const 读容器 = (路) => {
     const 数据长 = 字节.readUInt32LE(长位);
     const 起 = 长位 + 4;
     if (起 + 数据长 > 字节.length) return { ok: false, 错: "HMYR-器-006 成员数据截断" };
-    成员们.push({ 名, 数据: 字节.subarray(起, 起 + 数据长) });
+    成员册.push({ 名, 数据: 字节.subarray(起, 起 + 数据长) });
     位 = 起 + 数据长;
   }
-  return { ok: true, 成员们 };
+  return { ok: true, 成员册 };
 };
 
 // 写：与 self/ittgn.hmoca 的「装」逐字节对齐。验收拿它做对照 —— 一份 HMYR 写的、
 // 一份 JS 写的，落在同一个包上，字节相同才算格式真的定住了。
-export const 写容器 = (路, 成员们) => {
-  const 段们 = [Buffer.from(魔数, "latin1"), Buffer.from([版])];
+export const 写容器 = (路, 成员册) => {
+  const 段批 = [Buffer.from(魔数, "latin1"), Buffer.from([版])];
   const 数 = Buffer.alloc(2);
-  数.writeUInt16LE(成员们.length, 0);
-  段们.push(数);
-  for (const m of 成员们) {
+  数.writeUInt16LE(成员册.length, 0);
+  段批.push(数);
+  for (const m of 成员册) {
     const 名 = Buffer.from(m.名, "utf8");
     const 头 = Buffer.alloc(2);
     头.writeUInt16LE(名.length, 0);
     const 长 = Buffer.alloc(4);
     长.writeUInt32LE(m.数据.length, 0);
-    段们.push(头, 名, 长, m.数据);
+    段批.push(头, 名, 长, m.数据);
   }
-  fs.writeFileSync(路, Buffer.concat(段们));
+  fs.writeFileSync(路, Buffer.concat(段批));
   return { ok: true, 大小: fs.statSync(路).size };
 };
 
@@ -76,12 +76,12 @@ export const 归一成员名 = (名) => {
 
 // 摊开到一个目录。启动器与转换工具共用这一份 —— 两处各写一遍的话，
 // 「路径要不要归一」「跳出目录拦不拦」这种规矩迟早会分叉。
-export const 摊开 = (成员们, 目录) => {
+export const 摊开 = (成员册, 目录) => {
   const 根 = path.resolve(目录);
-  for (const m of 成员们) {
+  for (const m of 成员册) {
     const 名 = 归一成员名(m.名);
-    const 段们 = 名.split("/").filter((x) => x.length > 0);
-    if (段们.length === 0 || 段们.includes("..")) {
+    const 段批 = 名.split("/").filter((x) => x.length > 0);
+    if (段批.length === 0 || 段批.includes("..")) {
       return { ok: false, 错: "HMYR-器-007 成员路径不合法：" + m.名 };
     }
     const 归 = path.resolve(目录, 名);
@@ -120,9 +120,9 @@ export const 解容器 = (包路) => {
   const r = 读容器(包路);
   if (!r.ok) return r;
   const 目录 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-ittgn-"));
-  const 开 = 摊开(r.成员们, 目录);
+  const 开 = 摊开(r.成员册, 目录);
   if (!开.ok) return 开;
   const 入口 = 找入口(目录, 包路);
   if (!入口) return { ok: false, 错: "HMYR-器-008 容器里没有可跑的入口（要先有 hmoca 或 hmoks 成员）" };
-  return { ok: true, 目录, 入口, 成员们: r.成员们 };
+  return { ok: true, 目录, 入口, 成员册: r.成员册 };
 };

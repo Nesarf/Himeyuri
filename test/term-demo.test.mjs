@@ -29,11 +29,11 @@ console.log("六帧都画出来，而且标题按拍切换");
   rt.write = (s) => { buffer += s; };
   const 帧数 = call("demo", [[[0, "42"], [2, "2026"], [4, "42"]], 6]);
   ok("返回的帧数是 6", 帧数 === 6, String(帧数));
-  const 帧们 = buffer.split(ESC + "[2J").filter((s) => s.length);
-  ok("六处清屏，即六帧", 帧们.length === 6, String(帧们.length));
-  ok("第 0 帧是「42」（4 的形状 # # 与 2 的形状 ###）", 帧们[0].includes("# #") && 帧们[0].includes("###"), JSON.stringify(帧们[0].slice(0, 40)));
-  ok("第 2 帧起是「2026」（更多笔画）", (帧们[2].split("#").length - 1) > (帧们[1].split("#").length - 1),
-    (帧们[2].split("#").length - 1) + " 对 " + (帧们[1].split("#").length - 1));
+  const 帧批 = buffer.split(ESC + "[2J").filter((s) => s.length);
+  ok("六处清屏，即六帧", 帧批.length === 6, String(帧批.length));
+  ok("第 0 帧是「42」（4 的形状 # # 与 2 的形状 ###）", 帧批[0].includes("# #") && 帧批[0].includes("###"), JSON.stringify(帧批[0].slice(0, 40)));
+  ok("第 2 帧起是「2026」（更多笔画）", (帧批[2].split("#").length - 1) > (帧批[1].split("#").length - 1),
+    (帧批[2].split("#").length - 1) + " 对 " + (帧批[1].split("#").length - 1));
   ok("没有替换字符", !buffer.includes(String.fromCharCode(0xFFFD)));
 }
 {
@@ -41,9 +41,9 @@ console.log("六帧都画出来，而且标题按拍切换");
   let buffer = "";
   rt.write = (s) => { buffer += s; };
   call("demo", [[[0, "42"]], 3]);
-  const 帧们 = buffer.split(ESC + "[2J").filter((s) => s.length);
-  const 第一格 = 帧们[0].indexOf("*");
-  const 第二格 = 帧们[1].indexOf("*");
+  const 帧批 = buffer.split(ESC + "[2J").filter((s) => s.length);
+  const 第一格 = 帧批[0].indexOf("*");
+  const 第二格 = 帧批[1].indexOf("*");
   ok("点逐帧右移一格", 第二格 === 第一格 + 1, String(第一格) + " 再到 " + String(第二格));
 }
 

@@ -13,7 +13,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { 账本 } from "./tooling-ledger.mjs";
-import { 工具们, 闭包, 入口们 } from "./runtime-path.mjs";
+import { 工具册, 闭包, 入口册 } from "./runtime-path.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 行批 = [];
@@ -48,7 +48,7 @@ const 报 = (名, 值) => 行批.push([名, 值]);
 // 四、运行时路径：五个入口的 import 闭包里没有工具。
 {
   let 越界 = 0;
-  for (const 入口 of 入口们) 越界 += [...闭包(入口)].filter((f) => 工具们.has(f)).length;
+  for (const 入口 of 入口册) 越界 += [...闭包(入口)].filter((f) => 工具册.has(f)).length;
   报("运行时路径", 越界 === 0 ? "五个入口，零工具" : "有 " + 越界 + " 处越界");
 }
 

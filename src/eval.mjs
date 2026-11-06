@@ -1304,9 +1304,9 @@ const BUILTINS = {
   // 字节元组转文本：按 UTF-8 解码。read_stdin_bytes 交回字节，而请求体是 UTF-8，
   // 两格之间需要这一格。不猜编码：给的就是 UTF-8。
   bytes_to_text: (rt, args) => {
-    const 项们 = Array.isArray(args[0]) ? args[0] : [];
+    const 项册 = Array.isArray(args[0]) ? args[0] : [];
     const 字节串 = [];
-    for (let i = 0; i < 项们.length; i++) 字节串.push(Number(项们[i]) & 0xFF);
+    for (let i = 0; i < 项册.length; i++) 字节串.push(Number(项册[i]) & 0xFF);
     return Buffer.from(字节串).toString("utf8");
   },
   // 从标准输入读 N 个字节：交回 {字节串, 结束}。结束表示没读满（EOF 先到了）。
@@ -1325,16 +1325,16 @@ const BUILTINS = {
   // 从标准输入读一行：交回 {行, 结束}。结束是 EOF —— 与空行是两件事，
   // 「读到没有为止」的循环要能分清它们。行尾的 \r 去掉，别的空白不动。
   read_stdin_line: (rt) => {
-    const 段们 = [];
+    const 段批 = [];
     let 结束 = false;
     for (;;) {
       let b;
       try { b = rt.cap.terminal.readSync(1); } catch (err) { b = null; }
       if (!b || b.length === 0) { 结束 = true; break; }
       if (b[0] === 10) break;
-      段们.push(b);
+      段批.push(b);
     }
-    let s = Buffer.concat(段们).toString("utf8");
+    let s = Buffer.concat(段批).toString("utf8");
     if (s.endsWith("\r")) s = s.slice(0, -1);
     return { 行: s, 结束 };
   },

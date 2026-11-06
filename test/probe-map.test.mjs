@@ -19,12 +19,12 @@ const ok = (label, condition, detail = "") => {
 
 function 读表() {
   const 文 = fs.readFileSync(表路, "utf8");
-  const 行们 = [];
+  const 行批 = [];
   for (const l of 文.split("\n")) {
     const m = l.match(/^ {2}(\S+\.hmoca) +(\d+) +(\S.*?) {2,}(\S.*)$/);
-    if (m) 行们.push({ 文件: m[1], 行数: Number(m[2]), 问: m[3].trim(), 答: m[4].trim() });
+    if (m) 行批.push({ 文件: m[1], 行数: Number(m[2]), 问: m[3].trim(), 答: m[4].trim() });
   }
-  return 行们;
+  return 行批;
 }
 
 const 实际 = fs.readdirSync(path.join(ROOT, "probes")).filter((f) => f.endsWith(".hmoca")).sort();

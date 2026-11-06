@@ -52,13 +52,13 @@ console.log("一、函数表造得出来");
 
 console.log("二、整个程序：两边同一个答案");
 {
-  const 例们 = [
+  const 例册 = [
     ["只调一个", ["fn f() -> Int {", "  return 41", "}", "fn main() -> Int {", "  return f() + 1", "}"], 42],
     ["调两个", ["fn a() -> Int {", "  return 2", "}", "fn b() -> Int {", "  return 3", "}", "fn main() -> Int {", "  return a() + b()", "}"], 5],
     ["函数里带 if", ["fn f() -> Int {", "  if 1 < 2 {", "    return 9", "  }", "  return 0", "}", "fn main() -> Int {", "  return f()", "}"], 9],
     ["函数套函数", ["fn g() -> Int {", "  return 4", "}", "fn f() -> Int {", "  return g() + 1", "}", "fn main() -> Int {", "  return f() * 2", "}"], 10],
   ];
-  for (const [标签, 行批, 答] of 例们) {
+  for (const [标签, 行批, 答] of 例册) {
     const 源 = 写(行批);
     const 甲 = 宿主的(源);
     const 乙 = 那边的(源);

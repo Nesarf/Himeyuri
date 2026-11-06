@@ -72,24 +72,24 @@ if (入字节 === null) {
   process.exit(1);
 }
 
-const 成员们 = [];
+const 成员册 = [];
 for (const 名 of 成员名册) {
   const 全 = path.join(目录, 名);
   if (名 === 入口名) {
     // 入口那一份从根目录回收：摊开时它被复制成两个入口，原来那个名字下的副本
     // 在 zip 里仍然是成员（转换时没删它），所以两条路都该通；取根目录那一份，
     // 是因为那才是「运行逻辑」的所在。
-    成员们.push({ 名, 数据: 入字节 });
+    成员册.push({ 名, 数据: 入字节 });
     continue;
   }
   if (!fs.existsSync(全)) {
     console.error("HMYR-器-012 成员表里有这个成员，而 zip 里没有：" + 名);
     process.exit(1);
   }
-  成员们.push({ 名, 数据: fs.readFileSync(全) });
+  成员册.push({ 名, 数据: fs.readFileSync(全) });
 }
 
-写容器(出, 成员们);
-console.log("收回 " + 成员们.length + " 个成员 → " + 出 + "（" + fs.statSync(出).size + " 字节）");
+写容器(出, 成员册);
+console.log("收回 " + 成员册.length + " 个成员 → " + 出 + "（" + fs.statSync(出).size + " 字节）");
 console.log("  入口 " + 入口名 + " 取自根目录那一对入口文件");
 fs.rmSync(目录, { recursive: true, force: true });

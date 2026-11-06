@@ -35,9 +35,9 @@ console.log("一、那二十六个位置：两两组合，加与乘与比");
     Infinity, -Infinity, NaN, 1.7976931348623157e308, 9007199254740992, 9007199254740993,
     1 / 3, 1e-7, 123456789012345680000, 0.30000000000000004, 1e-310, -1e-310, 4.9e-324,
   ];
-  const 位们 = 定位.map((x) => f.收(x));
+  const 位簇 = 定位.map((x) => f.收(x));
   let 坏 = [];
-  for (const x of 位们) for (const y of 位们) {
+  for (const x of 位簇) for (const y of 位簇) {
     const a = f.交(x), b = f.交(y);
     if (!一样(f.交(f.加(x, y)), a + b)) 坏.push(a + " + " + b);
     if (!一样(f.交(f.乘(x, y)), a * b)) 坏.push(a + " * " + b);
@@ -53,15 +53,15 @@ console.log("二、一千个位模式：随机与日常数量级各一半");
   // 固定种子。数值本身不重要，重要的是它对每一次运行都一样。
   let 种 = 20261021;
   const 随 = () => { 种 = (种 * 1103515245 + 12345) % 2147483648; return 种 / 2147483648; };
-  const 位们 = [];
+  const 位簇 = [];
   for (let i = 0; i < 400; i++) {
-    位们.push((BigInt(Math.floor(随() * 0x100000000)) << 32n) | BigInt(Math.floor(随() * 0x100000000)));
+    位簇.push((BigInt(Math.floor(随() * 0x100000000)) << 32n) | BigInt(Math.floor(随() * 0x100000000)));
   }
   // 随机位模式多半落在极大或次正规区，而日常的算术发生在中间那几档，所以再补一半。
-  for (let i = 0; i < 600; i++) 位们.push(f.收((随() - 0.5) * Math.pow(2, Math.floor(随() * 40) - 20)));
+  for (let i = 0; i < 600; i++) 位簇.push(f.收((随() - 0.5) * Math.pow(2, Math.floor(随() * 40) - 20)));
 
   let 坏 = [], 次数 = 0;
-  for (const x of 位们) for (const y of 位们) {
+  for (const x of 位簇) for (const y of 位簇) {
     const a = f.交(x), b = f.交(y);
     次数 += 3;
     if (!一样(f.交(f.加(x, y)), a + b)) 坏.push(a + " + " + b);
@@ -112,12 +112,12 @@ console.log("四、除法与取余：商要五十五位，余数进粘滞位");
   // 而加与乘那一组用一千个 —— 两组的判据是同一个：与宿主的位模式相同。
   let 种 = 20261022;
   const 随 = () => { 种 = (种 * 1103515245 + 12345) % 2147483648; return 种 / 2147483648; };
-  const 位们 = [0, -0, 1, -1, 0.1, 3, 7, 1e308, 5e-324, Infinity, -Infinity, NaN, 1 / 3, 1e-310].map((x) => f.收(x));
-  for (let i = 0; i < 200; i++) 位们.push((BigInt(Math.floor(随() * 0x100000000)) << 32n) | BigInt(Math.floor(随() * 0x100000000)));
-  for (let i = 0; i < 600; i++) 位们.push(f.收((随() - 0.5) * Math.pow(2, Math.floor(随() * 40) - 20)));
+  const 位簇 = [0, -0, 1, -1, 0.1, 3, 7, 1e308, 5e-324, Infinity, -Infinity, NaN, 1 / 3, 1e-310].map((x) => f.收(x));
+  for (let i = 0; i < 200; i++) 位簇.push((BigInt(Math.floor(随() * 0x100000000)) << 32n) | BigInt(Math.floor(随() * 0x100000000)));
+  for (let i = 0; i < 600; i++) 位簇.push(f.收((随() - 0.5) * Math.pow(2, Math.floor(随() * 40) - 20)));
 
   let 坏 = [], 次数 = 0;
-  for (const x of 位们) for (const y of 位们) {
+  for (const x of 位簇) for (const y of 位簇) {
     const a = f.交(x), b = f.交(y);
     次数 += 2;
     if (!一样(f.交(f.除(x, y)), a / b)) 坏.push(a + " / " + b);

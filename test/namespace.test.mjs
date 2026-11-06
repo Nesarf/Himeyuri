@@ -175,7 +175,7 @@ console.log("六、整仓：没有一个跨模块的私有调用");
 {
   // 迁移做完了，所以这一条能立起来：仓库里每一个多模块入口，装载完都是零条 HMYR-載-006。
   // 少了这一条，下一次「随手把 pub 删掉」不会有人发现。
-  const 入口们 = [
+  const 入口册 = [
     "self/run.hmoca", "self/compile.hmoca", "self/fmt.hmoca", "self/lsp.hmoca",
     "self/manifest.hmoca", "self/pack.hmoca", "self/package.hmoca", "self/release.hmoca",
     "self/sign.hmoca", "self/verify.hmoca", "self/sig.hmoca", "self/ssh.hmoca",
@@ -185,7 +185,7 @@ console.log("六、整仓：没有一个跨模块的私有调用");
   ];
   const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const 脏 = [];
-  for (const 相 of 入口们) {
+  for (const 相 of 入口册) {
     const 单 = loadUnit(path.join(ROOT, 相));
     const 数 = 单.diagnostics.warnings.filter((w) => w.code === "HMYR-載-006").length;
     if (数 > 0) 脏.push(相 + " 有 " + 数 + " 条");

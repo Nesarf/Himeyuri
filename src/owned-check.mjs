@@ -255,25 +255,25 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
 
   // 第一遍：直接改与直接传。
   for (const d of 函数族) {
-    const 位们 = 位置表.get(d.name);
+    const 位簇 = 位置表.get(d.name);
     const 走 = (n) => {
       if (!n || typeof n !== "object") return;
       if (Array.isArray(n)) { for (const x of n) 走(x); return; }
       if (n.kind === "调用" && n.callee) {
         const 主 = n.callee.kind === "字段" ? n.callee.target : null;
-        if (主 && 主.kind === "名" && 位们.has(主.name)) {
+        if (主 && 主.kind === "名" && 位簇.has(主.name)) {
           const 方法 = n.callee.name;
-          if (方法 === "放" || 方法 === "取" || 方法 === "关") 记脏(d.name, 位们.get(主.name));
+          if (方法 === "放" || 方法 === "取" || 方法 === "关") 记脏(d.name, 位簇.get(主.name));
         }
         if (n.callee.kind === "名" && 签名表.has(n.callee.name)) {
           const 形们 = 签名表.get(n.callee.name) || [];
           const 实们 = n.args || [];
           for (let i = 0; i < 实们.length; i++) {
             const 实 = 实们[i];
-            if (!实 || 实.kind !== "名" || !位们.has(实.name)) continue;
+            if (!实 || 实.kind !== "名" || !位簇.has(实.name)) continue;
             const 形 = 形们[i];
-            if (形 && 形.passing === "own") 记脏(d.name, 位们.get(实.name));
-            else 记传(d.name, 位们.get(实.name), n.callee.name, i);
+            if (形 && 形.passing === "own") 记脏(d.name, 位簇.get(实.name));
+            else 记传(d.name, 位簇.get(实.name), n.callee.name, i);
           }
         }
       }
@@ -304,7 +304,7 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
 
   // 第三遍：报在最初那一侧 —— 对象是那个标了 borrow 的参数。
   for (const d of 函数族) {
-    const 位们 = 位置表.get(d.name);
+    const 位簇 = 位置表.get(d.name);
     const 借来位 = new Set();
     (d.params || []).forEach((p, i) => { if (p && p.passing === "borrow") 借来位.add(i); });
     if (借来位.size === 0) continue;
@@ -319,7 +319,7 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
       if (Array.isArray(n)) { for (const x of n) if (走(x)) return true; return false; }
       if (n.kind === "调用" && n.callee) {
         const 主 = n.callee.kind === "字段" ? n.callee.target : null;
-        if (主 && 主.kind === "名" && 位们.has(主.name) && 该报.has(位们.get(主.name))) {
+        if (主 && 主.kind === "名" && 位簇.has(主.name) && 该报.has(位簇.get(主.name))) {
           const 方法 = n.callee.name;
           if (方法 === "放" || 方法 === "取" || 方法 === "关") {
             报("'" + 主.name + "' is borrowed, and this function calls " + 方法 + " on it: a borrow promises to leave what it borrows alone", n);
@@ -330,8 +330,8 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
           const 实们 = n.args || [];
           for (let i = 0; i < 实们.length; i++) {
             const 实 = 实们[i];
-            if (!实 || 实.kind !== "名" || !位们.has(实.name)) continue;
-            if (!该报.has(位们.get(实.name))) continue;
+            if (!实 || 实.kind !== "名" || !位簇.has(实.name)) continue;
+            if (!该报.has(位簇.get(实.name))) continue;
             报("'" + 实.name + "' is borrowed, and it goes into '" + n.callee.name + "' here, which changes it: a borrow promises to leave it alone all the way down", n);
             return true;
           }
@@ -350,10 +350,10 @@ function 查借用承诺(ast, 签名表, 报, 外部) {
   // 这是「跨模块」的全部内容 —— 单趟、按装载顺序，而「被调者在后面才装载」
   // 这件事这一层看不见，理由写在 design/MEMORY.txt 第 2 节。
   if (外部 && 外部.脏) {
-    for (const [名, 位们] of 脏) {
+    for (const [名, 位簇] of 脏) {
       const 已有 = 外部.脏.get(名);
-      if (!已有) 外部.脏.set(名, new Set(位们));
-      else for (const 位 of 位们) 已有.add(位);
+      if (!已有) 外部.脏.set(名, new Set(位簇));
+      else for (const 位 of 位簇) 已有.add(位);
     }
   }
 }

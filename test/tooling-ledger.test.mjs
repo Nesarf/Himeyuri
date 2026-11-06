@@ -10,7 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { 账本 } from "../tools/tooling-ledger.mjs";
-import { 工具们 } from "../tools/runtime-path.mjs";
+import { 工具册 } from "../tools/runtime-path.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -49,7 +49,7 @@ console.log("三、不搬的每一项都有理由，而且有可执行的证明"
     ok(项.名 + " 给了证明文件", Array.isArray(项.证明) && 项.证明.length > 0, "");
     for (const f of 项.证明 || []) {
       ok(项.名 + " 的证明文件 " + f + " 在", fs.existsSync(path.join(ROOT, f)), f);
-      ok(项.名 + " 的证明文件 " + f + " 落在工具清单里", 工具们.has(f), f);
+      ok(项.名 + " 的证明文件 " + f + " 落在工具清单里", 工具册.has(f), f);
     }
   }
 }

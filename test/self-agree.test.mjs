@@ -46,7 +46,7 @@ const 那边的 = (源) => {
 const 写 = (行批) => 行批.join("\n") + "\n";
 
 // 每一例：标签 · 程序的行 · 期望的数
-const 例们 = [
+const 例册 = [
   ["算术与优先级", ["fn main() -> Int {", "  return 1 + 2 * 3 + 4 * 5", "}"], 27],
   ["括号改变结合", ["fn main() -> Int {", "  return (1 + 2) * (3 + 4)", "}"], 21],
   ["取余", ["fn main() -> Int {", "  return 17 % 5", "}"], 2],
@@ -61,7 +61,7 @@ const 例们 = [
 ];
 
 console.log("一、两边同一个答案");
-for (const [标签, 行批, 答] of 例们) {
+for (const [标签, 行批, 答] of 例册) {
   const 源 = 写(行批);
   const 甲 = 宿主的(源);
   const 乙 = 那边的(源);
@@ -98,12 +98,12 @@ console.log("二、已知的语义差异：改参数");
 console.log("三、两边不会一边成功一边失败");
 {
   // 几个两边都该拒绝的程序。要紧的是**两边态度一致**，而具体理由可以不同。
-  const 坏们 = [
+  const 坏例 = [
     ["除零", ["fn main() -> Int {", "  return 1 / 0", "}"]],
     ["未知名字", ["fn main() -> Int {", "  return nope", "}"]],
     ["调用不存在的函数", ["fn main() -> Int {", "  return 不存在()", "}"]],
   ];
-  for (const [标签, 行批] of 坏们) {
+  for (const [标签, 行批] of 坏例) {
     const 源 = 写(行批);
     const 甲 = 宿主的(源);
     const 乙 = 那边的(源);
