@@ -4237,9 +4237,13 @@ static int call_builtin(uint32_t 名off, Value *args, int nargs, Value *out) {
 #endif
     free(名文);
 #ifdef _WIN32
-    _mkdir(全);   /* 已经在就算了：与 JS 那侧的 ensureDir 同一条规矩。 */
+        /* temp_path 建的是临时目录本身，不是文件路径。
+     * 2026-11-05 修：原来建的是 全（「目录/hmyr-名字」这个文件路径），
+     * 于是 Windows 上 temp_path("x.txt") 造出一个叫 hmyr-x.txt 的目录，
+     * 下一步 write_text 就撞上它，报 HMYR-內-012 cannot write that file。 */
+_mkdir(dir);   /* 建临时目录本身，不是文件路径 —— 2026-11-05 修 */
 #elif !defined(__arm__) && !defined(__ARM_ARCH) && !defined(__aarch64__)
-    mkdir(全, 0777);
+    mkdir(dir, 0777);
 #endif
     *out = 路径值(全);
     free(全);

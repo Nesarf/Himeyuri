@@ -71,3 +71,36 @@
 
 一条顺带记下的编译差异：WSL 的 gcc 要 -lm（不然 undefined reference to floor），
 Strawberry 那一份不用 —— 那是 libm 在 MinGW 里并进 libc 的关系，不是程序的差别。
+
+2026-11-05 收口：那个 fopen 失败不是 fopen，是 temp_path 建错了对象
+--------------------------------------------------------------------
+
+上一条留下两条嫌疑（混分隔符、路径编码），而两条都不是。根因在别处，且更简单：
+
+  vm/hmyr.c 的 temp_path 在最后建目录时，建的是「全」（完整文件路径），
+  而不是「dir」（临时目录本身）。
+
+    拼接(dir, "/hmyr-") + 名  →  全
+    _mkdir(全)                     ← 把 hmyr-xxx.txt 建成了一个目录
+
+于是 Windows 上 temp_path("x.txt") 造出一个叫 hmyr-x.txt 的目录，下一步
+write_text 去开那个名字就撞上目录，报 HMYR-內-012 cannot write that file。
+
+为什么它只在 Windows 上露出来：WSL 那一路先被自举层跑过，同名文件已经在了，
+mkdir 失败之后什么也没改 —— 于是那边的下一次写是成功的。换句话说，WSL 那次成功
+不是因为这边对，而是因为顺序恰好绕开了。
+
+两处改动：
+
+  vm/hmyr.c    _mkdir(dir) / mkdir(dir, 0777) —— 建临时目录本身
+  手动清理      删掉旧行为留下的目录（hmyr-x.txt、hmyr-hmyr-io-probe.txt）
+
+验证（同一份 io.hmoks，三处各跑一次）：
+
+  WSL 的 C 机器（重编）      往返一致，20 字节
+  Windows 的 C 机器（重编）  往返一致，20 字节
+  自举层（WSL）              往返一致，20 字节
+
+两条被排除的嫌疑也记在这里，因为它们看起来都像真原因：混分隔符不是问题
+（单独写一份 E:\...\tmp/mix-probe.txt 成功），路径编码也不是（temp_path 交回的
+四十个字符逐个查过，全是可打印 ASCII）。
