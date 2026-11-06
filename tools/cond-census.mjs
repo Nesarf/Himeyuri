@@ -86,3 +86,46 @@ for (const r of 少) {
 console.log("");
 console.log("差额为负而「跳过」字样为零的几个最该先看 —— 那里跳过时什么都没说：");
 for (const r of 少.filter((x) => x.跳过 === 0)) console.log("  " + r.名 + "  " + r.脚本);
+
+// ---- 与基线比：差额只能变小，不能变大 ----
+//
+// 为什么用差额而不是绝对数当判据：加一条判据时静态与实跑同时加一，差额不变；
+// 修好一处被藏起来的判据时实跑加一，差额变小（好事，不红）；而有人把一组判据
+// 包进 if 而没交代时实跑减几，差额变大 —— 那正是 arm、pipe、socket 那三次的形状。
+//
+// 基线在 tools/gap-baseline.json。它只能在那次变化已经查清之后重写，命令是
+// 这一份带 --保存 跑一次全量的日志。生成它之前不该先改它 —— 那样等于把判据改成
+// 「今天的样子」，而判据的意义是「别退回去」。
+const 基线路 = path.join(ROOT, "tools/gap-baseline.json");
+const 差额 = (r) => r.静态 - r.跑过;
+const 现有 = Object.fromEntries(行批.map((r) => [r.名, 差额(r)]));
+
+if (process.argv.includes("--保存")) {
+  fs.writeFileSync(基线路, JSON.stringify({
+    说明: "每个套件的（静态断言数 − 实跑项数）。判据只有一条：这个数不能变大 —— 变大说明有判据从「跑」变成了「不跑」。修好一处会让它变小，那不是问题。",
+    测于: new Date().toISOString().slice(0, 10),
+    怎么改: "只在差额的变化已经查清之后重写：node tools/cond-census.mjs <一份全量日志> --保存",
+    差额: 现有,
+  }, null, 2) + "\n", "utf8");
+  console.log("");
+  console.log("基线写好了：" + 基线路 + "（" + Object.keys(现有).length + " 个套件）");
+} else if (fs.existsSync(基线路)) {
+  const 基线 = JSON.parse(fs.readFileSync(基线路, "utf8")).差额 || {};
+  const 变大 = [];
+  const 变小 = [];
+  for (const [名, 值] of Object.entries(现有)) {
+    const 旧 = 基线[名];
+    if (typeof 旧 !== "number") continue;         // 新套件还没有基线，不算变化
+    if (值 > 旧) 变大.push(名 + " 从 " + 旧 + " 涨到 " + 值);
+    else if (值 < 旧) 变小.push(名 + " 从 " + 旧 + " 降到 " + 值);
+  }
+  console.log("");
+  console.log("与基线比（基线记于 " + (JSON.parse(fs.readFileSync(基线路, "utf8")).测于 || "未知") + "）：");
+  if (变大.length === 0) console.log("  没有一个套件的差额变大");
+  else for (const x of 变大) console.log("  变大  " + x + "  ← 有判据从「跑」变成「不跑」，要看它为什么");
+  for (const x of 变小) console.log("  变小  " + x + "（修好了，好事，不是问题）");
+} else {
+  console.log("");
+  console.log("还没有基线：tools/gap-baseline.json 不在，所以这一趟只列事实、不比。");
+  console.log("要建基线：node tools/cond-census.mjs <一份全量日志> --保存");
+}
