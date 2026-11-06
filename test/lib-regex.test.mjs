@@ -77,12 +77,12 @@ const 期望 = (式, 文, 组数) => {
   if (!m) return "无|-";
   const 整 = m.index + "," + (m.index + m[0].length);
   if (组数 === 0) return 整 + "|-";
-  const 组们 = [];
+  const 组册 = [];
   for (let k = 1; k <= 组数; k++) {
     const 位 = m.indices[k];
-    组们.push(位 ? 位[0] + "," + 位[1] : "-1,-1");
+    组册.push(位 ? 位[0] + "," + 位[1] : "-1,-1");
   }
-  return 整 + "|" + 组们.join(";");
+  return 整 + "|" + 组册.join(";");
 };
 
 const 跑 = () => spawnSync(process.execPath,
