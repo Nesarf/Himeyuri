@@ -159,13 +159,13 @@ export const statements = (源码) => {
   const d = { items: [], errors: [], warnings: [], add() {}, error() {}, warn() {} };
   const { ast } = parse(lex(源码, { diagnostics: d }).tokens, { diagnostics: d });
   const fn = (ast.decls || []).find((x) => x.kind === "函数" && x.name === "main");
-  if (!fn) return { 语句们: null, 错: "没有 main" };
-  return { 语句们: 块(fn.body), 错: null };
+  if (!fn) return { 语句批: null, 错: "没有 main" };
+  return { 语句批: 块(fn.body), 错: null };
 };
 
 // ---- 三、函数表 ----
 //
-// 自举那边的函数表是一串三元元组 (("名字", 参数名册, 语句们), ...)，由 装函数从 装进环境，
+// 自举那边的函数表是一串三元元组 (("名字", 参数名册, 语句批), ...)，由 装函数从 装进环境，
 // 而 求调用 用 "fn:" + 名字 去查。
 //
 // 一条要写明的边界：自举那边执行函数体时**不把参数绑进环境**
@@ -183,7 +183,7 @@ export const functions = (源码) => {
     const 体 = 块(声.body);
     const 坏的 = 体.find((s) => s && s.kind === "err");
     if (坏的) { 错们.push(声.name + "：" + 坏的.text); continue; }
-    // 三件：名字、参数名册、语句们。自举那边要用参数名去绑环境。
+    // 三件：名字、参数名册、语句批。自举那边要用参数名去绑环境。
     表.push([String(声.name), (声.params || []).map((p) => String(p.name)), 体]);
   }
   return { 表, 错们 };

@@ -154,7 +154,7 @@ export class 虚拟机 {
         this.坏("HMYR-行-002", "function '" + 名 + "' expects " + 函.参数量 + " argument(s), got " + 参数.length);
         return { ok: false, ...this.停机 };
       }
-      const 帧 = { 槽: new Array(函.槽数).fill(null).map(() => ({ v: null, 可写: true })), 效果: new Set(函.效果), 持有格们: [] };
+      const 帧 = { 槽: new Array(函.槽数).fill(null).map(() => ({ v: null, 可写: true })), 效果: new Set(函.效果), 持有格串: [] };
       for (let i = 0; i < 参数.length; i++) 帧.槽[i] = { v: 参数[i], 可写: true };
       const 上帧 = this.当前帧;
       this.当前帧 = 帧;
@@ -165,7 +165,7 @@ export class 虚拟机 {
         this.当前帧 = 上帧;
         // 帧退出：这一帧里建的持有格一律关掉（design/MEMORY.txt 第 2 节）。
         // 与自举层同一条形状：交出去的已经在「放」那一步从登记表里移走了。
-        for (const 格 of 帧.持有格们) {
+        for (const 格 of 帧.持有格串) {
           if (格 && 格.tag === "index" && 格.m.get("kind") === "owner" && 格.m.get("关") === 0) {
             格.m.set("装", 0);
             格.m.set("值", null);

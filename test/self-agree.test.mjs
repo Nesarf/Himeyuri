@@ -36,7 +36,7 @@ const 那边的 = (源) => {
     const 表 = functions(源);
     const 主 = statements(源);
     if (主.错) return { err: 主.错 };
-    const 回 = 自举.callFunction(自举.functions.get("跑程序带函数"), [主.语句们, 表.表], null);
+    const 回 = 自举.callFunction(自举.functions.get("跑程序带函数"), [主.语句批, 表.表], null);
     if (回 && 回.ok === false) return { err: 回.text || "报错" };
     return { value: 回 && Object.prototype.hasOwnProperty.call(回, "value") ? 回.value : 回 };
   } catch (e) {

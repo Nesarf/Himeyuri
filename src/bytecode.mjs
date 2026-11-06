@@ -295,11 +295,11 @@ const 编译函数 = (decl, 契约) => {
         // 放在 then 之后会让两个分支各留一个值，栈就错位了。
         表达(n.condition);
         const 假 = 发("假跳", -1);
-        if (n.then) { 进层(); 语句们(n.then.statements, true); 出层(); } else 发("常量", null);
+        if (n.then) { 进层(); 语句批(n.then.statements, true); 出层(); } else 发("常量", null);
         const 完 = 发("跳", -1);
         码[假].a = 码.length;
         if (n.otherwise) {
-          if (n.otherwise.kind === "块") { 进层(); 语句们(n.otherwise.statements, true); 出层(); }
+          if (n.otherwise.kind === "块") { 进层(); 语句批(n.otherwise.statements, true); 出层(); }
           else 表达(n.otherwise);
         } else {
           发("常量", null);
@@ -314,7 +314,7 @@ const 编译函数 = (decl, 契约) => {
         const 头 = 码.length;
         表达(n.condition);
         const 出 = 发("假跳", -1);
-        if (n.body) { 进层(); 语句们(n.body.statements, false); 出层(); }
+        if (n.body) { 进层(); 语句批(n.body.statements, false); 出层(); }
         编循环不变(n.invariant);
         发("跳", 头);
         码[出].a = 码.length;
@@ -421,7 +421,7 @@ const 编译函数 = (decl, 契约) => {
         throw new 编译错("这一份不认这种语句：" + s.kind);
     }
   };
-  const 语句们 = (列, 留值) => {
+  const 语句批 = (列, 留值) => {
     for (let i = 0; i < 列.length; i++) 语句(列[i], !!留值 && i === 列.length - 1);
   };
 
@@ -430,7 +430,7 @@ const 编译函数 = (decl, 契约) => {
   for (const 声 of decl.顶层常量 || []) { 表达(声.value); 发("全域存", 声.name); }
 
   编入场();
-  语句们((decl.body && decl.body.statements) || []);
+  语句批((decl.body && decl.body.statements) || []);
   发("常量", null);
   编出场();
   发("返回");

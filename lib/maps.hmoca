@@ -53,10 +53,10 @@
 // 于是「并」把左边的集也改掉了，探针里交集的键多出一个 —— 就是这么发现的。
 公开 函数 表拷(表: Int) {
   变 新 = index_new()
-  定 键们 = index_keys(表)
+  定 键串 = index_keys(表)
   变 i = 0
-  当 i < len(键们) {
-    新 = index_set(新, 键们[i], index_get(表, 键们[i]))
+  当 i < len(键串) {
+    新 = index_set(新, 键串[i], index_get(表, 键串[i]))
     i = i + 1
   }
   返回 新
@@ -67,11 +67,11 @@
 // 键本来就不在时交回一张内容相同的新表：删不存在的东西不是失败。
 公开 函数 表删(表: Int, 键: String) {
   变 新 = index_new()
-  定 键们 = index_keys(表)
+  定 键串 = index_keys(表)
   变 i = 0
-  当 i < len(键们) {
-    若 键们[i] != 键 {
-      新 = index_set(新, 键们[i], index_get(表, 键们[i]))
+  当 i < len(键串) {
+    若 键串[i] != 键 {
+      新 = index_set(新, 键串[i], index_get(表, 键串[i]))
     }
     i = i + 1
   }
@@ -114,11 +114,11 @@
 // 接着用同一个 a 算交集，交集的键就多出一个。现在先用 表拷。
 公开 函数 集并(a: Int, b: Int) {
   变 出 = 表拷(a)
-  定 键们 = index_keys(b)
+  定 键串 = index_keys(b)
   变 i = 0
-  当 i < len(键们) {
-    若 index_has(出, 键们[i]) == 假 {
-      出 = index_set(出, 键们[i], 真)
+  当 i < len(键串) {
+    若 index_has(出, 键串[i]) == 假 {
+      出 = index_set(出, 键串[i], 真)
     }
     i = i + 1
   }
@@ -128,11 +128,11 @@
 // 交：留下两边都有的，顺序按 a。
 公开 函数 集交(a: Int, b: Int) {
   变 出 = index_new()
-  定 键们 = index_keys(a)
+  定 键串 = index_keys(a)
   变 i = 0
-  当 i < len(键们) {
-    若 index_has(b, 键们[i]) {
-      出 = index_set(出, 键们[i], 真)
+  当 i < len(键串) {
+    若 index_has(b, 键串[i]) {
+      出 = index_set(出, 键串[i], 真)
     }
     i = i + 1
   }
@@ -142,11 +142,11 @@
 // 差：a 有而 b 没有的，顺序按 a。
 公开 函数 集差(a: Int, b: Int) {
   变 出 = index_new()
-  定 键们 = index_keys(a)
+  定 键串 = index_keys(a)
   变 i = 0
-  当 i < len(键们) {
-    若 index_has(b, 键们[i]) == 假 {
-      出 = index_set(出, 键们[i], 真)
+  当 i < len(键串) {
+    若 index_has(b, 键串[i]) == 假 {
+      出 = index_set(出, 键串[i], 真)
     }
     i = i + 1
   }

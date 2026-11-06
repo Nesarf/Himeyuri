@@ -194,7 +194,7 @@ export const 内置表 = {
   owned: { 做: (vm) => {
     const 格 = 新持有格();
     const 帧 = vm && vm.当前帧;
-    if (帧 && 帧.持有格们) 帧.持有格们.push(格);
+    if (帧 && 帧.持有格串) 帧.持有格串.push(格);
     return 格;
   } },
   // 字节元组转文本：按 UTF-8 解码。read_stdin_bytes 交回字节，而请求体是 UTF-8。
@@ -771,9 +771,9 @@ export function 调区方法(主, 名, 参, vm) {
       // 放进去的若是一条持有格，它就从当前帧的登记表里移走 —— 「转移」的第二层意思，
       // 与自举层那一条同形。少了它，交出去的格子会被造它的帧关掉。
       const 帧 = vm && vm.当前帧;
-      if (帧 && 帧.持有格们) {
-        const at = 帧.持有格们.indexOf(参[0]);
-        if (at >= 0) 帧.持有格们.splice(at, 1);
+      if (帧 && 帧.持有格串) {
+        const at = 帧.持有格串.indexOf(参[0]);
+        if (at >= 0) 帧.持有格串.splice(at, 1);
       }
       return { 值: 主 };
     }

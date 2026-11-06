@@ -22,7 +22,7 @@ const 宿主的 = (源) => run(源, {}).value;
 const 那边的 = (源) => {
   const r = statements(源);
   if (r.错) return { err: r.错 };
-  const 回 = 自举.callFunction(自举.functions.get("跑程序"), [r.语句们], null);
+  const 回 = 自举.callFunction(自举.functions.get("跑程序"), [r.语句批], null);
   if (回 && 回.ok === false) return { err: 回.text || "报错" };
   return { value: 回 && Object.prototype.hasOwnProperty.call(回, "value") ? 回.value : 回 };
 };
@@ -79,7 +79,7 @@ console.log("六、函数声明不在这一层，而它说得出这句话");
   const 源 = "fn f() -> Int {\n  return 1\n}\nfn main() -> Int {\n  return f()\n}\n";
   const r = statements(源);
   // main 里只有一个 return f()，而 f() 是个调用——转得出形状
-  ok("转得出形状", r.语句们 && r.语句们.length === 1, JSON.stringify(r).slice(0, 100));
+  ok("转得出形状", r.语句批 && r.语句批.length === 1, JSON.stringify(r).slice(0, 100));
   // 而函数表不在这一层：自举那边拿不到 f，于是会报错而不是算错
   const 乙 = 那边的(源);
   ok("自举那边找不到 f（而那是另一件事）", 乙.err !== undefined, JSON.stringify(乙).slice(0, 100));

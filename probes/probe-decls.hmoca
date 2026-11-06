@@ -14,6 +14,6 @@
   定 全部 = parse_decls(tokens)
   print("fns=" + str(len(全部.fns)) + chr(10))
   print("首项=" + str(len(全部.fns[0])) + chr(10))
-  print("语句们=" + str(len(全部.fns[0][2])) + chr(10))
+  print("语句批=" + str(len(全部.fns[0][2])) + chr(10))
   返回 0
 }

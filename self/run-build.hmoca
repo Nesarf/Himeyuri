@@ -107,15 +107,15 @@
   返回 n
 }
 
-公开 函数 翻字段批(们: Int, i: Int, acc: Int) {
-  若 i >= len(们) { 返回 acc }
-  定 f = 们[i]
-  返回 翻字段批(们, i + 1, acc + ({name: f.name, value: 翻表达式(f.value)},))
+公开 函数 翻字段批(项批: Int, i: Int, acc: Int) {
+  若 i >= len(项批) { 返回 acc }
+  定 f = 项批[i]
+  返回 翻字段批(项批, i + 1, acc + ({name: f.name, value: 翻表达式(f.value)},))
 }
 
-公开 函数 翻表达式批(们: Int, i: Int, acc: Int) {
-  若 i >= len(们) { 返回 acc }
-  返回 翻表达式批(们, i + 1, acc + (翻表达式(们[i]),))
+公开 函数 翻表达式批(项批: Int, i: Int, acc: Int) {
+  若 i >= len(项批) { 返回 acc }
+  返回 翻表达式批(项批, i + 1, acc + (翻表达式(项批[i]),))
 }
 
 // 语句里的那几个表达式字段也要翻。空 返回 干脆不带 value —— 宿主读出来是 undefined，
