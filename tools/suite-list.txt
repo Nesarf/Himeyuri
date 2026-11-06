@@ -181,10 +181,10 @@ vmboot	test/vm-boot.test.mjs
 interval	test/lib-interval.test.mjs
 time	test/lib-time.test.mjs
 regex	test/lib-regex.test.mjs
-libindex	test/lib-index.test.mjs
-distinct	test/self-distinct.test.mjs
-deadcode	test/deadcode.test.mjs
 opcodes	test/opcodes.test.mjs
+deadcode	test/deadcode.test.mjs
+distinct	test/self-distinct.test.mjs
+libindex	test/lib-index.test.mjs
 curve	test/curve.test.mjs
 sha512	test/sha512.test.mjs
 ssh	test/ssh.test.mjs
@@ -227,6 +227,7 @@ selfassign	test/self-assign.test.mjs
 selfif	test/self-if.test.mjs
 selfcompare	test/self-compare.test.mjs
 selfsig	test/self-sig.test.mjs
-suitelist	test/suite-list.test.mjs
-selfmap	test/selfmap.test.mjs
 probemap	test/probe-map.test.mjs
+selfmap	test/selfmap.test.mjs
+suitelist	test/suite-list.test.mjs
+racecensus	test/race-census.test.mjs

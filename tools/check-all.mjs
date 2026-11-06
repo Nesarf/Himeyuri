@@ -277,6 +277,7 @@ const SUITES = [
   ["probemap", "test/probe-map.test.mjs", "design/PROBES.txt says what each probe was asking at the time and where the answer landed: every probe listed, none listed that is gone, every question written out, and four concrete questions each answered by exactly one probe"],
   ["selfmap", "test/selfmap.test.mjs", "design/SELF.txt tells you which of the 64 self files owns what: every file listed, no file listed that is gone, no empty duty, and five concrete questions each answered by exactly one file"],
   ["suitelist", "test/suite-list.test.mjs", "the two suite lists agree: check-all.mjs --list and tools/suite-list.txt hold the same names, the same scripts, no duplicates, and every path that does not exist is named"],
+  ["racecensus", "test/race-census.test.mjs", "SPEC M7 - the race census: an assertion that runs after the promise's resolve races the process exit, and the tool that finds those is itself checked against one sample it must catch and two shapes it must not"],
 ];
 
 /* 清单导出：给 HMYR 写的那一份调度器（self/check.hmyr）用。
