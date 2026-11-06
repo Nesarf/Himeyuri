@@ -229,3 +229,4 @@ selfcompare	test/self-compare.test.mjs
 selfsig	test/self-sig.test.mjs
 suitelist	test/suite-list.test.mjs
 selfmap	test/selfmap.test.mjs
+probemap	test/probe-map.test.mjs

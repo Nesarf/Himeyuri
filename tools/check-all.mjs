@@ -274,6 +274,7 @@ const SUITES = [
   ["selfif", "test/self-if.test.mjs", "SPEC M7 - if, with its blocks, read by Himeyuri"],
   ["selfcompare", "test/self-compare.test.mjs", "SPEC M7 - comparison operators, at the precedence the language declares"],
   ["selfsig", "test/self-sig.test.mjs", "SPEC M7 - function signatures read by Himeyuri agree with the JavaScript reader"],
+  ["probemap", "test/probe-map.test.mjs", "design/PROBES.txt says what each probe was asking at the time and where the answer landed: every probe listed, none listed that is gone, every question written out, and four concrete questions each answered by exactly one probe"],
   ["selfmap", "test/selfmap.test.mjs", "design/SELF.txt tells you which of the 64 self files owns what: every file listed, no file listed that is gone, no empty duty, and five concrete questions each answered by exactly one file"],
   ["suitelist", "test/suite-list.test.mjs", "the two suite lists agree: check-all.mjs --list and tools/suite-list.txt hold the same names, the same scripts, no duplicates, and every path that does not exist is named"],
 ];
