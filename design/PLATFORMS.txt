@@ -45,3 +45,29 @@
 一条仍然没有确立的事：MinGW 下 int 与 long 的宽度、文本模式的换行这些常见坑，
 这一轮一个都没有撞到 —— 不是因为确认过它们不存在，而是因为这两份程序走的路
 没有碰到它们（没有读文件、没有写二进制、没有字符级 I/O）。
+
+2026-11-05 续：文件 I/O 在 Windows 的 C 机器上失败，而同一份字节码在 WSL 上成功
+--------------------------------------------------------------------
+
+这一轮专门造了一份读写文件的探针（写一行、读回来、数字节），编成同一份 .hmoks，
+在三处各跑一次：
+
+  自举层（WSL）              往返一致，20 字节
+  C 机器（WSL，gcc -lm）      往返一致，20 字节
+  C 机器（Windows，gcc）      HMYR-內-012 cannot write that file，退出码 1
+
+同一份字节码、同一份源码，两个平台两个结果 —— 那是这一整段里第一个跨平台的失败。
+
+往下查了两层，两层都是干净的：
+
+  · TEMP 目录本身没问题。Windows 上 TEMP=E:\DaShaoHuo\cache\tmp，目录存在，
+    PowerShell 往里写文件成功。
+  · temp_path 在两边都给真路径 —— 自举层给 E:\DaShaoHuo\cache\tmp\hmyr-x.txt，
+    自举层在 WSL 给 /tmp/hmyr-x.txt。那是各自平台该有的答案。
+
+而 C 机器的 temp_path 在 Windows 上给的是 E:\DaShaoHuo\cache\tmp/hmyr-x.txt ——
+反斜杠与正斜杠混着。它在 PowerShell 里能开，而在 C 的 fopen 里不成立，所以嫌疑落在
+两条上：混用的分隔符，或者 utf16_to_utf8 之后按 ANSI 代码页交给 fopen 的路径编码。
+
+一条顺带记下的编译差异：WSL 的 gcc 要 -lm（不然 undefined reference to floor），
+Strawberry 那一份不用 —— 那是 libm 在 MinGW 里并进 libc 的关系，不是程序的差别。

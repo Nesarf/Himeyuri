@@ -1,0 +1,14 @@
+函数 main() -> Int 效果串(file, process) {
+  定 路 = temp_path("hmyr-io-probe.txt")
+  定 文 = "第一行" + chr(10) + "第二行" + chr(10)
+  write_text(路, 文)
+  定 回 = read_text(路)
+  若 回 == 文 {
+    print("往返一致" + chr(10))
+  } 否则 {
+    print("往返不同：得 " + str(len(回)) + " 字节，期 " + str(len(文)) + chr(10))
+  }
+  定 字节 = read_bytes(路)
+  print("字节数 " + str(len(字节)) + chr(10))
+  返回 0
+}
