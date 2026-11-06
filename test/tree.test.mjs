@@ -36,7 +36,12 @@ if (!有编译器) {
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-tree-"));
   const exe = path.join(临, "hmyr.exe");
+  // 编译与跑分开记：2026-11-06 全量里这一套跑了二十一分钟，而「时间花在哪一段」
+  // 当时没有数 —— 编 C 机器（6347 行加 466 KB 的 pack_seed.h）与跑 HMYR 程序是两件事，
+  // 而它们对负载的反应不一样。
+  const 编起 = Date.now();
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const 编毫秒 = Date.now() - 编起;
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
     const 码路 = path.join(临, "tree.hmoks");
@@ -64,7 +69,8 @@ if (!有编译器) {
     // 那种时候说不出「是走错路还是每步变贵」—— 现在有得比了。
     if (步 !== null) {
       console.log("");
-      console.log("这一趟：" + 步 + " 步 / " + 毫秒 + " ms");
+      console.log("这一趟：编 C 机器 " + (编毫秒 / 1000).toFixed(1) + "s · 跑 " +
+        (毫秒 / 1000).toFixed(1) + "s · " + 步 + " 步");
     }
   }
   fs.rmSync(临, { recursive: true, force: true });

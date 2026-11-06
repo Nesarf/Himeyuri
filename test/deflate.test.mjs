@@ -42,7 +42,11 @@ if (!有编译器) {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-deflate-"));
   const 账 = [];   // 每一趟的步数与耗时：正常跑也记，因为「异常」要有个东西比
   const exe = path.join(临, "hmyr.exe");
+  // 编译与跑分开记 —— 与 tree 那一套同一个理由：二十一分钟那次，手里没有数说得出
+  // 时间花在编 C 机器上还是花在跑 HMYR 程序上。
+  const 编起 = Date.now();
   const c = spawnSync("gcc", ["-std=c11", "-O2", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const 编毫秒 = Date.now() - 编起;
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
     const 码路 = path.join(临, "deflate.hmoks");
@@ -205,7 +209,8 @@ if (!有编译器) {
     const 最重 = 账.filter((x) => x.步 !== null).sort((a, b) => b.步 - a.步)[0];
     if (最重) {
       console.log("");
-      console.log("步数最多的一趟：" + 最重.步 + " 步 / " + 最重.毫秒 + " ms（" + 最重.什么 + "）");
+      console.log("步数最多的一趟：编 C 机器 " + (编毫秒 / 1000).toFixed(1) + "s · 跑 " +
+        (最重.毫秒 / 1000).toFixed(1) + "s · " + 最重.步 + " 步（" + 最重.什么 + "）");
     }
 
     fs.rmSync(临, { recursive: true, force: true });
