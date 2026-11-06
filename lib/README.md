@@ -13,7 +13,7 @@
 哪个库能干什么，以及**谁在验它**。
 
 - interval.hmoca —— 区间数：一对双精度当上下界，按舍入方向取端点。判据：interval 套件。例子：[interval-tour.hmoca](../examples/interval-tour.hmoca)
-- json.hmoca —— JSON 的解析与生成。判据：json 套件。例子：还没有
+- json.hmoca —— JSON 的解析与生成。判据：json 套件。例子：[json-tour.hmoca](../examples/json-tour.hmoca)
 - maps.hmoca —— map 与 set，底是内置索引；键可以是任意字符串（这是它与 tables 的分界）。判据：maps 套件。例子：[maps-tour.hmoca](../examples/maps-tour.hmoca)
 - numbers.hmoca —— 整数与实数的常用函数。判据：numbers 套件。例子：[numbers-tour.hmoca](../examples/numbers-tour.hmoca)
 - protocol.hmoca —— 帧：长度前缀 + 类型字节 + 载荷，整数按小端写。判据：cvm 套件（跑 conformance/lib-protocol.hmoca）。例子：[protocol-tour.hmoca](../examples/protocol-tour.hmoca)
@@ -41,5 +41,7 @@ c-vm 套件里 —— 它们在 C 机器上跑，因为那四个库是自举层�
 `examples/` 下有九份 `*-tour.hmoca`，每一份都自己判自己（不对就返回非零），所以
 examples 那一条判据同时验了「库好用」。上表每一行的末尾就是它对应那一份。
 
-十一个库里只有 json 还没有例子 —— 它的公开面很小（解析与生成各一个入口），
-而 `self/manifest.hmoca` 与 `self/verify.hmoca` 都在用它们，那两处就是这个库的活例子。
+十一个库全都有例子了。json 是最后补上的一份 —— 它的公开面很小（解析与生成各一个
+入口），而值的形状要读文件开头那段注释才明白：每一个值都带标记（`{数: …}`、`{串: …}`、
+`{对象: ((键, 值), …)}`），因为这门语言没有类型反射。而 `解析` 交回的是 `{ok, 值}`，
+所以取内容要写 `解析(文).值.数`。
