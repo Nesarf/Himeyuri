@@ -904,6 +904,15 @@ typedef struct {
   int 步限;
 } Hmyr机器;
 
+/* 按 opcode 的计数：HMYR_OPSMAP 开着才记，退出时按次数降序打到 stderr。
+ *
+ * 为什么要有它（2026-11-06）：HMYR_OPS 只给总步数，而「总步数很多」回答不了
+ * 「该优化哪一条指令」—— 34 条指令里通常三四条占了八成，而那几条才是要改的地方。
+ * 计数在热循环里只多一次分支（预测成功约一两纳秒），而每步现在约 220 纳秒，
+ * 所以它不影响量出来的数；开关在启动时读一次 getenv，热循环里不碰环境。 */
+static long g_op计数[64];
+static int g_op计开 = 0;
+
 /* 主机：一台进程里必然有的那一个。线程要的是「第二台」，所以 g_机 是指针 ——
  * 这一刀只换形状，行为一个字节都不变（宿主那一份在 main 之前没人碰它）。 */
 static Hmyr机器 主机;
@@ -5263,6 +5272,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
       缓存位 = rr.at;
     }
     Ins *in = &本条;
+    if (g_op计开) g_op计数[in->op & 63]++;
     if (g_trace_on) {
       Trace *t = &g_trace[g_trace_at];
       t->pc = pc;
@@ -6164,6 +6174,10 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
   g_机->步限 = 限;
   g_机->步数 = 0;
   g_failed = 0;
+  /* opcode 分布只在这一次启动时问一次环境：热循环里每步都 getenv 会把量出来的
+   * 数弄脏，而那正是这一份要量的东西。 */
+  g_op计开 = getenv("HMYR_OPSMAP") != NULL;
+  if (g_op计开) memset(g_op计数, 0, sizeof(g_op计数));
 
   /* 第一个槽位是脚本自己，之后才是参数 —— 与启动器那一层的约定一致。 */
   g_机->argv = v_null();
@@ -6242,6 +6256,19 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
    * 那一条开不起来。2026-11-03 加。 */
   if (getenv("HMYR_OPS")) {
     fprintf(stderr, "ops=%ld\n", g_机->步数);
+  }
+  /* HMYR_OPSMAP：按下数降序把 34 条指令的分布打到 stderr。
+   * 一条一行，两个制表符分隔，直接能喂 sort 也能被人读。 */
+  if (g_op计开) {
+    int 序[34];
+    for (int i = 0; i < 34; i++) 序[i] = i;
+    for (int i = 0; i < 34; i++)
+      for (int j = i + 1; j < 34; j++)
+        if (g_op计数[序[j]] > g_op计数[序[i]]) { int t = 序[i]; 序[i] = 序[j]; 序[j] = t; }
+    for (int i = 0; i < 34; i++) {
+      if (!g_op计数[序[i]]) break;
+      fprintf(stderr, "op\t%s\t%ld\n", op_names[序[i]], g_op计数[序[i]]);
+    }
   }
   /* 返回值就是退出码，不是输出。自举层自己会打印它那份验收的编号，
    * 而一台机器不欠谁这一行。 */
