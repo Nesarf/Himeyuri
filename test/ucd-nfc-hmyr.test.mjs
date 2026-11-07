@@ -11,6 +11,8 @@ import { 写程序, 读程序 } from "../src/code-file.mjs";
 import { 虚拟机 } from "../src/vm.mjs";
 import { 本机能力 } from "../src/capabilities.mjs";
 import { loadUnit } from "../src/loader.mjs";
+import { spawnSync } from "node:child_process";
+import { 编C机器 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -39,15 +41,22 @@ if (failed === 0) {
   ok("模块读得进来（含引入的 ucd-trim）", 层.ok, 层.diagnostics.errors.map((e) => e.code + " " + e.message).join(" · ").slice(0, 160));
   const 模块册 = 层.order.map((f) => 编译模块(层.modules.get(f)));
   const 字节 = 写程序(合并程序(模块册));
-  const vm = new 虚拟机(读程序(字节), {
-    capabilities: 本机能力(), stepLimit: 2000000000, maxDepth: 4000,
-    argv: ["hmyr", 语料, 出],
-  });
-  vm.write = () => {};
+  // 2026-11-07：执行面从 src/vm.mjs（JS 写的字节码机器）换成 C 机器。
+  // 这一份是「一次跑、无 spawn 成本」，所以换面只有收益 —— 与 curve 那两套不同，
+  // 那里十二次启动的装载费吃掉了机器省下的钱（CHECKING.txt 第四十八与五十笔）。
+  // 量到的：八千五百万步、十点三秒，而原来在 JS 那一台上是套件七十七点六秒。
+  const 码路 = path.join(临, "nfc.hmoks");
+  fs.writeFileSync(码路, 字节);
+  const exe = path.join(临, "hmyr.exe");
+  const 编C = 编C机器(exe);
+  ok("C 机器编得出来", 编C.status === 0, String(编C.stderr).slice(0, 160));
 
-  console.log("二、在字节码机上跑得动");
-  const r = vm.调用("main", [], null);
-  ok("main 跑完", r && r.ok, r && r.ok ? "" : JSON.stringify(vm.停机));
+  console.log("二、在 C 机器上跑得动");
+  const r = spawnSync(exe, [码路, 语料, 出], {
+    encoding: "utf8", timeout: 1800000,
+    env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
+  });
+  ok("main 跑完", r.status === 0, String(r.status) + " " + String(r.stderr).slice(0, 160));
 
   console.log("三、产物与 JS 那位逐字节相同");
   if (!fs.existsSync(出)) {
