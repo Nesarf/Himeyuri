@@ -64,7 +64,7 @@ self/ 的 63 份文件：谁管什么
 -----
   curve.hmoca               504  Ed25519 的曲线运算：twisted Edwards 曲线 -x^2 + y^2 = 1 + d x^2 y^2。
   sha256.hmoca              207  SHA-256：清单里每一个文件的哈希与整份的 digest 都要它。
-  sha512.hmoca              286  SHA-512：64 位字用两个 32 位半表示（小半在前）。
+  sha512.hmoca              340  SHA-512：64 位字用两个 32 位半表示（小半在前）。
 
 签名与清单
 -----
