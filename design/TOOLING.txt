@@ -336,7 +336,9 @@ self/release.hmoca 收一个 tag，出三样：清单（调 manifest 的 主）�
 说明书要回答三问，这是它存在的理由：哪些资产带签名、哪些没有以及为什么、怎么在不装
 本项目任何工具的情况下自己验。三问缺一个，这份说明书就只是装饰。
 
-两件明确不做：签名（HMYR 侧还没实现，那是目标的第四件）；真发 —— gh release create 要
+两件明确不做：签名（这一句在 2026-11-02 写下时是真的，而 11-03 补上了 ——
+self/sign.hmoca 有 签名(种子, 消息)，判据在 signgen 与 signbridge 两套里；所以这里
+说的「不做」指的是 release 流程不调它，不是语言没有它）；真发 —— gh release create 要
 一张 GitHub 令牌，而凭据不该进语言运行时，所以 --upload 那一类留在 tools/release.mjs。
 
 途中碰到的两个小坑，都记在这里：
