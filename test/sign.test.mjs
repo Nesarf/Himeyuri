@@ -20,11 +20,17 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
+// 三次调用各记一次时（2026-11-07）：这一套在全量里是一百三十秒那一档，而手里只有总数。
+// 记的只有一个总数 —— bin/hmyr.mjs --compile 那一次里含着编译与跑，两层之间没有分开
+// 的钟。记它的用处是知道「三次各多久」，而不是「编多久、跑多久」。
+const 账 = [];
 const 验 = (签名路, 消息路) => {
+  const 起 = Date.now();
   const r = spawnSync(process.execPath, ["bin/hmyr.mjs", "--compile", "self/sign.hmoca", 签名路, 消息路], {
     cwd: ROOT, encoding: "utf8", timeout: 300000,
     env: { ...process.env, HMYR_STEPS: "20000000000" },
   });
+  账.push({ 名: path.basename(消息路), 毫秒: Date.now() - 起 });
   if (r.status !== 0) return { 坏: String(r.stderr || "").slice(0, 140) };
   const 出 = String(r.stdout || "");
   return { 通过: 出.indexOf("通过") >= 0 && 出.indexOf("不通过") < 0 };
@@ -55,5 +61,11 @@ if (!fs.existsSync(签名) || !fs.existsSync(清单)) {
 }
 
 console.log("");
+if (账.length) {
+  const 总 = 账.reduce((a, b) => a + b.毫秒, 0);
+  console.log("这一趟：跑 " + (总 / 1000).toFixed(1) + "s（" + 账.length + " 次）· " +
+    账.map((x) => x.名 + " " + (x.毫秒 / 1000).toFixed(1) + "s").join(" · "));
+  console.log("");
+}
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);

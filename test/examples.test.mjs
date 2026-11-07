@@ -27,11 +27,17 @@ const ok = (label, condition, detail = "") => {
 };
 
 // 跑一份源码，交回退出码与最后一行输出（失败时那一行是诊断）。
+//
+// 顺带记时（2026-11-07）：这一套在全量里是一百二十秒那一档，而手里只有总数。
+// 与 probes 那边同一个理由 —— 知道自己慢回答不了该动哪里。
+const 账 = [];
 const 跑 = (相对) => {
+  const 起 = Date.now();
   const r = spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), 相对], {
     cwd: ROOT, encoding: "utf8", timeout: 180000,
     env: { ...process.env, HMYR_STEPS: "2000000000" },
   });
+  账.push({ 名: 相对, 毫秒: Date.now() - 起 });
   const 行批 = String(r.stdout || "").trim().split("\n");
   return { 码: r.status, 末行: (行批[行批.length - 1] || "").trim(), 错: String(r.stderr || "") };
 };
@@ -61,5 +67,14 @@ console.log("三、跑不动的会被认出来");
 }
 
 console.log("");
+if (账.length) {
+  const 总 = 账.reduce((a, b) => a + b.毫秒, 0);
+  const 慢 = [...账].sort((a, b) => b.毫秒 - a.毫秒).slice(0, 3)
+    .map((x) => x.名.replace(/^examples[\\/]/, "").replace(/\.hmoca$/, "") + " " + (x.毫秒 / 1000).toFixed(1) + "s")
+    .join(" · ");
+  console.log("这一趟：跑 " + (总 / 1000).toFixed(1) + "s（" + 账.length + " 次，平均 " +
+    (总 / 账.length / 1000).toFixed(1) + "s）· 最慢 " + 慢);
+  console.log("");
+}
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
