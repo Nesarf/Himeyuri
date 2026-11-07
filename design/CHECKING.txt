@@ -2029,3 +2029,50 @@ package 那一套，敲的是 --only package-hmyr。
 一条可带走的：判断一道检查是否真跑了，看报告里有没有逐套一行 —— 只有全过一句
 而没有套件名单，就是零套。名字打错、套件改名、从旧笔记里抄一条命令，三种都
 长这个样子。
+
+2026-11-08 夜：在真的 Windows 10 上跑一次 C 机器
+--------------------------------------------------------------------
+
+PLATFORM.txt 那一格原来读成两半：硬件是实测（2019 年出厂那台，cvm 那 93 项与
+cli 那 21 项跑绿），系统是推断（那台机器早升到 Win11，Win10 那一遍靠向下兼容
+撑着）。这一笔把后一半补上。
+
+一、环境。VirtualBox 7.2.20，机器 W10Test，6 GB 内存、4 核、BIOS 引导，磁盘
+   75 GB 落在 G 盘机械盘上。客户系统是 Windows 10 Enterprise LTSC 2021 评估版，
+   ver 报 10.0.19044.1288。
+
+二、跑的东西。静态链接的 C 机器（gcc -std=c11 -O3 -static 编 vm/hmyr.c，
+   511794 字节），依赖表只剩 KERNEL32 与 UCRT 那一组 api-ms-win-crt-*。加
+   -static 之前它还依赖 libwinpthread-1.dll —— MinGW 的线程库，系统里没有，
+   不放在同一个目录就起不来。
+
+三、判据与结果。同一份 examples/hello.hmoca：
+
+     主机 Win11    静态 C 机器        退出码 5
+     主机 Win11    node bin/hmyr.mjs  打印 5，退出码 0
+     客户 Win10    静态 C 机器        退出码 5
+
+   三处对同一个数：那个程序算出 5。C 机器把返回值当退出码，node 那面打印返回值
+   并以 0 退出 —— 差别在出口，不在答案。
+
+四、路上撞到的四件，值得单独记：
+
+   一、VirtualBox 的无人值守安装生成一个空的 ProductKey 块，Windows Setup 在
+      最早阶段就失败，报的却是「Windows cannot find the Microsoft Software
+      License Terms」。那句话把判断引向 ISO 与光驱，补挂光盘一点用也没有；
+      删掉那个块才真的开始装。
+   二、它的分区方案与固件不匹配。BIOS 配 GPT，文件写了 4.6 GB，重启后 BIOS 报
+      「An operating system wasn't found」；改成 UEFI，分区创建直接失败。两套
+      都走不通，最后回到手动装。
+   三、首次启动卡在「Starting services」：画面完全静止，CPU 正好两个核满载，
+      日志里两条 ip6_icmp 的 MTU 警告。把网卡设成 none 之后这次过去了 ——
+      卡的是网络初始化。
+   四、ACPI 关机在 OOBE 收尾阶段没有响应，而 reset 会打断安装收尾，Windows
+      判定安装失败。这一条是这一笔最贵的一课：卡住的时候不要 reset。
+
+五、记录。PLATFORM.txt 那一格从「一半实测一半推断」改成实测，并写清是在
+   10.0.19044 上验的。
+
+一条可带走的：把「推断」变成「实测」，成本不在跑那一条命令，在让那台机器走到
+能跑命令的地方 —— 而那一路上真正花时间的三件，与 hmyr 毫无关系，全是
+VirtualBox 自己的缺陷。
