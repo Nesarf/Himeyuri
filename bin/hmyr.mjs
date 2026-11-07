@@ -41,10 +41,11 @@ if (process.argv.includes("--compile")) {
     process.exit(2);
   }
   // 不引入 fs：加载器自己读文件，而这个启动器「不直接碰文件系统」是一条被验收盯着的性质。
-  const [{ loadUnit }, { 跑字节码 }, { 本机能力 }, path] = await Promise.all([
+  const [{ loadUnit }, { 跑字节码 }, { 本机能力 }, fs, path] = await Promise.all([
     import("../src/loader.mjs"),
     import("../src/vm.mjs"),
     import("../src/capabilities.mjs"),
+    import("node:fs"),
     import("node:path"),
   ]);
   const 绝对 = path.resolve(目标);
@@ -67,6 +68,17 @@ if (process.argv.includes("--compile")) {
     vm.write = (s) => process.stdout.write(s);
     vm.writeErr = (s) => process.stderr.write(s);
     const r = vm.调用("main", [], null);
+    // HMYR_OPS：把这一趟跑了多少步报出来，名字与格式都与 C 机器那个出口一致 ——
+    // 于是读过其中一处的人就能读另一处，而工具也不必认两种格式。
+    //
+    // 为什么要有它（2026-11-07）：这一层是「HMYR 写的 VM 跑在 src/vm.mjs 上」的两层
+    // 解释器，而 probes、vmboot、inflate 这几套最慢的都在这一层上跑。它们此前只有墙钟，
+    // 而墙钟回答不了「慢在自举层的装载还是慢在程序本身」—— 第二十笔就是因为手里只有
+    // 相关性而写错过一次结论。步数是确定的数，与机器快慢无关。
+    // 用 fs.writeSync 而不是 process.stderr.write：下面几行就要 process.exit，而
+    // 对管道写是异步的 —— 第一次加这一行时打出来的东西被 exit 吞掉了，症状是
+    // 「明明写了却没输出」，而代码看着完全正确。
+    if (process.env.HMYR_OPS) fs.writeSync(2, "ops=" + vm.步 + "\n");
     if (!r.ok) { console.error(r.码 + " " + r.话); process.exit(1); }
     process.exit(typeof r.值 === "number" ? Math.trunc(r.值) : 0);
   } catch (e) {
