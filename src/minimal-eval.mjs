@@ -43,6 +43,19 @@ class 作用域 {
   constructor(parent) { this.map = new Map(); this.parent = parent; }
   has(name) { return this.map.has(name) || (this.parent ? this.parent.has(name) : false); }
   get(name) { return this.map.has(name) ? this.map.get(name).value : this.parent.get(name); }
+  // 2026-11-07：一次沿链找到「那一格」，而不是 has 再 get 各走一遍父链。
+  // 名 的求值原来走 has(名) 再 get(名)：每一层都要两次 map.has，而循环体的名字
+  // 访问是这份求值器里最密的一件事（profile 里 has 与 get 合计 8.6%）。
+  // map 存的是 {value, mutable}，不会是 undefined，所以它是安全的哨兵。
+  查(name) {
+    let s = this;
+    while (s) {
+      const e = s.map.get(name);
+      if (e !== undefined) return e;
+      s = s.parent;
+    }
+    return undefined;
+  }
   set(name, value, mutable = false) { this.map.set(name, { value, mutable }); }
   assign(name, value) {
     if (this.map.has(name)) {
@@ -813,6 +826,8 @@ export class 最小运行时 {
   }
 
   执行块(block, parentScope, effects) {
+    // 2026-11-07：作用域池化试过又撤了 —— 池化加 try/finally 量出来 34.13 秒，
+    // 比不池化的 33.02 慢。V8 的 Map 分配比「从池里取、改 parent、清空、放回」便宜。
     const scope = new 作用域(parentScope);
     let last = null;
     for (const stmt of block.statements) last = this.执行语句(stmt, scope, effects);
@@ -865,7 +880,8 @@ export class 最小运行时 {
         // 语言的每一个字符串值都是 Uint16Array，而宿主串只在进出这一层时出现。
         return this.码元串 && typeof node.value === "string" ? 码元.由宿主(node.value) : node.value;
       case "名": {
-        if (scope.has(node.name)) return scope.get(node.name);
+        const 格 = scope.查(node.name);
+        if (格 !== undefined) return 格.value;
         if (this.globals.has(node.name)) return this.globals.get(node.name);
         this.坏("HMYR-行-005", "there is no name '" + node.name + "' in scope");
         break;
