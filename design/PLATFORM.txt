@@ -20,6 +20,12 @@ Himeyuri 的定位：车间／平台类语言
       半成。宿主那一侧要 Node（bin/hmyr.mjs），而 C 机器（vm/hmyr.c）把种子
       编在自己里面，所以一个 exe 加一份源码就够。真正「不依赖」要等 Yunooka
       有自己的字节码机 —— 四段路线写在 design/FULLSELF.txt 第七节。
+      一处要补的（2026-11-08 实测）：默认编法下那个 exe 不是单独一个文件。
+      objdump 读出它还依赖 libwinpthread-1.dll（MinGW 的线程库，系统里没有，
+      不在同一个目录就起不来）。加 -static 之后只剩 KERNEL32 与 UCRT 那一组
+      api-ms-win-crt-*，而 UCRT 自 Windows 10 起是系统自带的。这一条顺带也是
+      「2015 年之后」那个基准点的又一个理由：UCRT 在 Win10 之前要靠 KB2999226
+      补上去。所以「一个 exe」这句话要加一个条件 —— 静态链接的那一个。
 
     自主的运行逻辑与文件类型
       成。三种后缀（.hmoca 源码、.hmoks 字节码、.hmtn 种子）写在
