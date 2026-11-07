@@ -29,18 +29,24 @@ const 合行数 = (几份) => 几份.reduce((n, f) => n + 行数(f), 0);
 console.log("一、Stage 0 是五份：loader、子集那两层、诊断，与最小求值器");
 {
   const 五份 = ["src/loader.mjs", "src/subset-lex.mjs", "src/subset-parse.mjs", "src/diagnostics.mjs", "src/minimal-eval.mjs"];
+  // 判据盯的是「文档与实测一致」，不是「等于某个数」。2026-11-08 之前这一节问的是
+  // 「五份加起来在一千到三千之间」：那个区间宽到能同时容纳 1108 与 2097，于是
+  // design/BOOTSTRAP.txt 的合计过期了近一千行也没人听见。区间不是判据，是把判断
+  // 交给了一个范围。数字照样可以变，变的时候改文档，判据不动 —— 那是活的判据。
+  const 账 = fs.readFileSync(path.join(ROOT, "design/BOOTSTRAP.txt"), "utf8");
+  const 引 = (文) => 文.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   for (const 文 of 五份) {
     const n = 行数(文);
-    ok(文 + " 在，且行数是 " + n, n > 20, String(n));
+    ok(文 + " 在", n > 20, String(n));
+    // 分项也要对。只盯合计的话，一份涨了另一份缩了，合计纹丝不动，而两行数字
+    // 一起过期 —— 2026-11-08 补这一条，正是因为合计刚修好、分项还全是没人看的数。
+    const m = new RegExp(引(文) + "\\s+(\\d+) 行").exec(账);
+    const 写的 = m ? Number(m[1]) : null;
+    ok(文 + " 的行数与 design/BOOTSTRAP.txt 一致（写 " + 写的 + "，实 " + n + "）",
+      写的 === n, "");
   }
   const 合 = 合行数(五份);
   console.log("    （合计 " + 合 + " 行）");
-  // 判据盯的是「文档与实测一致」，不是「合计等于某个数」。
-  // 2026-11-08 之前这里是「一千到三千之间」：那个区间宽到能同时容纳 1108 与 2097，
-  // 于是 design/BOOTSTRAP.txt 那行合计过期了近一千行也没人听见。区间不是判据，
-  // 是把判断交给了一个范围。现在两处必须对上：数字照样可以变，变的时候改文档，
-  // 判据不动 —— 那是活的判据。
-  const 账 = fs.readFileSync(path.join(ROOT, "design/BOOTSTRAP.txt"), "utf8");
   // 只认表格里那一行（行首空白之后的「合计」）。第一版没锚行首，于是抓到了上文
   // 「那时候五份合计 / 1108 行」里那个历史数字 —— 判据读错了它该读的那一行。
   const 账里写的 = Number((/^\s+合计\s+(\d+) 行/m.exec(账) || [])[1]);
