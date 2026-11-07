@@ -34,6 +34,7 @@ console.log("一、probes/ 下有一批探针");
 ok("至少十份", 份簇.length >= 10, String(份簇.length) + " 份");
 
 console.log("二、每一份都编得动");
+const 编起 = Date.now();
 {
   const 坏例 = [];
   for (const f of 份簇) {
@@ -45,6 +46,7 @@ console.log("二、每一份都编得动");
   }
   ok("这一批都编得动（" + 份簇.length + " 份）", 坏例.length === 0, 坏例.join(" · "));
 }
+const 编毫秒 = Date.now() - 编起;
 
 console.log("");
 console.log("三、跑一遍，输出与 probes/expected.json 记的一样");
@@ -56,17 +58,32 @@ console.log("三、跑一遍，输出与 probes/expected.json 记的一样");
     const 期望 = JSON.parse(fs.readFileSync(期望路, "utf8"));
     const 归一 = (s) => String(s || "").trim().split("\n").map((l) => l.split(ROOT).join("<root>")).join("\n");
     const 变 = [];
+    const 账 = [];
     for (const [f, 项] of Object.entries(期望.项)) {
+      const 起 = Date.now();
       const r = spawnSync(process.execPath, [path.join(ROOT, "bin/hmyr.mjs"), path.join(目录, f)], {
         cwd: ROOT, encoding: "utf8", timeout: 120000,
       });
+      账.push({ 名: f, 毫秒: Date.now() - 起 });
       const 出 = 归一(r.stdout);
       if (r.status !== 项.码 || 出 !== 项.出) {
         变.push(f + "：" + (r.status !== 项.码 ? "退出码 " + r.status + " 对 " + 项.码
           : "输出 " + JSON.stringify(出.slice(0, 40)) + " 对 " + JSON.stringify(项.出.slice(0, 40))));
       }
     }
-    ok("十五份的输出都没变", 变.length === 0, 变.slice(0, 3).join(" · "));
+    ok("这" + 份簇.length + " 份的输出都没变", 变.length === 0, 变.slice(0, 3).join(" · "));
+    // 这一行是为了回答「慢在哪一段」。第五节原来没有数 —— 而这一套是全量里最慢的
+    // （197.0 秒，另两轮 190.9 与 169.5），只知道自己最慢回答不了该动哪里。
+    // 编走的是进程内的 loadUnit，跑是每份起一个 node 去跑 bin/hmyr.mjs（自举层），
+    // 两者没有共同的钟，所以分开记。
+    if (账.length) {
+      const 跑 = 账.reduce((a, b) => a + b.毫秒, 0);
+      const 慢 = [...账].sort((a, b) => b.毫秒 - a.毫秒).slice(0, 3)
+        .map((x) => x.名.replace(/\.hmoca$/, "") + " " + (x.毫秒 / 1000).toFixed(1) + "s").join(" · ");
+      console.log("");
+      console.log("这一趟：编 " + (编毫秒 / 1000).toFixed(1) + "s · 跑 " + (跑 / 1000).toFixed(1) +
+        "s（" + 账.length + " 份，平均 " + (跑 / 账.length / 1000).toFixed(1) + "s）· 最慢 " + 慢);
+    }
   }
 }
 
