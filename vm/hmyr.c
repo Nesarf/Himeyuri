@@ -2397,6 +2397,10 @@ static 线程局部 char g_fail_msg[512];
 /* 调用序列：HMYR_CALLS=1 时，每次函数调用打一行「第几个」。
  * 两台机器跑同一份字节码时，第一条不一致的调用就是分歧的起点。 */
 static int g_calls_on = 0;
+/* 每个函数被叫了几次（2026-11-07）。与 opcode 分布同一类出口，只是维度换成函数 ——
+ * 因为「一个函数多贵」与「它被叫几次」是两份账，而判断该动哪个要两者相乘。 */
+static int g_函计开 = 0;
+static uint16_t g_函计数[512];
 static long g_calls_n = 0;
 static int g_fields_on = 0;
 
@@ -5617,6 +5621,7 @@ static Value run_func(Func *f, Value *args, int nargs) {
       }
       case OP_CALLF: {
         int64_t 位 = find_func_index(in->a);
+        if (g_函计开 && 位 >= 0 && 位 < 512) g_函计数[位]++;
         Func *callee = (位 >= 0) ? &g_机->函数族[位] : NULL;
         if (!callee) {
           /* 缺的是哪一个名字：这句以前只说「没有这个函数」，而调用点可能有几十处。
@@ -6309,7 +6314,7 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
      * 而当时手里只有「秒」这一个数 —— 缺的正是这一行。撞到步限时这里给出的是步限
      * 附近的值，走错路时给的是真实的巨额步数，两者分得开。 */
     if (getenv("HMYR_OPS")) {
-      fprintf(stderr, "ops=%ld\n", g_机->步数);
+    fprintf(stderr, "ops=%ld\n", g_机->步数);
     }
     return 1;
   }
@@ -6321,6 +6326,18 @@ static int run_bytecode(const char *path, const char *argv0, int nrest, char **r
    * 那一条开不起来。2026-11-03 加。 */
   if (getenv("HMYR_OPS")) {
     fprintf(stderr, "ops=%ld\n", g_机->步数);
+  }
+  /* HMYR_FNCOUNT：每个函数被叫了几次。与 opcode 分布同一类出口，只是维度换成函数 ——
+   * 因为「一个函数多贵」与「它被叫几次」是两份账，判断该动哪个要两者相乘。 */
+  if (g_函计开) {
+    for (uint32_t i = 0; i < g_机->函数数; i++) {
+      if (g_函计数[i] == 0) continue;
+      uint16_t 名缓[256];
+      uint32_t ml = 池取到(g_机->函数族[i].name_off, 名缓, 256);
+      fprintf(stderr, "fn %u %lu ", (unsigned)i, (unsigned long)g_函计数[i]);
+      for (uint32_t k = 0; k < ml && k < 256; k++) fprintf(stderr, "%04X", (unsigned)名缓[k]);
+      fprintf(stderr, "\n");
+    }
   }
   /* HMYR_OPSMAP：按下数降序把 34 条指令的分布打到 stderr。
    * 一条一行，两个制表符分隔，直接能喂 sort 也能被人读。 */
@@ -6670,6 +6687,7 @@ int main(int argc, char **argv) {
 #endif
   g_trace_on = getenv("HMYR_TRACE") != NULL;
   g_calls_on = getenv("HMYR_CALLS") != NULL;
+  g_函计开 = getenv("HMYR_FNCOUNT") != NULL;
   g_fields_on = getenv("HMYR_FIELDS") != NULL;
   g_depth_on = getenv("HMYR_DEPTH") != NULL;
   {
