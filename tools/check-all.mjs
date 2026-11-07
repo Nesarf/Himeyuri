@@ -384,6 +384,20 @@ const 依赖于 = (文件) => {
 };
 
 const 改过的 = 分号(取值("--affects"));
+
+// 名字打错时不能静默通过。2026-11-08 实测：--only package-hmyr 选中了空集，
+// 输出「all suites held」、退出码 0 —— 一道检查变成空转，而报告说它过了。
+// 真的名字是 packagehmyr（tools/suite-list.txt 第 169 行）。
+// 所以判据放在这里：--only 与 --skip 里的每个名字都必须在 SUITES 里，
+// 否则报出来并退出 2 —— 那是用法错误，不是测试失败，两者不能共用一个退出码。
+const 已知套件 = new Set(SUITES.map(([名]) => 名));
+const 没这套 = [...只跑, ...跳过].filter((名) => !已知套件.has(名));
+if (没这套.length) {
+  console.error("这些名字不在套件表里：" + 没这套.join("、"));
+  console.error("名单在 tools/suite-list.txt，一行一套：名字加制表符加路径。");
+  process.exit(2);
+}
+
 let 选中 = SUITES;
 if (只跑.length) 选中 = SUITES.filter(([名]) => 只跑.includes(名));
 if (改过的.length) {
