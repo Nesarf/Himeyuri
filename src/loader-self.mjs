@@ -22,10 +22,11 @@ import { 区检查 } from "./zone-check.mjs";
 import { 实时检查 } from "./realtime-check.mjs";
 import { 持有格检查 } from "./owned-check.mjs";
 import { 本机能力 } from "./capabilities.mjs";
-// 包名与包清单从 loader.mjs 借同一份实现 —— 复制一份就等于两份知识，而两份知识
-// 迟早会分叉。循环 import 在这里是安全的：那边 import 的是这一层的 loadUnitSelf
-// （函数声明，提升），这里 import 的也是函数声明，两边都只在调用时求值。
-import { resolveImport, 找包根, 读包清单 } from "./loader.mjs";
+// 包名与包清单从 src/resolve.mjs 拿 —— 与 src/loader.mjs 同一份实现，复制一份
+// 就等于两份知识，而两份知识迟早会分叉。
+// （2026-11-07 之前这一层直接从 loader.mjs 要这三个函数，于是它与那个被一百三十五个
+// 文件依赖的枢纽互相拴着。三个函数搬去 resolve.mjs 之后，两边都从那里拿，环断了。）
+import { resolveImport, 找包根, 读包清单 } from "./resolve.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 适配源 = path.join(ROOT, "self", "adapter.hmoca");

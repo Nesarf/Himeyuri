@@ -232,3 +232,4 @@ selfmap	test/selfmap.test.mjs
 suitelist	test/suite-list.test.mjs
 racecensus	test/race-census.test.mjs
 gapbaseline	test/gap-baseline.test.mjs
+cycles	test/cycles.test.mjs

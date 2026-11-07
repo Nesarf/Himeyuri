@@ -279,6 +279,7 @@ const SUITES = [
   ["suitelist", "test/suite-list.test.mjs", "the two suite lists agree: check-all.mjs --list and tools/suite-list.txt hold the same names, the same scripts, no duplicates, and every path that does not exist is named"],
   ["racecensus", "test/race-census.test.mjs", "SPEC M7 - the race census: an assertion that runs after the promise's resolve races the process exit, and the tool that finds those is itself checked against one sample it must catch and two shapes it must not"],
   ["gapbaseline", "test/gap-baseline.test.mjs", "SPEC M7 - the conditional-clause gap may only shrink: tools/gap-baseline.json records how many assertions each suite writes against how many it runs, and the census must report a suite whose gap grew while staying quiet when it did not"],
+  ["cycles", "test/cycles.test.mjs", "the host module graph has no dependency cycle, and the detector is shown to catch one: two files built to import each other, a dynamic import counted as an edge, and nothing called clean when nothing was scanned"],
 ];
 
 /* 清单导出：给 HMYR 写的那一份调度器（self/check.hmyr）用。
