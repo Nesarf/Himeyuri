@@ -4,7 +4,7 @@
 来源：Elle Stone 的 well-behaved ICC profiles（GitHub: ellelstone/elles_icc_profiles）
 取法：经本机代理从该仓库的 profiles 目录按名字挑选下载，2026-10-16。
 许可：CC0 1.0（公有领域奉献）。可随本项目一起分发，不必署名，但这里记下来源，
-      因为「集百家之长，成一己之胜」的第一条就是写明学自哪里。
+      因为「集百家之长，成一己之特」的第一条就是写明学自哪里。
 
 为什么是这一批：它们按同一套原色与白点做成多种传递函数版本
 （srgbtrc 表示 sRGB 的传递曲线，g10/g18 表示 gamma 1.0 与 1.8，labl 表示 L* 曲线），
