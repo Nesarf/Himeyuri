@@ -5,7 +5,7 @@
 // It runs each suite as its own process, so a crash in one is reported as that suite failing rather
 // than as this script dying, and it prints the M2 status line the specification asks about.
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -424,6 +424,29 @@ const 缺席 = [];
   if (缺.length) { 缺席.push([名, 缺]); return false; }
   return true;
 });
+
+// ---- 全量之前：先编一份 C 机器，让每个套件复制它 ----
+//
+// 五十七处套件各自 spawn 一次 gcc 编同一个 vm/hmyr.c，一次全量在上面花三百多秒 CPU。
+// 前两次尝试都在「复用」上失败，根因在第三次找到：spawnSync 在 Windows 上走 PATHEXT，
+// 只认 .exe，所以「只有无后缀的 hmyr」时报 ENOENT —— 而 copyFileSync 只造出无后缀那份
+// （design/CHECKING.txt 第十九笔）。src/cc.mjs 的 编C机器 现在照 gcc 的样子补一份 .exe。
+//
+// 这里编一份，把路径放进 HMYR_EXE，子进程继承环境 —— 共享的只有「一个只读路径、
+// 一个写者」，没有并发写缓存。编不出来就不设这个变量：各套件退回自己编。
+{
+  const 共用目录 = path.join(os.tmpdir(), "hmyr-shared");
+  const 共用 = path.join(共用目录, process.platform === "win32" ? "hmyr.exe" : "hmyr");
+  try {
+    mkdirSync(共用目录, { recursive: true });
+    const 源路 = path.join(ROOT, "vm/hmyr.c");
+    const 旗 = ["-std=c11", "-O3", "-Wall",
+      ...(process.platform === "win32" ? ["-Wl,--stack,67108864"] : ["-pthread"]), "-lm"];
+    const r = spawnSync("gcc", [...旗, "-o", 共用, 源路], { encoding: "utf8" });
+    if (r.status === 0) process.env.HMYR_EXE = 共用;
+    else console.log("（共用 C 机器没编出来，各套件各自编：" + String(r.stderr).slice(0, 120) + "）\n");
+  } catch { /* 编不出来就各自编 */ }
+}
 
 const 跑一套 = (script) => new Promise((resolve) => {
   /* 每个工人的堆上限。2026-11-01 从写死的 768 改成可配置，缺省 512。

@@ -13,7 +13,7 @@ import { loadUnit } from "../src/loader.mjs";
 import { lex } from "../src/lexer.mjs";
 import { parse } from "../src/parser.mjs";
 import { run } from "../src/eval.mjs";
-import { 平台参数 } from "../src/cc.mjs";
+import { 平台参数, 编C机器 } from "../src/cc.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -71,7 +71,7 @@ if (!有编译器) {
   console.log("  跳过  这台机器上没有 gcc");
 } else {
   const exe = path.join(临, "hmyr.exe");
-  const c = spawnSync("gcc", ["-std=c11", "-O3", "-Wall", ...平台参数(), "-o", exe, path.join(ROOT, "vm/hmyr.c"), "-lm"], { encoding: "utf8" });
+  const c = 编C机器(exe);
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
   if (c.status === 0) {
     const 跑 = (路, 名) => {
