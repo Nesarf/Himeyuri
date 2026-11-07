@@ -348,6 +348,13 @@ rt.writeErr = (s) => process.stderr.write(脱线(s));
 rt.argv = 递给语言;
 
 const 码 = rt.callFunction(rt.functions.get("命令行入口"), [], null);
+// 解释面的步数（rt.steps，由 src/minimal-eval.mjs 第 663 行起算、第 860 行每求值一个
+// 节点加一）。与编译面那个出口同名同格式，于是两层的数可以放在一起读。
+//
+// 2026-11-07 的一段弯路记在这里：先以为这一层没有步数（属性叫 steps，而我找的是 步），
+// 于是写下「那一层没有这个概念」的结论；后来发现它一直在数，只是名字不同。教训是
+// 找东西之前先看一眼构造里赋了哪些字段，而不是按中文命名去猜。
+if (process.env.HMYR_OPS) process.stderr.write("ops=" + rt.steps + "\n");
 if (出口 !== null) {
   出口.close();
   if (异步口 !== null) {
