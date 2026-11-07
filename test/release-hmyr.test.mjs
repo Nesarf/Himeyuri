@@ -39,7 +39,7 @@ ok("说明书说了包里不含语料，以及去哪补",
 ok("真发留在 JS 那一侧，且写明了理由", 文.includes("gh release create") && 文.includes("令牌"));
 
 if (!process.env.HMYR_HEAVY) {
-  console.log("  跳过  真跑一次要先造清单，一分多钟，挂 HMYR_HEAVY 之后");
+  console.log("  跳过 10 项：真跑一次要先造清单，一分多钟，挂 HMYR_HEAVY 之后");
 } else {
   console.log("二、真跑一次：三样产物都要在");
   const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-release-"));

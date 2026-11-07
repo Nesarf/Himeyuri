@@ -519,6 +519,18 @@ for (const [name, script, what, 标记] of 选中) {
   console.log("  " + 标签 + name.padEnd(12) + tail +
     (result.耗时 >= 1000 ? "  (" + (result.耗时 / 1000).toFixed(1) + "s)" : ""));
   console.log("          " + what);
+  // 套件自己说了「跳过 N 项」，那一行要跟着报出来（2026-11-07）。
+  //
+  // 为什么：这些行本来就打在套件的 stdout 里，而这一层把它捕获之后只在失败时
+  // 才给人看 —— 于是单跑看得见、全量看不见。一条遮住十条判据的跳过，在只写
+  // 「10 passed」的报告里等于没打；而账上那句「条件不成立时要打一行跳过并带上
+  // 条数」也就停在了套件那一侧。
+  //
+  // 只印带条数的那些：没带条数的还停在「说了一句跳过」，条数得先补上；而全印
+  // 出来会在没有编译器的机器上刷成一片。
+  for (const l of String(result.出 || "").split("\n")) {
+    if (/^\s*跳过\s+\d+\s*项/.test(l)) console.log("          " + l.trim());
+  }
   if (是目标) console.log("          " + (ok ? "这一套本以为还做不到：把账改掉" : "还没做到，理由：" + 标记.knownMissing));
   if (!ok && !是目标) {
     console.log("          exit " + result.码 + (result.重试过 ? ", after retrying once" : ""));

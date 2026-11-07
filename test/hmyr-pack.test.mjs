@@ -126,7 +126,7 @@ console.log("四、自举的固定点：HMYR 编出来的编译器，重编自�
   } else if (!process.env.HMYR_HEAVY) {
     // 这一节要把 self/ 六份编两遍，也就撞上编译器那处平方级的指令累积
     // （见 design/COMPILER.txt）：一跑就是几吉字节。默认不跑。
-    console.log("  跳过  这一节要编 self/ 六份两遍，几吉字节：设 HMYR_HEAVY=1 才跑");
+    console.log("  跳过 5 项：这一节要编 self/ 六份两遍，几吉字节：设 HMYR_HEAVY=1 才跑");
   } else {
     const exe = path.join(临, "vm2.exe");
     const c = 编C机器(exe);

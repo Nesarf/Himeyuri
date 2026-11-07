@@ -38,7 +38,7 @@ if (层.ok) {
 }
 
 if (!process.env.HMYR_HEAVY) {
-  console.log("  跳过  真生成要一分钟上下，挂 HMYR_HEAVY 之后");
+  console.log("  跳过 10 项：真生成要一分钟上下，挂 HMYR_HEAVY 之后");
 } else {
   console.log("二、真跑一次：清单能被标准 JSON 读，digest 与标准缩进自洽");
   const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-manifest-"));
