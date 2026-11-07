@@ -72,7 +72,11 @@ const 两侧跑 = (源码, 名字) => {
   const jsr = vm.调用("main", [], null);
   const 码路 = path.join(临, 名字 + ".hmoks");
   fs.writeFileSync(码路, 写程序(程序));
-  const c = spawnSync(exe, [码路], { encoding: "utf8", timeout: 120000 });
+  // 2026-11-07：timeout 从 120 秒提到 300 秒。理由不是「它慢」，是全量并行时这一套
+  // 排在一百多个进程之间，线程的创建与调度会被拖慢；而这一套验的是「两台机器答案一样」，
+  // 不是「多快」。那天它红了一次、三条不通过、跑了 134 秒 ≈ 120 秒的超时加上编译 ——
+  // 单跑八秒全过。容差不改判据的语义，只改它在负载下说真话的余地。
+  const c = spawnSync(exe, [码路], { encoding: "utf8", timeout: 300000 });
   return { js: js出, c: String(c.stdout || ""), js码: jsr.ok ? jsr.值 : null, c码: c.status, c错: String(c.stderr || "") };
 };
 
@@ -106,8 +110,8 @@ console.log("一、两个线程同时活着，各自算完");
     '  let 甲 = thr_spawn(源码, "工作")',
     '  let 乙 = thr_spawn(源码, "工作")',
     "  print(str(thr_count()))",
-    "  let 一 = thr_join(甲, 30000)",
-    "  let 二 = thr_join(乙, 30000)",
+    "  let 一 = thr_join(甲, 60000)",
+    "  let 二 = thr_join(乙, 60000)",
     '  print("|" + str(一) + "|" + str(二))',
     "  return 0",
     "}",
