@@ -116,6 +116,36 @@ console.log("四、九种扩展名与 SPEC 2.11 一致");
     README的.join(" ") + " 对 " + 规格的.join(" "));
 }
 
+console.log("五、定位写在门口，而且指向那一页");
+{
+  // 为什么要有这一节：README 开头那句说的是「一门通用语言」—— 那是用途层（能写什么）。
+  // 定位层（车间／平台类语言）原先只在 SPEC 第 33 行与 design/PLATFORM.txt 第 83 行，
+  // 门口一句不提，于是读者拿到的印象比这门语言小一档。2026-11-08 补了一句进去，
+  // 这一节盯着它别悄悄走掉：一句定位被删掉不会让任何别的东西变坏，只有这里会说话。
+  const 段 = (源, 起, 止) => {
+    const a = 源.indexOf(起), b = 源.indexOf(止, a + 1);
+    return a >= 0 && b > a ? 源.slice(a, b) : "";
+  };
+  // 只看开头那一节（标题到看板娘之间）。README 别处也提「平台」二字是允许的，
+  // 而这条判据要的是「门口就写着」，所以范围必须窄。
+  const 开头 = 段(文, "# Himeyuri", "## 看板娘");
+  ok("README 里有开头那一节", 开头.length > 0, String(开头.length));
+  ok("开头那一段写着「开发平台」", 开头.includes("开发平台"), "开头没提定位");
+  ok("开头那一段指向 design/PLATFORM.txt", 开头.includes("design/PLATFORM.txt"), "");
+  ok("那一页真的在", fs.existsSync(path.join(ROOT, "design/PLATFORM.txt")), "");
+  // 反向：把开头那一处「开发平台」抠掉，第二条必须不成立。
+  // 一条从没见过红的判据是占位符 —— 与第二节同一个理由。
+  // 用 replaceAll：那一句里「开发平台」出现两次（「一个开发平台」与「新的开发平台」），
+  // 第一次跑的时候 replace 只抠掉一处，剩下那处让反向判断照样成立 —— 反向自己红了，
+  // 而它红得对：说明这一条真的在看文本。
+  const 坏 = 文.replaceAll("开发平台", "别的什么");
+  if (坏 === 文) {
+    ok("反向改动落到了位置（否则这一节什么都没验）", false, "README 里没有「开发平台」可替换");
+  } else {
+    ok("抠掉之后第二条判据不成立", !段(坏, "# Himeyuri", "## 看板娘").includes("开发平台"), "");
+  }
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
