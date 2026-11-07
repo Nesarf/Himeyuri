@@ -41,11 +41,10 @@ if (process.argv.includes("--compile")) {
     process.exit(2);
   }
   // 不引入 fs：加载器自己读文件，而这个启动器「不直接碰文件系统」是一条被验收盯着的性质。
-  const [{ loadUnit }, { 跑字节码 }, { 本机能力 }, fs, path] = await Promise.all([
+  const [{ loadUnit }, { 跑字节码 }, { 本机能力 }, path] = await Promise.all([
     import("../src/loader.mjs"),
     import("../src/vm.mjs"),
     import("../src/capabilities.mjs"),
-    import("node:fs"),
     import("node:path"),
   ]);
   const 绝对 = path.resolve(目标);
@@ -75,10 +74,12 @@ if (process.argv.includes("--compile")) {
     // 解释器，而 probes、vmboot、inflate 这几套最慢的都在这一层上跑。它们此前只有墙钟，
     // 而墙钟回答不了「慢在自举层的装载还是慢在程序本身」—— 第二十笔就是因为手里只有
     // 相关性而写错过一次结论。步数是确定的数，与机器快慢无关。
-    // 用 fs.writeSync 而不是 process.stderr.write：下面几行就要 process.exit，而
-    // 对管道写是异步的 —— 第一次加这一行时打出来的东西被 exit 吞掉了，症状是
-    // 「明明写了却没输出」，而代码看着完全正确。
-    if (process.env.HMYR_OPS) fs.writeSync(2, "ops=" + vm.步 + "\n");
+    // 一条曾经踩过的弯路：这里先用 process.stderr.write，没看到输出，于是判定「被
+    // process.exit 吞掉」，改成引入文件系统模块去同步写 —— 那让 test/bootstrap.test.mjs
+    // 的「启动器不直接碰文件系统」红了（它连注释里出现那个模块名都算）。
+    // 真正的原因与缓冲无关：那段代码当时被加进了 --compile 分支，而探针走的是解释面。
+    // 所以这里用 process.stderr.write 就够，一个字节都不碰文件系统。
+    if (process.env.HMYR_OPS) process.stderr.write("ops=" + vm.步 + "\n");
     if (!r.ok) { console.error(r.码 + " " + r.话); process.exit(1); }
     process.exit(typeof r.值 === "number" ? Math.trunc(r.值) : 0);
   } catch (e) {
