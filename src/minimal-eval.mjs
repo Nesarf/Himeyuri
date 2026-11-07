@@ -37,6 +37,9 @@ const 深限 = 500;
 const THREADS = new Map();
 let nextThreadId = 0;
 const 循环闸 = 1000000;
+// 2026-11-07：空效果集共享一份。允许() 原来每次函数调用都 new Set([])，而多数函数
+// 一个效果都不声明 —— 那份空集谁也不改，所以一份就够。
+const 空效果 = new Set();
 
 // 一个绑定：值 + 可不可改。let 不可改、var 可改，而 assign 要走到「拥有这个名字」的那一层去改。
 class 作用域 {
@@ -734,7 +737,7 @@ export class 最小运行时 {
   }
 
   // 与宿主的 allowed 同一件事：没声明效果的函数，什么带效果的都不许调。
-  允许(effects) { return new Set(effects || []); }
+  允许(effects) { return !effects || effects.length === 0 ? 空效果 : new Set(effects); }
 
   登记模块(ast) {
     for (const decl of ast.decls) {
