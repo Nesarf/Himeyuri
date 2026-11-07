@@ -45,15 +45,22 @@ if (!有编译器) {
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-inflate-"));
   const exe = path.join(临, "hmyr.exe");
+  const 编起 = Date.now();
   const c = 编C机器(exe);
+  const 编毫秒 = Date.now() - 编起;
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 160));
+  // 压与解分开记：这一套是全量里最慢的（137.1 秒，另一轮 168.8、251.9），而手里
+  // 只有总数。probes 那边量出「装载 self/run.hmoca 约十一秒」之后，才有理由猜这里
+  // 也有同样的一笔 —— 但猜不是数（2026-11-07）。
+  const 账 = { 压: { 次: 0, 毫秒: 0 }, 解: { 次: 0, 毫秒: 0 } };
+  const 计时 = (桶, 起) => { 桶.次++; 桶.毫秒 += Date.now() - 起; };
   if (c.status === 0 && 压码 && 解码) {
     const 压路 = path.join(临, "deflate.hmoks");
     const 解路 = path.join(临, "inflate.hmoks");
     fs.writeFileSync(压路, 压码);
     fs.writeFileSync(解路, 解码);
-    const 压 = (参) => spawnSync(exe, [压路, ...参], { encoding: "utf8", timeout: 600000, env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" } });
-    const 解 = (参) => spawnSync(exe, [解路, ...参], { encoding: "utf8", timeout: 600000, env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" } });
+    const 压 = (参) => { const 起 = Date.now(); const r = spawnSync(exe, [压路, ...参], { encoding: "utf8", timeout: 600000, env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" } }); 计时(账.压, 起); return r; };
+    const 解 = (参) => { const 起 = Date.now(); const r = spawnSync(exe, [解路, ...参], { encoding: "utf8", timeout: 600000, env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" } }); 计时(账.解, 起); return r; };
 
     console.log("二、五个小样本：短到能手工算");
     for (const 内容 of ["a", "ab", "aaaa", "abab", "abcabcabc"]) {
@@ -98,10 +105,12 @@ if (!有编译器) {
         const 流路 = path.join(临, "dyn-" + 名 + ".z");
         const 出2 = path.join(临, "dyn-" + 名 + ".out");
         fs.writeFileSync(流路, 流);
+        const t2 = Date.now();
         const r2 = spawnSync(exe, [解路, 流路, 出2], {
           encoding: "utf8", timeout: 600000,
           env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_MEM_LIMIT: "0", HMYR_GC: "1" },
         });
+        计时(账.解, t2);
         const 回2 = fs.existsSync(出2) ? fs.readFileSync(出2) : null;
         ok(名 + " 的动态流解回原样", r2.status === 0 && 回2 && 回2.length === 样本.length && Buffer.compare(样本, 回2) === 0, String(r2.status) + " " + (回2 ? 回2.length : 0));
       }
@@ -131,6 +140,7 @@ if (!有编译器) {
           env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0" },
         });
         const 秒 = ((Date.now() - t0) / 1000).toFixed(1);
+        计时(账.解, t0);
         const 回 = fs.existsSync(大出) ? fs.readFileSync(大出) : null;
         ok(倍 + " 倍（" + 大.length + " 字节）解得回原样", r.status === 0 && 回 && 回.length === 大.length && Buffer.compare(大, 回) === 0, String(r.status) + " 用时 " + 秒 + "s " + (回 ? 回.length : 0));
       }
@@ -158,6 +168,7 @@ if (!有编译器) {
           env: { ...process.env, HMYR_STEPS: "20000000000", HMYR_GC: "1", HMYR_MEM_LIMIT: "0", HMYR_OPS: "1" },
         });
         const 秒 = ((Date.now() - t0) / 1000).toFixed(1);
+        计时(账.解, t0);
         const 回 = fs.existsSync(出路) ? fs.readFileSync(出路) : null;
         const m = /ops=(\d+)/.exec(String(r.stderr || ""));
         const ops = m ? Number(m[1]) : NaN;
@@ -183,6 +194,15 @@ if (!有编译器) {
         ok("解出来与原样本一致", 回.length === 样本.length && Buffer.compare(样本, 回) === 0, 回.length + " 对 " + 样本.length);
       }
     }
+  }
+  // 汇总一行：这一套是全量里最慢的（137.1 秒），而「编」「压」「解」三笔此前没有分开。
+  // 记下来的用途与 probes 那一行相同：知道自己最慢回答不了该动哪里。
+  {
+    const 总 = 账.压.毫秒 + 账.解.毫秒;
+    console.log("");
+    console.log("这一趟：编 C 机器 " + (编毫秒 / 1000).toFixed(1) + "s · 跑 " + (总 / 1000).toFixed(1) +
+      "s（压 " + 账.压.次 + " 次 " + (账.压.毫秒 / 1000).toFixed(1) + "s · 解 " +
+      账.解.次 + " 次 " + (账.解.毫秒 / 1000).toFixed(1) + "s）");
   }
   fs.rmSync(临, { recursive: true, force: true });
 }

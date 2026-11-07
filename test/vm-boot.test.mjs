@@ -58,8 +58,16 @@ if (!有编译器) {
 } else if (探针) {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-vmboot-"));
   const exe = path.join(临, "hmyr");
+  // 三段分开记：编 C 机器、编探针、以及真正要跑的那三趟。
+  //
+  // 为什么要分（2026-11-07）：这一套是全量里第二慢的（128.5 秒，另一轮 146.6），而手里
+  // 只有总数。probes 那边量出来「装载 self/run.hmoca 约十一秒一份」之后，这里才有理由
+  // 猜它的时间也大半花在「VM 里跑自举层」上 —— 但猜不是数，所以记下来。
+  const 编起 = Date.now();
   const c = 编C机器(exe);
+  const 编毫秒 = Date.now() - 编起;
   ok("C 那台编得出来", c.status === 0, String(c.stderr).slice(0, 200));
+  const 账 = [];
 
   if (c.status === 0) {
     const 器路 = path.join(临, "vm-boot.hmoks");
@@ -70,9 +78,11 @@ if (!有编译器) {
 
     console.log("二、自举链：VM 里的自举层去跑一份示例");
     {
+      const 起 = Date.now();
       const r = spawnSync(exe, [器路, 自举, "examples/hello.hmoca"], {
         encoding: "utf8", timeout: 900000, env: 环境, cwd: ROOT,
       });
+      账.push({ 名: "自举链跑 hello", 毫秒: Date.now() - 起 });
       const 出 = String(r.stdout || "");
       // 两句话都要有：5 是客人打出来的，最后一行是探针自己说的退出码。
       // 只看最后一行的话，「客人一行都没打就退出 0」也会算过。
@@ -95,9 +105,11 @@ if (!有编译器) {
       const vm = 跑字节码(u, { capabilities: 本机能力() });
       const 那 = vm.调用("main", []);
       const 期望 = 那.ok ? String(那.值) : ("失败：" + 那.话);
+      const 起 = Date.now();
       const r = spawnSync(exe, [器路, 自举, "conformance/vm-hands.hmoca"], {
         encoding: "utf8", timeout: 900000, env: 环境, cwd: ROOT,
       });
+      账.push({ 名: "自举链跑 vm-hands", 毫秒: Date.now() - 起 });
       const 出 = String(r.stdout || "");
       const 首行 = (出.split("\n")[0] || "").trim();
       ok("自举层跑出与 src/vm.mjs 同一个数（期望 " + 期望 + "）",
@@ -109,11 +121,20 @@ if (!有编译器) {
     {
       // 点名一个不存在的入口：这一层要说出「没有 … 这个函数」，
       // 而不是安静地交回 0。探针把入口名从第五个参数接过来。
+      const 起 = Date.now();
       const r = spawnSync(exe, [器路, 自举, "examples/hello.hmoca", "根本没有这个入口"], {
         encoding: "utf8", timeout: 900000, env: 环境, cwd: ROOT,
       });
+      账.push({ 名: "不存在的入口", 毫秒: Date.now() - 起 });
       const 出 = String(r.stdout || "");
       ok("不存在的入口要说出来", r.status === 1 && 出.includes("没有 根本没有这个入口 这个函数"), 出.slice(0, 160));
+    }
+    if (账.length) {
+      const 跑 = 账.reduce((a, b) => a + b.毫秒, 0);
+      console.log("");
+      console.log("这一趟：编 C 机器 " + (编毫秒 / 1000).toFixed(1) + "s · 跑 " +
+        (跑 / 1000).toFixed(1) + "s（" + 账.length + " 次）· " +
+        账.map((x) => x.名 + " " + (x.毫秒 / 1000).toFixed(1) + "s").join(" · "));
     }
   }
 }
