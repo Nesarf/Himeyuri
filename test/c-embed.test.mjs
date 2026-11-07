@@ -30,7 +30,7 @@ const 有gcc = (() => {
 console.log("一、一个 C 程序调到 HMYR");
 {
   if (!有gcc) {
-    console.log("  跳过  这台机器上没有 gcc —— 嵌入那一侧不验");
+    console.log("  跳过 6 项：这台机器上没有 gcc —— 嵌入那一侧不验");
   } else {
     const exe = path.join(临, "c-embed.exe");
     const 编 = spawnSync("gcc", ["-std=c11", "-O3", "-w", "-DHMYR_NO_MAIN", "-I", path.join(ROOT, "vm"),
@@ -56,7 +56,7 @@ console.log("一、一个 C 程序调到 HMYR");
       const 自己路径 = path.join(临时目录(), "hmyr-self",
         process.platform === "win32" ? "hmyr.exe" : "hmyr");
       if (!fs.existsSync(自己路径)) {
-        console.log("  跳过  " + 自己路径 + " 不在，第二条判据不验");
+        console.log("  跳过 1 项：" + 自己路径 + " 不在，第二条判据不验");
       } else {
         const 自己 = spawnSync(自己路径, [码], { encoding: "utf8", timeout: 300000 });
         ok("HMYR 自己跑也是 42", 自己.status === 42, String(自己.status));

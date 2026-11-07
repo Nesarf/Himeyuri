@@ -39,7 +39,7 @@ const 有编译器 = (() => {
 
 console.log("二、握手：initialize / shutdown / exit");
 if (!有编译器) {
-  console.log("  跳过  这台机器上没有 gcc");
+  console.log("  跳过 16 项：这台机器上没有 gcc");
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-lsp-"));
   const exe = path.join(临, "hmyr.exe");

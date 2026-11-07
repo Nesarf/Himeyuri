@@ -50,7 +50,7 @@ console.log("二、全量清单在仓库里，而且是从 check-all 导出来�
 
 console.log("三、它真的调度得动：跑三个快套件");
 if (!有编译器) {
-  console.log("  跳过  这台机器上没有 gcc —— 调度器跑不起来");
+  console.log("  跳过 5 项：这台机器上没有 gcc —— 调度器跑不起来");
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-check-"));
   const exe = path.join(临, "hmyr.exe");

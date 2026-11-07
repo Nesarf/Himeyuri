@@ -198,7 +198,7 @@ console.log("七、C 那台也认得区（要 gcc 编一次）");
   // 它比的是与字节码机逐行相同：那两台跑的是同一份字节码，分派却各写了一份。
   const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
   if (!有gcc) {
-    console.log("  跳过  这台机器上没有 gcc —— C 那台那一侧不验");
+    console.log("  跳过 3 项：这台机器上没有 gcc —— C 那台那一侧不验");
   } else {
     const exe = path.join(临, "hmyr-c.exe");
     const 编 = spawnSync("gcc", ["-std=c11", "-O3", ...平台参数(), "-o", exe,
@@ -259,7 +259,7 @@ console.log("八、一个真程序：四台机器同一段");
   // 第四台用第七节编出来的那个 exe；没编出来就跳过，不假装验过。
   const exe = path.join(临, "hmyr-c.exe");
   if (!fs.existsSync(exe)) {
-    console.log("  跳过  C 那台没编出来 —— 第四台不验");
+    console.log("  跳过 1 项：C 那台没编出来 —— 第四台不验");
   } else {
     const 丁 = spawnSync(exe, [例], {
       encoding: "utf8", cwd: 临, timeout: 300000,
@@ -308,7 +308,7 @@ console.log("九、模块级 const 持有索引：四台同一段（§4.2 的原
 
   const exe = path.join(临, "hmyr-c.exe");
   if (!fs.existsSync(exe)) {
-    console.log("  跳过  C 那台没编出来 —— 第四台不验");
+    console.log("  跳过 1 项：C 那台没编出来 —— 第四台不验");
   } else {
     const 丁 = spawnSync(exe, [p], {
       encoding: "utf8", cwd: 临, timeout: 300000,

@@ -101,7 +101,7 @@ console.log("四、自举那一份也跳得过去");
     try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
   })();
   if (!有编译器) {
-    console.log("  跳过  这台机器上没有 gcc —— 自举那一边跑不起来");
+    console.log("  跳过 7 项：这台机器上没有 gcc —— 自举那一边跑不起来");
   } else {
     const 临二 = 临时mkdtempSync("hmyr-lspmod-c-");
     const exe = path.join(临二, "hmyr.exe");

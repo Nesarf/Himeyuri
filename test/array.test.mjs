@@ -84,7 +84,7 @@ console.log("四、C 那台也认：同一份程序给出同一个答案");
     try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
   })();
   if (!有编译器) {
-    console.log("  跳过  这台机器上没有 gcc");
+    console.log("  跳过 4 项：这台机器上没有 gcc");
   } else {
     const exe = path.join(临, "hmyr-array.exe");
     const c = 编C机器(exe);

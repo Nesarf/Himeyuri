@@ -193,7 +193,7 @@ console.log("十一、C 那台：契约已经在字节码里，所以它只差�
   // 判据因此不是「它自己也查一遍」，而是「同一份字节在它那里给出同一个答案与同一句话」。
   const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
   if (!有gcc) {
-    console.log("  跳过  这台机器上没有 gcc");
+    console.log("  跳过 5 项：这台机器上没有 gcc");
   } else {
     const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-contract-c-"));
     const exe = path.join(临, "hmyr.exe");

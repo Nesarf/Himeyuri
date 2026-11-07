@@ -114,7 +114,7 @@ console.log("四、C 那台一致");
     try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
   })();
   if (!有gcc) {
-    console.log("  跳过  这台机器上没有 gcc —— 第四台不验");
+    console.log("  跳过 3 项：这台机器上没有 gcc —— 第四台不验");
   } else {
     const exe = path.join(临, "hmyr-ffi.exe");
     const 编 = spawnSync("gcc", ["-std=c11", "-O3", "-w", ...平台参数(), "-o", exe,
@@ -228,7 +228,7 @@ console.log("六、call_c 的三条失败");
     try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
   })();
   if (!有gcc二) {
-    console.log("  跳过  这台机器上没有 gcc —— call_c 的失败路径不验");
+    console.log("  跳过 7 项：这台机器上没有 gcc —— call_c 的失败路径不验");
   } else {
     // 用一个自己的子目录：同一个临时目录里编第二个 exe 会撞上「输出文件打不开」
     // （第一个刚跑过还没放手），2026-11-02 实测 —— 而换一个目录就好了。
@@ -295,7 +295,7 @@ console.log("六、call_c 的三条失败");
       const 库出 = path.join(子, process.platform === "win32" ? "fixtures.dll" : "fixtures.so").replace(/\\/g, "/");
       const 编库 = spawnSync("gcc", ["-std=c11", "-O3", "-w", "-shared", ...平台参数(), "-o", 库出, 库源], { encoding: "utf8" });
       if (编库.status !== 0) {
-        console.log("  跳过  判据用的共用库没编出来：" + String(编库.stderr || "").slice(0, 120));
+        console.log("  跳过 2 项：判据用的共用库没编出来：" + String(编库.stderr || "").slice(0, 120));
       } else {
         const 混甲 = 跑一条(库出, "take_int_then_str", '(3, "abcd")');
         ok("数在前、串在后：3 与 abcd 得 304", String(混甲.stdout || "").trim() === "304",

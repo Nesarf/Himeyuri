@@ -88,7 +88,7 @@ console.log("二、编译出来的东西跑得动（字节相同之外，还要�
 console.log("三、C 那台也交得出同一份字节");
 {
   if (!有gcc) {
-    console.log("  跳过  这台机器上没有 gcc");
+    console.log("  跳过 4 项：这台机器上没有 gcc");
   } else {
     const exe = path.join(临, "vm.exe");
     const c = 编C机器(exe);

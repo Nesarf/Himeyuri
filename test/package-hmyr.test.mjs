@@ -35,7 +35,7 @@ const 有编译器 = (() => {
 
 console.log("二、真打一个包（design/），再自己读回来");
 if (!有编译器) {
-  console.log("  跳过  这台机器上没有 gcc");
+  console.log("  跳过 17 项：这台机器上没有 gcc");
 } else {
   const 临 = fs.mkdtempSync(path.join(ROOT, ".tmp-package-"));
   const exe = path.join(临, "hmyr.exe");

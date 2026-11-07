@@ -44,7 +44,7 @@ const 有编译器 = (() => {
 
 console.log("三、两份喂同一段小样本，产物逐字节相同");
 if (!有编译器) {
-  console.log("  跳过  这台机器上没有 gcc");
+  console.log("  跳过 5 项：这台机器上没有 gcc");
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-ucdc-"));
   const 甲 = path.join(临, "js");

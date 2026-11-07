@@ -37,7 +37,7 @@ const 有编译器 = (() => {
 })();
 
 if (!有编译器) {
-  console.log("  跳过  这台机器上没有 gcc");
+  console.log("  跳过 27 项：这台机器上没有 gcc");
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-deflate-"));
   const 账 = [];   // 每一趟的步数与耗时：正常跑也记，因为「异常」要有个东西比

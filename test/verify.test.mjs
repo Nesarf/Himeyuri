@@ -84,7 +84,7 @@ try {
 
   console.log("四、分离签名");
   if (!能签) {
-    console.log("    跳过：这台机器上没有签名钥匙");
+    console.log("    跳过 5 项：这台机器上没有签名钥匙");
   } else {
     // 先删旧 .sig：ssh-keygen 会问「Overwrite (y/n)?」而脚本里没人回答。
     const 签路径 = 清单路径 + ".sig";

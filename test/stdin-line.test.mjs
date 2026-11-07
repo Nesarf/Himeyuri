@@ -56,7 +56,7 @@ ok("加载没有诊断", unit.ok, JSON.stringify(unit.diagnostics.errors.slice(0
 
 console.log("三、喂进去什么，原样出来什么");
 if (!有编译器) {
-  console.log("  跳过  这台机器上没有 gcc");
+  console.log("  跳过 7 项：这台机器上没有 gcc");
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-stdin-"));
   const exe = path.join(临, "hmyr.exe");

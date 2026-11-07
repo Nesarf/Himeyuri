@@ -45,7 +45,7 @@ const 例子批 = [
   ["(a+b)*(c-d)", "(a + b) * (c - d)"],
 ];
 if (!有编译器) {
-  console.log("  跳过  这台机器上没有 gcc");
+  console.log("  跳过 3 项：这台机器上没有 gcc");
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-fmt-"));
   const exe = path.join(临, "hmyr.exe");
@@ -73,7 +73,7 @@ if (!有编译器) {
 
 console.log("四、整文件：六份源码缩进之后还能编，而且幂等");
 if (!有编译器) {
-  console.log("  跳过  这台机器上没有 gcc");
+  console.log("  跳过 3 项：这台机器上没有 gcc");
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-fmt-file-"));
   const exe = path.join(临, "hmyr.exe");

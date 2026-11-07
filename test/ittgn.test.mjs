@@ -235,7 +235,7 @@ console.log("十、C 那台也认容器");
   // 先 main 后与包同名）只要一处分叉，这条就红。
   const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
   if (!有gcc) {
-    console.log("  跳过  这台机器上没有 gcc —— C 那台那一侧不验");
+    console.log("  跳过 4 项：这台机器上没有 gcc —— C 那台那一侧不验");
   } else {
     const exe = path.join(临, "hmyr.exe");
     const 编 = spawnSync("gcc", ["-std=c11", "-O3", ...平台参数(), "-o", exe,

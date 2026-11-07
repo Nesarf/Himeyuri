@@ -40,7 +40,7 @@ const 签名 = path.join(ROOT, "dist/manifest.json.sig");
 const 清单 = path.join(ROOT, "dist/manifest.json");
 
 if (!fs.existsSync(签名) || !fs.existsSync(清单)) {
-  console.log("  跳过  dist 里没有 manifest.json 与它的签名：发布物打出来之后才有");
+  console.log("  跳过 3 项：dist 里没有 manifest.json 与它的签名：发布物打出来之后才有");
 } else {
   console.log("一、发布物自己的签名");
   const 好 = 验(签名, 清单);

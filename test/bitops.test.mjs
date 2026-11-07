@@ -27,7 +27,7 @@ const 有编译器 = (() => {
 })();
 
 if (!有编译器) {
-  console.log("  跳过  这台机器上没有 gcc");
+  console.log("  跳过 3 项：这台机器上没有 gcc");
 } else {
   const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "hmyr-bitops-"));
   const exe = path.join(临, "hmyr.exe");

@@ -68,7 +68,7 @@ const 有编译器 = (() => {
   try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
 })();
 if (!有编译器) {
-  console.log("  跳过  这台机器上没有 gcc");
+  console.log("  跳过 3 项：这台机器上没有 gcc");
 } else {
   const exe = path.join(临, "hmyr.exe");
   const c = 编C机器(exe);

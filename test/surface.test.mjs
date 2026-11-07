@@ -224,7 +224,7 @@ if (process.platform !== "linux") {
   // 这一节问的是 X11 的窗口表。Windows 那一侧的真窗口是 WPF（deps/surface/win.ps1），
   // 它不交窗口 id，也没有 X11 可问 —— 而「窗口在不在」在那条路上没有别的自动判据，
   // 所以在别的平台上如实跳过，而不是拿一句「反正开了」冒充。
-  console.log("  跳过  这一节问的是 X11 的窗口表（libX11），Windows 上那一侧是 WPF");
+  console.log("  跳过 3 项：这一节问的是 X11 的窗口表（libX11），Windows 上那一侧是 WPF");
 } else {
   // 三件事，一条链：后端开窗并把 id 打进回执；另一个进程（xprobe.py）查得见 viewable；
   // 后端退出之后同一个 id 查出来是 gone。
@@ -261,7 +261,7 @@ console.log("屏幕与缩放：问 X11，不靠猜");
 if (process.platform !== "linux") {
   // 与真窗口那一节同一个理由：这一节问的是 X11。Windows 那一侧的取法完全不同
   // （GetSystemMetrics 与 DPI awareness），而今天没有第二个后端，所以如实跳过。
-  console.log("  跳过  这一节问的是 X11 的屏幕表，Windows 上那一侧是另一套");
+  console.log("  跳过 6 项：这一节问的是 X11 的屏幕表，Windows 上那一侧是另一套");
 } else {
   // 两件事：主屏的像素与毫米（缩放由它们的比值决定），以及 Xinerama 认得几个显示器。
   // 2026-11-03 立的 —— design/OPEN.txt 第十二条那条「还没有的」收的就是它。

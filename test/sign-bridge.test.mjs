@@ -27,7 +27,7 @@ const 有ssh = (() => {
   try { return spawnSync("ssh-keygen", ["-?"], { encoding: "utf8" }).status !== null; } catch { return false; }
 })();
 if (!有ssh) {
-  console.log("  跳过  这台机器上没有 ssh-keygen —— 互通那半边不验");
+  console.log("  跳过 7 项：这台机器上没有 ssh-keygen —— 互通那半边不验");
 } else {
   // RFC 8032 Test 1 的 seed 与它该派生的公钥。
   const 种 = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60";
@@ -66,7 +66,7 @@ if (!有ssh) {
 
   console.log("二、ssh-keygen 读得懂它");
   if (!fs.existsSync(私)) {
-    console.log("  跳过  私钥没写出来，后面两条不验");
+    console.log("  跳过 6 项：私钥没写出来，第二到第四节都不验");
   } else {
     fs.chmodSync(私, 0o600);
     if (process.platform === "win32") {

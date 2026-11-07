@@ -86,7 +86,7 @@ console.log("五、C 那台也按档位：同一份内容，两个名字，两�
   // 那样「同一份内容的两档入口」在另一台上就成了两个空名字。
   const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
   if (!有gcc) {
-    console.log("  跳过  这台机器上没有 gcc —— C 那台那一侧不验");
+    console.log("  跳过 3 项：这台机器上没有 gcc —— C 那台那一侧不验");
   } else {
     const exe = path.join(临, "hmyr.exe");
     const 编 = spawnSync("gcc", ["-std=c11", "-O3", ...平台参数(), "-o", exe,
@@ -113,7 +113,7 @@ console.log("六、线程池那一项在 C 那台上真的拦");
   // 所以那一侧连「第一个线程」都起不来，测不出池的深浅。
   const exe = path.join(临, "hmyr.exe");
   if (!fs.existsSync(exe)) {
-    console.log("  跳过  C 那台没编出来 —— 线程池那一侧不验");
+    console.log("  跳过 4 项：C 那台没编出来 —— 线程池那一侧不验");
   } else {
     const 行批 = [
       "fn main() -> Int effects(thread) {",
@@ -180,7 +180,7 @@ console.log("八、GC 那一项在 C 那台上也按档位");
   // 看到 gc 开始就是开着，而「开」与「关」跑出的是同一段结果：档位换的是资源，不是答案。
   const exe = path.join(临, "hmyr.exe");
   if (!fs.existsSync(exe)) {
-    console.log("  跳过  C 那台没编出来 —— GC 那一侧不验");
+    console.log("  跳过 5 项：C 那台没编出来 —— GC 那一侧不验");
   } else {
     const 源 = [
       "fn main() -> Int {",

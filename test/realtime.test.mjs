@@ -206,7 +206,7 @@ console.log("七、C 那台：分配真的少了（堆账是判据）");
     try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }
   })();
   if (!有gcc) {
-    console.log("  跳过  这台机器上没有 gcc —— 堆账那一侧不验");
+    console.log("  跳过 4 项：这台机器上没有 gcc —— 堆账那一侧不验");
   } else {
     const exe = path.join(临, "hmyr-rt.exe");
     const 编 = spawnSync("gcc", ["-std=c11", "-O3", "-w", ...平台参数(), "-o", exe,

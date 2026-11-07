@@ -126,7 +126,7 @@ console.log("三、四台同一段");
 
   const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
   if (!有gcc) {
-    console.log("  跳过  这台机器上没有 gcc —— C 那台那一侧不验");
+    console.log("  跳过 2 项：这台机器上没有 gcc —— C 那台那一侧不验");
   } else {
     const exe = path.join(临, "hmyr-c.exe");
     const 编 = spawnSync("gcc", ["-std=c11", "-O3", ...平台参数(), "-o", exe,

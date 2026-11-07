@@ -102,7 +102,7 @@ console.log("一之三、链到 H723：编得过之后的下一关是链得出�
   if (!是GNU) {
     console.log("  跳过  这一节要 GNU 工具链；Arm 那一支的链接脚本是 link.sct，不是 link-h723.ld");
   } else if (!make) {
-    console.log("  跳过  这台机器上没有 make（MSYS2 那一份也不在常见位置）");
+    console.log("  跳过 6 项：这台机器上没有 make（MSYS2 那一份也不在常见位置）");
   } else {
     const 端口 = path.join(ROOT, "port");
     const 映 = path.join(端口, "build", "hmyr-board.elf");

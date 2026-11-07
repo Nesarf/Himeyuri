@@ -72,7 +72,7 @@ const 有编译器 = (() => {
 
 console.log("三、C 那一台");
 if (!有编译器) {
-  console.log("  跳过  这台机器上没有 gcc");
+  console.log("  跳过 4 项：这台机器上没有 gcc");
 } else {
   const exe = path.join(临, "hmyr.exe");
   const g = 编C机器(exe);

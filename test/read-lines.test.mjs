@@ -96,7 +96,7 @@ console.log("二、在真正的程序里按行读（两台机器）");
     // C 那台
     const 有gcc = (() => { try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; } })();
     if (!有gcc) {
-      console.log("  跳过  这台机器上没有 gcc");
+      console.log("  跳过 2 项：这台机器上没有 gcc");
     } else {
       const exe = path.join(临, "vm.exe");
       const c = 编C机器(exe);
