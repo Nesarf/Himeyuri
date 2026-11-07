@@ -829,11 +829,12 @@ export class 最小运行时 {
   }
 
   执行块(block, parentScope, effects) {
-    // 2026-11-07：作用域池化试过又撤了 —— 池化加 try/finally 量出来 34.13 秒，
-    // 比不池化的 33.02 慢。V8 的 Map 分配比「从池里取、改 parent、清空、放回」便宜。
+    // 2026-11-07：作用域池化试过又撤了（34.13 对 33.02，V8 的 Map 分配比池化便宜）。
+    // 这里换的是遍历方式：for...of 走迭代器，而 statements 一定是数组，索引循环省掉那层。
     const scope = new 作用域(parentScope);
+    const 语句们 = block.statements;
     let last = null;
-    for (const stmt of block.statements) last = this.执行语句(stmt, scope, effects);
+    for (let i = 0; i < 语句们.length; i++) last = this.执行语句(语句们[i], scope, effects);
     return last;
   }
 
