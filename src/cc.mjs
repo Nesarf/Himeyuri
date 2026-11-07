@@ -48,7 +48,14 @@ export const 编C机器 = (出, 额外旗标 = []) => {
     } catch { /* 复制不过去就自己编，让真正的错冒出来 */ }
   }
   const 源路 = path.join(path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."), "vm/hmyr.c");
+  // 优化档位可切换：HMYR_CC=-O2 或 -O3，缺省 -O3。
+  //
+  // 为什么要有这个开关（2026-11-07）：-O3 换上去时量的是单跑（tree 24.7 秒对 30.4 秒），
+  // 而全量里它看起来更慢。要判那一面得在同一条件下各跑一次全量，前提是旗标能切换 ——
+  // 否则每次比较都要反向替换五十七处。与 HMYR_EXE 同一个形状：只认一个环境变量，
+  // 缺省值就是今天的样子。
+  const 档 = process.env.HMYR_CC === "-O2" ? "-O2" : "-O3";
   return spawnSync("gcc",
-    ["-std=c11", "-O3", "-Wall", ...平台参数(), ...额外旗标, "-lm", "-o", 出, 源路],
+    ["-std=c11", 档, "-Wall", ...平台参数(), ...额外旗标, "-lm", "-o", 出, 源路],
     { encoding: "utf8" });
 };

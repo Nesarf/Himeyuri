@@ -440,7 +440,10 @@ const 缺席 = [];
   try {
     mkdirSync(共用目录, { recursive: true });
     const 源路 = path.join(ROOT, "vm/hmyr.c");
-    const 旗 = ["-std=c11", "-O3", "-Wall",
+    // 与 src/cc.mjs 的 编C机器 认同一个开关：HMYR_CC=-O2 切回旧档。
+    // 共用那一份也要跟着切 —— 否则套件复制到的是 -O3 的产物，而它们以为那一份是 -O2 编的。
+    const 档 = process.env.HMYR_CC === "-O2" ? "-O2" : "-O3";
+    const 旗 = ["-std=c11", 档, "-Wall",
       ...(process.platform === "win32" ? ["-Wl,--stack,67108864"] : ["-pthread"]), "-lm"];
     const r = spawnSync("gcc", [...旗, "-o", 共用, 源路], { encoding: "utf8" });
     if (r.status === 0) process.env.HMYR_EXE = 共用;
