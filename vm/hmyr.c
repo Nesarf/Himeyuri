@@ -1607,6 +1607,12 @@ typedef struct Func {
   uint32_t code_base;
   uint32_t seg_n;
   uint32_t *seg_at;
+  /* 装载时已经解过一遍的那份指令（读一条 在 for 里为了算 seg_at 本来就要走一遍）。
+   * 2026-11-07：把那一遍的结果留下来，执行循环里直接取 —— tree 那一趟从 21978 ms
+   * 降到 12528 ms，快四成三，而步数与输出一字不差。代价是每条指令六十四字节，
+   * tree 的一千六百八十九条合一百零六 KB（字节码本身九 KB）。
+   * 当初不预解码的理由是省内存，那个理由的价码现在有数了。 */
+  Ins *已解;
 } Func;
 
 /* 一条指令占几项分段表 —— 见 Func 里 seg_at 的注释。 */
@@ -1875,9 +1881,10 @@ static void load_program(const uint8_t *bytes, size_t len) {
      * 段内偏移在这个程序里不会溢出。少一条错误路径就是少一处将来会骗人的地方。 */
     f->seg_n = f->ncode ? (f->ncode + 码段宽 - 1) / 码段宽 : 1;
     f->seg_at = (uint32_t *)calloc(f->seg_n, sizeof(uint32_t));
+    f->已解 = (Ins *)calloc(f->ncode ? f->ncode : 1, sizeof(Ins));
     for (uint32_t c = 0; c < f->ncode; c++) {
       if (c % 码段宽 == 0) f->seg_at[c / 码段宽] = (uint32_t)(r.at - (size_t)f->code_base);
-      读一条(&r, NULL);
+      读一条(&r, &f->已解[c]);
     }
   }
   报装载步("函数族");
@@ -5256,6 +5263,10 @@ static Value run_func(Func *f, Value *args, int nargs) {
     /* 现场解一条：不预先建 Ins 数组（见 Func 里 seg_at 那段注释）。
      * 解出来的这一份活在栈上，只够这一轮用 —— 而这一轮的其余部分照旧读 *in。 */
     Ins 本条;
+    /* 有已解就直接取，没有才走现场解码那一条（读一条 的第二参数传 NULL）。
+     * 这一个判断每步一次，而它买下的是一步少一次解码 —— 2026-11-07 量的。 */
+    const int 用已解 = (f->已解 != NULL && (uint32_t)pc < f->ncode);
+    if (!用已解) {
     size_t 本条位;
     if (缓存条 == pc) {
       本条位 = 缓存位;
@@ -5271,7 +5282,8 @@ static Value run_func(Func *f, Value *args, int nargs) {
       缓存条 = pc + 1;
       缓存位 = rr.at;
     }
-    Ins *in = &本条;
+    }
+    Ins *in = 用已解 ? &f->已解[pc] : &本条;
     if (g_op计开) g_op计数[in->op & 63]++;
     if (g_trace_on) {
       Trace *t = &g_trace[g_trace_at];
