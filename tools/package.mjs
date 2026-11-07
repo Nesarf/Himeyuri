@@ -109,3 +109,20 @@ if (fs.existsSync(钥匙) && fs.existsSync(私钥)) {
   console.log("  旧的 dist/manifest.json.sig 已删：它对应的是上一份清单。");
 }
 console.log("  注意：zip 没有内嵌签名位置，所以签的是清单，不是 zip 本身。");
+
+// 谁写谁清：只留两份归档（今天的一份与上一次的一份）。
+//
+// 为什么要有这两行（2026-11-07）：归档名带日期，所以每跨一天跑一次全量就多一个 ——
+// 2026-11-05 到 11-07 攒了三个，而 test/size-audit.test.mjs 的上限是两份，于是那一套红了。
+// 它的注释早就写着「要根治得让 release 认一个输出目录，那是另一件事」—— 这一处是那件事
+// 的第一步：把清理放在写的人手里，而不是让审计去追。
+//
+// 只在默认落点（dist/）时清。--out 指定的目录是调用方的事，不碰。
+if (位 < 0) {
+  const 目录 = path.join(ROOT, "dist");
+  const 归档 = fs.existsSync(目录) ? fs.readdirSync(目录).filter((f) => f.endsWith(".zip")).sort() : [];
+  for (const f of 归档.slice(0, Math.max(0, 归档.length - 2))) {
+    fs.rmSync(path.join(目录, f), { force: true });
+    console.log("  清掉更早的归档：" + f);
+  }
+}
