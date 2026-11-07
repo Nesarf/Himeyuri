@@ -837,3 +837,40 @@ sign 115.7 —— 与没有共用 exe 那次相比在同一档，因为省下的
 这条教训值得单独写：gcc -o 一个没有后缀的路径会自己加 .exe，copyFileSync 不会，而
 spawnSync 只认 .exe。三者混用的时候，「文件存在」「是同一个文件」「能被启动」是三件
 不同的事，而只验证其中一件就宣布「能跑」会得出错的结论 —— 这一条我错了两次。
+
+2026-11-07 第二十笔：probes 那七十四秒里，四十四秒是同一份装载付了四次
+--------------------------------------------------------------------
+
+第十九笔之后给 probes 加了计时，得到「编 0.4 秒 · 跑 74.2 秒（十五份）」。而这一套在
+全量里是 197.0 秒，所以它自己只花了一小半，其余是四路并行下等 CPU。
+
+再往前一步：十五份各跑一次、按耗时排序，同时记下每份引入了什么。
+
+  probe-decls2      20.3s   self/run.hmoca
+  probe-load2       11.5s   self/run.hmoca
+  probe-row         11.4s   self/run.hmoca
+  probe-self-load   11.2s   self/run.hmoca
+  probe-decls        9.6s   self/lex.hmoca 加 self/body.hmoca
+  probe-lex          3.0s   self/lex.hmoca
+  probe-lex2         2.6s   self/lex.hmoca
+  probe-load         2.3s   self/lex.hmoca
+  probe-len          1.4s   self/lex.hmoca
+  其余六份           0.3s   什么都没有引入
+
+三件事就此清楚了。
+
+一、装载 self/run.hmoca 的固定开销约十一秒一份。四份付了四次，约四十四秒，占那
+    七十四秒的六成。
+
+二、probe-decls2 多出的九秒是它自己的活（只解析公开 的递归回调），不是浪费 ——
+    它问的正是「会不会撑到五百层」。
+
+三、没有引入的六份各 0.3 秒，而那 0.3 秒是 node 启动加装载程序本身。
+
+所以「优化 probes」的正确形状不是让每份更快，而是别把同一份装载付四次：一个宿主进程
+读那几份，装载只付一次。按这个画像估，七十四秒能到四十秒上下 —— 而那是结构改动
+（探针怎么被跑起来），不是一行的事，所以另开一轮。
+
+要留意的是这条画像不只属于 probes：装载 self/run.hmoca 的那十一秒，inflate、vmboot、
+examples 也在付。它才是「自举层装载成本」这个数，而这一页此前没有它 —— 有了它，
+那几套的耗时才有了可以拆开看的第二项。
