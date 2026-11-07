@@ -5266,18 +5266,34 @@ static Value run_func(Func *f, Value *args, int nargs) {
   if (!压帧(f, args, nargs)) { 清帧池(); return v_null(); }
 /* 出错路径：整机停 —— 那几十处 FRAME_RET 用的都是这个语义。 */
 #define FRAME_RET(x) do { 清帧池(); return (x); } while (0)
+  /* 2026-11-07：帧状态只在换帧时重取。
+   *
+   * 原来每轮都从帧池里取六个字段，理由是 CALLF 与 RET 都会换帧、不能只取一次。
+   * 那个理由成立，但「换帧」可以便宜地判断：压帧与弹帧都会改 g_活帧深，所以深度
+   * 一变就是换了帧。纯循环里深度不动，那六次加载就省下来了 —— 消融量过，这一段
+   * 值十八到二十纳秒一步（design/CHECKING.txt 第四十一、四十二笔）。
+   *
+   * CALLF 与 RET 都 continue 回循环顶、不走底部的写回，所以换帧之后第一件事就是
+   * 重取，fr 指向的一定是当前帧。 */
+  uint32_t 缓存深 = 0xFFFFFFFFu;
+  活帧 *fr = NULL;
+  Value *slots = NULL;
+  uint32_t base = 0;
+  int32_t pc = 0;
+  int32_t 缓存条 = 0;
+  size_t 缓存位 = 0;
   for (;;) {
     if (g_failed) FRAME_RET(v_null());
-    /* 每轮从帧池里取出状态：CALLF 与 RET 都会换帧，所以不能只取一次。
-     * 名字仍用原来那套（f、slots、base、外函、pc、缓存条、缓存位），
-     * 于是 switch 那八百行一个字都不用改。 */
-    活帧 *fr = &g_活帧池[g_活帧深 - 1];
-    f = fr->f;
-    Value *slots = fr->slots;
-    uint32_t base = fr->base;
-    int32_t pc = fr->pc;
-    int32_t 缓存条 = fr->缓存条;
-    size_t 缓存位 = fr->缓存位;
+    if (g_活帧深 != 缓存深) {
+      缓存深 = g_活帧深;
+      fr = &g_活帧池[g_活帧深 - 1];
+      f = fr->f;
+      slots = fr->slots;
+      base = fr->base;
+      pc = fr->pc;
+      缓存条 = fr->缓存条;
+      缓存位 = fr->缓存位;
+    }
     if (++g_机->步数 > g_机->步限) { fail("HMYR-行-003", "the program ran for too long"); FRAME_RET(v_null()); }
     if ((uint32_t)pc >= f->ncode) { fail("HMYR-行-010", "the instruction stream ran off its end"); FRAME_RET(v_null()); }
     /* 现场解一条：不预先建 Ins 数组（见 Func 里 seg_at 那段注释）。
@@ -5695,8 +5711,8 @@ static Value run_func(Func *f, Value *args, int nargs) {
         FRAME_RET(v_null());
       }
     }
-    /* 每条指令跑完之后把状态写回帧里 —— 下一轮从帧里取，所以 CALLF 与 RET
-     * 换了帧之后，接着跑的自然是新的那一帧。 */
+    /* 每条指令跑完之后把状态写回帧里。换帧之后不在这里写：CALLF 与 RET 都
+     * continue 回循环顶，到那里先重取、再由这里写新帧。 */
     fr->pc = pc; fr->缓存条 = 缓存条; fr->缓存位 = 缓存位;
   }
 }
