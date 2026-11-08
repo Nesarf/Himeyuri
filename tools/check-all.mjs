@@ -280,6 +280,7 @@ const SUITES = [
   ["racecensus", "test/race-census.test.mjs", "SPEC M7 - the race census: an assertion that runs after the promise's resolve races the process exit, and the tool that finds those is itself checked against one sample it must catch and two shapes it must not"],
   ["gapbaseline", "test/gap-baseline.test.mjs", "SPEC M7 - the conditional-clause gap may only shrink: tools/gap-baseline.json records how many assertions each suite writes against how many it runs, and the census must report a suite whose gap grew while staying quiet when it did not"],
   ["cycles", "test/cycles.test.mjs", "the host module graph has no dependency cycle, and the detector is shown to catch one: two files built to import each other, a dynamic import counted as an edge, and nothing called clean when nothing was scanned"],
+  ["plan", "test/plan.test.mjs", "design/PLAN.json is checked against its own shape: every goal has an id, a status and a scope, every parent and every ordering edge points at a goal that exists, every test it names and every path it touches is really there, and a goal with no judging suite has to say why - with the negative run to prove the check can go red"],
 ];
 
 /* 清单导出：给 HMYR 写的那一份调度器（self/check.hmyr）用。

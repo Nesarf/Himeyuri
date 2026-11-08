@@ -233,3 +233,4 @@ suitelist	test/suite-list.test.mjs
 racecensus	test/race-census.test.mjs
 gapbaseline	test/gap-baseline.test.mjs
 cycles	test/cycles.test.mjs
+plan	test/plan.test.mjs
