@@ -76,6 +76,18 @@
       "notes": "四段路线；Stage 0 不能为零，所以终点是缩到多小并说清为什么"
     },
     {
+      "id": "roundtrip-bootstrap",
+      "title": "往返式自举：先在 Yunooka 里长出来，再倒回来",
+      "scope": "project",
+      "status": "active",
+      "source": "design/FULLSELF.txt 八、往返式自举：五步",
+      "parent": "identity",
+      "after": ["fullself"],
+      "verifiedBy": ["test/self-contained.test.mjs"],
+      "touches": ["design/FULLSELF.txt"],
+      "notes": "五步：一、用 JS 与 C 搭 Windows 与 Linux 上的框架（基本完成）；二、建 Hiou Rengo 与 Yunooka 的雏形；三、在 Yunooka 里建真正的 HMYR；四、在 Yunooka 里建 Hiou Rengo；五、用 Yunooka 那一套倒回来重建 Windows 与 Linux 版。它与四段路线是两条腿：那一条管今天少依赖一点，这一条管最后那个不依赖任何宿主的东西从哪长出来"
+    },
+    {
       "id": "stage-1",
       "title": "self/ 那一套跑通全部验收",
       "scope": "stage",
