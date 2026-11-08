@@ -51,6 +51,64 @@ console.log("四、那几格的话是能查的（SELFRUN 里真有）");
   ok("SELFRUN 写了两种读法的判据", 文.includes("近的那一种") || 文.includes("近读法"), "");
 }
 
+console.log("五、第四段那张分类表：与实测一致，而且盖住全部");
+{
+  // 为什么要有这一节：design/INDEPENDENCE.txt 第七节把 src/ 与 vm/ 分成五类，
+  // 每类都写了份数与行数。那是四段路线第四段的进度表 —— 而表里的数字如果没人看，
+  // 它就只是文字。这一节按同一套规则重算一遍，与文档里写的比。
+  // 口径见 design/CHECKING.txt 开头那节：数字可以变，变的时候改文档，判据不动。
+  const 列文件 = (目录) => {
+    const 出 = [];
+    const 走 = (d) => {
+      for (const e of fs.readdirSync(path.join(ROOT, d), { withFileTypes: true })) {
+        const f = d + "/" + e.name;
+        if (e.isDirectory()) 走(f); else 出.push(f);
+      }
+    };
+    走(目录);
+    return 出;
+  };
+  const 行数 = (f) => fs.readFileSync(path.join(ROOT, f), "utf8").split("\n").length;
+  const 算 = (列) => ({ 份: 列.length, 行: 列.reduce((n, f) => n + 行数(f), 0) });
+
+  const src全部 = 列文件("src");
+  const vm全部 = 列文件("vm");
+  // 规则与文档里写的一致，靠前缀与文件名判定，不靠硬编码清单 ——
+  // 将来加一份新的生成头文件，它自己会落进「生成的数据」那一类。
+  const 生成 = vm全部.filter((f) => /pack_seed\.h$/.test(f) || /\/ucd-[^/]*\.h$/.test(f));
+  const c机器 = vm全部.filter((f) => !生成.includes(f));
+  const stage0 = ["src/loader.mjs", "src/subset-lex.mjs", "src/subset-parse.mjs", "src/diagnostics.mjs", "src/minimal-eval.mjs"];
+  const 对照 = ["src/lexer.mjs", "src/parser.mjs", "src/eval.mjs"];
+  const 其余 = src全部.filter((f) => !stage0.includes(f) && !对照.includes(f));
+
+  const 实测 = {
+    "生成的数据": 算(生成),
+    "C 机器代码": 算(c机器),
+    "Stage 0": 算(stage0),
+    "对照实现": 算(对照),
+    "其余 src": 算(其余),
+  };
+
+  const 文 = fs.readFileSync(path.join(ROOT, "design/INDEPENDENCE.txt"), "utf8");
+  const 表 = {};
+  for (const m of 文.matchAll(/^\s+(生成的数据|C 机器代码|Stage 0|对照实现|其余 src)\s+(\d+) 份\s+(\d+) 行/gm)) {
+    表[m[1]] = { 份: Number(m[2]), 行: Number(m[3]) };
+  }
+
+  for (const 名 of Object.keys(实测)) {
+    ok("文档里有「" + 名 + "」那一行", 表[名] !== undefined, "");
+    if (!表[名]) continue;
+    ok(名 + " 的份数与文档一致（写 " + 表[名].份 + "，实 " + 实测[名].份 + "）", 表[名].份 === 实测[名].份, "");
+    ok(名 + " 的行数与文档一致（写 " + 表[名].行 + "，实 " + 实测[名].行 + "）", 表[名].行 === 实测[名].行, "");
+  }
+
+  const 表之和 = Object.values(实测).reduce((n, x) => n + x.行, 0);
+  const 实之和 = src全部.reduce((n, f) => n + 行数(f), 0) + vm全部.reduce((n, f) => n + 行数(f), 0);
+  ok("五类加起来等于 src 与 vm 的总和（" + 表之和 + " 对 " + 实之和 + "）", 表之和 === 实之和, "");
+  // 一条自明但不该省的：这一节要真能看出「有人改了代码没改文档」。
+  // 改一个文件的行数就会红，红的是上面那两条「与文档一致」。
+}
+
 console.log("");
 console.log(passed + " passed, " + failed + " failed");
 process.exit(failed === 0 ? 0 : 1);
