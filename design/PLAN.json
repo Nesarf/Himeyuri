@@ -205,6 +205,18 @@
       "notes": "2026-11-08 记下；值可以动，对象不能换"
     },
     {
+      "id": "judge-infrastructure",
+      "title": "验证基础设施：清单、地图、普查与规划自己也要被盯着",
+      "scope": "principle",
+      "status": "active",
+      "source": "design/CHECKING.txt 一、它现在怎么跑",
+      "parent": "identity",
+      "after": ["judge-alive"],
+      "verifiedBy": ["test/suite-list.test.mjs", "test/impact.test.mjs", "test/gap-baseline.test.mjs", "test/readme.test.mjs", "test/plan.test.mjs", "test/independence.test.mjs"],
+      "touches": ["tools/suite-list.txt", "tools/check-all.mjs", "tools/impact.mjs", "tools/cond-census.mjs", "tools/independence.mjs", "tools/runtime-path.mjs", "tools/builtin-gap.mjs", "tools/tooling-ledger.mjs", "tools/map-agree.mjs", "design/PLAN.json"],
+      "notes": "把 tools/ 与两份清单画进网络。在那之前，改它们的时候规划侧一条目标都不会亮 —— 一个能被改坏却查不到的东西，等于没人看着"
+    },
+    {
       "id": "perf-position",
       "title": "性能的位置：可预测优于快，不倒退优于更快速",
       "scope": "principle",
