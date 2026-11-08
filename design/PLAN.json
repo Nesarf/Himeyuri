@@ -130,7 +130,7 @@
       "after": ["stage-4"],
       "verifiedBy": ["test/bootstrap.test.mjs", "tools/self-coverage.mjs"],
       "touches": ["src/minimal-eval.mjs", "src/subset-parse.mjs", "src/subset-lex.mjs", "src/loader.mjs", "src/diagnostics.mjs", "design/BOOTSTRAP.txt"],
-      "notes": "Stage 0 现在五份 2097 行，判据盯着文档与实测一致；这一条要的是把那个数往下压，每压一次在 OPEN.txt 记一行"
+      "notes": "2026-11-08 夜量过一次：没有死代码可砍（profile 与调用点都验过），2097 行是按需实现的代价，一百九十二个方法平均五点五行。要缩只剩一条路 —— 让 self/ 少用一种语法。账记在 OPEN.txt 同一夜那一节"
     },
     {
       "id": "dialect-as-library",
