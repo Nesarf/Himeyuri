@@ -112,13 +112,13 @@
       "id": "stage-4",
       "title": "收尾：src/ 与 vm/ 只剩宿主口，剩下的行要说清为什么留",
       "scope": "stage",
-      "status": "active",
+      "status": "open",
       "source": "design/FULLSELF.txt 第四段",
       "parent": "fullself",
       "after": ["stage-3"],
       "verifiedBy": ["test/independence.test.mjs"],
       "touches": ["src/", "vm/"],
-      "notes": "2026-11-08 分成五类共 31498 行并做成判据；五步里后四步还没走"
+      "notes": "2026-11-08 分成五类共 31498 行并做成判据；同日把剩下的四步量清了：终点条件已写进 INDEPENDENCE.txt，第四步没有便宜入口（见 stage-4-shrink），第五步等 Yunooka 的字节码机。所以这一条现在没有在动的子任务，状态从 active 退成 open"
     },
     {
       "id": "stage-4-shrink",
