@@ -121,6 +121,18 @@
       "notes": "2026-11-08 分成五类共 31498 行并做成判据；五步里后四步还没走"
     },
     {
+      "id": "stage-4-shrink",
+      "title": "缩 Stage 0 与其余 src：一处一处来，每缩一次记一行",
+      "scope": "task",
+      "status": "open",
+      "source": "design/INDEPENDENCE.txt 七、第三步与第四步",
+      "parent": "stage-4",
+      "after": ["stage-4"],
+      "verifiedBy": ["test/bootstrap.test.mjs", "tools/self-coverage.mjs"],
+      "touches": ["src/minimal-eval.mjs", "src/subset-parse.mjs", "src/subset-lex.mjs", "src/loader.mjs", "src/diagnostics.mjs", "design/BOOTSTRAP.txt"],
+      "notes": "Stage 0 现在五份 2097 行，判据盯着文档与实测一致；这一条要的是把那个数往下压，每压一次在 OPEN.txt 记一行"
+    },
+    {
       "id": "dialect-as-library",
       "title": "方言即库：新的语言＝新的库，不改核心文法",
       "scope": "principle",
@@ -215,6 +227,18 @@
       "verifiedBy": ["test/suite-list.test.mjs", "test/impact.test.mjs", "test/gap-baseline.test.mjs", "test/readme.test.mjs", "test/plan.test.mjs", "test/independence.test.mjs"],
       "touches": ["tools/suite-list.txt", "tools/check-all.mjs", "tools/impact.mjs", "tools/cond-census.mjs", "tools/independence.mjs", "tools/runtime-path.mjs", "tools/builtin-gap.mjs", "tools/tooling-ledger.mjs", "tools/map-agree.mjs", "design/PLAN.json"],
       "notes": "把 tools/ 与两份清单画进网络。在那之前，改它们的时候规划侧一条目标都不会亮 —— 一个能被改坏却查不到的东西，等于没人看着"
+    },
+    {
+      "id": "guest-recheck",
+      "title": "重验入口：一台 Windows 10 虚拟机与一份静态 exe，随时能把平台下限再量一次",
+      "scope": "task",
+      "status": "done",
+      "source": "design/CHECKING.txt 2026-11-08 夜",
+      "parent": "judge-infrastructure",
+      "after": [],
+      "verifiedBy": ["test/self-contained.test.mjs"],
+      "touches": ["design/PLATFORM.txt", "design/CHECKING.txt"],
+      "notes": "2026-11-08 完成过一次：Win10 10.0.19044 上静态 C 机器退出码 5，与主机一致。虚拟机留在 G 盘，登录方式写在它的 description 里"
     },
     {
       "id": "perf-position",
