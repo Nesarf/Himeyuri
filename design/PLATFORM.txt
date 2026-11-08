@@ -70,7 +70,7 @@ Himeyuri 的定位：车间／平台类语言
 
     自己的 SDK 与 OS
       SDK 有一期，OS 还没有。Hiou Rengo（緋凰·恋語）负责「写」，门口在
-      D:\Hiou Rengo\README.md：一个 hello.hmyr，加一句写明的借据 ——
+      D:\Hiou Rengo\README.md：一个 hello.hmoca，加一句写明的借据 ——
       跑还要借语言仓库的启动器，因为「跑」属于 湯の岡。那一期的判据是
       「那条命令跑得出那一行字」，它现在成立。
       Yunooka（湯の岡）负责「跑」，目录 D:\Yunooka 还是空的 —— 它要装的是
