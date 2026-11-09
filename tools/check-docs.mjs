@@ -4,6 +4,15 @@
 // that already mean something else - and that meaning only appears if the reader happens to render it.
 // This checks every document in the project for that.
 //
+// 原话是「不能用 md 语法写」，不是「不能用那些符号」。区别在意图：md 是再渲染的做法，
+// 它把意义藏进「本来意味着别的东西」的字符里，而那些意义只在渲染时才出现；在 .txt
+// 这种直接读的东西里用 md 语法，就是阅读的噪声。
+//
+// 而这一份检查抓的是符号，不是用法 —— 因为「这是不是 md 语法」要读意图，而意图不能
+// 自动判。两个星号是粗体的必要条件，于是拿它当代理：宁可放过一个纯属符号的星号，
+// 也不要让真正的粗体漏过去。代价是偶尔想写「星号本身」也得绕开，而这一条收窄时
+// 数过：受检文档里含两颗星的行是 0 行，所以代价目前是零。
+//
 //   node tools/check-docs.mjs
 import fs from "node:fs";
 import path from "node:path";
