@@ -60,7 +60,8 @@ dist/           打包产物
 语言本身的东西（`term.hmoca`、`shell*.hmoca`、`surface.hmoca`、`json.hmoca` 等）在根目录，
 后缀是 `.hmoca`（源码）· `.hmoks`（字节码）· `.hmtn`（种子）· `.hmnkk`（一般文本）
 · `.hmoug`（配置）· `.hmknst`（错误码与用例）· `.hmkit`（套件清单）· `.hmkgr`（乐曲与场景）
-· `.hmbnso`（说明书）。九个扩展名的判据见 [SPEC.txt](SPEC.txt) 的 2.11。
+· `.hmbnso`（文书）· `.hmhmdn`（姬文殿）· `.hmemk`（姬绘卷）· `.hmymte`（姬大和绘）。
+十二个扩展名的判据见 [SPEC.txt](SPEC.txt) 的 2.11。
 
 ## 怎么跑
 
