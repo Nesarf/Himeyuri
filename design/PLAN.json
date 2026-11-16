@@ -1,280 +1,236 @@
 {
-  "title": "Himeyuri 的目标网络",
-  "version": 1,
-  "note": "一条记录一个目标。scope 分 project / principle / stage / task；status 用 done / active / open / dropped。touches 写目录或文件，目录会展开成依赖图里的文件；verifiedBy 写测试文件，那一条存在才作数。这里的原因由 library_project op=plan 核对，写错的路径它会在 missing 里点名。",
+  "title": "Himeyuri / HMYR：一门通用语言（聚合既有语言的长处与稳定性）",
+  "source": "SPEC.txt 第 5 节「里程碑与验收」，加第 6 节「悬而未决」",
   "goals": [
     {
-      "id": "identity",
-      "title": "集百家之长，成一己之特的独立计算机语言",
+      "id": "language",
+      "title": "这门语言本身",
       "scope": "project",
       "status": "active",
-      "source": "design/PLATFORM.txt 总目标",
       "parent": null,
       "after": [],
-      "verifiedBy": ["test/independence.test.mjs"],
-      "touches": ["design/", "src/", "self/", "vm/"],
-      "notes": "2026-11-02 由先代会话的口述归拢；四条硬要求从这里往下拆"
+      "verifiedBy": [
+        "tools/check-all.mjs"
+      ],
+      "touches": [
+        "SPEC.txt",
+        "README.md",
+        "tools/impact.mjs"
+      ],
+      "notes": "顶层。七个里程碑（M1 到 M7）加两条悬而未决的模型。里程碑与验收的原文在 SPEC.txt 第 5 节，而这一份只做索引：每一条的判据都指向真正跑它的那一侧。",
+      "state": ""
     },
     {
-      "id": "no-host-language",
-      "title": "不依赖任何一种语言",
-      "scope": "principle",
-      "status": "active",
-      "source": "design/PLATFORM.txt 第一条硬要求",
-      "parent": "identity",
-      "after": [],
-      "verifiedBy": ["test/self-contained.test.mjs"],
-      "touches": ["src/minimal-eval.mjs", "vm/hmyr.c", "self/"],
-      "notes": "半成：默认路径要 Node（Stage 0 五份 2097 行），另一条链只要 C 与静态链接"
-    },
-    {
-      "id": "own-runtime",
-      "title": "自主的运行逻辑与文件类型",
-      "scope": "principle",
+      "id": "spec",
+      "title": "M1 本规格草案",
+      "scope": "stage",
       "status": "done",
-      "source": "design/PLATFORM.txt 第二条硬要求",
-      "parent": "identity",
+      "parent": "language",
       "after": [],
-      "verifiedBy": ["test/code-file.test.mjs", "test/names.test.mjs"],
-      "touches": ["design/FILETYPE.txt", "src/code-file.mjs"],
-      "notes": "三种后缀与两台字节码机"
-    },
-    {
-      "id": "platform-floor",
-      "title": "能在 2019 年的设备上跑（口述下限；实现取 2015）",
-      "scope": "principle",
-      "status": "done",
-      "source": "design/PLATFORM.txt 第三条硬要求",
-      "parent": "identity",
-      "after": [],
-      "verifiedBy": ["test/c-vm.test.mjs", "test/cli.test.mjs"],
-      "touches": ["vm/hmyr.c"],
-      "notes": "2026-11-08 在真的 Windows 10（10.0.19044）上跑到 C 机器退出码 5，与主机 Win11 一致"
-    },
-    {
-      "id": "own-sdk-os",
-      "title": "有自己的 SDK 与 OS",
-      "scope": "principle",
-      "status": "open",
-      "source": "design/PLATFORM.txt 第四条硬要求",
-      "parent": "identity",
-      "after": ["fullself"],
       "verifiedBy": [],
-      "touches": ["design/FULLSELF.txt"],
-      "notes": "SDK 有一期（Hiou Rengo）；OS 还没有，Yunooka 目录是空的"
+      "touches": [
+        "SPEC.txt"
+      ],
+      "notes": "每条主张都有 [验]，[悬] 项被明列。它不是一个可执行的东西，所以没有判据 —— 它自己就是判据的来源。",
+      "state": ""
     },
     {
-      "id": "fullself",
-      "title": "完全自举：整条链上不出现第二种语言",
-      "scope": "project",
-      "status": "active",
-      "source": "design/FULLSELF.txt",
-      "parent": "identity",
-      "after": ["no-host-language"],
-      "verifiedBy": ["test/self-ratio-hmyr.test.mjs"],
-      "touches": ["design/FULLSELF.txt", "self/"],
-      "notes": "四段路线；Stage 0 不能为零，所以终点是缩到多小并说清为什么"
-    },
-    {
-      "id": "roundtrip-bootstrap",
-      "title": "往返式自举：先在 Yunooka 里长出来，再倒回来",
-      "scope": "project",
-      "status": "active",
-      "source": "design/FULLSELF.txt 八、往返式自举：五步",
-      "parent": "identity",
-      "after": ["fullself"],
-      "verifiedBy": ["test/self-contained.test.mjs"],
-      "touches": ["design/FULLSELF.txt"],
-      "notes": "五步：一、用 JS 与 C 搭 Windows 与 Linux 上的框架（基本完成）；二、建 Hiou Rengo 与 Yunooka 的雏形；三、在 Yunooka 里建真正的 HMYR；四、在 Yunooka 里建 Hiou Rengo；五、用 Yunooka 那一套倒回来重建 Windows 与 Linux 版。它与四段路线是两条腿：那一条管今天少依赖一点，这一条管最后那个不依赖任何宿主的东西从哪长出来"
-    },
-    {
-      "id": "yunooka-sketch",
-      "title": "Yunooka 的雏形：从加电走到执行一份 HMYR 字节码",
+      "id": "host-impl",
+      "title": "M2 宿主实现：词法、语法、求值、编码、模块加载、静态检查器",
       "scope": "stage",
-      "status": "active",
-      "source": "design/OPEN.txt 2026-11-08 深夜那一节",
-      "parent": "roundtrip-bootstrap",
-      "after": ["roundtrip-bootstrap"],
+      "status": "done",
+      "parent": "language",
+      "after": [
+        "spec"
+      ],
+      "verifiedBy": [
+        "test/lexer.test.mjs",
+        "test/parser.test.mjs",
+        "test/eval.test.mjs"
+      ],
+      "touches": [
+        "src/lexer.mjs",
+        "src/parser.mjs",
+        "src/eval.mjs",
+        "src/loader.mjs",
+        "src/code-file.mjs"
+      ],
+      "notes": "判据是 lexer、parser、eval 那几套。",
+      "state": ""
+    },
+    {
+      "id": "conformance",
+      "title": "M3 符合性套件与错误编号",
+      "scope": "stage",
+      "status": "done",
+      "parent": "language",
+      "after": [
+        "host-impl"
+      ],
+      "verifiedBy": [
+        "test/codes-lex.test.mjs",
+        "test/codes-eval.test.mjs",
+        "test/codes-value.test.mjs"
+      ],
+      "touches": [
+        "conformance/codes.mjs",
+        "conformance/plain.mjs",
+        "tools/conformance.mjs",
+        "dump-codes.mjs"
+      ],
+      "notes": "conformance/ 里七十个编号，每个都有一句中文人话（plain.mjs）与至少一条能触发它的用例；tools/conformance.mjs 逐条对账。",
+      "state": ""
+    },
+    {
+      "id": "kpb",
+      "title": "M4 首个真用户：KPB 的谱与混与音色",
+      "scope": "stage",
+      "status": "done",
+      "parent": "language",
+      "after": [
+        "host-impl"
+      ],
+      "verifiedBy": [
+        "test/kpb.test.mjs",
+        "test/kpb-roundtrip.test.mjs"
+      ],
+      "touches": [
+        "kpb/piece.hmoca",
+        "kpb/etude.hmoca",
+        "kpb/emit.mjs"
+      ],
+      "notes": "第一门领域方言（作编混）住在 kpb/：piece.hmyr / etude.hmyr / emit.mjs / host.mjs。它是这门语言的第一个真实消费者，而不是一个例子。",
+      "state": ""
+    },
+    {
+      "id": "embed",
+      "title": "M5 可嵌入：在 KID 里跑一段 HMYR 脚本",
+      "scope": "stage",
+      "status": "open",
+      "parent": "language",
+      "after": [
+        "host-impl"
+      ],
       "verifiedBy": [],
-      "touches": ["design/OPEN.txt", "design/FULLSELF.txt"],
-      "notes": "D:\\Yunooka 十七个提交、十二块砖、全部在 VirtualBox 里真跑过：引导、三段位宽、页表、堆、种子头、函数表、指令流、求值、跳转、调用。没有 verifiedBy 是因为那个仓库不在这个网络里 —— 它的判据在自己那边（一条 node tools/run.mjs，退出码 0 表示十九行串口都在）。另有一条与 HMYR 有关的发现：种子里有重名（main 七次），所以「第几个函数」不是可靠坐标，字节偏移是"
+      "touches": [
+        "design/RELAY.txt",
+        "src/embed.mjs",
+        "src/capabilities.mjs"
+      ],
+      "notes": "子进程加 JSON-RPC 的设计在 design/RELAY.txt，而宿主那一侧还没有接。这是七个里程碑里唯一未成的一个 —— 缺的不是语言，是一条让另一个进程把脚本递进来的通道。",
+      "state": ""
     },
     {
-      "id": "stage-1",
-      "title": "self/ 那一套跑通全部验收",
+      "id": "toolchain",
+      "title": "M6 工具链：格式化器、AST 反射、LSP",
       "scope": "stage",
       "status": "done",
-      "source": "design/FULLSELF.txt 第一段",
-      "parent": "fullself",
-      "after": [],
-      "verifiedBy": ["tools/self-coverage.mjs"],
-      "touches": ["self/"]
+      "parent": "language",
+      "after": [
+        "host-impl"
+      ],
+      "verifiedBy": [
+        "test/format.test.mjs",
+        "test/reflect.test.mjs",
+        "test/lsp.test.mjs",
+        "test/lsp-symbol-hmyr.test.mjs",
+        "test/lsp-completion-hmyr.test.mjs",
+        "test/lsp-module.test.mjs"
+      ],
+      "touches": [
+        "src/format.mjs",
+        "src/reflect.mjs",
+        "src/lsp.mjs",
+        "bin/hmyr.mjs"
+      ],
+      "notes": "三段都有，编辑器里能补全与跳转。",
+      "state": ""
     },
     {
-      "id": "stage-2",
-      "title": "换掉 src/ 之后还绿的套件，一套一套扩到全部",
+      "id": "bootstrap",
+      "title": "M7 自举：self/ 用 HMYR 写自己",
       "scope": "stage",
       "status": "done",
-      "source": "design/FULLSELF.txt 第二段",
-      "parent": "fullself",
-      "after": ["stage-1"],
-      "verifiedBy": ["tools/self-bridge-check.mjs"],
-      "touches": ["self/", "src/loader.mjs"]
+      "parent": "language",
+      "after": [
+        "conformance",
+        "toolchain"
+      ],
+      "verifiedBy": [
+        "test/self.test.mjs",
+        "test/self-compile.test.mjs",
+        "test/self-run.test.mjs",
+        "test/bootstrap-seed.test.mjs"
+      ],
+      "touches": [
+        "self/eval.hmoca",
+        "self/lex.hmoca",
+        "self/parse.hmoca",
+        "self/compile.hmoca",
+        "bootstrap/pack.hmtn"
+      ],
+      "notes": "self/ 用 HMYR 写了词法与语法、语句与体、求值器、编译器、打包器；种子是 bootstrap/pack.hmtn，产物在 runtime/。顺序上的硬规矩写在这里：自举是最后一桥，而它已经过了 —— 所以下一次要动求值器之前，先看 M7 的判据会不会跟着漂。",
+      "state": ""
     },
     {
-      "id": "stage-3",
-      "title": "字节码机：HMYR 写的 VM 跑通 bytecode 那套，再接 C 那台",
+      "id": "memory-model",
+      "title": "内存模型：三区（arena / owned / managed）",
       "scope": "stage",
       "status": "done",
-      "source": "design/FULLSELF.txt 第三段",
-      "parent": "fullself",
-      "after": ["stage-2"],
-      "verifiedBy": ["test/bytecode.test.mjs", "test/vm-load.test.mjs", "test/vm-run.test.mjs"],
-      "touches": ["self/", "src/vm.mjs"]
+      "parent": "language",
+      "after": [
+        "host-impl"
+      ],
+      "verifiedBy": [
+        "test/owned.test.mjs",
+        "test/owned-state.test.mjs",
+        "test/owned-check.test.mjs"
+      ],
+      "touches": [
+        "design/MEMORY.txt"
+      ],
+      "notes": "原 [悬] 1，2026-10-27 全部落地：三区模型四台一致，帧退出释放、装载时的四层静态检查、跨模块与跨包的借用分析都已有判据。",
+      "state": ""
     },
     {
-      "id": "stage-4",
-      "title": "收尾：src/ 与 vm/ 只剩宿主口，剩下的行要说清为什么留",
+      "id": "concurrency",
+      "title": "并发模型：结构化并发、进程式隔离、消息传递",
       "scope": "stage",
-      "status": "open",
-      "source": "design/FULLSELF.txt 第四段",
-      "parent": "fullself",
-      "after": ["stage-3"],
-      "verifiedBy": ["test/independence.test.mjs"],
-      "touches": ["src/", "vm/"],
-      "notes": "2026-11-08 分成五类共 31498 行并做成判据；同日把剩下的四步量清了：终点条件已写进 INDEPENDENCE.txt，第四步没有便宜入口（见 stage-4-shrink），第五步等 Yunooka 的字节码机。所以这一条现在没有在动的子任务，状态从 active 退成 open"
-    },
-    {
-      "id": "stage-4-shrink",
-      "title": "缩 Stage 0 与其余 src：一处一处来，每缩一次记一行",
-      "scope": "task",
-      "status": "open",
-      "source": "design/INDEPENDENCE.txt 七、第三步与第四步",
-      "parent": "stage-4",
-      "after": ["stage-4"],
-      "verifiedBy": ["test/bootstrap.test.mjs", "tools/self-coverage.mjs"],
-      "touches": ["src/minimal-eval.mjs", "src/subset-parse.mjs", "src/subset-lex.mjs", "src/loader.mjs", "src/diagnostics.mjs", "design/BOOTSTRAP.txt"],
-      "notes": "2026-11-08 夜量过两轮：没有死代码可砍（profile 与调用点都验过），运算符里最少的 <= 也有 69 处而它是 >= 的对称面。便宜的入口没有，剩下的只有「愿为几十行付几百处改动」这一种，账记在 OPEN.txt 同一夜那一节"
-    },
-    {
-      "id": "dialect-as-library",
-      "title": "方言即库：新的语言＝新的库，不改核心文法",
-      "scope": "principle",
       "status": "done",
-      "source": "design/PLATFORM.txt 推论一",
-      "parent": "identity",
-      "after": [],
-      "verifiedBy": ["test/kpb.test.mjs"],
-      "touches": ["kpb/"],
-      "notes": "KPB 的谱／混／音色已经证明这一条"
+      "parent": "language",
+      "after": [
+        "host-impl"
+      ],
+      "verifiedBy": [
+        "test/threads.test.mjs",
+        "test/task.test.mjs",
+        "test/sched.test.mjs",
+        "test/parallel.test.mjs"
+      ],
+      "touches": [
+        "design/CONCURRENCY.txt"
+      ],
+      "notes": "原 [悬] 2，2026-10-27 落地。取消的两种形态按「谁能被语言调度」分界；效果跨任务只落在派生处。design/CONCURRENCY.txt 里有六个反例与验收。",
+      "state": ""
     },
     {
-      "id": "macro-core",
-      "title": "宏是核心能力，不是装饰",
-      "scope": "principle",
+      "id": "independence",
+      "title": "完全独立化：六条能验的性质",
+      "scope": "stage",
       "status": "done",
-      "source": "design/PLATFORM.txt 推论二",
-      "parent": "identity",
-      "after": [],
-      "verifiedBy": ["test/macro.test.mjs"],
-      "touches": ["src/expand.mjs"],
-      "notes": "只做卫生宏加编译期常量求值，不做任意语法改写"
-    },
-    {
-      "id": "drive-tools",
-      "title": "要能驱动工具：进程、文件、时间、网络四种效果",
-      "scope": "principle",
-      "status": "done",
-      "source": "design/PLATFORM.txt 推论三",
-      "parent": "identity",
-      "after": [],
-      "verifiedBy": ["test/stdlib.test.mjs"],
-      "touches": ["src/capabilities.mjs"],
-      "notes": "能力由宿主授予"
-    },
-    {
-      "id": "reflect-generate",
-      "title": "要能自省与生成",
-      "scope": "principle",
-      "status": "done",
-      "source": "design/PLATFORM.txt 推论四",
-      "parent": "identity",
-      "after": [],
-      "verifiedBy": ["test/reflect.test.mjs", "test/fmt-whole-hmyr.test.mjs"],
-      "touches": ["src/reflect.mjs", "self/fmt.hmoca"],
-      "notes": "格式化器就是第一个代码生成器"
-    },
-    {
-      "id": "three-ways-out",
-      "title": "向外三向接口：形状、被调用、调用别人、编译到别处",
-      "scope": "principle",
-      "status": "active",
-      "source": "design/PLATFORM.txt 推论五",
-      "parent": "identity",
-      "after": [],
-      "verifiedBy": ["test/ffi.test.mjs", "test/embed.test.mjs"],
-      "touches": ["src/embed.mjs"],
-      "notes": "WASM 与最后原生还没做"
-    },
-    {
-      "id": "pkg-discipline",
-      "title": "包管理沿用自己的纪律：声明、许可、哈希",
-      "scope": "principle",
-      "status": "active",
-      "source": "design/PLATFORM.txt 推论六",
-      "parent": "identity",
-      "after": [],
-      "verifiedBy": ["test/hmget.test.mjs", "test/pkg-manifest.test.mjs"],
-      "touches": ["design/PKGMAN.txt"],
-      "notes": "名字已定 kagaribi（篝火）；运行时不许偷偷下载"
-    },
-    {
-      "id": "judge-alive",
-      "title": "判据是活的：盯关系，不盯常数",
-      "scope": "principle",
-      "status": "done",
-      "source": "design/CHECKING.txt 零、判据是活的",
-      "parent": "identity",
-      "after": [],
-      "verifiedBy": ["test/gap-baseline.test.mjs", "test/readme.test.mjs", "test/bootstrap.test.mjs"],
-      "touches": ["design/CHECKING.txt"],
-      "notes": "2026-11-08 记下；值可以动，对象不能换"
-    },
-    {
-      "id": "judge-infrastructure",
-      "title": "验证基础设施：清单、地图、普查与规划自己也要被盯着",
-      "scope": "principle",
-      "status": "active",
-      "source": "design/CHECKING.txt 一、它现在怎么跑",
-      "parent": "identity",
-      "after": ["judge-alive"],
-      "verifiedBy": ["test/suite-list.test.mjs", "test/impact.test.mjs", "test/gap-baseline.test.mjs", "test/readme.test.mjs", "test/plan.test.mjs", "test/independence.test.mjs"],
-      "touches": ["tools/suite-list.txt", "tools/check-all.mjs", "tools/impact.mjs", "tools/cond-census.mjs", "tools/independence.mjs", "tools/runtime-path.mjs", "tools/builtin-gap.mjs", "tools/tooling-ledger.mjs", "tools/map-agree.mjs", "design/PLAN.json"],
-      "notes": "把 tools/ 与两份清单画进网络。在那之前，改它们的时候规划侧一条目标都不会亮 —— 一个能被改坏却查不到的东西，等于没人看着"
-    },
-    {
-      "id": "guest-recheck",
-      "title": "重验入口：一台 Windows 10 虚拟机与一份静态 exe，随时能把平台下限再量一次",
-      "scope": "task",
-      "status": "done",
-      "source": "design/CHECKING.txt 2026-11-08 夜",
-      "parent": "judge-infrastructure",
-      "after": [],
-      "verifiedBy": ["test/self-contained.test.mjs"],
-      "touches": ["design/PLATFORM.txt", "design/CHECKING.txt"],
-      "notes": "2026-11-08 完成过一次：Win10 10.0.19044 上静态 C 机器退出码 5，与主机一致。虚拟机留在 G 盘，登录方式写在它的 description 里"
-    },
-    {
-      "id": "perf-position",
-      "title": "性能的位置：可预测优于快，不倒退优于更快速",
-      "scope": "principle",
-      "status": "done",
-      "source": "design/PLATFORM.txt 八、性能的位置",
-      "parent": "identity",
-      "after": [],
-      "verifiedBy": ["test/gap-baseline.test.mjs"],
-      "touches": ["design/PLATFORM.txt", "design/OPEN.txt"],
-      "notes": "慢榜四套是已知形状，不是缺陷清单；不主动追快"
+      "parent": "language",
+      "after": [
+        "bootstrap"
+      ],
+      "verifiedBy": [
+        "test/independence.test.mjs"
+      ],
+      "touches": [
+        "design/INDEPENDENCE.txt",
+        "tools/independence.mjs"
+      ],
+      "notes": "2026-11-04 起草，用来替换一句自述（「近读法齐了，差 0 格」）—— 那句话的问题在于格子是自己画的。六条性质才是定义，而每一条都指着一个已经存在的判据：运行时闭包不碰工具、种子自己够、世界面靠 builtin-gap、工具账本靠 tooling-ledger、运行时路径靠 runtime-path，而这一套只验「那条命令跑出来的表五条都在，结论说的是齐了」。一条说不清该看哪个判据的性质，是愿望而不是性质。",
+      "state": ""
     }
   ]
 }
