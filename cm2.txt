@@ -1,5 +1,0 @@
-The commit message file should not have been committed with it
-
-The previous commit ran git add -A after writing the message to cm.txt in the
-repository root, so the message file itself went in alongside design/PLAN.json.
-It is removed here; the plan file is unchanged.
