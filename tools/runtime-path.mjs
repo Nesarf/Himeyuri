@@ -30,6 +30,7 @@ export const 工具册 = new Set([
   "tools/ucd-nfc.mjs",
   "tools/check-all.mjs",
   "tools/check-docs.mjs",
+  "tools/check-langs.mjs",
   "tools/check-builtins.mjs",
   "tools/builtin-gap.mjs",
   "tools/helper.mjs",

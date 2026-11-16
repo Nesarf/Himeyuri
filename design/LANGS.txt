@@ -130,9 +130,10 @@
     ・test/ 与 tools/ 不限语言，但 tools/ 里凡进入发行产物的那几份
       （release、package、verify、manifest 一路）按核心对待。
 
-  这条门禁可以写成一条判据：读 design/LANGS.txt 里那张清单，与 src/ 的实际
-  文件对账，多出来的 .mjs 要求它在清单里出现过。这一条尚未实现 —— 本文件
-  先立规矩，判据在下一格里补。
+  这一条现在是一条判据：套件 langs 跑 tools/check-langs.mjs，它读本文件第九节
+  那张清单，与 src/ 的实际文件对账 —— 盘上有而清单里没有是「新文件没登记」，
+  清单里有而盘上没有是「清单过时」，两向都红。所以往核心语义里加一行 JS，
+  代价是先在这张表上写一个词，而那个词要说清它属于哪一层。
 
 已定：C++（用户 2026-11-17 点下）
 --------------------------------------------------------------------
@@ -171,16 +172,72 @@
   条会更值钱；下一次要给一门新方言做前端，Rust 那条会更值钱。这条决定只对
   「第二份前端 + 基础库」这一格成立。
 
+清单：src/ 下四十一个 .mjs 各属哪一层
+--------------------------------------------------------------------
+
+  core 是语言的定义面 —— 读源码、建 AST、编字节码、跑、值语义、静态检查。
+  tool 是工具与服务 —— 格式化、语言服务器、反射、脱敏、嵌入、容器、线程。
+  判据（tools/check-langs.mjs）只要求两件事：每个文件在表里，层名合法。
+
+  ・adapter.mjs core
+  ・bits.mjs core
+  ・bytecode.mjs core
+  ・capabilities.mjs core
+  ・cc.mjs core
+  ・code-file.mjs core
+  ・decimal.mjs core
+  ・diagnostics.mjs core
+  ・embed.mjs tool
+  ・eval.mjs core
+  ・expand.mjs core
+  ・f64.mjs core
+  ・format.mjs tool
+  ・ittgn.mjs tool
+  ・lexer.mjs core
+  ・loader-checks.mjs core
+  ・loader-self.mjs core
+  ・loader.mjs core
+  ・lsp.mjs tool
+  ・minimal-eval.mjs core
+  ・numbers.mjs core
+  ・owned-check.mjs core
+  ・owned-state.mjs core
+  ・parser.mjs core
+  ・realtime-check.mjs tool
+  ・redact.mjs tool
+  ・reflect.mjs tool
+  ・resolve.mjs core
+  ・subset-lex.mjs core
+  ・subset-parse.mjs core
+  ・text-impl.mjs core
+  ・text.mjs core
+  ・thr-worker-min.mjs tool
+  ・thr-worker-vm.mjs tool
+  ・thr-worker.mjs tool
+  ・units.mjs core
+  ・vm-builtins.mjs core
+  ・vm-values.mjs core
+  ・vm.mjs core
+  ・zip-writer.mjs tool
+  ・zone-check.mjs core
+
+  三十个 core、十一个 tool。这张表与 tools/runtime-path.mjs 的「工具册」
+  不是一个集合，两者也不要合并：工具册问的是「它会不会出现在跑程序的路径
+  上」，而这张表问的是「它属于哪一层」。adapter.mjs 就是两边都在的例子 ——
+  它不在运行时路径上（工具册收它），但它是「宿主与自举对同一个数」那条语义
+  的实现，所以层是 core。两个问题各有各的答案，合并就会有一个答错。
+
 这一份怎么被检查
 --------------------------------------------------------------------
 
   本文的三条主张各有落点，没有一条是只在文档里出现的借用：
 
     ・台数的账：tools/ 或 test/ 里的一条普查，数各语言的文件与行数，与本
-      文件第二节的表对账。尚未写。
+      文件第二节的表对账。尚未写 —— 第二节那些数字是 2026-11-17 手量的。
     ・缺口那一条：test/crosscheck.test.mjs 目前只从字节码起跑，把入口上移
       一层即是对它的扩张，不是新判据。
-    ・门禁那一条：读本文件第六节的清单，与 src/ 实际文件对账。尚未写。
+    ・门禁那一条：成了。套件 langs（tools/check-langs.mjs）读第九节那张表，
+      与 src/ 实际文件对账，两向都红。
 
-  两句尚未写，与 INDEPENDENCE 那次同一个理由：先立判断，再立判据，而判据
-  落下之前这文件里的数字就是它自己的证据。
+  还差一条（台数普查），与 INDEPENDENCE 那次同一个理由：先立判断，再立判据，
+  而判据落下之前这文件里的数字就是它自己的证据。
