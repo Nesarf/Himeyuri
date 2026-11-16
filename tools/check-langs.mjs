@@ -57,6 +57,59 @@ console.log("三、清单里每一个都还在盘上");
   ok("清单里 " + listed.size + " 项都指向存在的文件", 已消失.length === 0, 已消失.join(" "));
 }
 
+console.log("四、第二节那张账与盘上对得上");
+// 口径与表共用：只数参与构建与验收的十三个目录。表里第二节开头写着这句话，判据照同一份清单走，
+// 所以两边不会各自漂 —— 上一版那张表就是口径与写法各一份，于是每一个数都偏小而没人发现。
+const DIRS = ["src", "tools", "test", "self", "lib", "kpb", "bench", "conformance", "vm", "port", "deps", "bin", "bootstrap"];
+const 计 = new Map();
+const 记 = (key, top, n) => {
+  if (!计.has(key)) 计.set(key, { files: 0, lines: 0, byTop: new Map() });
+  const 桶 = 计.get(key);
+  桶.files++; 桶.lines += n;
+  桶.byTop.set(top, (桶.byTop.get(top) || 0) + n);
+};
+const 走 = (dir, top) => {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) { 走(p, top); continue; }
+    const key = { ".mjs": "mjs", ".hmoca": "hmoca", ".c": "c", ".py": "py" }[path.extname(e.name)];
+    if (key) 记(key, top, fs.readFileSync(p, "utf8").split("\n").length - 1);
+  }
+};
+for (const d of DIRS) { const p = path.join(ROOT, d); if (fs.existsSync(p)) 走(p, d); }
+
+const 表 = new Map();
+for (const line of fs.readFileSync(LIST, "utf8").split("\n")) {
+  const m = line.match(/^ {2,6}(JS（\.mjs）|HMYR（\.hmoca）|C|Python)\s+(\d+) 个文件\s+([\d,]+) 行/);
+  if (m) 表.set(m[1], { files: Number(m[2]), lines: Number(m[3].split(",").join("")) });
+}
+ok("表里四个语言各有一条总量行", 表.size === 4, [...表.keys()].join(" "));
+
+// 文件数是结构，变一个就该动表；行数每天都在动，所以给一成。两档都是刻意的：
+// 精确对行数会让每一次小改都要改文档，而文档一烦就会被改成一句「见代码」—— 那等于删了这张表。
+for (const [label, key] of Object.entries({ "JS（.mjs）": "mjs", "HMYR（.hmoca）": "hmoca", "C": "c", "Python": "py" })) {
+  const 表值 = 表.get(label);
+  const 实 = 计.get(key) || { files: 0, lines: 0 };
+  if (!表值) continue;
+  ok(label + " 的文件数与表一致", 表值.files === 实.files, "表 " + 表值.files + " / 盘上 " + 实.files);
+  const 差 = 表值.lines ? Math.abs(实.lines - 表值.lines) / 表值.lines : 1;
+  ok(label + " 的行数在表的一成以内", 差 <= 0.10, "表 " + 表值.lines + " / 盘上 " + 实.lines + "，差 " + Math.round(差 * 100) + "%");
+}
+
+// 三条主张，是这张表存在的理由。数字会变，主张不该悄悄变弱 —— 上一版的账偏小 8%，
+// 而「HMYR 是 C 的三倍」那句话在那 8% 里其实已经站不住了。
+const 行数 = (key, top) => {
+  const 桶 = 计.get(key);
+  if (!桶) return 0;
+  return top ? (桶.byTop.get(top) || 0) : 桶.lines;
+};
+ok("主张一：test/ 的 .mjs 行数多于 src/ 的", 行数("mjs", "test") > 行数("mjs", "src"), "test " + 行数("mjs", "test") + " / src " + 行数("mjs", "src"));
+ok("主张二：HMYR 自己的行数是 C 的两倍以上", 行数("hmoca") > 2 * 行数("c"), "hmoca " + 行数("hmoca") + " / C " + 行数("c"));
+{
+  const py桶 = 计.get("py") || { byTop: new Map() };
+  ok("主张三：Python 那几份只在 deps/ 里", [...py桶.byTop.keys()].every((t) => t === "deps"), [...py桶.byTop.keys()].join(" "));
+}
+
 const core = [...listed.values()].filter((l) => l === "core").length;
 console.log("");
 console.log("core " + core + " 个 · tool " + (listed.size - core) + " 个");
