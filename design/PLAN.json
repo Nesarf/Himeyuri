@@ -231,6 +231,27 @@
       ],
       "notes": "2026-11-04 起草，用来替换一句自述（「近读法齐了，差 0 格」）—— 那句话的问题在于格子是自己画的。六条性质才是定义，而每一条都指着一个已经存在的判据：运行时闭包不碰工具、种子自己够、世界面靠 builtin-gap、工具账本靠 tooling-ledger、运行时路径靠 runtime-path，而这一套只验「那条命令跑出来的表五条都在，结论说的是齐了」。一条说不清该看哪个判据的性质，是愿望而不是性质。",
       "state": ""
+    },
+    {
+      "id": "langs",
+      "title": "语言分层：三台机器与一座城市，以及前端只有一台机器的缺口",
+      "scope": "project",
+      "status": "open",
+      "parent": "language",
+      "after": [
+        "independence"
+      ],
+      "verifiedBy": [],
+      "touches": [
+        "design/LANGS.txt",
+        "design/HOSTMIN.txt",
+        "design/C-VM.txt",
+        "src/lexer.mjs",
+        "src/parser.mjs",
+        "vm/hmyr.c"
+      ],
+      "notes": "用户的方向是三层分工（中重量级为核心、轻量级辅助、专门类针对性），而「降低 JavaScript 使用率」按行数会指向重写 test/ 那二万五千行 —— 那是错的行动。所以这一条把目标换成台数：核心语义路径上有几台独立机器。实测现状是三台（src 的 JS 参考实现、vm/hmyr.c、self 的 HMYR 自举），而缺口在前端 —— 源码到 AST 只有 JS 一份，机器二与机器三都从字节码起跑。补法是第二份前端，从词法与语法起。两条判据尚未写（台数普查、src 新文件的层归属对账），所以它不是 done。",
+      "state": "design/LANGS.txt 立了判断与四条边界；第二份前端选哪个语言（Rust / C# / Java / C++）未定"
     }
   ]
 }
