@@ -234,7 +234,7 @@
     },
     {
       "id": "langs",
-      "title": "语言分层：三台机器与一座城市，以及前端只有一台机器的缺口",
+      "title": "语言分层：三台机器与一块地，缺口是第二台前端踩在 JS 求值器上",
       "scope": "project",
       "status": "open",
       "parent": "language",
@@ -248,12 +248,15 @@
         "design/LANGS.txt",
         "design/HOSTMIN.txt",
         "design/C-VM.txt",
+        "self/host.mjs",
+        "self/scan.hmoca",
+        "src/eval.mjs",
         "src/lexer.mjs",
         "src/parser.mjs",
         "vm/hmyr.c"
       ],
-      "notes": "用户的方向是三层分工（中重量级为核心、轻量级辅助、专门类针对性），而「降低 JavaScript 使用率」按行数会指向重写 test/ 那二万五千行 —— 那是错的行动。所以这一条把目标换成台数：核心语义路径上有几台独立机器。实测现状是三台（src 的 JS 参考实现、vm/hmyr.c、self 的 HMYR 自举），而缺口在前端 —— 源码到 AST 只有 JS 一份，机器二与机器三都从字节码起跑。补法是第二份前端，从词法与语法起。两条判据现在都成了，都在 tools/check-langs.mjs（套件 langs，十六项）：层归属那条把 src/ 下四十一个 .mjs 与 design/LANGS.txt 第九节的清单两向对账（三十个 core · 十一个 tool），台数那条读第二节的四行总量与盘上对账（文件数精确、行数给一成、另有 test/ 多于 src/ 等三条主张用不等式）。还差的是第二份前端本身，所以它不是 done。",
-      "state": "选项已定：C++（用户 2026-11-17 点下）。理由是与 ynok 待建的那个基础库同侧 —— 同一套 ABI、同一批头文件、同一份无运行时约束；HMYR 自建要先有那个库，而前端与它同族才谈得上在裸机上跑。"
+      "notes": "用户的方向是三层分工（中重量级为核心、轻量级辅助、专门类针对性），而「降低 JavaScript 使用率」按行数会指向重写 test/ 那二万七千行 —— 那是错的行动。所以这一条把目标换成台数：核心语义路径上有几台独立机器。实测是三台（src 的 JS 参考实现、vm/hmyr.c、self 的 HMYR 自举）。头一版把缺口写成「前端只有一台机器」，取证之后发现错了：self/ 六十三份 .hmoca 里有 lex、parse、stmt、body、scan，前端早有两份，而 test/self.test.mjs、test/self-lex.test.mjs、test/self-body.test.mjs 与 test/adapter.test.mjs 那一族（表达式、语句、函数表三条）一直在比它们是否一致。真正卡住的只有一处，写在 self/host.mjs 自己的第二行注释里 —— this file is only the bridge：那座桥 import 的 Runtime 来自 src/eval.mjs，所以能读源码的那台机器脚下踩的是 JS 的求值器。缺口不是再写一份前端，是给已经有的那份换一块地；这与用户那句「hmyr 还需要一个完整的 ynok 基础库以自建」同形 —— 基础库不是前端，是那块地。两条判据都已成（tools/check-langs.mjs，套件 langs，十六项）。下一步第一件事是取证而不是实现：vm/hmyr.c 认不认 self 那一族要的运行时。所以它不是 done。",
+      "state": "C++（用户 2026-11-17 点下）买的不是第二份前端，是那块地 —— 一个与 vm/hmyr.c、与 port/、与将来那个基础库共用一个世界的宿主，让 self/ 那一族不必踩在 src/eval.mjs 上。待取证：vm/hmyr.c 认不认 self/eval.hmoca 那一族要的运行时（闭包、作用域链、异常）；认，则下一步是接线；不认，则基础库不是绕路而是唯一的路。"
     }
   ]
 }
