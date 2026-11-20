@@ -279,7 +279,7 @@
     },
     {
       "id": "rebuild",
-      "title": "第二代 hmyr：ynok 完善之后，在一个有 C++ 基础库的环境里重造一遍",
+      "title": "往返式自举的后三步：在 Yunooka 里建真正的 HMYR，再倒回来重建各宿主上的移植",
       "scope": "project",
       "status": "open",
       "parent": "language",
@@ -291,8 +291,8 @@
         "design/LANGS.txt",
         "design/FULLSELF.txt"
       ],
-      "notes": "用户 2026-11-17 的原话：「速度方面暂时不着急，等到 ynok 完善后还要再建一次 hmyr 的」。这一条记的是那句话里最容易被丢掉的部分 —— 时序，以及它改变了什么。第一代是现在这棵树（src 的 JS 参考实现、vm/hmyr.c、self 的自举那一族），它的目标是 FULLSELF 那本账里的一百，而它还差一格：HMYR 写的字节码机接 C 那台的位置。第二代不是第一代的延长线，是在另一个环境里从头造一遍 —— 那时脚下已经有 C++ 基础库与 ynok，于是「脚本语言能不能当宿主」这个问题不必再问。两件事的实际后果：一、提高 C++ 使用率在这份规划里不等于改写 src 那四万多行，等于下一次建造从 C++ 起；二、vm-self 的后半因此降级 —— 它仍然该做（判据已经在跑，缺的是速度与三样功能），但不再是「下一个大件」，因为第二次建造可能根本不继承它。判据尚未立，而这一条的判据本来也不该现在立：它依赖一个还不存在的环境。",
-      "state": "用户给的次序：先 ynok 完善（含 C++ 基础库），再重造 hmyr。"
+      "notes": "用户 2026-11-17 的两句话 ——「速度方面暂时不着急」与「等到 ynok 完善后还要再建一次 hmyr 的」—— 说的是 design/FULLSELF.txt 第八节那条路线，它自己编了号：一、用 JS 与 C 把 HMYR 在 Windows 与 Linux 上的框架搭起来；二、在那之上建 Hiou Rengo 与 Yunooka 的雏形；三、到 Yunooka 里面建真正的 HMYR（用 HMYR 写、跑在 Yunooka 上）；四、在 Yunooka 里建 Hiou Rengo；五、用 Yunooka 里那一套倒回来重建各宿主上的 HMYR 与 Hiou Rengo。那一节自己写着「第一步：基本完成……所以第二步可以从现在起」。而紧接着的第九节把第五步说准了：那不是一份代码到处跑，是一族移植（For Windows / macOS / Nyarch / Debian / YunookA），每个移植里宿主口一份、其余共用。这一条在地图上记的是第三到第五步，它依赖 base-lib 那块地。判据尚未立，理由与 base-lib 相同：它依赖一个还不存在的环境。措辞用 FULLSELF 的，不另造新词 —— 新词会让读者以为它是新东西，而它已经在文档里放了很久。",
+      "state": "依赖 base-lib 那块地。FULLSELF 第八节：第一步基本完成，第二步可以从现在起。"
     },
     {
       "id": "vm-self",
