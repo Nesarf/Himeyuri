@@ -279,7 +279,7 @@
     },
     {
       "id": "vm-self",
-      "title": "HMYR 写的字节码机：从 vm-boot 那一格推到 bytecode 那一套",
+      "title": "HMYR 写的字节码机接 C 那台的位置（前半已成，后半卡在速度与三样缺）",
       "scope": "stage",
       "status": "open",
       "parent": "language",
@@ -287,6 +287,7 @@
         "bootstrap"
       ],
       "verifiedBy": [
+        "test/bytecode.test.mjs",
         "test/vm-boot.test.mjs"
       ],
       "touches": [
@@ -296,8 +297,8 @@
         "test/vm-boot.test.mjs",
         "test/bytecode.test.mjs"
       ],
-      "notes": "design/FULLSELF.txt 第三段：「字节码机：先让 HMYR 写的 VM 跑通 test/bytecode.test.mjs，再接 C 那台的位置。这一段最长。」今天它站在前一格：self/vm.hmoca 八百一十六行，能装载 .hmoks、能执行、能认二十二个内置，判据是 test/vm-boot.test.mjs（examples/hello.hmoca 从源码跑到 5）。它自己声明还缺三样 —— 调方法 那条指令、效果检查、深度上限 —— 而栈深 128 那个数是量过的，不是拍的（1024 要 24 秒而 128 只要 2 秒，vm-hands 300 秒跑不完对 21 秒跑完）。所以这一条不是在写一个新东西，是把一份已有的实现从一格推到下一格，而下一格有它自己的判据。",
-      "state": ""
+      "notes": "design/FULLSELF.txt 第三段的后半。前半 —— 让 HMYR 写的 VM 跑通 test/bytecode.test.mjs —— 2026-11-04 就做完了，比那一段写的时候还早：test/bytecode.test.mjs 的第二节从两台变三台，第三台正是 self/vm.hmoca，由 C 那台驮着跑，三台对同一份源码给同一个答案；test/vm-boot.test.mjs 是更重的一格（把 runtime/run.hmoks 装进它，让它读 examples/hello.hmoca、编成字节码、再跑、打出 5）。所以剩下的只有后半：接 C 那台的位置。障碍不在判据，在两件更硬的东西 —— 一是速度，自举解释器每一步比 C 贵三个数量级（C 那台约二十秒，而 bin/hmyr.mjs 在同一个客人上撞两亿步的限）；二是 self/vm.hmoca 自己声明的三样缺（调方法 那条指令、效果检查、深度上限）。前两样在 bytecode 那条路上用不到，所以不影响前半的绿；要接位置，它们就得在。栈深 128 那个数是量过的，不是拍的：1024 要 24 秒而 128 只要 2 秒，vm-hands 300 秒跑不完对 21 秒跑完。",
+      "state": "前半已完成（2026-11-04 起 bytecode 的三台里就有它）；后半未开工，两个障碍已量：速度差三个数量级，三样功能缺里有两样还没写。"
     }
   ]
 }
