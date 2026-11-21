@@ -275,7 +275,7 @@
         "port/arm-port.c"
       ],
       "notes": "用户 2026-11-17 的原话：「hmyr 还需要一个完整的 ynok 基础库以自建，所以可以考虑选择 C++」。那个库长在 Yunooka 那一侧（design/LAYERS.txt 与 design/NAMES.txt 两份清单，加它的 PLAN 里 system-software 那一条六件），而它现在一行都没有。hmyr 这一侧要买的是那块地：一个与 vm/hmyr.c、与 port/、与将来那个基础库共用一个世界的宿主，而不是第二份前端 —— 前端 self/ 里早就有两份了。第一步是写 design/BASELIB.txt 把宿主形状定下来，而它的依据是三条现成的取证：HOSTMIN.txt 的上界已经收紧成实测下界（NODE_V8_COVERAGE 六条路径），且它第 102-104 行写着那张十项全局八种构造的表是「用另一种语言实现 JS 语义」这条路的需求表，C 这条路绕过了它；SELFRUN.txt 第 90-92 行写 vm/hmyr.c 不实现 JS 语义，值、栈、错误都是自己的；self/vm.hmoca 八百一十六行是 HMYR 写的字节码机器，同样不经过 JS 语义。所以基础库是字节码机器的宿主：给分配、串（UTF-16 码元）、文件读写、退出，不实现闭包、异常、Map、JSON。判据尚未立，而它该在宿主形状定了之后才立。",
-      "state": "宿主形状正在写（design/BASELIB.txt）；判据等形状定了再立。"
+      "state": "形状已定（design/BASELIB.txt：四样，不实现 JS 语义）。第一块砖已在：baselib/ 一个 .cpp 六十七行加一个 .h 三十九行，判据 test/baselib.test.mjs 三项（含反向），已挂进 check-all 的 baselib 套件。"
     },
     {
       "id": "rebuild",
