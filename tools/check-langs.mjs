@@ -60,7 +60,7 @@ console.log("三、清单里每一个都还在盘上");
 console.log("四、第二节那张账与盘上对得上");
 // 口径与表共用：只数参与构建与验收的十三个目录。表里第二节开头写着这句话，判据照同一份清单走，
 // 所以两边不会各自漂 —— 上一版那张表就是口径与写法各一份，于是每一个数都偏小而没人发现。
-const DIRS = ["src", "tools", "test", "self", "lib", "kpb", "bench", "conformance", "vm", "port", "deps", "bin", "bootstrap"];
+const DIRS = ["src", "tools", "test", "self", "lib", "kpb", "bench", "conformance", "vm", "port", "deps", "bin", "bootstrap", "baselib"];
 const 计 = new Map();
 const 记 = (key, top, n) => {
   if (!计.has(key)) 计.set(key, { files: 0, lines: 0, byTop: new Map() });
@@ -72,7 +72,7 @@ const 走 = (dir, top) => {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) { 走(p, top); continue; }
-    const key = { ".mjs": "mjs", ".hmoca": "hmoca", ".c": "c", ".py": "py" }[path.extname(e.name)];
+    const key = { ".mjs": "mjs", ".hmoca": "hmoca", ".c": "c", ".cpp": "cpp", ".hpp": "cpp", ".cc": "cpp", ".cxx": "cpp", ".py": "py" }[path.extname(e.name)];
     if (key) 记(key, top, fs.readFileSync(p, "utf8").split("\n").length - 1);
   }
 };
@@ -80,14 +80,14 @@ for (const d of DIRS) { const p = path.join(ROOT, d); if (fs.existsSync(p)) 走(
 
 const 表 = new Map();
 for (const line of fs.readFileSync(LIST, "utf8").split("\n")) {
-  const m = line.match(/^ {2,6}(JS（\.mjs）|HMYR（\.hmoca）|C|Python)\s+(\d+) 个文件\s+([\d,]+) 行/);
+  const m = line.match(/^ {2,6}(JS（\.mjs）|HMYR（\.hmoca）|C\+\+（\.cpp）|C|Python)\s+(\d+) 个文件\s+([\d,]+) 行/);
   if (m) 表.set(m[1], { files: Number(m[2]), lines: Number(m[3].split(",").join("")) });
 }
-ok("表里四个语言各有一条总量行", 表.size === 4, [...表.keys()].join(" "));
+ok("表里五个语言各有一条总量行", 表.size === 5, [...表.keys()].join(" "));
 
 // 文件数是结构，变一个就该动表；行数每天都在动，所以给一成。两档都是刻意的：
 // 精确对行数会让每一次小改都要改文档，而文档一烦就会被改成一句「见代码」—— 那等于删了这张表。
-for (const [label, key] of Object.entries({ "JS（.mjs）": "mjs", "HMYR（.hmoca）": "hmoca", "C": "c", "Python": "py" })) {
+for (const [label, key] of Object.entries({ "JS（.mjs）": "mjs", "HMYR（.hmoca）": "hmoca", "C++（.cpp）": "cpp", "C": "c", "Python": "py" })) {
   const 表值 = 表.get(label);
   const 实 = 计.get(key) || { files: 0, lines: 0 };
   if (!表值) continue;

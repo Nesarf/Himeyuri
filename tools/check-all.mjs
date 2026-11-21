@@ -98,6 +98,7 @@ const SUITES = [
   ["writetext", "test/write-text.test.mjs", "SPEC 2.5 - write_text writes and reads back the same text, and an undeclared effect refuses instead of writing"],
   ["codefile", "test/code-file.test.mjs", "SPEC M4 - bytecode survives a file round trip: same names, same slots, same effects, same instructions, same answer"],
   ["cvm", "test/c-vm.test.mjs", "SPEC M4 - a machine that is not JavaScript executes the same bytecode and prints the same thing (skipped when the host has no C compiler)"],
+  ["baselib", "test/baselib.test.mjs", "BASELIB - the first C++ in the repository: the base library owes four things (allocation, UTF-16 strings, file read, exit) and no JavaScript semantics, and the judge proves it can go red (skipped when the host has no C++ compiler)"],
   // 线程：两台字节码机都有了自己的实例。JS 那台 2026-10-25，C 那台次日 ——
   // C 那台靠的是线程局部的 g_机：一个线程一个 Hmyr机器，线程里编译、装载、跑，
   // 结果写成文本交回。板子那一支不编线程，thr_* 仍如实说没有。
