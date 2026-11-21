@@ -11,6 +11,9 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { loadUnit } from "../src/loader.mjs";
+import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
+import { 写程序 } from "../src/code-file.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TMP = fs.mkdtempSync(path.join("E:/DaShaoHuo/cache/tmp", "baselib-"));
@@ -85,6 +88,48 @@ if (!有gpp) {
     const 跑坏 = spawnSync(exe, [], { cwd: TMP, encoding: "utf8", timeout: 30000 });
     ok("把长度 5 改成 6 之后跑不通过（退出码 3）", 跑坏.status === 3,
       "退出 " + 跑坏.status + " · " + String(跑坏.stderr).slice(0, 120));
+  }
+
+  console.log("四、第一次互相调：vm 用 baselib 读文件");
+  {
+    // 一份小探针，自己打印 7 而不是靠 vm 打印返回值 —— 断言只看串口上的字节，
+    // 与「两台机器同一个答案」那条路同一个口径。
+    const 源 = path.join(TMP, "probe.hmoca");
+    fs.writeFileSync(源, "fn main() -> Int {\n  print(\"7\" + chr(10))\n  return 0\n}\n", "utf8");
+    const u = loadUnit(源);
+    if (!u.ok) {
+      ok("探针读得进", false, JSON.stringify(u.diagnostics.errors.map((e) => e.code)));
+    } else {
+      const 包 = 写程序(合并程序(
+        u.order.map((f) => 编译模块(u.modules.get(f))),
+        编译模块(u.modules.get(u.order[u.order.length - 1])),
+      ));
+      const 码路 = path.join(TMP, "probe.hmoks");
+      fs.writeFileSync(码路, 包);
+
+      // vm 不带 main 编成目标文件，baselib 两个 .cpp 用 g++ 编并链接它 ——
+      // extern "C" 边界在这里第一次被真的用到：C 那台调 baselib_read_file，
+      // 而两边各写各的语言，链接器要把它们接上。
+      const o = path.join(TMP, "hmyr.o");
+      const 编c = spawnSync("gcc", ["-std=c11", "-O2", "-DHMYR_NO_MAIN", "-c",
+        path.join(ROOT, "vm/hmyr.c"), "-o", o], { encoding: "utf8" });
+      const exe2 = path.join(TMP, "baselib-host");
+      const 编cp = spawnSync("g++", ["-std=c++17", "-O2",
+        "-I", path.join(ROOT, "baselib"), "-I", path.join(ROOT, "vm"),
+        path.join(ROOT, "baselib", "baselib.cpp"),
+        path.join(ROOT, "baselib", "baselib-platform.cpp"),
+        o, "-o", exe2, "-lm"], { encoding: "utf8" });
+      ok("vm（无 main）+ baselib 编得通、链得通",
+        编c.status === 0 && 编cp.status === 0,
+        String(编c.stderr).slice(0, 200) + String(编cp.stderr).slice(0, 200));
+
+      if (编c.status === 0 && 编cp.status === 0) {
+        const 跑2 = spawnSync(exe2, [码路], { cwd: TMP, encoding: "utf8", timeout: 60000 });
+        ok("装了 baselib 平台的 vm 跑探针，串口上是 7",
+          跑2.status === 0 && /7/.test(跑2.stdout || ""),
+          "退出 " + 跑2.status + " · " + String(跑2.stdout).slice(0, 120) + String(跑2.stderr).slice(0, 200));
+      }
+    }
   }
 }
 

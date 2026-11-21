@@ -47,8 +47,8 @@
       port/*.c       6             756      ARM 与板级移植
       test/          1              43      一个夹具
 
-    C++（.cpp）      1 个文件       67 行
-      baselib/       1              67     基础库第一块砖（形状见 design/BASELIB.txt；
+    C++（.cpp）      2 个文件      104 行
+      baselib/       2             104     基础库（形状见 design/BASELIB.txt；
                                             baselib.h 那三十九行接口按 .h 不计的先例不算）
 
     Python         4 个文件        747 行     deps/ 的窗口探测与图像

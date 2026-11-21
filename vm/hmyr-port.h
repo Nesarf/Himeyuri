@@ -12,6 +12,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* C++ 调用方：这个仓库的第一份 C++（baselib）要调这里的 hmyr_运行 与
+ * hmyr_装平台。没有这一层，g++ 会把这两个名字装饰掉，而 hmyr.o（gcc 编的）
+ * 导出的是裸名 —— 链接器于是报 undefined reference。BASELIB 的接口自己也写
+ * extern "C"，两边是同一个理由：边界不能有名字装饰。 */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
   /* 读一个文件的字节：成功交回 1 并把指针与长度填好，失败交回 0。
    * 这块内存在这台机器的生命周期里只读，它不会去改。 */
@@ -125,5 +133,9 @@ size_t hmyr_值字节(void);
  * 每调用一个函数都会再触发一次硬错误 —— 串口上只剩半行被无限重复。
  * 崩溃之前的输出才是安全的证据，所以档位在正常栈上打。 */
 void hmyr_开深度档(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
