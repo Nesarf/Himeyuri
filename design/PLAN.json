@@ -267,15 +267,20 @@
       "after": [
         "independence"
       ],
-      "verifiedBy": [],
+      "verifiedBy": [
+        "test/baselib.test.mjs"
+      ],
       "touches": [
         "design/LANGS.txt",
         "design/HOSTMIN.txt",
         "vm/hmyr.c",
-        "port/arm-port.c"
+        "port/arm-port.c",
+        "baselib/baselib.cpp",
+        "baselib/baselib.h",
+        "test/baselib.test.mjs"
       ],
-      "notes": "用户 2026-11-17 的原话：「hmyr 还需要一个完整的 ynok 基础库以自建，所以可以考虑选择 C++」。那个库长在 Yunooka 那一侧（design/LAYERS.txt 与 design/NAMES.txt 两份清单，加它的 PLAN 里 system-software 那一条六件），而它现在一行都没有。hmyr 这一侧要买的是那块地：一个与 vm/hmyr.c、与 port/、与将来那个基础库共用一个世界的宿主，而不是第二份前端 —— 前端 self/ 里早就有两份了。第一步是写 design/BASELIB.txt 把宿主形状定下来，而它的依据是三条现成的取证：HOSTMIN.txt 的上界已经收紧成实测下界（NODE_V8_COVERAGE 六条路径），且它第 102-104 行写着那张十项全局八种构造的表是「用另一种语言实现 JS 语义」这条路的需求表，C 这条路绕过了它；SELFRUN.txt 第 90-92 行写 vm/hmyr.c 不实现 JS 语义，值、栈、错误都是自己的；self/vm.hmoca 八百一十六行是 HMYR 写的字节码机器，同样不经过 JS 语义。所以基础库是字节码机器的宿主：给分配、串（UTF-16 码元）、文件读写、退出，不实现闭包、异常、Map、JSON。判据尚未立，而它该在宿主形状定了之后才立。",
-      "state": "形状已定（design/BASELIB.txt：四样，不实现 JS 语义）。第一块砖已在：baselib/ 一个 .cpp 六十七行加一个 .h 三十九行，判据 test/baselib.test.mjs 三项（含反向），已挂进 check-all 的 baselib 套件。"
+      "notes": "用户 2026-11-17 的原话：「hmyr 还需要一个完整的 ynok 基础库以自建，所以可以考虑选择 C++」。那个库长在 Yunooka 那一侧（design/LAYERS.txt 与 design/NAMES.txt 两份清单，加它的 PLAN 里 system-software 那一条六件），而它现在一行都没有。hmyr 这一侧要买的是那块地：一个与 vm/hmyr.c、与 port/、与将来那个基础库共用一个世界的宿主，而不是第二份前端 —— 前端 self/ 里早就有两份了。第一步是写 design/BASELIB.txt 把宿主形状定下来，而它的依据是三条现成的取证：HOSTMIN.txt 的上界已经收紧成实测下界（NODE_V8_COVERAGE 六条路径），且它第 102-104 行写着那张十项全局八种构造的表是「用另一种语言实现 JS 语义」这条路的需求表，C 这条路绕过了它；SELFRUN.txt 第 90-92 行写 vm/hmyr.c 不实现 JS 语义，值、栈、错误都是自己的；self/vm.hmoca 八百一十六行是 HMYR 写的字节码机器，同样不经过 JS 语义。所以基础库是字节码机器的宿主：给分配、串（UTF-16 码元）、文件读写、退出，不实现闭包、异常、Map、JSON。判据已经立了：test/baselib.test.mjs 三项（含反向）挂在 check-all 的 baselib 套件里，3941a23 是 C 机器经基础库读自己程序的第一次握手 —— 上面「判据尚未立」这句旧账就此作废，它立得比这句笔记还早。",
+      "state": "形状已定（design/BASELIB.txt：四样，不实现 JS 语义）。第一块砖已在：baselib/ 一个 .cpp 六十七行加一个 .h 三十九行，判据 test/baselib.test.mjs 三项（含反向），已挂进 check-all 的 baselib 套件。3941a23 之后 C 机器经这个库读自己的程序（第一次握手）已通。"
     },
     {
       "id": "rebuild",
@@ -317,5 +322,9 @@
       "notes": "design/FULLSELF.txt 第三段的后半。前半 —— 让 HMYR 写的 VM 跑通 test/bytecode.test.mjs —— 2026-11-04 就做完了，比那一段写的时候还早：test/bytecode.test.mjs 的第二节从两台变三台，第三台正是 self/vm.hmoca，由 C 那台驮着跑，三台对同一份源码给同一个答案；test/vm-boot.test.mjs 是更重的一格（把 runtime/run.hmoks 装进它，让它读 examples/hello.hmoca、编成字节码、再跑、打出 5）。所以剩下的只有后半：接 C 那台的位置。障碍不在判据，在两件更硬的东西 —— 一是速度，自举解释器每一步比 C 贵三个数量级（C 那台约二十秒，而 bin/hmyr.mjs 在同一个客人上撞两亿步的限）；二是 self/vm.hmoca 自己声明的三样缺（调方法 那条指令、效果检查、深度上限）。前两样在 bytecode 那条路上用不到，所以不影响前半的绿；要接位置，它们就得在。栈深 128 那个数是量过的，不是拍的：1024 要 24 秒而 128 只要 2 秒，vm-hands 300 秒跑不完对 21 秒跑完。",
       "state": "前半已完成（2026-11-04 起 bytecode 的三台里就有它）；后半未开工，两个障碍已量：速度差三个数量级，三样功能缺里有两样还没写。"
     }
+  ],
+  "sections": [
+    "units",
+    "plan"
   ]
 }
