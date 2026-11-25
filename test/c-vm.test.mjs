@@ -812,6 +812,10 @@ console.log("二十、输入那一组：一条队列，没有终端也不阻塞"
 
 console.log("二十一、改工作目录：进去、读回来、再回来");
 {
+  // temp_path 只保证父目录在，它返回的那个子目录要调用方自己建 —— 一个非空的目录名
+  // 不等于一个已存在的目录。这一节早先靠上次运行留下的 hmyr-chdir-probe 蒙过去，
+  // 缓存被清掉之后就露了（2026-11-26：两台机器都输出 true true true 加一个空串）。
+  fs.mkdirSync(path.join(process.env.HMYR_TMP || os.tmpdir(), "hmyr-chdir-probe"), { recursive: true });
   // chdir 会改进程状态，所以程序自己负责回到原处 —— 这一条既测「进得去」，
   // 也测「交回的是新目录」，还测「回得来」，于是三句都能被断言。
   const 源码 = [
