@@ -13,9 +13,8 @@ import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // python：Windows 上是那个固定路径，别的平台问 PATH —— 写死一个 Windows
 // 路径在 Linux 上必然找不到（2026-11-03 跨系统时这三套因此全红）。
-const PY = process.platform === "win32"
-  ? "E:/DaShaoHuo/Python-managed/bin/python.exe"
-  : "python3";
+// 2026-11-26：缺省值里不再有本机路径 —— HMYR_PYTHON 优先，否则问 PATH。
+const PY = process.env.HMYR_PYTHON || (process.platform === "win32" ? "python" : "python3");
 // ICC profile：Windows 用系统自带的那两张（sRGB 与 SWOP）；别的系统上没有它们，
 // 而仓库自带 deps/color/profiles/ 一整套（elle stone 那份公开 profile 集）。
 // 2026-11-03 给 Linux 补这一条时改的：源用仓库的 sRGB，目标用 AllColorsRGB ——

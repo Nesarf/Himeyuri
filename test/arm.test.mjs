@@ -28,7 +28,6 @@ const 找 = (候选串) => 候选串.filter(Boolean).find((p) => {
 });
 const gcc = 找([
   process.env.ARM_GCC,
-  "E:/DaShaoHuo/downloads/arm-gnu-toolchain/xpack-arm-none-eabi-gcc-15.2.1-1.1/bin/arm-none-eabi-gcc.exe",
   "arm-none-eabi-gcc",
 ]);
 const 编译器 = gcc || 找([

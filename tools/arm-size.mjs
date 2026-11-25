@@ -29,7 +29,6 @@ const 找 = (候选册) => 候选册.filter(Boolean).find((p) => {
 // GNU 那一支。xPack 的包解开之后就在这一层，装到哪里都可以 —— ARM_GCC 覆盖它。
 const gcc = 找([
   process.env.ARM_GCC,
-  "E:/DaShaoHuo/downloads/arm-gnu-toolchain/xpack-arm-none-eabi-gcc-15.2.1-1.1/bin/arm-none-eabi-gcc.exe",
   "arm-none-eabi-gcc",
 ]);
 const clang = 找([
@@ -149,7 +148,7 @@ if (gcc) {
       process.exit(1);
     }
     // objcopy 给的符号名由输入文件名决定，所以这一步要在那个目录里用相对名跑：
-    // 传绝对路径的话符号会变成 _binary_E__DaShaoHuo_..._start，与 board-main.c
+    // 传绝对路径的话符号会变成 _binary__路径__start，与 board-main.c
     // 里声明的名字对不上 —— 症状是弱声明落空，链接照样过，上电却说读不到文件。
     const 打 = spawnSync(objcopy, ["-I", "binary", "-O", "elf32-littlearm", "-B", "arm",
       "--rename-section", ".data=.program,alloc,load,readonly,data,contents",

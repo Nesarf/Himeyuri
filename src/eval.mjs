@@ -1084,11 +1084,10 @@ const BUILTINS = {
     return rt.cap.path.join(目录, "hmyr-" + 名);
   },
   python_path: (rt) => {
-    // 先看环境变量（于是别的机器可以指自己的），再看这台机器上那个托管解释器，最后退回 PATH。
+    // 先看环境变量（于是别的机器可以指自己的），再退回 PATH。
+    // 2026-11-26：这台机器上那个托管解释器的位置不再写死 —— 要指它就设 HMYR_PYTHON。
     const 指 = rt.cap.env.get("HMYR_PYTHON");
     if (指) return 指;
-    const 托管 = "E:/DaShaoHuo/Python-managed/bin/python.exe";
-    if (rt.cap.file.exists(托管)) return 托管;
     return "python";
   },
   // ---- 二、输出：写到一个可替换的出口 ----

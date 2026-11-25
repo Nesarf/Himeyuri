@@ -16,6 +16,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { 压目录 } from "../src/zip-writer.mjs";
 import { 只留源码 } from "./file-kind-hmyr.mjs";
+import { 签名位 } from "./signing-paths.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const 参 = process.argv.slice(2);
@@ -86,8 +87,7 @@ console.log("  清单 digest " + 清单.digest.slice(0, 16) + " · 内核 " + �
 // 四、分离签名。zip 没有内嵌签名位置，于是签名落在清单旁边一个 .sig 里——
 // 那正是 S.M.Y.T. 对 Linux 包与压缩归档的做法，不是这里临时想出来的。
 // 钥匙不在就当「没有钥匙」如实说，而不是悄悄跳过。
-const 钥匙 = "C:/Windows/System32/OpenSSH/ssh-keygen.exe";
-const 私钥 = "C:/Users/Administrator/.ssh/signing_ed25519_20261011";
+const { 钥匙, 私钥 } = 签名位();
 if (fs.existsSync(钥匙) && fs.existsSync(私钥)) {
   // 先删旧的 .sig：ssh-keygen 在目标已存在时会问一句「Overwrite (y/n)?」，
   // 而脚本里 stdin 被占着，于是它默默不动——旧的签名就这么留了下来，

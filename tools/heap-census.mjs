@@ -33,8 +33,8 @@ const STATIC_BYTES = 48128;
 const 找C机器 = () => {
   const 候选 = [
     path.join(ROOT, "port", "build", "host-hmyr.exe"),
-    "E:\\DaShaoHuo\\cache\\tmp\\stack1\\hmyr-128.exe",
-  ];
+    process.env.HMYR_C_VM,
+  ].filter(Boolean);
   for (const p of 候选) if (fs.existsSync(p)) return p;
   return null;
 };

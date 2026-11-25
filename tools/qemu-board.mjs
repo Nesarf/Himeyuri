@@ -47,7 +47,6 @@ if (!elf) {
 // QEMU 在哪：环境变量优先，然后是这台机器把它装的位置，最后才试 PATH。
 const 候选 = [
   process.env.QEMU_SYSTEM_ARM,
-  "E:/DaShaoHuo/apps/qemu/qemu-system-arm.exe",
   "qemu-system-arm",
 ].filter(Boolean);
 let qemu = null;

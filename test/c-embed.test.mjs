@@ -19,9 +19,9 @@ const ok = (label, condition, detail = "") => {
   else { failed++; console.log("  不通过  " + label + (detail ? "  " + detail : "")); }
 };
 
-// 临时目录问 test/scratch.mjs。这一处原来写的是反斜杠形式
-// （"E:\\DaShaoHuo\\cache\\tmp"），上一轮扫改正斜杠时漏了它 ——
-// 而它在 Linux 上直接 ENOENT，于是这一套连第一行都没跑出来，报的是零输出。
+// 临时目录问 test/scratch.mjs。这一处原来写死了本机那条缓存路径（还是反斜杠形式），
+// 上一轮扫改正斜杠时漏了它 —— 而它在 Linux 上直接 ENOENT，
+// 于是这一套连第一行都没跑出来，报的是零输出。
 const 临 = 临时mkdtempSync("hmyr-cembed-");
 const 有gcc = (() => {
   try { return spawnSync("gcc", ["--version"], { encoding: "utf8" }).status === 0; } catch { return false; }

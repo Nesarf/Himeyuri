@@ -2560,7 +2560,7 @@ selfloa 的 27/27）。
     读数：arm 的编译从失败变成 exit=0；套件从 7 passed / 14 failed 变成
     10 passed / 11 failed。剩下的 11 项里，gc_收集 那条警告（第 2560 行）是原有的
     （那一支在板子上不激活回收），其余 8 项是「拿不到链接日志」
-    （E:\DaShaoHuo\cache\tmp\hmyr-arm-link.log）—— 那是环境里缺 armlink 那一侧，
+    （本机缓存目录下的 hmyr-arm-link.log）—— 那是环境里缺 armlink 那一侧，
     与这一段无关。
 
     这一轮最该记住的一句：「编译通过」在桌面与板子上是两件事。 我给 C 机器加

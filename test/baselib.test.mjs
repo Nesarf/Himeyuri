@@ -16,7 +16,7 @@ import { 编译模块, 合并程序 } from "../src/bytecode.mjs";
 import { 写程序 } from "../src/code-file.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const TMP = fs.mkdtempSync(path.join("E:/DaShaoHuo/cache/tmp", "baselib-"));
+const TMP = fs.mkdtempSync(path.join(os.tmpdir(), "baselib-"));
 
 let passed = 0, failed = 0;
 const ok = (label, condition, detail = "") => {

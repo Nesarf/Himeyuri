@@ -1029,7 +1029,7 @@
 
     一、QEMU 在哪
 
-      E:\DaShaoHuo\apps\qemu\qemu-system-arm.exe（QEMU 11.1.0）
+      本机 apps/qemu 下的 qemu-system-arm.exe（QEMU 11.1.0）
 
     二、两条机器，各有各的用处
 

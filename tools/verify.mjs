@@ -14,6 +14,7 @@
 //   node tools/verify.mjs --in x.json     验一份给定的清单
 import fs from "node:fs";
 import path from "node:path";
+import { 签名位 } from "./signing-paths.mjs";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -84,8 +85,8 @@ else console.log("  不通过");
 const 签路径 = (位 >= 0 && 参[位 + 1] ? path.resolve(参[位 + 1]) : path.join(ROOT, "dist/manifest.json")) + ".sig";
 if (fs.existsSync(签路径)) {
   const 找 = (p) => (fs.existsSync(p) ? p : null);
-  const 钥匙 = "C:/Windows/System32/OpenSSH/ssh-keygen.exe";
-  const allowed = 找("C:/Users/Administrator/.ssh/allowed_signers");
+  const { 钥匙, 名单 } = 签名位();
+  const allowed = 找(名单);
   if (找(钥匙) && allowed) {
     const r = spawnSync(钥匙, ["-Y", "verify", "-I", "Nesarf@users.noreply.github.com", "-n", "file", "-f", allowed, "-s", 签路径], {
       encoding: "utf8",

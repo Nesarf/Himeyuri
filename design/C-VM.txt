@@ -709,12 +709,12 @@ C 版虚拟机：那台不是 JS 的机器
   全过。
 
   一处更正值得记：arm 那一套第一次也标了 需要 arm-gcc，结果在 Windows 上
-  被误判成缺席 —— 那份编译器装在绝对路径里（E:/DaShaoHuo/downloads/ 那一串），
+  被误判成缺席 —— 那份编译器装在绝对路径里（本机下载目录那一串），
   不在 PATH 里，而套件自己带着那份候选清单。所以 arm 不标：它自己就会
   「缺编译器就打印跳过并以 0 退出」。同一件事写在两处，就是这次的小错。
 
   pixel 在 WSL 上红了三项，根因是第十个 Windows 假设：那个套件把临时路径
-  写死成 E:/DaShaoHuo/cache/tmp/px-test.txt，而 WSL 里那个路径不存在
+  写死成本机缓存目录下的 px-test.txt，而 WSL 里那个路径不存在
   （它要的是 /mnt/e/ 那一串）。这属于「该修」，不属于「设计缺席」。
   这一处已经改成按平台取（Windows 用那个盘符，别的平台用 /mnt/e，都没有就
   退到 /tmp）。
@@ -725,7 +725,7 @@ C 版虚拟机：那台不是 JS 的机器
   修掉 pixel 之后顺手 grep 了一遍 test/，结果不是一处，而是二十多处：
   每一个 mkdtempSync、每一串临时文件路径都写死了那个 Windows 盘符。
 
-    test/module.test.mjs        fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/hmyr-mod-")
+    test/module.test.mjs        fs.mkdtempSync("<本机缓存目录>/hmyr-mod-")
     test/macro.test.mjs、launcher.test.mjs、threads.test.mjs、
     verify.test.mjs、write-text.test.mjs、package.test.mjs、mod.test.mjs、
     units.test.mjs、lsp-module.test.mjs、lsp-completion-hmyr.test.mjs、
@@ -771,7 +771,7 @@ C 版虚拟机：那台不是 JS 的机器
       额外 spawn 了什么。
 
   三、python —— 环境缺件，不是缺陷。color、colorimage、colorreport 三套红，
-      而三份文件里写死了 E:/DaShaoHuo/Python-managed/bin/python.exe，那个
+      而三份文件里写死了本机那个托管解释器的路径，那个
       解释器在 Linux 上不存在。
 
   四、其余。contracts、zoneself、globalvar、realtime、owned、ffi、array、zip、
@@ -824,7 +824,7 @@ C 版虚拟机：那台不是 JS 的机器
 
     环境缺件，不是缺陷
       color、colorimage、colorreport —— 三份文件写死了
-      E:/DaShaoHuo/Python-managed/bin/python.exe，那个解释器在 Linux 上不存在。
+      本机那个托管解释器的路径，而它在 Linux 上不存在。
 
     该修
       i18nthree —— 17 项过、1 项红：那一节用 cmd /c echo 验 GBK 那一路。

@@ -11,6 +11,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { 签名位 } from "./signing-paths.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let 要紧 = 0, 可选 = 0;
@@ -58,11 +59,10 @@ console.log("  二、验一遍吗");
 console.log("");
 console.log("  三、能用什么（都是可选的）");
 {
-  const py = process.env.HMYR_PYTHON || "E:/DaShaoHuo/Python-managed/bin/python.exe";
+  const py = process.env.HMYR_PYTHON || "python";
   查(fs.existsSync(py), "Python（颜色桥与 PNG 导出用）",
     "没有它，颜色那一层与像素导出跑不了；别的照常。", "可选");
-  const 钥匙 = "C:/Windows/System32/OpenSSH/ssh-keygen.exe";
-  const 私钥 = "C:/Users/Administrator/.ssh/signing_ed25519_20261011";
+  const { 钥匙, 私钥 } = 签名位();
   查(fs.existsSync(钥匙) && fs.existsSync(私钥), "签名钥匙（发布物签名用）",
     "没有它，包只有哈希没有签名；那正是 S.M.Y.T. 对压缩归档的做法能成立的前提。", "可选");
 }

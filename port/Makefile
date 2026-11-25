@@ -167,7 +167,7 @@ h723-flash:
 #
 # OpenOCD 要显式 INIT 之后才能 reset —— 少了那一句会报 invalid command name "reset"。
 PROBE       ?= openocd
-PYOCD       ?= /e/DaShaoHuo/Python-managed/pythoncore-3.14-64/Scripts/pyocd.exe
+PYOCD       ?= pyocd
 OPENOCD     ?= openocd
 TARGET_CHIP ?= stm32f411re
 # OpenOCD 的目标配置也得跟着换：H7 那一族是 target/stm32h7x.cfg，F4 是 stm32f4x.cfg。

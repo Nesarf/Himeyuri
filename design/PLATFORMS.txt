@@ -60,12 +60,12 @@
 
 往下查了两层，两层都是干净的：
 
-  · TEMP 目录本身没问题。Windows 上 TEMP=E:\DaShaoHuo\cache\tmp，目录存在，
+  · TEMP 目录本身没问题。Windows 上 TEMP 指向本机缓存目录，目录存在，
     PowerShell 往里写文件成功。
-  · temp_path 在两边都给真路径 —— 自举层给 E:\DaShaoHuo\cache\tmp\hmyr-x.txt，
+  · temp_path 在两边都给真路径 —— 自举层给 <本机缓存目录>/hmyr-x.txt，
     自举层在 WSL 给 /tmp/hmyr-x.txt。那是各自平台该有的答案。
 
-而 C 机器的 temp_path 在 Windows 上给的是 E:\DaShaoHuo\cache\tmp/hmyr-x.txt ——
+而 C 机器的 temp_path 在 Windows 上给的是 <本机缓存目录>/hmyr-x.txt ——
 反斜杠与正斜杠混着。它在 PowerShell 里能开，而在 C 的 fopen 里不成立，所以嫌疑落在
 两条上：混用的分隔符，或者 utf16_to_utf8 之后按 ANSI 代码页交给 fopen 的路径编码。
 

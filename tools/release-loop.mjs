@@ -23,6 +23,7 @@
 //
 //   node tools/release-loop.mjs [tag]
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -35,8 +36,8 @@ const ok = (标签, 条件, 细节 = "") => {
   else { failed++; console.log("  不通过  " + 标签 + (细节 ? "  " + 细节 : "")); }
 };
 
-// 临时目录留在非系统盘，跑完就删。
-const 临 = fs.mkdtempSync("E:/DaShaoHuo/cache/tmp/release-loop-");
+// 临时目录用宿主给的那一个，跑完就删。
+const 临 = fs.mkdtempSync(path.join(os.tmpdir(), "release-loop-"));
 const 解 = path.join(临, "x");
 const 包路 = path.join(临, "himeyuri-" + 标 + ".zip");
 const 外清单 = path.join(临, "manifest.json");

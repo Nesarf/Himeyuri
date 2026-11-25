@@ -11,9 +11,8 @@ import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // python：Windows 上是那个固定路径，别的平台问 PATH（见 color.test.mjs）。
-const PY = process.platform === "win32"
-  ? "E:/DaShaoHuo/Python-managed/bin/python.exe"
-  : "python3";
+// 2026-11-26：缺省值里不再有本机路径 —— HMYR_PYTHON 优先，否则问 PATH。
+const PY = process.env.HMYR_PYTHON || (process.platform === "win32" ? "python" : "python3");
 // ICC 按平台：Windows 用系统自带的两张，POSIX 上 sRGB 用仓库自带的、CMYK 用 colord 带的
 // SWOP_TR003 —— 同一个印刷条件，两份 profile（2026-11-03 跨系统时改的）。
 const SWOP = process.platform === "win32"

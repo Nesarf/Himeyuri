@@ -11,6 +11,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { 临时目录, 临时mkdtempSync, 临时文件 } from "./scratch.mjs";
+import { 签名位 } from "../tools/signing-paths.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let passed = 0, failed = 0;
@@ -22,9 +23,10 @@ const 验 = (...参) => spawnSync(process.execPath, [path.join(ROOT, "tools/veri
 const 临 = 临时mkdtempSync("verify-");
 
 // 本机的签名能力：有就测签名那几节，没有就跳过去。
-const 钥匙 = "C:/Windows/System32/OpenSSH/ssh-keygen.exe";
-const 私钥 = "C:/Users/Administrator/.ssh/signing_ed25519_20261011";
-const allowed = "C:/Users/Administrator/.ssh/allowed_signers";
+const 签位 = 签名位();
+const 钥匙 = 签位.钥匙;
+const 私钥 = 签位.私钥;
+const allowed = 签位.名单;
 const 能签 = fs.existsSync(钥匙) && fs.existsSync(私钥) && fs.existsSync(allowed);
 
 try {
