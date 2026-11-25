@@ -56,7 +56,8 @@ if (!有编译器) {
       ok("打包跑得动", r.status === 0 && fs.existsSync(包路), String(r.status) + " " + String(r.stderr || "").slice(0, 200));
 
       if (fs.existsSync(包路)) {
-        const 源批 = fs.readdirSync(path.join(ROOT, "design")).filter((n) => n.endsWith(".txt")).sort();
+        // design/ 里不只有 .txt：PLAN.json 也在里面。包是整个目录打的，所以比的是文件数。
+        const 源批 = fs.readdirSync(path.join(ROOT, "design")).sort();
         const 包 = fs.readFileSync(包路);
         const 尾位 = 包.length - 22;
         ok("尾记录的签名是 PK 5 6", 包[尾位] === 0x50 && 包[尾位 + 1] === 0x4b && 包[尾位 + 2] === 5 && 包[尾位 + 3] === 6,
@@ -64,7 +65,7 @@ if (!有编译器) {
         const 条数 = 包.readUInt16LE(尾位 + 10);
         const 目录起 = 包.readUInt32LE(尾位 + 16);
         const 目录大 = 包.readUInt32LE(尾位 + 12);
-        ok("条目数等于 design 里的 .txt 数", 条数 === 源批.length, 条数 + " 对 " + 源批.length);
+        ok("条目数等于 design 里的文件数", 条数 === 源批.length, 条数 + " 对 " + 源批.length);
         ok("目录大小与实际相符", 目录起 + 目录大 === 尾位, 目录起 + "+" + 目录大 + " 对 " + 尾位);
 
         // 逐条读中央目录，按偏移取成员，与源文件逐字节比。
@@ -147,7 +148,8 @@ if (有编译器) {
 
 console.log("四、附加一份包外的文件（发布清单走的就是这条）");
 if (有编译器) {
-  const 源批 = fs.readdirSync(path.join(ROOT, "design")).filter((n) => n.endsWith(".txt")).sort();
+  // 同上一节：design/ 里的成员是文件数，不是 .txt 数。
+  const 源批 = fs.readdirSync(path.join(ROOT, "design")).sort();
   const 附路 = path.join(临, "manifest.json");
   fs.writeFileSync(附路, '{"name":"himeyuri","digest":"x"}\n', "utf8");
   const 附包 = path.join(临, "with-manifest.zip");
@@ -161,7 +163,7 @@ if (有编译器) {
     const 包 = fs.readFileSync(附包);
     const 尾位 = 包.length - 22;
     const 条数 = 包.readUInt16LE(尾位 + 10);
-    ok("成员数是 design 的 .txt 数加一", 条数 === 源批.length + 1, 条数 + " 对 " + (源批.length + 1));
+    ok("成员数是 design 的文件数加一", 条数 === 源批.length + 1, 条数 + " 对 " + (源批.length + 1));
     let 找到 = null;
     let at = 包.readUInt32LE(尾位 + 16);
     for (let i = 0; i < 条数; i++) {
