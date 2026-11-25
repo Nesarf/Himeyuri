@@ -17,9 +17,14 @@ import os from "node:os";
 // 临时目录：HMYR_TMP 优先（这台机器用它指到非系统盘的那个缓存目录），
 // 否则用宿主给的临时目录。「不进 C 盘」那条纪律坐在环境变量里，不在仓库里 ——
 // 源码里写死任何一台机器自己的位置，第二台机器上就起不来。
+//
+// 一律交出正斜杠：这个路径会被下游拼进 HMYR 源码字符串，
+// 而 os.tmpdir() 在这台机器上给的是反斜杠 —— 那样 `\Users` 会被读成转义 `\U`，
+// subset-lex 报「子集不含这种转义：U」。原来那个写死的值本来就带正斜杠，
+// 所以这条约定一直在，只是没人写下来（2026-11-26 换成 os.tmpdir 时踩到）。
 export const 临时目录 = () => {
   const 候选 = [process.env.HMYR_TMP, os.tmpdir()];
-  for (const 路 of 候选) if (路 && fs.existsSync(路)) return 路;
+  for (const 路 of 候选) if (路 && fs.existsSync(路)) return 路.replace(/\\/g, "/");
   return "/tmp";
 };
 
